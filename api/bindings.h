@@ -9,4 +9,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef struct Buffer {
+  uint8_t *ptr;
+  uintptr_t size;
+} Buffer;
+
 int32_t add(int32_t a, int32_t b);
+
+void free_rust(Buffer *raw);
+
+Buffer *greet(Buffer *name);

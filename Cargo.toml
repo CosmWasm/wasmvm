@@ -21,3 +21,7 @@ maintenance = { status = "actively-developed" }
 
 [build-dependencies]
 cbindgen = { version = "0.9.1" }
+
+[profile.release]
+opt-level = 2
+lto = true
