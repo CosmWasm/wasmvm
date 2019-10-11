@@ -20,18 +20,17 @@ func Add(a int32, b int32) int32 {
 }
 
 func Greet(name []byte) []byte {
-	buf := sliceToBuffer(name)
+	buf := sendSlice(name)
 	raw := C.greet(buf)
-	res := copyBuffer(raw)
 	// make sure to free after call
-	freeOurBuf(buf)
-	freeTheirBuf(raw)
-	return res
+	freeAfterSend(buf)
+
+	return receiveSlice(raw)
 }
 
 /*** To memory module **/
 
-func sliceToBuffer(s []byte) *C.Buffer {
+func sendSlice(s []byte) *C.Buffer {
 	if s == nil {
 		return nil;
 	}
@@ -41,18 +40,19 @@ func sliceToBuffer(s []byte) *C.Buffer {
 	}
 }
 
-func freeOurBuf(buf *C.Buffer) {
+func receiveSlice(b *C.Buffer) []byte {
+	if b == nil || b.ptr == u8_ptr(nil) {
+		return nil
+	}
+	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.size))
+	C.free_rust(b)
+	return res
+}
+
+func freeAfterSend(buf *C.Buffer) {
 	if buf != nil && buf.ptr != u8_ptr(nil) {
 		C.free(unsafe.Pointer(buf.ptr))
 	}
 }
 
-func freeTheirBuf(buf *C.Buffer) {
-	if buf != nil && buf.ptr != u8_ptr(nil) {
-		C.free_rust(buf)
-	}
-}
 
-func copyBuffer(b *C.Buffer) []byte {
-	return C.GoBytes(unsafe.Pointer(b.ptr), cint(b.size))
-}
