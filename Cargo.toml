@@ -9,6 +9,9 @@ license = "Apache-2.0"
 readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
 
+[lib]
+crate-type = ["cdylib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [badges]
 circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
