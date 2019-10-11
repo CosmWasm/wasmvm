@@ -3,14 +3,9 @@ package api
 // #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm
 // #include <stdlib.h>
 // #include "bindings.h"
-//
-// Buffer *toBuf(uint8_t *ptr, uintptr_t size) { Buffer *buf = malloc(sizeof(Buffer)); buf->ptr = ptr; buf->size = size; return buf; }
 import "C"
 
 import "unsafe"
-
-// TODO: free after toBuf
-
 
 // nice aliases to the rust names
 type i32 = C.int32_t
@@ -27,7 +22,11 @@ func Add(a int32, b int32) int32 {
 func Greet(name []byte) []byte {
 	buf := sliceToBuffer(name)
 	raw := C.greet(buf)
-	return copyBuffer(raw)
+	res := copyBuffer(raw)
+	// make sure to free after call
+	freeOurBuf(buf)
+	freeTheirBuf(raw)
+	return res
 }
 
 /*** To memory module **/
@@ -36,7 +35,22 @@ func sliceToBuffer(s []byte) *C.Buffer {
 	if s == nil {
 		return nil;
 	}
-	return C.toBuf(u8_ptr(&s[0]), usize(len(s)))
+	return &C.Buffer{
+		ptr: u8_ptr(C.CBytes(s)),
+		size: usize(len(s)),
+	}
+}
+
+func freeOurBuf(buf *C.Buffer) {
+	if buf != nil && buf.ptr != u8_ptr(nil) {
+		C.free(unsafe.Pointer(buf.ptr))
+	}
+}
+
+func freeTheirBuf(buf *C.Buffer) {
+	if buf != nil && buf.ptr != u8_ptr(nil) {
+		C.free_rust(buf)
+	}
 }
 
 func copyBuffer(b *C.Buffer) []byte {
