@@ -18,4 +18,4 @@ int32_t add(int32_t a, int32_t b);
 
 void free_rust(Buffer *raw);
 
-Buffer *greet(Buffer *name);
+Buffer *greet(const Buffer *name);
