@@ -6,5 +6,5 @@ package api
 import "C"
 
 func Add(a int32, b int32) int32 {
-	return C.add(a, b)
+	return (int32)(C.add((C.int32_t)(a), (C.int32_t)(b)))
 }

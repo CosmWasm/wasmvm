@@ -1,4 +1,4 @@
-.PHONY: build build-rust build-go
+.PHONY: build build-rust build-go test
 
 build: build-rust build-go
 
@@ -8,3 +8,6 @@ build-rust:
 
 build-go:
 	go build .
+
+test:
+	go test -v ./api
