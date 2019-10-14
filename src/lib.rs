@@ -33,12 +33,9 @@ pub extern "C" fn divide(num: i32, div: i32) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn may_panic(guess: i32) -> Buffer {
-    let r = catch_unwind(|| do_may_panic(guess));
-    let p = match r {
-        Ok(r2) => handle_c_error(r2).into_bytes(),
-        Err(_) => { update_last_error("Caught panic".to_string()); Vec::<u8>::new()}
-    };
-    release_vec(p)
+    let r = catch_unwind(|| do_may_panic(guess)).unwrap_or(Err("Caught panic".to_string()));
+    let v = handle_c_error(r).into_bytes();
+    release_vec(v)
 }
 
 fn do_may_panic(guess: i32) -> Result<String, String> {
