@@ -16,6 +16,6 @@ typedef struct Buffer {
 
 int32_t add(int32_t a, int32_t b);
 
-void free_rust(Buffer *raw);
+void free_rust(Buffer buf);
 
-Buffer *greet(const Buffer *name);
+Buffer greet(Buffer name);
