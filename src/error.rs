@@ -3,17 +3,16 @@ use std::fmt::Display;
 use errno;
 use errno::{set_errno, Errno};
 
-use crate::memory::{Buffer, write_buffer};
+use crate::memory::{Buffer, release_vec};
 
 thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = RefCell::new(None);
 }
 
 #[no_mangle]
-pub extern "C" fn get_last_error(buf: &Buffer) {
+pub extern "C" fn get_last_error() -> Buffer {
     let msg = take_last_error().unwrap_or_default();
-    // return another error if we are out of memory
-    handle_c_error(write_buffer(buf, msg.as_bytes()));
+    release_vec(msg.into_bytes())
 }
 
 pub fn update_last_error(msg: String) {

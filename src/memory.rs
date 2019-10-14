@@ -1,4 +1,3 @@
-use std::fmt;
 use std::mem;
 use std::slice;
 
@@ -28,23 +27,6 @@ pub fn read_buffer(b: &Buffer) -> Option<&'static [u8]> {
         unsafe { Some(slice::from_raw_parts(b.ptr, b.size)) }
     }
 }
-
-pub struct MemoryErr {
-    required: usize,
-}
-
-impl fmt::Display for MemoryErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "No enough memory in buffer, need {}", self.required)
-    }
-}
-
-// write buffer, writes to the (caller) memory referenced by the buffer
-// it returns an error if this is too big
-pub fn write_buffer(b: &Buffer, data: &[u8]) -> Result<(), MemoryErr> {
-    panic!("not implemented");
-}
-
 
 // this releases our memory to the caller
 pub fn release_vec(mut v: Vec<u8>) -> Buffer {

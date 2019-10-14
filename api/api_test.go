@@ -26,6 +26,10 @@ func TestDivide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no error, got %s", err)
 	}
+	e := getError()
+	if e != nil {
+		t.Errorf("getError() should return nil, got %s", e.Error())
+	}
 	if res != 5 {
 		t.Fatalf("Unexpected result: %d", res)
 	}
@@ -34,7 +38,10 @@ func TestDivide(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error, but got none")
 	}
-	t.Log(err)
+	errMsg := err.Error()
+	if errMsg != "Cannot divide by zero" {
+		t.Fatalf("Unexpected error msg: %s", errMsg)
+	}
 	if res != 0 {
 		t.Fatalf("Unexpected result: %d", res)
 	}

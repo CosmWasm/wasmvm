@@ -5,6 +5,7 @@ package api
 // #include "bindings.h"
 import "C"
 
+import "fmt"
 import "unsafe"
 
 // nice aliases to the rust names
@@ -31,12 +32,20 @@ func Greet(name []byte) []byte {
 func Divide(a, b int32) (int32, error) {
 	res, err := C.divide(i32(a), i32(b))
 	if err != nil {
-		return 0, err
+		return 0, getError()
 	}
 	return int32(res), nil
 }
 
-// TODO: add error handling example...
+// returns the last error message (or nil if none returned)
+func getError() error {
+	// TODO: add custom error type
+	msg := receiveSlice(C.get_last_error())
+	if msg == nil {
+		return nil
+	}
+	return fmt.Errorf("%s", string(msg))
+}
 
 /*** To memory module **/
 
@@ -51,7 +60,7 @@ func sendSlice(s []byte) C.Buffer {
 }
 
 func receiveSlice(b C.Buffer) []byte {
-	if b.ptr == u8_ptr(nil) {
+	if emptyBuf(b) {
 		return nil
 	}
 	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.size))
@@ -59,10 +68,14 @@ func receiveSlice(b C.Buffer) []byte {
 	return res
 }
 
-func freeAfterSend(buf C.Buffer) {
-	if buf.ptr != u8_ptr(nil) {
-		C.free(unsafe.Pointer(buf.ptr))
+func freeAfterSend(b C.Buffer) {
+	if !emptyBuf(b) {
+		C.free(unsafe.Pointer(b.ptr))
 	}
+}
+
+func emptyBuf(b C.Buffer) bool {
+	return b.ptr == u8_ptr(nil) || b.size == usize(0)
 }
 
 

@@ -23,6 +23,6 @@ int32_t divide(int32_t num, int32_t div);
 
 void free_rust(Buffer buf);
 
-void get_last_error(const Buffer *buf);
+Buffer get_last_error(void);
 
 Buffer greet(Buffer name);
