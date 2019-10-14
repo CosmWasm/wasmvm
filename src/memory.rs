@@ -12,11 +12,7 @@ pub struct Buffer {
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
     unsafe {
-        let _v = Vec::from_raw_parts(
-            buf.ptr,
-            buf.size,
-            buf.size,
-        );
+        let _v = Vec::from_raw_parts(buf.ptr, buf.size, buf.size);
     }
 }
 
@@ -31,7 +27,10 @@ pub fn read_buffer(b: &Buffer) -> Option<&'static [u8]> {
 // this releases our memory to the caller
 pub fn release_vec(mut v: Vec<u8>) -> Buffer {
     if v.len() == 0 {
-        return Buffer{ptr: 0 as *mut u8, size: 0};
+        return Buffer {
+            ptr: 0 as *mut u8,
+            size: 0,
+        };
     }
     let buf = Buffer {
         ptr: v.as_mut_ptr(),
@@ -40,4 +39,3 @@ pub fn release_vec(mut v: Vec<u8>) -> Buffer {
     mem::forget(v);
     buf
 }
-

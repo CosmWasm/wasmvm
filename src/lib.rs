@@ -1,8 +1,8 @@
 mod error;
 mod memory;
 
-pub use error::{get_last_error};
-pub use memory::{Buffer, free_rust};
+pub use error::get_last_error;
+pub use memory::{free_rust, Buffer};
 
 use error::{handle_c_error, update_last_error};
 use memory::{read_buffer, release_vec};
@@ -10,7 +10,7 @@ use std::panic::catch_unwind;
 
 #[no_mangle]
 pub extern "C" fn add(a: i32, b: i32) -> i32 {
-    a+b
+    a + b
 }
 
 #[no_mangle]

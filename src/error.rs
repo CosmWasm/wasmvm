@@ -1,9 +1,9 @@
-use std::cell::RefCell;
-use std::fmt::Display;
 use errno;
 use errno::{set_errno, Errno};
+use std::cell::RefCell;
+use std::fmt::Display;
 
-use crate::memory::{Buffer, release_vec};
+use crate::memory::{release_vec, Buffer};
 
 thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = RefCell::new(None);
@@ -28,9 +28,11 @@ pub fn take_last_error() -> Option<String> {
     LAST_ERROR.with(|prev| prev.borrow_mut().take())
 }
 
-
 pub fn handle_c_error<T, E>(r: Result<T, E>) -> T
-    where T: Default, E: Display {
+where
+    T: Default,
+    E: Display,
+{
     match r {
         Ok(t) => t,
         Err(e) => {
