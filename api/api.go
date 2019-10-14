@@ -28,6 +28,14 @@ func Greet(name []byte) []byte {
 	return receiveSlice(raw)
 }
 
+func Divide(a, b int32) (int32, error) {
+	res, err := C.divide(i32(a), i32(b))
+	if err != nil {
+		return 0, err
+	}
+	return int32(res), nil
+}
+
 // TODO: add error handling example...
 
 /*** To memory module **/
