@@ -30,6 +30,9 @@ pub fn read_buffer(b: &Buffer) -> Option<&'static [u8]> {
 
 // this releases our memory to the caller
 pub fn release_vec(mut v: Vec<u8>) -> Buffer {
+    if v.len() == 0 {
+        return Buffer{ptr: 0 as *mut u8, size: 0};
+    }
     let buf = Buffer {
         ptr: v.as_mut_ptr(),
         size: v.len(),

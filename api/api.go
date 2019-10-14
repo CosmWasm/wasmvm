@@ -37,6 +37,17 @@ func Divide(a, b int32) (int32, error) {
 	return int32(res), nil
 }
 
+func RandomMessage(guess int32) (string, error) {
+	res, err := C.may_panic(i32(guess))
+	if err != nil {
+		return "", getError()
+	}
+	return string(receiveSlice(res)), nil
+}
+
+
+/**** To error module ***/
+
 // returns the last error message (or nil if none returned)
 func getError() error {
 	// TODO: add custom error type

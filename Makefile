@@ -1,4 +1,6 @@
-.PHONY: build build-rust build-go test
+.PHONY: all build build-rust build-go test
+
+all: build test
 
 build: build-rust build-go
 

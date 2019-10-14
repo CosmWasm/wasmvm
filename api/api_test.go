@@ -46,3 +46,54 @@ func TestDivide(t *testing.T) {
 		t.Fatalf("Unexpected result: %d", res)
 	}
 }
+
+func TestRandomMessage(t *testing.T) {
+	// this should pass
+	res, err := RandomMessage(123)
+	if err != nil {
+		t.Fatalf("Expected no err, got %s", err)
+	}
+	if e2 := getError(); e2 != nil {
+		t.Fatalf("Expected no getError, got %s", err)
+	}
+	if res != "You are a winner!" {
+		t.Fatalf("Unexpected result: %s", res)
+	}
+
+	// this should error (normal)
+	res, err = RandomMessage(-20)
+	if err == nil {
+		t.Fatalf("Expected error, but got none")
+	}
+	if errMsg := err.Error(); errMsg != "Too low" {
+		t.Fatalf("Unexpected error msg: %s", errMsg)
+	}
+	if res != "" {
+		t.Fatalf("Unexpected result: %s", res)
+	}
+
+	// this should panic
+	res, err = RandomMessage(0)
+	if err == nil {
+		t.Fatalf("Expected error, but got none")
+	}
+	if errMsg := err.Error(); errMsg != "Caught panic" {
+		t.Fatalf("Unexpected error msg: %s", errMsg)
+	}
+	if res != "" {
+		t.Fatalf("Unexpected result: %s", res)
+	}
+	// make sure error cleared after read
+	if e2 := getError(); e2 != nil {
+		t.Fatalf("Expected no getError, got %s", err)
+	}
+
+	// this should pass (again)
+	res, err = RandomMessage(789)
+	if err != nil {
+		t.Fatalf("Expected no err, got %s", err)
+	}
+	if res != "You are a winner!" {
+		t.Fatalf("Unexpected result: %s", res)
+	}
+}

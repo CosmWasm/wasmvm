@@ -26,3 +26,5 @@ void free_rust(Buffer buf);
 Buffer get_last_error(void);
 
 Buffer greet(Buffer name);
+
+Buffer may_panic(int32_t guess);
