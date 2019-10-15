@@ -124,22 +124,37 @@ func TestDemoDBAccess(t *testing.T) {
 	l.Set(bar, []byte("short"))
 
 	// long
-	UpdateDB(l, foo)
+	if err := UpdateDB(l, foo); err != nil {
+		t.Fatalf("unexpected error")
+	}
 	if string(l.Get(foo)) != "long text that fills the buffer." {
 		t.Errorf("Unexpected result (long): %s", string(l.Get(foo)))
 	}
 
 	// short
-	UpdateDB(l, bar)
-	UpdateDB(l, bar)
-	UpdateDB(l, bar)
+	if err := UpdateDB(l, bar); err != nil {
+		t.Fatalf("unexpected error")
+	}
+	if err := UpdateDB(l, bar); err != nil {
+		t.Fatalf("unexpected error")
+	}
+	if err := UpdateDB(l, bar); err != nil {
+		t.Fatalf("unexpected error")
+	}
 	if string(l.Get(bar)) != "short..." {
 		t.Errorf("Unexpected result (short): %s", string(l.Get(bar)))
 	}
 
 	// missing
-	UpdateDB(l, missing)
+	if err := UpdateDB(l, missing); err != nil {
+		t.Fatalf("unexpected error")
+	}
 	if string(l.Get(missing)) != "." {
 		t.Errorf("Unexpected result (missing): %s", string(l.Get(missing)))
+	}
+
+	err := UpdateDB(l, nil)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }

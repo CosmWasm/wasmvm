@@ -44,11 +44,17 @@ func RandomMessage(guess int32) (string, error) {
 	return string(receiveSlice(res)), nil
 }
 
-func UpdateDB(kv KVStore, key []byte) {
+func UpdateDB(kv KVStore, key []byte) error {
 	buf := sendSlice(key)
+
 	db := buildDB(kv)
-	C.update_db(db, buf)
+	_, err := C.update_db(db, buf)
 	freeAfterSend(buf)
+
+	if err != nil {
+		return getError()
+	}
+	return nil
 }
 
 /**** To error module ***/
