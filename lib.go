@@ -14,7 +14,6 @@ type StorageCallback interface {
 	Set(key, value []byte)
 }
 
-
 // Wasmer is the main entry point to this library.
 // You should create an instance with it's own subdirectory to manage state inside,
 // and call it for all cosmwasm contract related actions.
@@ -52,14 +51,14 @@ func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
 //
 // TODO: is there a way to simplify the arguments here? `gasAvailable *int64` and modify in place???
 // TODO: clarify which errors are returned? vm failure. out of gas. contract unauthorized.
-func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res Result, err error) {
-	return nil, 0, nil
+func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res *Result, err error) {
+	return nil, nil
 }
 
 // Handle calls a given instance of the contract. Since the only difference between the instances is the data in their
 // local storage, and their address in the outside world, we need no InstanceID.
 // The caller is responsible for passing the correct `storage` (which must have been initialized exactly once),
 // and setting the params with relevent info on this instance (address, balance, etc)
-func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res Result, err error) {
-	return nil, 0, nil
+func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res *Result, err error) {
+	return nil, nil
 }
