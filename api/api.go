@@ -44,6 +44,13 @@ func RandomMessage(guess int32) (string, error) {
 	return string(receiveSlice(res)), nil
 }
 
+func UpdateDB(kv KVStore, key []byte) {
+	buf := sendSlice(key)
+	db := buildDB(kv)
+	C.update_db(db, buf)
+	freeAfterSend(buf)
+}
+
 /**** To error module ***/
 
 // returns the last error message (or nil if none returned)
