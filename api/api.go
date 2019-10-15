@@ -22,9 +22,6 @@ func Add(a int32, b int32) int32 {
 func Greet(name []byte) []byte {
 	buf := sendSlice(name)
 	raw := C.greet(buf)
-	// make sure to free after call
-	freeAfterSend(buf)
-
 	return receiveSlice(raw)
 }
 
@@ -46,10 +43,8 @@ func RandomMessage(guess int32) (string, error) {
 
 func UpdateDB(kv KVStore, key []byte) error {
 	buf := sendSlice(key)
-
 	db := buildDB(kv)
 	_, err := C.update_db(db, buf)
-	freeAfterSend(buf)
 
 	if err != nil {
 		return getError()
