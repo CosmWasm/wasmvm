@@ -1,6 +1,6 @@
 package cosmwasm
 
-// import "github.com/confio/go-cosmwasm/api"
+import "github.com/confio/go-cosmwasm/api"
 
 // ContractID represents an ID for a contract, must be generated from this library
 type ContractID []byte
@@ -9,10 +9,7 @@ type ContractID []byte
 type WasmCode []byte
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a contract
-type KVStore interface {
-	Get(key []byte) []byte
-	Set(key, value []byte)
-}
+type KVStore = api.KVStore
 
 // Wasmer is the main entry point to this library.
 // You should create an instance with it's own subdirectory to manage state inside,
