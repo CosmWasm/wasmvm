@@ -8,8 +8,8 @@ type ContractID []byte
 // WasmCode is an alias for raw bytes of the wasm compiled code
 type WasmCode []byte
 
-// StorageCallback is a reference to some sub-kvstore that is valid for one instance of a contract
-type StorageCallback interface {
+// KVStore is a reference to some sub-kvstore that is valid for one instance of a contract
+type KVStore interface {
 	Get(key []byte) []byte
 	Set(key, value []byte)
 }
@@ -51,14 +51,14 @@ func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
 //
 // TODO: is there a way to simplify the arguments here? `gasAvailable *int64` and modify in place???
 // TODO: clarify which errors are returned? vm failure. out of gas. contract unauthorized.
-func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res *Result, err error) {
+func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error) {
 	return nil, nil
 }
 
 // Handle calls a given instance of the contract. Since the only difference between the instances is the data in their
 // local storage, and their address in the outside world, we need no InstanceID.
-// The caller is responsible for passing the correct `storage` (which must have been initialized exactly once),
+// The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the params with relevent info on this instance (address, balance, etc)
-func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, storage StorageCallback, gasLimit int64) (res *Result, err error) {
+func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error) {
 	return nil, nil
 }
