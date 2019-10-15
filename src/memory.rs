@@ -8,16 +8,24 @@ pub struct Buffer {
     pub size: usize,
 }
 
+impl Buffer {
+    pub fn is_empty(&self) -> bool {
+        self.size == 0 || self.ptr.is_null()
+    }
+}
+
 // this frees memory we released earlier
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
-    unsafe {
-        let _v = Vec::from_raw_parts(buf.ptr, buf.size, buf.size);
+    if !buf.is_empty() {
+        unsafe {
+            let _ = Vec::from_raw_parts(buf.ptr, buf.size, buf.size);
+        }
     }
 }
 
 pub fn read_buffer(b: &Buffer) -> Option<&'static [u8]> {
-    if b.ptr.is_null() || b.size == 0 {
+    if b.is_empty() {
         None
     } else {
         unsafe { Some(slice::from_raw_parts(b.ptr, b.size)) }

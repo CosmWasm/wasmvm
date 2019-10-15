@@ -1,6 +1,8 @@
+mod db;
 mod error;
 mod memory;
 
+pub use db::{db_t, DB};
 pub use error::get_last_error;
 pub use memory::{free_rust, Buffer};
 
@@ -46,4 +48,13 @@ fn do_may_panic(guess: i32) -> Result<String, String> {
     } else {
         Ok("You are a winner!".to_owned())
     }
+}
+
+// This loads key from DB and then appends a "." and saves it
+#[no_mangle]
+pub extern "C" fn update_db(db: DB, key: Buffer) {
+    let vkey = read_buffer(&key).unwrap_or(b"").to_vec();
+    let mut val = db.get(vkey.clone()).unwrap_or(Vec::new());
+    val.extend_from_slice(b".");
+    db.set(vkey, val);
 }
