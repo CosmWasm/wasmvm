@@ -1,6 +1,9 @@
 package api
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestAdd(t *testing.T) {
 	res := Add(5, 7)
@@ -26,7 +29,7 @@ func TestDivide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no error, got %s", err)
 	}
-	e := getError()
+	e := getError(fmt.Errorf("fake error"))
 	if e != nil {
 		t.Errorf("getError() should return nil, got %s", e.Error())
 	}
@@ -53,7 +56,7 @@ func TestRandomMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no err, got %s", err)
 	}
-	if e2 := getError(); e2 != nil {
+	if e2 := getError(fmt.Errorf("fake error")); e2 != nil {
 		t.Fatalf("Expected no getError, got %s", err)
 	}
 	if res != "You are a winner!" {
@@ -84,7 +87,7 @@ func TestRandomMessage(t *testing.T) {
 		t.Fatalf("Unexpected result: %s", res)
 	}
 	// make sure error cleared after read
-	if e2 := getError(); e2 != nil {
+	if e2 := getError(err); e2 != nil {
 		t.Fatalf("Expected no getError, got %s", err)
 	}
 

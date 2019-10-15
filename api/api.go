@@ -27,35 +27,33 @@ func Greet(name []byte) []byte {
 
 func Divide(a, b int32) (int32, error) {
 	res, err := C.divide(i32(a), i32(b))
-	if err != nil {
-		return 0, getError()
-	}
-	return int32(res), nil
+	return int32(res), getError(err)
 }
 
 func RandomMessage(guess int32) (string, error) {
 	res, err := C.may_panic(i32(guess))
 	if err != nil {
-		return "", getError()
+		return "", getError(err)
 	}
 	return string(receiveSlice(res)), nil
 }
 
 func UpdateDB(kv KVStore, key []byte) error {
-	buf := sendSlice(key)
 	db := buildDB(kv)
+	buf := sendSlice(key)
 	_, err := C.update_db(db, buf)
-
-	if err != nil {
-		return getError()
-	}
-	return nil
+	return getError(err)
 }
 
 /**** To error module ***/
 
 // returns the last error message (or nil if none returned)
-func getError() error {
+// err is assumed to be the result of errno, and this only queries if err != nil
+// so you can safely use it to wrap all returns (eg. it will be a noop if err == nil)
+func getError(err error) error {
+	if err == nil {
+		return nil
+	}
 	// TODO: add custom error type
 	msg := receiveSlice(C.get_last_error())
 	if msg == nil {
