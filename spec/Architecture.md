@@ -76,6 +76,12 @@ of parsing in the smart contract.
 
 Whether we wrap the existing `Query` interface or provide a different interface just for WASM contract is an open question, which we touch in the next section.
 
+## Exposing Queries
+
+We will also want to expose the state of the contract to clients, and possibly other modules (or contracts). The "contracts" module should contain generic code to do a raw key-value lookup on any contract. For example `contract/5/17/foo` should locate contract 5, instance 17 (assuming we auto-increment counters here... maybe this is a sha256 hash?), and in that sub-keystore for a raw query for `foo`, returning whatever data happens to be there (likely json).
+
+While this generic functionality is a good addition, we will want to support custom query handlers, just as all major sdk modules do. This allows us to abstract out the raw keys used in the store to something easier to understand. It also allows us to perform filters or aggregations on the results. We will expose a generic query handler interface in the store, but once a contract is deployed, the specific format will never change. Thus, one could actually allow one contract to query a previously deployed contract through such an interface without any chance for breaking changes.
+
 ## Upgradeability
 
 This can be a **major problem** or even **blocker** for enabling Web Assembly contracts, unless we make some very conscious design decisions, both in the WASM interfaces, as well as the SDK as a whole.
@@ -98,11 +104,17 @@ Even with a buffer class, this will have a noticeable strong impact on a number 
 
 Relevant link (recommended by Aaron): https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/Spec_ulation.md 
 
+## Genesis File
+
+It is not desirable (or feasible) to run every smart contract to do a state dump and restore. However, since all the data of the contracts is in the kvstore, it is ultimately owned by the Go "contract" module, and we can build a generic import/export logic there. Serializing the contract should only consist in a base64 dump of the binary wasm code. For each instance of the contract (with its own substore), we can serialize the raw data as hex and then decode it. Often the keys are strings and values are (ascii) json, so a text representation is simpler to read and much smaller. Perhaps we can check this per contract and have an option to use the ascii encoding if possible, otherwise use a generic hex encoding of the store?
+
+
+
 ## Summary
 
 * Contracts get *trusted context* from the state machine, as well as raw, *user-defined message* to specify the requested action
 * Contracts can trigger state changes in other modules, by returning a list of "messages" that will be dispatched after contract execution, but **in the same atomic transaction**
-* Contracts will have a (limited) way to query state in other modules as syncronous calls inside their logic 
+* Contracts will have a (limited) way to query state in other modules as syncronous calls inside their logic
+* Contracts can also expose a custom query handler for clients (or other contracts)
 * Defining stable APIs decoupled from the actual SDK code is essential for allowing upgradeability (that old contracts still work after state machine upgrades)
-
-**TODO** add info on genesis (import/export) and exposing a query API from the smart contract (to client)
+* The "contract" module should be fully responsible for exporting and importing the data for all contracts in a generic manner
