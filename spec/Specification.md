@@ -5,9 +5,9 @@ implementation details, function signatures, naming choices, etc.
 
 ## Definitions
 
-**Contract** is as some wasm code uploaded to the system, *possibly* with some "global" state, initialized at the creation of the contract.
+**Contract** is as some wasm code uploaded to the system, initialized at the creation of the contract. This has no state except that which is contained in the wasm code (eg. static constants)
 
-**Instance** is one instantiation of the contract. This contains a reference to the contract, as well as some "local" state to this instance, initialized at the creation of the instance.
+**Instance** is one instantiation of the contract. This contains a reference to the contract, as well as some "local" state to this instance, initialized at the creation of the instance. This state is stored in the kvstore, meaning a reference to the code plus a reference to the (prefixed) data store uniquely defines the smart contract.
 
 Example: we could upload a generic "ERC20 mintable" contract, and many people could create independent instances of the same bytecode, where the local data defines the token name, the issuer, the max issuance, etc.
 
@@ -17,7 +17,7 @@ Example: we could upload a generic "ERC20 mintable" contract, and many people co
 
 *Contracts* are immutible (code/logic is fixed), but *instances* are mutible (state changes)
 
-## Serialization
+## Serialization Format
 
 There are two pieces of data that must be considered here. **Message Data**, which is arbitrary binary data passed in the transaction by the end user signing it, and **Context Data**, which is passed in by the cosmos sdk runtime, providing some guaranteed context. Context data may include the signer's address, the instance's address, number of tokens sent, block height, and any other information a contract may need to control the internal logic.
 
@@ -32,92 +32,181 @@ In spite of possible performance gains or compiler guarantees with C-types, I wo
 * [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen/) also tries to convert types and you can [read some success and limitations of the approach](https://github.com/rustwasm/wasm-bindgen/issues/111)
 * [cgo](https://golang.org/cmd/cgo/#hdr-Go_references_to_C) has some documentation about accessing C structs from Go (which is what we get with the repr( c ) directive)
 
+In short, go/cgo doesn't handle c-types very transparently, and these also don't support references to heap allocated data (eg. strings). All we get is a small performance gain for a lot of headaches... let's stick with json.
+
 ## State Access
-
-**Contract State** is globally accessible to all instances of  the contract. This is optional and I would consider a read-only singleton as sufficient for most customizations of the contract (using a contract with different configurations), and more secure than other access modes. This should be discussed in the light of actual use cases. Maybe it is unneeded, maybe write access is needed.
-
-We can set contract state upon *creation*. This is a unique db key that cannot be accessed excpet by this contract code. I would conceive of this as a data section baked into the binary, which is actually probably the better approach. 
 
 **Instance State** is accessible only by one instance of the contract, with full read-write access. This can contain either a singleton (one key - simple contract or config) or a kvstore (subspace with many keys that can be accessed - like erc20 instance holding balances for many accounts). Sometimes the contract may want one or the other or even both (config + much data) access modes. 
 
 We can set the instance state upon *instantiation*. We can read and modify it upon *invocation*. This is a unique "prefixed db"  subspace that can only be accessed by this instance. The read-only contract state should suffice for shared data between all instances. (Discuss this design in light of all use cases)
 
+**Instance Account** is the sdk account controlled by this isntance. We pass in the address of the account, as well as it's current balance along with every invocation of the contract. This allows the contract to be somewhat self-aware of the external environment for the most common cases (eg. if it needs to release funds).
+
 ## Function Definitions
 
-As discussed above, all data structures passed between web assembly and the cosmos-sdk will be sent in their JSON representation. For simplicity, I will show them as Go structs in this section, and we can assume a cannonical snake_case conversion of the field name. This allows us to be explicit about types.
+As discussed above, all data structures passed between web assembly and the cosmos-sdk will be sent in their JSON representation. For simplicity, I will show them as Go structs in this section, but only the json representation is used.
 
-Function: `Process(request Request) Response`
+The actual call to create a new contract (upload code) is quite simple, and returns a `ContractID` to be used in all future calls:
+`Create(contract WasmCode) (ContractID, error)`
+
+Both Instantiating a contract, as well as invoking a contract (`Handle` method) have similar interfaces. The difference is that `Instantiate` requires the `store` to be empty, while `Handle` requires it to be non-empty:
+
+* `Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
+* `Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
+
+**TODO** Define Query method we want to expose on the contract
+
+Note that no `InstanceID` is ever used. The reason being is that the code and the data define the entire instance state. The calling logic is responsible for prefixing the `KVStore` with the instance-specific prefix and passing the proper `ContractInfo` in the parameters. This `InstanceID` is managed on the SDK side, but not exposed over the general interface to the Wasm engine.
+
+### Parameters
 
 This Read-Only info is available to every contract:
 
 ```go
-type Request struct {
-    Block BlockInfo
-    Message MessageInfo
-    Contract ContractInfo
+// Params defines the state of the blockchain environment this contract is
+// running in. This must contain only trusted data - nothing from the Tx itself
+// that has not been verfied (like Signer).
+//
+// Params are json encoded to a byte slice before passing to the wasm contract.
+type Params struct {
+	Block    BlockInfo    `json:"block"`
+	Message  MessageInfo  `json:"message"`
+	Contract ContractInfo `json:"contract"`
 }
 
 type BlockInfo struct {
-    Height int64
-    Time int64 // ??? seconds (nanoseconds) since unix epoch???
-    ChainID string
+    // block height this transaction is executed
+    Height  int64  `json:"height"`
+    // timestamp of current block (in seconds since unix epoch)
+    Time    int64  `json:"time"`
+	ChainID string `json:"chain_id"`
 }
 
 type MessageInfo struct {
-    Signer string // bech32 encoding of authorizing address
-    TokensSent CoinInfo  // money transfered by sdk as part of this message (before execution)
-    UserData string // arbitrary data set in transaction
+    // bech32 encoding of sdk.AccAddress executing the contract
+    Signer    string       `json:"signer"`
+    // amount of funds send to the contract along with this message 
+    SentFunds []Coin `json:"sent_funds"`
 }
 
 type ContractInfo struct {
-    Address string // bech32 encoding of address this contract controls
-    Balance []CoinInfo
+    // sdk.AccAddress of the contract, to be used when sending messages
+    Address string       `json:"address"`
+    // current balance of the account controlled by the contract
+	Balance []Coin `json:"send_amount"`
 }
 
-type CoinInfo struct {
-    Amount string // encoing of decimal value, eg. "12.3456"
-    Denom string // type, eg. "ATOM"
+// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
+type Coin struct {
+	Denom  string `json:"denom"`  // string encoing of decimal value, eg. "12.3456"
+	Amount string `json:"amount"`  // type, eg. "ATOM"
 }
 ```
+
+### Results
 
 This is the information the contract can return:
 
 ```go
-type Response struct {
-    Result ABCIResult
-    // Msg struct is an "interface" discussed in a later section
-    Messages []Msg
-}
-
-type ABCIResult struct {
-    Data string // hex-encoded
-    Log string
-    Code int32 // non-zero on error
-    CodeSpace string // non-empty on error
-    Events []Event
-}
-
-// do we give all this power to wasm, or provide a simpler interface (eg. fixing type)
-type Event struct {
-    Type string
-    Attributes []struct{
-        Key string
-        Value string
-    }
+// Result defines the return value on a successful
+type Result struct {
+	// GasUsed is what is calculated from the VM, assuming it didn't run out of gas
+	// This is set by the calling code, not the contract itself
+	GasUsed int64 `json:"gas_used"`
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"msgs"`
+	// base64-encoded bytes to return as ABCI.Data field
+	Data string
+	// log message to return over abci interface
+	Log string
 }
 ```
 
-Note that I intentionally redefine a number of core types, rather than importing them from sdk/types. This is to guarantee immutibility. These types will be passed to and from the contract, and the contract adapter code (in go) can convert them to the go types used in the rest of the app. But these are decoupled, so they can remain constant while other parts of the sdk evolve.
+`CosmosMsg` is defined in the next section.
+
+Note: I intentionally redefine a number of core types, rather than importing them from sdk/types. This is to guarantee immutibility. These types will be passed to and from the contract, and the contract adapter code (in go) can convert them to the go types used in the rest of the app. But these are decoupled, so they can remain constant while other parts of the sdk evolve.
+
+I also consider adding Events to the return Result, but will delay that until there is a clear spec for how to use them 
+
+## Define External Types
+
+### Dispatched Messages
+
+`CosmosMsg` is an abstraction of allowed message types that is designed to be consistent in spite of any changes to the underlying SDK. The "contract" module will maintain an adapter between these well-defined types and the current sdk implementation.
+
+The following are allowed types for `CosmosMsg` return values. To be expanded later:
+
+```go
+// CosmosMsg is an rust enum and only (exactly) one of the fields should be set
+// Should we do a cleaner approach in Go? (type/data?)
+type CosmosMsg struct {
+	Send SendMsg `json:"send"`
+	Contract ContractMsg `json:"contract"`
+	Opaque OpaqueMsg `json:"opaque"`
+}
+
+// SendMsg contains instructions for a Cosmos-SDK/SendMsg
+// It has a fixed interface here and should be converted into the proper SDK format before dispatching
+type SendMsg struct {
+	FromAddress string `json:"from_address"`
+	ToAddress   string `json:"to_address"`
+	Amount      []Coin `json:"amount"`
+}
+
+// ContractMsg is used to call another defined contract on this chain.
+// The calling contract requires the callee to be defined beforehand,
+// and the address should have been defined in initialization.
+// And we assume the developer tested the ABIs and coded them together.
+//
+// Since a contract is immutable once it is deployed, we don't need to transform this.
+// If it was properly coded and worked once, it will continue to work throughout upgrades.
+type ContractMsg struct {
+    // ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
+    // the contract ID and instance ID. The sdk module should maintain a reverse lookup table. 
+    ContractAddr string `json:"contract_addr"`
+    // Msg is assumed to be a json-encoded message, which will be passed directly
+    // as `userMsg` when calling `Handle` on the above-defined contract
+    Msg string `json:"msg"`
+}
+
+
+// OpaqueMsg is some raw sdk-transaction that is passed in from a user and then relayed
+// by the contract under some given conditions. These should never be created or
+// inspected by the contract, but allows to build eg. multisig, governance in a contract
+// and allow the end users to make use of all sdk functionality.
+//
+// An example is submitting a proposal for a vote. This is assumed to be correct (from the user)
+// and if the contract determines the vote passed, the contract can then re-send it. If the chain
+// updates, the client can submit a new proposal in the new format. Since this never comes from the
+// contract itself, we don't need to worry about upgrading.
+type OpaqueMsg struct {
+	// Data is a custom msg that the sdk knows.
+	// Generally the base64-encoded of go-amino binary encoding of an sdk.Msg implementation.
+	// This should never be created by the contract, but allows for blindly passing through
+	// temporary data.
+	Data string `json:"data"`
+}
+```
+
+### Well-defined Queries
+
+**TODO** query types (request/response)
 
 ## Exposed imports
 
-**TODO**
+### Local Storage
 
-Precise imports it can expect to be able to call (eg. query modules, modify local state)
+We expose a (sandboxed) `KVStore` to the contract that it can read and write to as it desires (with gas limits and perhaps absolute storage limits). This is then translated into a C struct and passed into rust to be adapted to the wasm contract. But in essence we expose the following:
 
+```go
+type KVStore interface {
+	Get(key []byte) []byte
+	Set(key, value []byte)
+}
+```
 
-## Define Query and Message types
+If desired, we can add an Iterate method, but that adds yet another level of complexity, a method that returns yet another object with custom callbacks. And then ensuring proper cleanup. 
 
-**TODO**
+### Querying Other Modules
 
-After upgrade discussion above, some fixed subset of types here
+**TODO**  define how to query other modules
