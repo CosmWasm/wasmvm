@@ -14,6 +14,15 @@ impl Buffer {
     }
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Buffer{
+            ptr: 0 as *mut u8,
+            size: 0,
+        }
+    }
+}
+
 // this frees memory we released earlier
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
