@@ -2,6 +2,8 @@ package api
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type Lookup struct {
@@ -30,37 +32,75 @@ func TestDemoDBAccess(t *testing.T) {
 	l.Set(bar, []byte("short"))
 
 	// long
-	if err := UpdateDB(l, foo); err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if string(l.Get(foo)) != "long text that fills the buffer." {
-		t.Errorf("Unexpected result (long): %s", string(l.Get(foo)))
-	}
+	err := UpdateDB(l, foo)
+	require.NoError(t, err)
+	require.Equal(t, "long text that fills the buffer.", string(l.Get(foo)))
 
 	// short
-	if err := UpdateDB(l, bar); err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if err := UpdateDB(l, bar); err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if err := UpdateDB(l, bar); err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if string(l.Get(bar)) != "short..." {
-		t.Errorf("Unexpected result (short): %s", string(l.Get(bar)))
-	}
+	err = UpdateDB(l, bar)
+	require.NoError(t, err)
+	err = UpdateDB(l, bar)
+	require.NoError(t, err)
+	err = UpdateDB(l, bar)
+	require.NoError(t, err)
+	require.Equal(t, "short...", string(l.Get(bar)))
 
 	// missing
-	if err := UpdateDB(l, missing); err != nil {
-		t.Fatalf("unexpected error")
-	}
-	if string(l.Get(missing)) != "." {
-		t.Errorf("Unexpected result (missing): %s", string(l.Get(missing)))
-	}
+	err = UpdateDB(l, missing)
+	require.NoError(t, err)
+	require.Equal(t, ".", string(l.Get(missing)))
 
-	err := UpdateDB(l, nil)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
+	err = UpdateDB(l, nil)
+	require.Error(t, err)
+}
+
+func TestCreateAndGetFails(t *testing.T) {
+	dataDir := "/foo"
+	wasm := []byte("code goes here")
+
+	_, err := Create(dataDir, wasm)
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
+
+	id := []byte("should be return from above")
+
+	_, err = GetCode(dataDir, id)
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
+}
+
+func TestInstantiateFails(t *testing.T) {
+	dataDir := "/foo"
+	id := []byte("foo")
+	params := []byte("{}")
+	msg := []byte("{}")
+	db := NewLookup()
+
+	_, err := Instantiate(dataDir, id, params, msg, db, 100000000)
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
+}
+
+func TestHandleFails(t *testing.T) {
+	dataDir := "/foo"
+	id := []byte("foo")
+	params := []byte("{}")
+	msg := []byte("{}")
+	db := NewLookup()
+
+	_, err := Handle(dataDir, id, params, msg, db, 100000000)
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
+}
+
+func TestQueryFails(t *testing.T) {
+	dataDir := "/foo"
+	id := []byte("foo")
+	path := []byte("/some/stuff")
+	data := []byte("{}")
+	db := NewLookup()
+
+	_, err := Query(dataDir, id, path, data, db, 100000000)
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
 }
