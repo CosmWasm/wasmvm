@@ -35,6 +35,8 @@ int32_t divide(int32_t num, int32_t div);
 
 void free_rust(Buffer buf);
 
+Buffer get_code(Buffer data_dir, Buffer id);
+
 Buffer get_last_error(void);
 
 Buffer greet(Buffer name);
@@ -54,5 +56,12 @@ Buffer instantiate(Buffer data_dir,
                    int64_t gas_limit);
 
 Buffer may_panic(int32_t guess);
+
+Buffer query(Buffer data_dir,
+             Buffer contract_id,
+             Buffer path,
+             Buffer data,
+             DB db,
+             int64_t gas_limit);
 
 void update_db(DB db, Buffer key);

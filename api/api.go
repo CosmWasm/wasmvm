@@ -22,9 +22,16 @@ func Create(dataDir string, wasm []byte) ([]byte, error) {
 	return receiveSlice(id), getError(err)
 }
 
-func Instantiate(dataDir string, contractId []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func GetCode(dataDir string, contractID []byte) ([]byte, error) {
 	dir := sendSlice([]byte(dataDir))
-	id := sendSlice(contractId)
+	id := sendSlice(contractID)
+	code, err := C.get_code(dir, id)
+	return receiveSlice(code), getError(err)
+}
+
+func Instantiate(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	dir := sendSlice([]byte(dataDir))
+	id := sendSlice(contractID)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
@@ -32,13 +39,23 @@ func Instantiate(dataDir string, contractId []byte, params []byte, msg []byte, s
 	return receiveSlice(res), getError(err)
 }
 
-func Handle(dataDir string, contractId []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func Handle(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
 	dir := sendSlice([]byte(dataDir))
-	id := sendSlice(contractId)
+	id := sendSlice(contractID)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
 	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit))
+	return receiveSlice(res), getError(err)
+}
+
+func Query(dataDir string, contractID []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	dir := sendSlice([]byte(dataDir))
+	id := sendSlice(contractID)
+	p := sendSlice(path)
+	d := sendSlice(data)
+	db := buildDB(store)
+	res, err := C.query(dir, id, p, d, db, i64(gasLimit))
 	return receiveSlice(res), getError(err)
 }
 

@@ -31,6 +31,13 @@ pub extern "C" fn create(data_dir: Buffer, wasm: Buffer) -> Buffer {
 }
 
 #[no_mangle]
+pub extern "C" fn get_code(data_dir: Buffer, id: Buffer) -> Buffer {
+    // TODO
+    update_last_error("not implemented".to_string());
+    Buffer::default()
+}
+
+#[no_mangle]
 pub extern "C" fn instantiate(data_dir: Buffer, contract_id: Buffer, params: Buffer, msg: Buffer, db: DB, gas_limit: i64) -> Buffer {
     // TODO
     update_last_error("not implemented".to_string());
@@ -39,6 +46,13 @@ pub extern "C" fn instantiate(data_dir: Buffer, contract_id: Buffer, params: Buf
 
 #[no_mangle]
 pub extern "C" fn handle(data_dir: Buffer, contract_id: Buffer, params: Buffer, msg: Buffer, db: DB, gas_limit: i64) -> Buffer {
+    // TODO
+    update_last_error("not implemented".to_string());
+    Buffer::default()
+}
+
+#[no_mangle]
+pub extern "C" fn query(data_dir: Buffer, contract_id: Buffer, path: Buffer, data: Buffer, db: DB, gas_limit: i64) -> Buffer {
     // TODO
     update_last_error("not implemented".to_string());
     Buffer::default()

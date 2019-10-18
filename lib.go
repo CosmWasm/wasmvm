@@ -39,6 +39,17 @@ func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
 	return api.Create(w.dataDir, contract)
 }
 
+// GetCode will load the original wasm code for the given contract id.
+// This will only succeed if that contract id was previously returned from
+// a call to Create.
+//
+// This can be used so that the (short) contract id (hash) is stored in the iavl tree
+// and the larger binary blobs (wasm and pre-compiles) are all managed by the
+// rust library
+func (w *Wasmer) GetCode(contract ContractID) (WasmCode, error) {
+	return api.GetCode(w.dataDir, contract)
+}
+
 // Instantiate will create a new instance of a contract using the given contractID.
 // storage should be set with a PrefixedKVStore that this contract can safely access.
 //
@@ -46,6 +57,7 @@ func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
 // for performance.
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. contract unauthorized.
+// TODO: add callback for querying into other modules
 func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
@@ -67,6 +79,8 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 // local storage, and their address in the outside world, we need no InstanceID.
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the params with relevent info on this instance (address, balance, etc)
+//
+// TODO: add callback for querying into other modules
 func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
