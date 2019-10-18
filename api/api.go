@@ -18,15 +18,23 @@ type cint = C.int
 func Create(dataDir string, wasm []byte) ([]byte, error) {
 	dir := sendSlice([]byte(dataDir))
 	code := sendSlice(wasm)
-	id, err := C.create(dir, code)
-	return receiveSlice(id), getError(err)
+	errmsg := C.Buffer{}
+	id, err := C.create(dir, code, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(id), nil
 }
 
 func GetCode(dataDir string, contractID []byte) ([]byte, error) {
 	dir := sendSlice([]byte(dataDir))
 	id := sendSlice(contractID)
-	code, err := C.get_code(dir, id)
-	return receiveSlice(code), getError(err)
+	errmsg := C.Buffer{}
+	code, err := C.get_code(dir, id, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(code), nil
 }
 
 func Instantiate(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
@@ -35,8 +43,12 @@ func Instantiate(dataDir string, contractID []byte, params []byte, msg []byte, s
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
-	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit))
-	return receiveSlice(res), getError(err)
+	errmsg := C.Buffer{}
+	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
 }
 
 func Handle(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
@@ -45,8 +57,12 @@ func Handle(dataDir string, contractID []byte, params []byte, msg []byte, store 
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
-	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit))
-	return receiveSlice(res), getError(err)
+	errmsg := C.Buffer{}
+	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
 }
 
 func Query(dataDir string, contractID []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
@@ -55,30 +71,31 @@ func Query(dataDir string, contractID []byte, path []byte, data []byte, store KV
 	p := sendSlice(path)
 	d := sendSlice(data)
 	db := buildDB(store)
-	res, err := C.query(dir, id, p, d, db, i64(gasLimit))
-	return receiveSlice(res), getError(err)
+	errmsg := C.Buffer{}
+	res, err := C.query(dir, id, p, d, db, i64(gasLimit), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return receiveSlice(res), nil
 }
 
 func UpdateDB(kv KVStore, key []byte) error {
 	db := buildDB(kv)
 	buf := sendSlice(key)
-	_, err := C.update_db(db, buf)
-	return getError(err)
+	errmsg := C.Buffer{}
+	_, err := C.update_db(db, buf, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
 }
 
 /**** To error module ***/
 
-// returns the last error message (or nil if none returned)
-// err is assumed to be the result of errno, and this only queries if err != nil
-// so you can safely use it to wrap all returns (eg. it will be a noop if err == nil)
-func getError(err error) error {
-	if err == nil {
-		return nil
-	}
-	// TODO: add custom error type
-	msg := receiveSlice(C.get_last_error())
+func errorWithMessage(err error, b C.Buffer) error {
+	msg := receiveSlice(b)
 	if msg == nil {
-		return nil
+		return err
 	}
 	return fmt.Errorf("%s", string(msg))
 }

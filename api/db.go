@@ -20,11 +20,15 @@ type KVStore interface {
 	Set(key, value []byte)
 }
 
+var DBvtable = C.DB_vtable{
+	c_get: (C.get_fn)(C.cGet_cgo),
+	c_set: (C.set_fn)(C.cSet_cgo),
+}
+
 func buildDB(kv KVStore) C.DB {
 	return C.DB{
 		state: (*C.db_t)(unsafe.Pointer(&kv)),
-		c_get: (C.get_fn)(C.cGet_cgo),
-		c_set: (C.set_fn)(C.cSet_cgo),
+		vtable: DBvtable,
 	}
 }
 
