@@ -15,27 +15,31 @@ type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
 type cint = C.int
 
-func Add(a int32, b int32) int32 {
-	return (int32)(C.add(i32(a), i32(b)))
+func Create(dataDir string, wasm []byte) ([]byte, error) {
+	dir := sendSlice([]byte(dataDir))
+	code := sendSlice(wasm)
+	id, err := C.create(dir, code)
+	return receiveSlice(id), getError(err)
 }
 
-func Greet(name []byte) []byte {
-	buf := sendSlice(name)
-	raw := C.greet(buf)
-	return receiveSlice(raw)
+func Instantiate(dataDir string, contractId []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	dir := sendSlice([]byte(dataDir))
+	id := sendSlice(contractId)
+	p := sendSlice(params)
+	m := sendSlice(msg)
+	db := buildDB(store)
+	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit))
+	return receiveSlice(res), getError(err)
 }
 
-func Divide(a, b int32) (int32, error) {
-	res, err := C.divide(i32(a), i32(b))
-	return int32(res), getError(err)
-}
-
-func RandomMessage(guess int32) (string, error) {
-	res, err := C.may_panic(i32(guess))
-	if err != nil {
-		return "", getError(err)
-	}
-	return string(receiveSlice(res)), nil
+func Handle(dataDir string, contractId []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	dir := sendSlice([]byte(dataDir))
+	id := sendSlice(contractId)
+	p := sendSlice(params)
+	m := sendSlice(msg)
+	db := buildDB(store)
+	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit))
+	return receiveSlice(res), getError(err)
 }
 
 func UpdateDB(kv KVStore, key []byte) error {

@@ -23,6 +23,27 @@ pub extern "C" fn greet(name: Buffer) -> Buffer {
     release_vec(v)
 }
 
+#[no_mangle]
+pub extern "C" fn create(data_dir: Buffer, wasm: Buffer) -> Buffer {
+    // TODO
+    update_last_error("not implemented".to_string());
+    Buffer::default()
+}
+
+#[no_mangle]
+pub extern "C" fn instantiate(data_dir: Buffer, contract_id: Buffer, params: Buffer, msg: Buffer, db: DB, gas_limit: i64) -> Buffer {
+    // TODO
+    update_last_error("not implemented".to_string());
+    Buffer::default()
+}
+
+#[no_mangle]
+pub extern "C" fn handle(data_dir: Buffer, contract_id: Buffer, params: Buffer, msg: Buffer, db: DB, gas_limit: i64) -> Buffer {
+    // TODO
+    update_last_error("not implemented".to_string());
+    Buffer::default()
+}
+
 /// divide returns the rounded (i32) result, returns a C error if div == 0
 #[no_mangle]
 pub extern "C" fn divide(num: i32, div: i32) -> i32 {
