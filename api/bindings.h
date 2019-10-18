@@ -11,33 +11,34 @@
 
 typedef struct Buffer {
   uint8_t *ptr;
-  uintptr_t size;
+  uintptr_t len;
+  uintptr_t cap;
 } Buffer;
 
 typedef struct db_t {
 
 } db_t;
 
-typedef struct DB {
-  db_t *state;
+typedef struct DB_vtable {
   int64_t (*c_get)(db_t*, Buffer, Buffer);
   void (*c_set)(db_t*, Buffer, Buffer);
+} DB_vtable;
+
+typedef struct DB {
+  db_t *state;
+  DB_vtable vtable;
 } DB;
 
-int32_t add(int32_t a, int32_t b);
-
-Buffer create(Buffer data_dir, Buffer wasm);
+Buffer create(Buffer data_dir, Buffer wasm, Buffer *err);
 
 /**
  * divide returns the rounded (i32) result, returns a C error if div == 0
  */
-int32_t divide(int32_t num, int32_t div);
+int32_t divide(int32_t num, int32_t div, Buffer *err);
 
 void free_rust(Buffer buf);
 
-Buffer get_code(Buffer data_dir, Buffer id);
-
-Buffer get_last_error(void);
+Buffer get_code(Buffer data_dir, Buffer id, Buffer *err);
 
 Buffer greet(Buffer name);
 
@@ -46,22 +47,25 @@ Buffer handle(Buffer data_dir,
               Buffer params,
               Buffer msg,
               DB db,
-              int64_t gas_limit);
+              int64_t gas_limit,
+              Buffer *err);
 
 Buffer instantiate(Buffer data_dir,
                    Buffer contract_id,
                    Buffer params,
                    Buffer msg,
                    DB db,
-                   int64_t gas_limit);
+                   int64_t gas_limit,
+                   Buffer *err);
 
-Buffer may_panic(int32_t guess);
+Buffer may_panic(int32_t guess, Buffer *err);
 
 Buffer query(Buffer data_dir,
              Buffer contract_id,
              Buffer path,
              Buffer data,
              DB db,
-             int64_t gas_limit);
+             int64_t gas_limit,
+             Buffer *err);
 
-void update_db(DB db, Buffer key);
+void update_db(DB db, Buffer key, Buffer *err);
