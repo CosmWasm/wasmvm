@@ -14,6 +14,16 @@ typedef struct Buffer {
   uintptr_t size;
 } Buffer;
 
+typedef struct db_t {
+
+} db_t;
+
+typedef struct DB {
+  db_t *state;
+  int64_t (*c_get)(db_t*, Buffer, Buffer);
+  void (*c_set)(db_t*, Buffer, Buffer);
+} DB;
+
 int32_t add(int32_t a, int32_t b);
 
 /**
@@ -28,3 +38,5 @@ Buffer get_last_error(void);
 Buffer greet(Buffer name);
 
 Buffer may_panic(int32_t guess);
+
+void update_db(DB db, Buffer key);

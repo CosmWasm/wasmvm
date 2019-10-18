@@ -12,3 +12,8 @@ involves compiling rust -> C library, and linking that library to the Go code.
 For ergonomics of the user, we will include pre-compiled libraries to easily
 link with, and Go developers should just be able to import this directly.
 
+## Design
+
+Please read the [Documentation](./spec/Index.md) to understand both the general
+[Architecture](./spec/Architecture.md), as well as the more detailed 
+[Specification](./spec/Specification.md) of the parameters and entry points.
