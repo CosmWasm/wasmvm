@@ -54,7 +54,11 @@ Both Instantiating a contract, as well as invoking a contract (`Handle` method) 
 * `Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
 * `Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
 
-**TODO** Define Query method we want to expose on the contract
+We also expose a Query method to respond to abci.QueryRequests:
+
+* `Query(contract ContractID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error)`
+
+Here we pass in the remainder of the path (after directing to the contract) as well as a user-defined (json?) data from the query. We pass in the instances KVStore as above, and a gasLimit, as the computation takes some time. There is no gas for queries, but we should define some reasonable limit here to avoid any DoS vectors, such as a uploading a contract with an infinite loop in the query handler. QueryResult is JSON-encoded data in whatever format the contract decides.
 
 Note that no `InstanceID` is ever used. The reason being is that the code and the data define the entire instance state. The calling logic is responsible for prefixing the `KVStore` with the instance-specific prefix and passing the proper `ContractInfo` in the parameters. This `InstanceID` is managed on the SDK side, but not exposed over the general interface to the Wasm engine.
 
@@ -128,9 +132,8 @@ Note: I intentionally redefine a number of core types, rather than importing the
 
 I also consider adding Events to the return Result, but will delay that until there is a clear spec for how to use them 
 
-## Define External Types
 
-### Dispatched Messages
+## Dispatched Messages
 
 `CosmosMsg` is an abstraction of allowed message types that is designed to be consistent in spite of any changes to the underlying SDK. The "contract" module will maintain an adapter between these well-defined types and the current sdk implementation.
 
@@ -188,10 +191,6 @@ type OpaqueMsg struct {
 }
 ```
 
-### Well-defined Queries
-
-**TODO** query types (request/response)
-
 ## Exposed imports
 
 ### Local Storage
@@ -209,4 +208,51 @@ If desired, we can add an Iterate method, but that adds yet another level of com
 
 ### Querying Other Modules
 
-**TODO**  define how to query other modules
+We also pass in a callback to the smart contracts to make some well-defined queries 
+
+```go
+Query(query QueryRequest) (QueryModels, error)
+```
+
+Both of these are enums (interfaces) and there is a clear 1-to-1 relation between QueryRequest type to QueryModel type. We can not make any arbitrary queries, but only those well-specified below.
+
+## Well-defined Queries
+
+Here are request-model pairs that we can use in queries:
+
+```go
+// QueryRequest is an enum. Exactly one field should be non-empty
+type QueryRequest struct {
+	Account AccountRequest `json:"account"`
+}
+
+// QueryModels is an enum. Exactly one field should be non-empty: the same one corresponding to the Request
+type QueryModels struct {
+	Account []AccountModel `json:"account"`
+}
+```
+
+**Account**
+
+```go
+// AccountRequest asks to read the state of a given account
+type AccountRequest struct {
+	// bech32 encoded sdk.AccAddres
+	Address string `json:"address"`
+}
+
+// AccountModel is a basic description of an account
+// (more fields may be added later, but none should change)
+type AccountModel struct {
+	Address string `json:"address"`
+	Balance []Coin `json:"balance"`
+	// pubkey may be empty
+	PubKey struct {
+		// hex-encoded bytes of the raw public key
+		Data string `json:"data"`
+		// the algorithm of the pubkey, currently "secp256k1", possibly others in the future
+		Algo string `json:"algo"`
+	} `json:"pub_key"`
+}
+```
+

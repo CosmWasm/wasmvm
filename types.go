@@ -1,5 +1,7 @@
 package cosmwasm
 
+//---------- Params ---------
+
 // Params defines the state of the blockchain environment this contract is
 // running in. This must contain only trusted data - nothing from the Tx itself
 // that has not been verfied (like Signer).
@@ -38,6 +40,8 @@ type Coin struct {
 	Denom  string `json:"denom"`  // string encoing of decimal value, eg. "12.3456"
 	Amount string `json:"amount"` // type, eg. "ATOM"
 }
+
+//------- Results / Msgs -------------
 
 // Result defines the return value on a successful
 type Result struct {
@@ -99,4 +103,36 @@ type OpaqueMsg struct {
 	// This should never be created by the contract, but allows for blindly passing through
 	// temporary data.
 	Data string `json:"data"`
+}
+
+//-------- Queries --------
+
+// QueryRequest is an enum. Exactly one field should be non-empty
+type QueryRequest struct {
+	Account AccountRequest `json:"account"`
+}
+
+// QueryModels is an enum. Exactly one field should be non-empty: the same one corresponding to the Request
+type QueryModels struct {
+	Account []AccountModel `json:"account"`
+}
+
+// AccountRequest asks to read the state of a given account
+type AccountRequest struct {
+	// bech32 encoded sdk.AccAddres
+	Address string `json:"address"`
+}
+
+// AccountModel is a basic description of an account
+// (more fields may be added later, but none should change)
+type AccountModel struct {
+	Address string `json:"address"`
+	Balance []Coin `json:"balance"`
+	// pubkey may be empty
+	PubKey struct {
+		// hex-encoded bytes of the raw public key
+		Data string `json:"data"`
+		// the algorithm of the pubkey, currently "secp256k1", possibly others in the future
+		Algo string `json:"algo"`
+	} `json:"pub_key"`
 }
