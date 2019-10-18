@@ -2,7 +2,9 @@
 
 ## The Handler Interface
 
-For the work below, we are just looking at the "Handler" interface. In go, this is `type Handler func(ctx Context, msg Msg) Result`. In addition to the message to process, it gets a Context that allows it to view and mutate state:
+For the work below, we are just looking at the "Handler" interface. In go, this is 
+`type Handler func(ctx Context, msg Msg) Result`. In addition to the message to process, 
+it gets a Context that allows it to view and mutate state:
 
 ```go
 func (c Context) Context() context.Context    { return c.ctx }
@@ -22,40 +24,50 @@ func (c Context) EventManager() *EventManager { return c.eventManager }
 
 It is clearly not desirable to expose all this to arbitrary, unaudited code, but we can grab a subset of this to expose to the wasm contract.
 
-Readonly:
+Readonly, verified by state machine:
 
 * Block Context
     * BlockHeight
     * BlockTime
     * ChainID
-* Message Data
+* Transaction Data
     * Signer (who authorized this message)
     * Tokens Sent with message
-    * User-defined data
 * Contract State
     * Contract Address
     * Contract Account (just balance or more info?)
 
-Read/Write:
+Read/Write, to state machine:
 
 * A sandboxed sub-store
-* Events
+* Events(?)
 
-### Security Concerns
+Untrusted data:
+
+* Arbitary user-defined message data (generally json request)
+
+## Security Model
 
 We clearly cannot just pass in a Controller to another module into an unknown wasm contract. But we do need some way to allow a wasm contract to integrate with other modules to make it interesting. Above we allow it access to its internal state and ability to read its own balance.
 
-In terms of security, we can view the wasm contract as a "client" on-chain with its  own account and address. It can theoretically read any on-chain data, and send any message  "signed" by its own address, without opening up security holes. Provided these messages are processed just like external messages, and that gas limits are enforced in CPU time and  those queries.
+In terms of security, we can view the wasm contract as a "client" on-chain with its  own account and address. It can theoretically read any on-chain data, and send any message "signed" by its own address, without opening up security holes. Provided these messages are processed just like external messages, and that gas limits are enforced in CPU time and those queries.
 
-### Calling Other Modules
+Note that the addition of "subkey functionality" in the upstream sdk will allow us to selectively allow smart contracts
+to act on our behalf - but only up to the limits we impose.
 
-Ethereum provides a nice dispatch model, where a contract can make arbitrary calls to the public API of any other contract. However, we have seen many issues and bugs, especially related to re-entrancy attacks. To simplify this, we propose that the contract cannot directly call any other contract, but instead returns a list of messages, which will be dispatched and validated *after contract execution* but in *the same transaction*. This means that if they fail, the contract will also roll back, but we don't allow any cycles or re-entrancy possibilities.
+## Calling Other Modules
 
-We could conceive of this as something like: `ProcessMessage(info ReadOnlyInfo, db SubStore) []Msg`. Note that we also want to allow it to return a `Result` and `Events`, so this may end up with a much larger pseudo-function signature, like: `ProcessMessage(info ReadOnlyInfo, db SubStore) (*Result, []Event, []Msg, error)`
+Ethereum provides a nice dispatch model, where a contract can make arbitrary calls to the public API of any other contract. However, we have seen many issues and bugs, especially related to re-entrancy attacks. To simplify this, we propose that the contract cannot directly call any other contract, but instead *returns a list of messages*, which will be dispatched and validated *after contract execution* but in *the same transaction*. This means that if they fail, the contract will also roll back, but we don't allow any cycles or re-entrancy possibilities.
 
-This allows the contract to easily move the tokens it controls (via `SendMsg`) or even vote, stake tokens,  or take any other action its account has authority to do. The potential actions increase with the delegation work being done as part of Key Managament.
+We could conceive of this as something like: `ProcessMessage(info ReadOnlyInfo, db SubStore) []Msg`. 
+Note that we also want to allow it to return a `Result` and `Events`, so this may end up with a much larger 
+pseudo-function signature, like: `ProcessMessage(info ReadOnlyInfo, db SubStore) (*Result, []Event, []Msg, error)`
 
-### Querying Other Modules
+This allows the contract to easily move the tokens it controls (via `SendMsg`) or even vote, stake tokens,  or take any other action its account has authority to do. The potential actions increase with the delegation work being done as part of Key Management.
+
+Note that the contract cannot get the result of the other state-changing calls, but in pratice, this doesn't seem to be a blocker. What is important is to allow the contract to somehow query the state of other modules in the system. Since those are only reads, and performed before modifying any state, they don't allow for re-entrancy attacks.
+
+## Querying Other Modules
 
 While it is great to change state in other modules, the design until this point leave the contract blind. Sure, it can emit a message in order to stake some tokens, but it cannot check its current stake, or the number of tokens available to withdraw. To do so, we need to expose some interface to query other modules.
 
@@ -85,3 +97,12 @@ This means we would have to manually enable each Message or Query we would want 
 Even with a buffer class, this will have a noticeable strong impact on a number of development practices in the core cosmos-sdk team, especially related to version and migration, and we need to have a clear and open discussion on possible approaches here.
 
 Relevant link (recommended by Aaron): https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/Spec_ulation.md 
+
+## Summary
+
+* Contracts get *trusted context* from the state machine, as well as raw, *user-defined message* to specify the requested action
+* Contracts can trigger state changes in other modules, by returning a list of "messages" that will be dispatched after contract execution, but **in the same atomic transaction**
+* Contracts will have a (limited) way to query state in other modules as syncronous calls inside their logic 
+* Defining stable APIs decoupled from the actual SDK code is essential for allowing upgradeability (that old contracts still work after state machine upgrades)
+
+**TODO** add info on genesis (import/export) and exposing a query API from the smart contract (to client)
