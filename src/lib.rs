@@ -5,12 +5,12 @@ mod memory;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use failure::{bail, format_err, Error};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
-use failure::{bail, Error, format_err};
 
-use cosmwasm_vm::{CosmCache};
 use crate::error::{handle_c_error, set_error};
+use cosmwasm_vm::CosmCache;
 
 #[no_mangle]
 pub extern "C" fn greet(name: Buffer) -> Buffer {
@@ -33,24 +33,31 @@ pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut
 }
 
 fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
-    let dir = data_dir.read().ok_or_else(||format_err!("empty data_dir"))?;
+    let dir = data_dir
+        .read()
+        .ok_or_else(|| format_err!("empty data_dir"))?;
     let cache = unsafe { CosmCache::new(from_utf8(dir)?) };
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
 
 #[no_mangle]
-pub extern "C" fn release_cache(cache: *mut CosmCache) {
+pub unsafe extern "C" fn release_cache(cache: *mut CosmCache) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(cache) };
+        let _ = Box::from_raw(cache);
     }
 }
 
 #[no_mangle]
-pub extern "C" fn create(cache: Option<&mut CosmCache>, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn create(
+    cache: Option<&mut CosmCache>,
+    wasm: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
     let r = match cache {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm))).unwrap_or_else(|_| bail!("Caught panic")),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
         None => Err(format_err!("cache argument is null")),
     };
     let v = handle_c_error(r, err);
@@ -58,14 +65,21 @@ pub extern "C" fn create(cache: Option<&mut CosmCache>, wasm: Buffer, err: Optio
 }
 
 fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
-    let wasm = wasm.read().ok_or_else(||format_err!("empty wasm argument"))?;
+    let wasm = wasm
+        .read()
+        .ok_or_else(|| format_err!("empty wasm argument"))?;
     cache.save_wasm(wasm)
 }
 
 #[no_mangle]
-pub extern "C" fn get_code(cache: Option<&mut CosmCache>, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn get_code(
+    cache: Option<&mut CosmCache>,
+    id: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
     let r = match cache {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id))).unwrap_or_else(|_| bail!("Caught panic")),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
         None => Err(format_err!("cache argument is null")),
     };
     let v = handle_c_error(r, err);
@@ -73,10 +87,9 @@ pub extern "C" fn get_code(cache: Option<&mut CosmCache>, id: Buffer, err: Optio
 }
 
 fn do_get_code(cache: &mut CosmCache, id: Buffer) -> Result<Vec<u8>, Error> {
-        let id = id.read().ok_or_else(||format_err!("empty id argument"))?;
-        cache.load_wasm(id)
+    let id = id.read().ok_or_else(|| format_err!("empty id argument"))?;
+    cache.load_wasm(id)
 }
-
 
 #[no_mangle]
 pub extern "C" fn instantiate(
@@ -161,7 +174,7 @@ pub extern "C" fn update_db(db: DB, key: Buffer, err: Option<&mut Buffer>) {
 fn do_update_db(db: &DB, key: &Buffer) {
     // Note: panics on empty key for testing
     let vkey = key.read().unwrap().to_vec();
-    let mut val = db.get(vkey.clone()).unwrap_or(Vec::new());
+    let mut val = db.get(vkey.clone()).unwrap_or_default();
     val.extend_from_slice(b".");
     db.set(vkey, val);
 }

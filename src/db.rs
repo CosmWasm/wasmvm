@@ -1,13 +1,13 @@
-use crate::memory::{Buffer};
+use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
-pub struct db_t { }
+pub struct db_t {}
 
 #[repr(C)]
 pub struct DB_vtable {
-    pub c_get: extern fn(*mut db_t, Buffer, Buffer) -> i64,
-    pub c_set: extern fn(*mut db_t, Buffer, Buffer),
+    pub c_get: extern "C" fn(*mut db_t, Buffer, Buffer) -> i64,
+    pub c_set: extern "C" fn(*mut db_t, Buffer, Buffer),
 }
 
 #[repr(C)]
@@ -29,7 +29,7 @@ impl DB {
             panic!("val was not big enough for data");
         }
         if res == 0 {
-            return None
+            return None;
         }
         buf2.len = res as usize;
         unsafe { Some(buf2.consume()) }

@@ -12,9 +12,9 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
 }
 
 pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
-    where
-        T: Default,
-        E: Display,
+where
+    T: Default,
+    E: Display,
 {
     match r {
         Ok(t) => t,
