@@ -18,12 +18,14 @@ circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+cosmwasm-vm = "0.2"
 errno = "0.2"
+failure = "0.1.6"
 
 [build-dependencies]
 cbindgen = { version = "0.9.1" }
 
 [profile.release]
-opt-level = 2
+opt-level = 3
 lto = true
 panic = "unwind"

@@ -3,6 +3,10 @@ use std::fmt::Display;
 
 use crate::memory::Buffer;
 
+pub fn clear_error() {
+    set_errno(Errno(0));
+}
+
 pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
     if let Some(mb) = errout {
         *mb = Buffer::from_vec(msg.into_bytes());
@@ -12,12 +16,12 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
 }
 
 pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
-    where
-        T: Default,
-        E: Display,
+where
+    T: Default,
+    E: Display,
 {
     match r {
-        Ok(t) => t,
+        Ok(t) => { clear_error(); t },
         Err(e) => {
             set_error(e.to_string(), errout);
             T::default()

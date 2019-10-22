@@ -15,64 +15,77 @@ type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
 type cint = C.int
 
-func Create(dataDir string, wasm []byte) ([]byte, error) {
+type Cache struct {
+	ptr *C.cache_t
+}
+
+func InitCache(dataDir string) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
+	errmsg := C.Buffer{}
+	ptr, err := C.init_cache(dir, &errmsg)
+	if err != nil {
+		return Cache{}, errorWithMessage(err, errmsg)
+	}
+	return Cache{ptr: ptr}, nil
+}
+
+func ReleaseCache(cache Cache) {
+	C.release_cache(cache.ptr)
+}
+
+func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
 	errmsg := C.Buffer{}
-	id, err := C.create(dir, code, &errmsg)
+	id, err := C.create(cache.ptr, code, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(id), nil
 }
 
-func GetCode(dataDir string, contractID []byte) ([]byte, error) {
-	dir := sendSlice([]byte(dataDir))
+func GetCode(cache Cache, contractID []byte) ([]byte, error) {
 	id := sendSlice(contractID)
 	errmsg := C.Buffer{}
-	code, err := C.get_code(dir, id, &errmsg)
+	code, err := C.get_code(cache.ptr, id, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(code), nil
 }
 
-func Instantiate(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	dir := sendSlice([]byte(dataDir))
+func Instantiate(cache Cache, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
 	id := sendSlice(contractID)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(res), nil
 }
 
-func Handle(dataDir string, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	dir := sendSlice([]byte(dataDir))
+func Handle(cache Cache, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
 	id := sendSlice(contractID)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(dir, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(res), nil
 }
 
-func Query(dataDir string, contractID []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	dir := sendSlice([]byte(dataDir))
+func Query(cache Cache, contractID []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
 	id := sendSlice(contractID)
 	p := sendSlice(path)
 	d := sendSlice(data)
 	db := buildDB(store)
 	errmsg := C.Buffer{}
-	res, err := C.query(dir, id, p, d, db, i64(gasLimit), &errmsg)
+	res, err := C.query(cache.ptr, id, p, d, db, i64(gasLimit), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}

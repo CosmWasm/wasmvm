@@ -5,8 +5,25 @@ mod memory;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
-use std::panic::catch_unwind;
-use crate::error::{handle_c_error, set_error};
+use failure::{bail, format_err, Error};
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::str::from_utf8;
+
+use crate::error::{clear_error, handle_c_error, set_error};
+use cosmwasm_vm::CosmCache;
+
+#[repr(C)]
+pub struct cache_t {}
+
+fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache> {
+    if ptr.is_null() {
+        None
+    } else {
+        let c: &mut CosmCache = unsafe { &mut *(ptr as *mut CosmCache) };
+        Some(c)
+    }
+}
+
 
 #[no_mangle]
 pub extern "C" fn greet(name: Buffer) -> Buffer {
@@ -17,22 +34,84 @@ pub extern "C" fn greet(name: Buffer) -> Buffer {
 }
 
 #[no_mangle]
-pub extern "C" fn create(data_dir: Buffer, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut cache_t {
+    let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|_| bail!("Caught panic"));
+    match r {
+        Ok(t) => {
+            clear_error();
+            t as *mut cache_t
+        },
+        Err(e) => {
+            set_error(e.to_string(), err);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
+    let dir = data_dir
+        .read()
+        .ok_or_else(|| format_err!("empty data_dir"))?;
+    let dir_str = from_utf8(dir)?;
+    let cache = unsafe { CosmCache::new(dir_str) };
+    let out = Box::new(cache);
+    let res = Ok(Box::into_raw(out));
+    res
 }
 
 #[no_mangle]
-pub extern "C" fn get_code(data_dir: Buffer, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
+    if !cache.is_null() {
+        // this will free cache when it goes out of scope
+        let _ = Box::from_raw(cache as *mut CosmCache);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn create(
+    cache: *mut cache_t,
+    wasm: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
+    let wasm = wasm
+        .read()
+        .ok_or_else(|| format_err!("empty wasm argument"))?;
+    cache.save_wasm(wasm)
+}
+
+#[no_mangle]
+pub extern "C" fn get_code(
+    cache: *mut cache_t,
+    id: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_get_code(cache: &mut CosmCache, id: Buffer) -> Result<Vec<u8>, Error> {
+    let id = id.read().ok_or_else(|| format_err!("empty id argument"))?;
+    cache.load_wasm(id)
 }
 
 #[no_mangle]
 pub extern "C" fn instantiate(
-    data_dir: Buffer,
+    cache: *mut cache_t,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -47,7 +126,7 @@ pub extern "C" fn instantiate(
 
 #[no_mangle]
 pub extern "C" fn handle(
-    data_dir: Buffer,
+    cache: *mut cache_t,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -62,7 +141,7 @@ pub extern "C" fn handle(
 
 #[no_mangle]
 pub extern "C" fn query(
-    data_dir: Buffer,
+    cache: *mut cache_t,
     contract_id: Buffer,
     path: Buffer,
     data: Buffer,
@@ -113,7 +192,7 @@ pub extern "C" fn update_db(db: DB, key: Buffer, err: Option<&mut Buffer>) {
 fn do_update_db(db: &DB, key: &Buffer) {
     // Note: panics on empty key for testing
     let vkey = key.read().unwrap().to_vec();
-    let mut val = db.get(vkey.clone()).unwrap_or(Vec::new());
+    let mut val = db.get(vkey.clone()).unwrap_or_default();
     val.extend_from_slice(b".");
     db.set(vkey, val);
 }

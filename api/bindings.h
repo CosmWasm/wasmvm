@@ -15,6 +15,10 @@ typedef struct Buffer {
   uintptr_t cap;
 } Buffer;
 
+typedef struct cache_t {
+
+} cache_t;
+
 typedef struct db_t {
 
 } db_t;
@@ -29,7 +33,7 @@ typedef struct DB {
   DB_vtable vtable;
 } DB;
 
-Buffer create(Buffer data_dir, Buffer wasm, Buffer *err);
+Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 /**
  * divide returns the rounded (i32) result, returns a C error if div == 0
@@ -38,11 +42,11 @@ int32_t divide(int32_t num, int32_t div, Buffer *err);
 
 void free_rust(Buffer buf);
 
-Buffer get_code(Buffer data_dir, Buffer id, Buffer *err);
+Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer greet(Buffer name);
 
-Buffer handle(Buffer data_dir,
+Buffer handle(cache_t *cache,
               Buffer contract_id,
               Buffer params,
               Buffer msg,
@@ -50,7 +54,9 @@ Buffer handle(Buffer data_dir,
               int64_t gas_limit,
               Buffer *err);
 
-Buffer instantiate(Buffer data_dir,
+cache_t *init_cache(Buffer data_dir, Buffer *err);
+
+Buffer instantiate(cache_t *cache,
                    Buffer contract_id,
                    Buffer params,
                    Buffer msg,
@@ -60,12 +66,14 @@ Buffer instantiate(Buffer data_dir,
 
 Buffer may_panic(int32_t guess, Buffer *err);
 
-Buffer query(Buffer data_dir,
+Buffer query(cache_t *cache,
              Buffer contract_id,
              Buffer path,
              Buffer data,
              DB db,
              int64_t gas_limit,
              Buffer *err);
+
+void release_cache(cache_t *cache);
 
 void update_db(DB db, Buffer key, Buffer *err);

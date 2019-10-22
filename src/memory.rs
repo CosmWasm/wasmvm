@@ -19,7 +19,11 @@ pub struct Buffer {
 
 impl Default for Buffer {
     fn default() -> Self {
-        Buffer{ptr: 0 as *mut u8, len: 0, cap: 0}
+        Buffer {
+            ptr: std::ptr::null_mut(),
+            len: 0,
+            cap: 0,
+        }
     }
 }
 
