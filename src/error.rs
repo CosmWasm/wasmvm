@@ -21,7 +21,10 @@ where
     E: Display,
 {
     match r {
-        Ok(t) => { clear_error(); t },
+        Ok(t) => {
+            clear_error();
+            t
+        }
         Err(e) => {
             set_error(e.to_string(), errout);
             T::default()

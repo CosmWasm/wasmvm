@@ -72,7 +72,7 @@ func Handle(cache Cache, contractID []byte, params []byte, msg []byte, store KVS
 	m := sendSlice(msg)
 	db := buildDB(store)
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -90,17 +90,6 @@ func Query(cache Cache, contractID []byte, path []byte, data []byte, store KVSto
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveSlice(res), nil
-}
-
-func UpdateDB(kv KVStore, key []byte) error {
-	db := buildDB(kv)
-	buf := sendSlice(key)
-	errmsg := C.Buffer{}
-	_, err := C.update_db(db, buf, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
-	}
-	return nil
 }
 
 /**** To error module ***/

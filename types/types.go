@@ -1,4 +1,4 @@
-package cosmwasm
+package types
 
 //---------- Params ---------
 
@@ -16,8 +16,9 @@ type Params struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height int64 `json:"height"`
-	// timestamp of current block (in seconds since unix epoch)
-	Time    int64  `json:"time"`
+	// timestamp of current block as RFC3339
+	// TODO: move to seconds since unix epoch - for cosmwasm 0.3
+	Time    string  `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 
@@ -32,7 +33,7 @@ type ContractInfo struct {
 	// sdk.AccAddress of the contract, to be used when sending messages
 	Address string `json:"address"`
 	// current balance of the account controlled by the contract
-	Balance []Coin `json:"send_amount"`
+	Balance []Coin `json:"balance"`
 }
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
@@ -43,17 +44,23 @@ type Coin struct {
 
 //------- Results / Msgs -------------
 
+// CosmosResponse is the raw response from the init / handle calls
+type CosmosResponse struct {
+	Ok Result `json:"ok"`
+	Err string `json:"err"`
+}
+
 // Result defines the return value on a successful
 type Result struct {
 	// GasUsed is what is calculated from the VM, assuming it didn't run out of gas
 	// This is set by the calling code, not the contract itself
 	GasUsed int64 `json:"gas_used"`
 	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"msgs"`
+	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
-	Data string
+	Data string `json:"data"`
 	// log message to return over abci interface
-	Log string
+	Log string `json:"log"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set

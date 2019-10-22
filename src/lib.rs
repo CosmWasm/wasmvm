@@ -10,7 +10,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
-use cosmwasm_vm::CosmCache;
+use cosmwasm_vm::{CosmCache, call_handle_raw, call_init_raw};
 
 #[repr(C)]
 pub struct cache_t {}
@@ -24,15 +24,6 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache> {
     }
 }
 
-
-#[no_mangle]
-pub extern "C" fn greet(name: Buffer) -> Buffer {
-    let rname = name.read().unwrap_or(b"<nil>");
-    let mut v = b"Hello, ".to_vec();
-    v.extend_from_slice(rname);
-    Buffer::from_vec(v)
-}
-
 #[no_mangle]
 pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut cache_t {
     let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|_| bail!("Caught panic"));
@@ -40,7 +31,7 @@ pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut
         Ok(t) => {
             clear_error();
             t as *mut cache_t
-        },
+        }
         Err(e) => {
             set_error(e.to_string(), err);
             std::ptr::null_mut()
@@ -68,11 +59,7 @@ pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
 }
 
 #[no_mangle]
-pub extern "C" fn create(
-    cache: *mut cache_t,
-    wasm: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
+pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
             .unwrap_or_else(|_| bail!("Caught panic")),
@@ -90,11 +77,7 @@ fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
 }
 
 #[no_mangle]
-pub extern "C" fn get_code(
-    cache: *mut cache_t,
-    id: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
+pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
             .unwrap_or_else(|_| bail!("Caught panic")),
@@ -119,9 +102,30 @@ pub extern "C" fn instantiate(
     gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_init(c, contract_id, params, msg, db, gas_limit)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_init(
+    cache: &mut CosmCache,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    // TODO: use gas_limit
+    _gas_limit: i64,
+) -> Result<Vec<u8>, Error> {
+    let contract_id = contract_id.read().ok_or_else(|| format_err!("empty contract_id argument"))?;
+    let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
+    let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
+
+    let mut instance = cache.get_instance(contract_id)?;
+    call_init_raw(&mut instance, params, msg)
 }
 
 #[no_mangle]
@@ -134,65 +138,43 @@ pub extern "C" fn handle(
     gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_handle(c, contract_id, params, msg, db, gas_limit)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_handle(
+    cache: &mut CosmCache,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    // TODO: use gas_limit
+    _gas_limit: i64,
+) -> Result<Vec<u8>, Error> {
+    let contract_id = contract_id.read().ok_or_else(|| format_err!("empty contract_id argument"))?;
+    let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
+    let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
+
+    let mut instance = cache.get_instance(contract_id)?;
+    call_handle_raw(&mut instance, params, msg)
 }
 
 #[no_mangle]
 pub extern "C" fn query(
-    cache: *mut cache_t,
-    contract_id: Buffer,
-    path: Buffer,
-    data: Buffer,
-    db: DB,
-    gas_limit: i64,
+    _cache: *mut cache_t,
+    _contract_id: Buffer,
+    _path: Buffer,
+    _data: Buffer,
+    _db: DB,
+    _gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     // TODO
     set_error("not implemented".to_string(), err);
     Buffer::default()
-}
-
-/// divide returns the rounded (i32) result, returns a C error if div == 0
-#[no_mangle]
-pub extern "C" fn divide(num: i32, div: i32, err: Option<&mut Buffer>) -> i32 {
-    if div == 0 {
-        set_error("Cannot divide by zero".to_string(), err);
-        return 0;
-    }
-    num / div
-}
-
-#[no_mangle]
-pub extern "C" fn may_panic(guess: i32, err: Option<&mut Buffer>) -> Buffer {
-    let r = catch_unwind(|| do_may_panic(guess)).unwrap_or(Err("Caught panic".to_string()));
-    let v = handle_c_error(r, err).into_bytes();
-    Buffer::from_vec(v)
-}
-
-fn do_may_panic(guess: i32) -> Result<String, String> {
-    if guess == 0 {
-        panic!("Must be negative or positive")
-    } else if guess < 17 {
-        Err("Too low".to_owned())
-    } else {
-        Ok("You are a winner!".to_owned())
-    }
-}
-
-// This loads key from DB and then appends a "." and saves it
-#[no_mangle]
-pub extern "C" fn update_db(db: DB, key: Buffer, err: Option<&mut Buffer>) {
-    let r = catch_unwind(|| do_update_db(&db, &key)).or(Err("Caught panic".to_string()));
-    handle_c_error(r, err);
-}
-
-// note we need to panic inside another function, not a closure to ensure catching it
-fn do_update_db(db: &DB, key: &Buffer) {
-    // Note: panics on empty key for testing
-    let vkey = key.read().unwrap().to_vec();
-    let mut val = db.get(vkey.clone()).unwrap_or_default();
-    val.extend_from_slice(b".");
-    db.set(vkey, val);
 }

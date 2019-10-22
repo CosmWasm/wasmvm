@@ -2,8 +2,10 @@ package cosmwasm
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/confio/go-cosmwasm/api"
+	"github.com/confio/go-cosmwasm/types"
 )
 
 // ContractID represents an ID for a contract, must be generated from this library
@@ -30,6 +32,11 @@ func NewWasmer(dataDir string) (*Wasmer, error) {
 		return nil, err
 	}
 	return &Wasmer{cache: cache}, nil
+}
+
+// Cleanup should be called when no longer using this to free resources on the rust-side
+func (w *Wasmer)Cleanup() {
+	api.ReleaseCache(w.cache)
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile
@@ -61,7 +68,7 @@ func (w *Wasmer) GetCode(contract ContractID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. contract unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
+func (w *Wasmer) Instantiate(contract ContractID, params types.Params, userMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
@@ -70,12 +77,16 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 	if err != nil {
 		return nil, err
 	}
-	var res Result
-	err = json.Unmarshal(data, &res)
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, err
 	}
-	return &res, nil
+	if resp.Err != "" {
+		return nil, fmt.Errorf(resp.Err)
+	}
+	return &resp.Ok, nil
 }
 
 // Handle calls a given instance of the contract. Since the only difference between the instances is the data in their
@@ -84,7 +95,7 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
+func (w *Wasmer) Handle(contract ContractID, params types.Params, userMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
@@ -93,12 +104,16 @@ func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, stor
 	if err != nil {
 		return nil, err
 	}
-	var res Result
-	err = json.Unmarshal(data, &res)
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, err
 	}
-	return &res, nil
+	if resp.Err != "" {
+		return nil, fmt.Errorf(resp.Err)
+	}
+	return &resp.Ok, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
