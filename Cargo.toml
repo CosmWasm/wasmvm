@@ -18,7 +18,6 @@ circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-cosmwasm = "0.2"
 cosmwasm-vm = "0.2"
 errno = "0.2"
 failure = "0.1.6"
