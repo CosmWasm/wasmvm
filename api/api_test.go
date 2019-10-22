@@ -25,36 +25,38 @@ func (l *Lookup) Set(key, value []byte) {
 	l.data[string(key)] = string(value)
 }
 
-func TestDemoDBAccess(t *testing.T) {
-	l := NewLookup()
-	foo := []byte("foo")
-	bar := []byte("bar")
-	missing := []byte("missing")
-	l.Set(foo, []byte("long text that fills the buffer"))
-	l.Set(bar, []byte("short"))
+var _ KVStore = (*Lookup)(nil)
 
-	// long
-	err := UpdateDB(l, foo)
-	require.NoError(t, err)
-	require.Equal(t, "long text that fills the buffer.", string(l.Get(foo)))
-
-	// short
-	err = UpdateDB(l, bar)
-	require.NoError(t, err)
-	err = UpdateDB(l, bar)
-	require.NoError(t, err)
-	err = UpdateDB(l, bar)
-	require.NoError(t, err)
-	require.Equal(t, "short...", string(l.Get(bar)))
-
-	// missing
-	err = UpdateDB(l, missing)
-	require.NoError(t, err)
-	require.Equal(t, ".", string(l.Get(missing)))
-
-	err = UpdateDB(l, nil)
-	require.Error(t, err)
-}
+// func TestDemoDBAccess(t *testing.T) {
+// 	l := NewLookup()
+// 	foo := []byte("foo")
+// 	bar := []byte("bar")
+// 	missing := []byte("missing")
+// 	l.Set(foo, []byte("long text that fills the buffer"))
+// 	l.Set(bar, []byte("short"))
+//
+// 	// long
+// 	err := UpdateDB(l, foo)
+// 	require.NoError(t, err)
+// 	require.Equal(t, "long text that fills the buffer.", string(l.Get(foo)))
+//
+// 	// short
+// 	err = UpdateDB(l, bar)
+// 	require.NoError(t, err)
+// 	err = UpdateDB(l, bar)
+// 	require.NoError(t, err)
+// 	err = UpdateDB(l, bar)
+// 	require.NoError(t, err)
+// 	require.Equal(t, "short...", string(l.Get(bar)))
+//
+// 	// missing
+// 	err = UpdateDB(l, missing)
+// 	require.NoError(t, err)
+// 	require.Equal(t, ".", string(l.Get(missing)))
+//
+// 	err = UpdateDB(l, nil)
+// 	require.Error(t, err)
+// }
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
@@ -107,7 +109,6 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	_, err := Create(cache, wasm)
 	require.Error(t, err)
 }
-
 
 func TestInstantiateFails(t *testing.T) {
 	cache, cleanup := withCache(t)

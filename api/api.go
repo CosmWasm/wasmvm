@@ -92,17 +92,6 @@ func Query(cache Cache, contractID []byte, path []byte, data []byte, store KVSto
 	return receiveSlice(res), nil
 }
 
-func UpdateDB(kv KVStore, key []byte) error {
-	db := buildDB(kv)
-	buf := sendSlice(key)
-	errmsg := C.Buffer{}
-	_, err := C.update_db(db, buf, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
-	}
-	return nil
-}
-
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {

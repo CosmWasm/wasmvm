@@ -35,16 +35,9 @@ typedef struct DB {
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
-/**
- * divide returns the rounded (i32) result, returns a C error if div == 0
- */
-int32_t divide(int32_t num, int32_t div, Buffer *err);
-
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
-
-Buffer greet(Buffer name);
 
 Buffer handle(cache_t *cache,
               Buffer contract_id,
@@ -64,8 +57,6 @@ Buffer instantiate(cache_t *cache,
                    int64_t gas_limit,
                    Buffer *err);
 
-Buffer may_panic(int32_t guess, Buffer *err);
-
 Buffer query(cache_t *cache,
              Buffer contract_id,
              Buffer path,
@@ -75,5 +66,3 @@ Buffer query(cache_t *cache,
              Buffer *err);
 
 void release_cache(cache_t *cache);
-
-void update_db(DB db, Buffer key, Buffer *err);
