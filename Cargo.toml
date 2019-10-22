@@ -27,5 +27,6 @@ cbindgen = { version = "0.9.1" }
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = false
+#lto = true
 panic = "unwind"
