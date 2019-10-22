@@ -1,4 +1,4 @@
-package cosmwasm
+package types
 
 //---------- Params ---------
 

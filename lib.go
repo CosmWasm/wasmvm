@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/confio/go-cosmwasm/api"
+	"github.com/confio/go-cosmwasm/types"
 )
 
 // ContractID represents an ID for a contract, must be generated from this library
@@ -61,7 +62,7 @@ func (w *Wasmer) GetCode(contract ContractID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. contract unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
+func (w *Wasmer) Instantiate(contract ContractID, params types.Params, userMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
@@ -70,7 +71,7 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 	if err != nil {
 		return nil, err
 	}
-	var res Result
+	var res types.Result
 	err = json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (*Result, error) {
+func (w *Wasmer) Handle(contract ContractID, params types.Params, userMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, stor
 	if err != nil {
 		return nil, err
 	}
-	var res Result
+	var res types.Result
 	err = json.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
