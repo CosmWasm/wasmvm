@@ -12,6 +12,19 @@ use std::str::from_utf8;
 use crate::error::{handle_c_error, set_error};
 use cosmwasm_vm::CosmCache;
 
+#[repr(C)]
+pub struct cache_t {}
+
+fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache> {
+    if ptr.is_null() {
+        None
+    } else {
+        let c: &mut CosmCache = unsafe { &mut *(ptr as *mut CosmCache) };
+        Some(c)
+    }
+}
+
+
 #[no_mangle]
 pub extern "C" fn greet(name: Buffer) -> Buffer {
     let rname = name.read().unwrap_or(b"<nil>");
@@ -21,10 +34,10 @@ pub extern "C" fn greet(name: Buffer) -> Buffer {
 }
 
 #[no_mangle]
-pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut CosmCache {
+pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut cache_t {
     let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|_| bail!("Caught panic"));
     match r {
-        Ok(t) => t,
+        Ok(t) => t as *mut cache_t,
         Err(e) => {
             set_error(e.to_string(), err);
             std::ptr::null_mut()
@@ -42,20 +55,20 @@ fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn release_cache(cache: *mut CosmCache) {
+pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = Box::from_raw(cache);
+        let _ = Box::from_raw(cache as *mut CosmCache);
     }
 }
 
 #[no_mangle]
 pub extern "C" fn create(
-    cache: Option<&mut CosmCache>,
+    cache: *mut cache_t,
     wasm: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match cache {
+    let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
             .unwrap_or_else(|_| bail!("Caught panic")),
         None => Err(format_err!("cache argument is null")),
@@ -73,11 +86,11 @@ fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
 
 #[no_mangle]
 pub extern "C" fn get_code(
-    cache: Option<&mut CosmCache>,
+    cache: *mut cache_t,
     id: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match cache {
+    let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
             .unwrap_or_else(|_| bail!("Caught panic")),
         None => Err(format_err!("cache argument is null")),
@@ -93,7 +106,7 @@ fn do_get_code(cache: &mut CosmCache, id: Buffer) -> Result<Vec<u8>, Error> {
 
 #[no_mangle]
 pub extern "C" fn instantiate(
-    cache: Option<&mut CosmCache>,
+    cache: *mut cache_t,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -108,7 +121,7 @@ pub extern "C" fn instantiate(
 
 #[no_mangle]
 pub extern "C" fn handle(
-    cache: Option<&mut CosmCache>,
+    cache: *mut cache_t,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -123,7 +136,7 @@ pub extern "C" fn handle(
 
 #[no_mangle]
 pub extern "C" fn query(
-    cache: Option<&mut CosmCache>,
+    cache: *mut cache_t,
     contract_id: Buffer,
     path: Buffer,
     data: Buffer,

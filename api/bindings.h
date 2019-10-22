@@ -15,6 +15,10 @@ typedef struct Buffer {
   uintptr_t cap;
 } Buffer;
 
+typedef struct cache_t {
+
+} cache_t;
+
 typedef struct db_t {
 
 } db_t;
@@ -29,7 +33,7 @@ typedef struct DB {
   DB_vtable vtable;
 } DB;
 
-Buffer create(CosmCache *cache, Buffer wasm, Buffer *err);
+Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 /**
  * divide returns the rounded (i32) result, returns a C error if div == 0
@@ -38,11 +42,11 @@ int32_t divide(int32_t num, int32_t div, Buffer *err);
 
 void free_rust(Buffer buf);
 
-Buffer get_code(CosmCache *cache, Buffer id, Buffer *err);
+Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer greet(Buffer name);
 
-Buffer handle(CosmCache *cache,
+Buffer handle(cache_t *cache,
               Buffer contract_id,
               Buffer params,
               Buffer msg,
@@ -50,9 +54,9 @@ Buffer handle(CosmCache *cache,
               int64_t gas_limit,
               Buffer *err);
 
-CosmCache *init_cache(Buffer data_dir, Buffer *err);
+cache_t *init_cache(Buffer data_dir, Buffer *err);
 
-Buffer instantiate(CosmCache *cache,
+Buffer instantiate(cache_t *cache,
                    Buffer contract_id,
                    Buffer params,
                    Buffer msg,
@@ -62,7 +66,7 @@ Buffer instantiate(CosmCache *cache,
 
 Buffer may_panic(int32_t guess, Buffer *err);
 
-Buffer query(CosmCache *cache,
+Buffer query(cache_t *cache,
              Buffer contract_id,
              Buffer path,
              Buffer data,
@@ -70,6 +74,6 @@ Buffer query(CosmCache *cache,
              int64_t gas_limit,
              Buffer *err);
 
-void release_cache(CosmCache *cache);
+void release_cache(cache_t *cache);
 
 void update_db(DB db, Buffer key, Buffer *err);
