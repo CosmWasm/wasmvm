@@ -16,8 +16,9 @@ type Params struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height int64 `json:"height"`
-	// timestamp of current block (in seconds since unix epoch)
-	Time    int64  `json:"time"`
+	// timestamp of current block as RFC3339
+	// TODO: move to seconds since unix epoch - for cosmwasm 0.3
+	Time    string  `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 
@@ -32,7 +33,7 @@ type ContractInfo struct {
 	// sdk.AccAddress of the contract, to be used when sending messages
 	Address string `json:"address"`
 	// current balance of the account controlled by the contract
-	Balance []Coin `json:"send_amount"`
+	Balance []Coin `json:"balance"`
 }
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)

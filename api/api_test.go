@@ -1,11 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/confio/go-cosmwasm/types"
 )
 
 type Lookup struct {
@@ -110,18 +113,45 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestInstantiateFails(t *testing.T) {
+func mockParams() types.Params {
+	return types.Params{
+		Block: types.BlockInfo{},
+		Message: types.MessageInfo{
+			Signer: "Signer",
+			SentFunds: []types.Coin{{
+				Denom: "ATOM",
+				Amount: "100",
+			}},
+		},
+		Contract: types.ContractInfo{
+			Address: "Signer",
+			Balance: []types.Coin{{
+				Denom: "ATOM",
+				Amount: "100",
+			}},
+		},
+	}
+}
+
+func TestInstantiate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	id := []byte("foo")
-	params := []byte("{}")
-	msg := []byte("{}")
-	db := NewLookup()
+	// create contract
+	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+	id, err := Create(cache, wasm)
+	require.NoError(t, err)
 
-	_, err := Instantiate(cache, id, params, msg, db, 100000000)
-	require.Error(t, err)
-	require.Equal(t, "not implemented", err.Error())
+	// instantiate it with this store
+	store := NewLookup()
+	params, err := json.Marshal(mockParams())
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	res, err := Instantiate(cache, id, params, msg, store, 100000000)
+	require.NoError(t, err)
+	require.Equal(t, `{"ok":{"messages":[],"log":null,"data":null}}`, string(res))
 }
 
 func TestHandleFails(t *testing.T) {
