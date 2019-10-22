@@ -21,6 +21,7 @@ maintenance = { status = "actively-developed" }
 cosmwasm = "0.2"
 cosmwasm-vm = "0.2"
 errno = "0.2"
+failure = "0.1.6"
 
 [build-dependencies]
 cbindgen = { version = "0.9.1" }
