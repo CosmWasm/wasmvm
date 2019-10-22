@@ -152,20 +152,42 @@ func TestInstantiate(t *testing.T) {
 	res, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
 	require.Equal(t, `{"ok":{"messages":[],"log":null,"data":null}}`, string(res))
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 0, len(resp.Ok.Messages))
 }
 
 func TestHandleFails(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	id := []byte("foo")
-	params := []byte("{}")
-	msg := []byte("{}")
-	db := NewLookup()
+	// create contract
+	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+	id, err := Create(cache, wasm)
+	require.NoError(t, err)
 
-	_, err := Handle(cache, id, params, msg, db, 100000000)
-	require.Error(t, err)
-	require.Equal(t, "not implemented", err.Error())
+	// instantiate it with this store
+	store := NewLookup()
+	params, err := json.Marshal(mockParams())
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	_, err = Instantiate(cache, id, params, msg, store, 100000000)
+	require.NoError(t, err)
+
+	// execute with the same store
+	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	require.NoError(t, err)
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
 }
 
 func TestQueryFails(t *testing.T) {

@@ -44,17 +44,23 @@ type Coin struct {
 
 //------- Results / Msgs -------------
 
+// CosmosResponse is the raw response from the init / handle calls
+type CosmosResponse struct {
+	Ok Result `json:"ok"`
+	Err string `json:"err"`
+}
+
 // Result defines the return value on a successful
 type Result struct {
 	// GasUsed is what is calculated from the VM, assuming it didn't run out of gas
 	// This is set by the calling code, not the contract itself
 	GasUsed int64 `json:"gas_used"`
 	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"msgs"`
+	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
-	Data string
+	Data string `json:"data"`
 	// log message to return over abci interface
-	Log string
+	Log string `json:"log"`
 }
 
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set

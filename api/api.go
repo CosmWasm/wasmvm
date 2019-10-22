@@ -72,7 +72,7 @@ func Handle(cache Cache, contractID []byte, params []byte, msg []byte, store KVS
 	m := sendSlice(msg)
 	db := buildDB(store)
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
