@@ -57,12 +57,12 @@ Buffer instantiate(cache_t *cache,
                    int64_t gas_limit,
                    Buffer *err);
 
-Buffer query(cache_t *cache,
-             Buffer contract_id,
-             Buffer path,
-             Buffer data,
-             DB db,
-             int64_t gas_limit,
+Buffer query(cache_t *_cache,
+             Buffer _contract_id,
+             Buffer _path,
+             Buffer _data,
+             DB _db,
+             int64_t _gas_limit,
              Buffer *err);
 
 void release_cache(cache_t *cache);

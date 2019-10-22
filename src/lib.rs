@@ -166,12 +166,12 @@ fn do_handle(
 
 #[no_mangle]
 pub extern "C" fn query(
-    cache: *mut cache_t,
-    contract_id: Buffer,
-    path: Buffer,
-    data: Buffer,
-    db: DB,
-    gas_limit: i64,
+    _cache: *mut cache_t,
+    _contract_id: Buffer,
+    _path: Buffer,
+    _data: Buffer,
+    _db: DB,
+    _gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     // TODO
