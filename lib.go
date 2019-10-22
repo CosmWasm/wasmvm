@@ -19,14 +19,17 @@ type KVStore = api.KVStore
 // You should create an instance with it's own subdirectory to manage state inside,
 // and call it for all cosmwasm contract related actions.
 type Wasmer struct {
-	dataDir string
+	cache api.Cache
 }
 
 // NewWasmer creates an new binding, with the given dataDir where
 // it can store raw wasm and the pre-compile cache
-func NewWasmer(dataDir string) *Wasmer {
-	// TODO: at least double-check this dir exists and we can write to this dir (or panic?)
-	return &Wasmer{dataDir: dataDir}
+func NewWasmer(dataDir string) (*Wasmer, error) {
+	cache, err := api.InitCache(dataDir)
+	if err != nil {
+		return nil, err
+	}
+	return &Wasmer{cache: cache}, nil
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile
@@ -36,7 +39,7 @@ func NewWasmer(dataDir string) *Wasmer {
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
 func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
-	return api.Create(w.dataDir, contract)
+	return api.Create(w.cache, contract)
 }
 
 // GetCode will load the original wasm code for the given contract id.
@@ -47,7 +50,7 @@ func (w *Wasmer) Create(contract WasmCode) (ContractID, error) {
 // and the larger binary blobs (wasm and pre-compiles) are all managed by the
 // rust library
 func (w *Wasmer) GetCode(contract ContractID) (WasmCode, error) {
-	return api.GetCode(w.dataDir, contract)
+	return api.GetCode(w.cache, contract)
 }
 
 // Instantiate will create a new instance of a contract using the given contractID.
@@ -63,7 +66,7 @@ func (w *Wasmer) Instantiate(contract ContractID, params Params, userMsg []byte,
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Instantiate(w.dataDir, contract, paramBin, userMsg, store, gasLimit)
+	data, err := api.Instantiate(w.cache, contract, paramBin, userMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +89,7 @@ func (w *Wasmer) Handle(contract ContractID, params Params, userMsg []byte, stor
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Handle(w.dataDir, contract, paramBin, userMsg, store, gasLimit)
+	data, err := api.Handle(w.cache, contract, paramBin, userMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}

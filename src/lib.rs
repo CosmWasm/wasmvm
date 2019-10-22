@@ -49,7 +49,9 @@ fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
     let dir = data_dir
         .read()
         .ok_or_else(|| format_err!("empty data_dir"))?;
-    let cache = unsafe { CosmCache::new(from_utf8(dir)?) };
+    let dirStr = from_utf8(dir)?;
+    println!("init cache: {}", dirStr);
+    let cache = unsafe { CosmCache::new(dirStr) };
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
