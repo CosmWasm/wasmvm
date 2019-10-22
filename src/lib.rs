@@ -10,7 +10,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
-use cosmwasm_vm::CosmCache;
+use cosmwasm_vm::{CosmCache, call_handle_raw, call_init_raw};
 
 #[repr(C)]
 pub struct cache_t {}
@@ -102,9 +102,30 @@ pub extern "C" fn instantiate(
     gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_init(c, contract_id, params, msg, db, gas_limit)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_init(
+    cache: &mut CosmCache,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    // TODO: use gas_limit
+    _gas_limit: i64,
+) -> Result<Vec<u8>, Error> {
+    let contract_id = contract_id.read().ok_or_else(|| format_err!("empty contract_id argument"))?;
+    let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
+    let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
+
+    let mut instance = cache.get_instance(contract_id)?;
+    call_init_raw(&mut instance, params, msg)
 }
 
 #[no_mangle]
@@ -117,9 +138,30 @@ pub extern "C" fn handle(
     gas_limit: i64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_handle(c, contract_id, params, msg, db, gas_limit)))
+            .unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_handle(
+    cache: &mut CosmCache,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    // TODO: use gas_limit
+    _gas_limit: i64,
+) -> Result<Vec<u8>, Error> {
+    let contract_id = contract_id.read().ok_or_else(|| format_err!("empty contract_id argument"))?;
+    let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
+    let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
+
+    let mut instance = cache.get_instance(contract_id)?;
+    call_handle_raw(&mut instance, params, msg)
 }
 
 #[no_mangle]
