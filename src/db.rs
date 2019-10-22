@@ -21,6 +21,7 @@ impl DB {
         let buf = Buffer::from_vec(key);
         // TODO: dynamic size
         let mut buf2 = Buffer::from_vec(vec![0u8; 2000]);
+        println!("DB.get called");
         let res = (self.vtable.c_get)(self.state, buf, buf2);
 
         // read in the number of bytes returned
@@ -39,6 +40,7 @@ impl DB {
         let buf = Buffer::from_vec(key);
         let buf2 = Buffer::from_vec(value);
         // caller will free input
+        println!("DB.set called");
         (self.vtable.c_set)(self.state, buf, buf2);
     }
 }
