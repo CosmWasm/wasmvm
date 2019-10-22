@@ -88,7 +88,9 @@ func TestCreateAndGet(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm := []byte("code goes here")
+	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
 
@@ -96,6 +98,16 @@ func TestCreateAndGet(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wasm, code)
 }
+
+func TestCreateFailsWithBadData(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm := []byte("some invalid data")
+	_, err := Create(cache, wasm)
+	require.Error(t, err)
+}
+
 
 func TestInstantiateFails(t *testing.T) {
 	cache, cleanup := withCache(t)
