@@ -5,7 +5,7 @@ mod memory;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
-use std::panic::catch_unwind;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::from_utf8;
 use failure::{bail, Error, format_err};
 
@@ -49,36 +49,32 @@ pub extern "C" fn release_cache(cache: *mut CosmCache) {
 
 #[no_mangle]
 pub extern "C" fn create(cache: Option<&mut CosmCache>, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    let r = catch_unwind(|| do_create(cache, wasm)).unwrap_or_else(|_| bail!("Caught panic"));
+    let r = match cache {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm))).unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
 }
 
-fn do_create(cache: Option<&mut CosmCache>, wasm: Buffer) -> Result<Vec<u8>, Error> {
-    match cache {
-        Some(c) => {
-            let wasm = wasm.read().ok_or_else(||format_err!("empty wasm argument"))?;
-            c.save_wasm(wasm)
-        },
-        None => Err(format_err!("null cache argument")),
-    }
+fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
+    let wasm = wasm.read().ok_or_else(||format_err!("empty wasm argument"))?;
+    cache.save_wasm(wasm)
 }
 
 #[no_mangle]
 pub extern "C" fn get_code(cache: Option<&mut CosmCache>, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    let r = catch_unwind(|| do_get_code(cache, id)).unwrap_or_else(|_| bail!("Caught panic"));
+    let r = match cache {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id))).unwrap_or_else(|_| bail!("Caught panic")),
+        None => Err(format_err!("cache argument is null")),
+    };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
 }
 
-fn do_get_code(cache: Option<&mut CosmCache>, id: Buffer) -> Result<Vec<u8>, Error> {
-        match cache {
-            Some(c) => {
-                let id = id.read().ok_or_else(||format_err!("empty id argument"))?;
-                c.load_wasm(id)
-            },
-            None => Err(format_err!("null cache argument")),
-        }
+fn do_get_code(cache: &mut CosmCache, id: Buffer) -> Result<Vec<u8>, Error> {
+        let id = id.read().ok_or_else(||format_err!("empty id argument"))?;
+        cache.load_wasm(id)
 }
 
 

@@ -27,6 +27,8 @@ failure = "0.1.6"
 cbindgen = { version = "0.9.1" }
 
 [profile.release]
-opt-level = 3
+# lower for now for quick build cycle
+# opt-level = 3
+opt-level = 1
 lto = true
 panic = "unwind"
