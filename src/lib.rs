@@ -35,14 +35,13 @@ pub extern "C" fn greet(name: Buffer) -> Buffer {
 
 #[no_mangle]
 pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|e| { println!("unwraped else {:?}", e); bail!("Caught panic") });
+    let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|_| bail!("Caught panic"));
     match r {
         Ok(t) => {
             clear_error();
             t as *mut cache_t
         },
         Err(e) => {
-            println!("Got error: {}", e.to_string());
             set_error(e.to_string(), err);
             std::ptr::null_mut()
         }
@@ -54,13 +53,9 @@ fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
         .read()
         .ok_or_else(|| format_err!("empty data_dir"))?;
     let dir_str = from_utf8(dir)?;
-    println!("init cache: {}", dir_str);
     let cache = unsafe { CosmCache::new(dir_str) };
-    println!("do_init_cache happy");
     let out = Box::new(cache);
-    println!("boxify succeeded");
     let res = Ok(Box::into_raw(out));
-    println!("as raw");
     res
 }
 

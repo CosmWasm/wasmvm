@@ -84,20 +84,17 @@ func withCache(t *testing.T) (Cache, func()) {
 	return cache, cleanup
 }
 
-func TestCreateAndGetFails(t *testing.T) {
+func TestCreateAndGet(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
 	wasm := []byte("code goes here")
-	_, err := Create(cache, wasm)
-	require.Error(t, err)
-	require.Equal(t, "not implemented", err.Error())
+	id, err := Create(cache, wasm)
+	require.NoError(t, err)
 
-	id := []byte("should be return from above")
-
-	_, err = GetCode(cache, id)
-	require.Error(t, err)
-	require.Equal(t, "not implemented", err.Error())
+	code, err := GetCode(cache, id)
+	require.NoError(t, err)
+	require.Equal(t, wasm, code)
 }
 
 func TestInstantiateFails(t *testing.T) {
