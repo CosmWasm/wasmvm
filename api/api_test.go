@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -22,12 +21,10 @@ func NewLookup() *Lookup {
 
 func (l *Lookup) Get(key []byte) []byte {
 	val := l.data[string(key)]
-	fmt.Printf("Get %s=%s\n", string(key), string(val))
 	return []byte(val)
 }
 
 func (l *Lookup) Set(key, value []byte) {
-	fmt.Printf("Set %s=%s\n", string(key), string(value))
 	l.data[string(key)] = string(value)
 }
 
@@ -85,18 +82,18 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func mockParams() types.Params {
+func mockParams(signer string) types.Params {
 	return types.Params{
 		Block: types.BlockInfo{},
 		Message: types.MessageInfo{
-			Signer: "Signer",
+			Signer: signer,
 			SentFunds: []types.Coin{{
 				Denom: "ATOM",
 				Amount: "100",
 			}},
 		},
 		Contract: types.ContractInfo{
-			Address: "Signer",
+			Address: "contract",
 			Balance: []types.Coin{{
 				Denom: "ATOM",
 				Amount: "100",
@@ -117,7 +114,7 @@ func TestInstantiate(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams())
+	params, err := json.Marshal(mockParams("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -144,7 +141,7 @@ func TestHandle(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams())
+	params, err := json.Marshal(mockParams("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -152,15 +149,16 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 
 	// execute with the same store
+	params, err = json.Marshal(mockParams("fred"))
+	require.NoError(t, err)
 	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	// TODO: right now this fails, blocked on https://github.com/confio/cosmwasm/issues/39 and a new release of cosmwasm-vm
-// 	require.Equal(t, "", resp.Err)
-// 	require.Equal(t, 1, len(resp.Ok.Messages))
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
 }
 
 func TestQueryFails(t *testing.T) {
