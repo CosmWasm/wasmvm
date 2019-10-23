@@ -43,8 +43,8 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	return receiveSlice(id), nil
 }
 
-func GetCode(cache Cache, contractID []byte) ([]byte, error) {
-	id := sendSlice(contractID)
+func GetCode(cache Cache, code_id []byte) ([]byte, error) {
+	id := sendSlice(code_id)
 	errmsg := C.Buffer{}
 	code, err := C.get_code(cache.ptr, id, &errmsg)
 	if err != nil {
@@ -53,8 +53,8 @@ func GetCode(cache Cache, contractID []byte) ([]byte, error) {
 	return receiveSlice(code), nil
 }
 
-func Instantiate(cache Cache, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	id := sendSlice(contractID)
+func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
@@ -66,8 +66,8 @@ func Instantiate(cache Cache, contractID []byte, params []byte, msg []byte, stor
 	return receiveSlice(res), nil
 }
 
-func Handle(cache Cache, contractID []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	id := sendSlice(contractID)
+func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
@@ -79,8 +79,8 @@ func Handle(cache Cache, contractID []byte, params []byte, msg []byte, store KVS
 	return receiveSlice(res), nil
 }
 
-func Query(cache Cache, contractID []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
-	id := sendSlice(contractID)
+func Query(cache Cache, code_id []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
+	id := sendSlice(code_id)
 	p := sendSlice(path)
 	d := sendSlice(data)
 	db := buildDB(store)
