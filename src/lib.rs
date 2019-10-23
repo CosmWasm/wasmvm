@@ -15,18 +15,18 @@ use cosmwasm_vm::{CosmCache, call_handle_raw, call_init_raw};
 #[repr(C)]
 pub struct cache_t {}
 
-fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache> {
+fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB>> {
     if ptr.is_null() {
         None
     } else {
-        let c: &mut CosmCache = unsafe { &mut *(ptr as *mut CosmCache) };
+        let c = unsafe { &mut *(ptr as *mut CosmCache<DB>) };
         Some(c)
     }
 }
 
 #[no_mangle]
-pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir)).unwrap_or_else(|_| bail!("Caught panic"));
+pub extern "C" fn init_cache(data_dir: Buffer, cache_size: usize, err: Option<&mut Buffer>) -> *mut cache_t {
+    let r = catch_unwind(|| do_init_cache(data_dir, cache_size)).unwrap_or_else(|_| bail!("Caught panic"));
     match r {
         Ok(t) => {
             clear_error();
@@ -39,12 +39,12 @@ pub extern "C" fn init_cache(data_dir: Buffer, err: Option<&mut Buffer>) -> *mut
     }
 }
 
-fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
+fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB>, Error> {
     let dir = data_dir
         .read()
         .ok_or_else(|| format_err!("empty data_dir"))?;
     let dir_str = from_utf8(dir)?;
-    let cache = unsafe { CosmCache::new(dir_str) };
+    let cache = unsafe { CosmCache::new(dir_str, cache_size) };
     let out = Box::new(cache);
     let res = Ok(Box::into_raw(out));
     res
@@ -54,7 +54,7 @@ fn do_init_cache(data_dir: Buffer) -> Result<*mut CosmCache, Error> {
 pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = Box::from_raw(cache as *mut CosmCache);
+        let _ = Box::from_raw(cache as *mut CosmCache<DB>);
     }
 }
 
@@ -69,7 +69,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_create(cache: &mut CosmCache, wasm: Buffer) -> Result<Vec<u8>, Error> {
+fn do_create(cache: &mut CosmCache<DB>, wasm: Buffer) -> Result<Vec<u8>, Error> {
     let wasm = wasm
         .read()
         .ok_or_else(|| format_err!("empty wasm argument"))?;
@@ -87,7 +87,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_get_code(cache: &mut CosmCache, id: Buffer) -> Result<Vec<u8>, Error> {
+fn do_get_code(cache: &mut CosmCache<DB>, id: Buffer) -> Result<Vec<u8>, Error> {
     let id = id.read().ok_or_else(|| format_err!("empty id argument"))?;
     cache.load_wasm(id)
 }
@@ -112,7 +112,7 @@ pub extern "C" fn instantiate(
 }
 
 fn do_init(
-    cache: &mut CosmCache,
+    cache: &mut CosmCache<DB>,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -124,8 +124,10 @@ fn do_init(
     let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
     let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
 
-    let mut instance = cache.get_instance(contract_id)?;
-    call_init_raw(&mut instance, params, msg)
+    let mut instance = cache.get_instance(contract_id, db)?;
+    let res = call_init_raw(&mut instance, params, msg)?;
+    cache.store_instance(contract_id, instance);
+    Ok(res)
 }
 
 #[no_mangle]
@@ -148,7 +150,7 @@ pub extern "C" fn handle(
 }
 
 fn do_handle(
-    cache: &mut CosmCache,
+    cache: &mut CosmCache<DB>,
     contract_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -160,8 +162,10 @@ fn do_handle(
     let params = params.read().ok_or_else(|| format_err!("empty params argument"))?;
     let msg = msg.read().ok_or_else(|| format_err!("empty msg argument"))?;
 
-    let mut instance = cache.get_instance(contract_id)?;
-    call_handle_raw(&mut instance, params, msg)
+    let mut instance = cache.get_instance(contract_id, db)?;
+    let res = call_handle_raw(&mut instance, params, msg)?;
+    cache.store_instance(contract_id, instance);
+    Ok(res)
 }
 
 #[no_mangle]

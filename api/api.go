@@ -19,10 +19,10 @@ type Cache struct {
 	ptr *C.cache_t
 }
 
-func InitCache(dataDir string) (Cache, error) {
+func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	errmsg := C.Buffer{}
-	ptr, err := C.init_cache(dir, &errmsg)
+	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}

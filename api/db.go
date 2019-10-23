@@ -13,7 +13,6 @@ void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 */
 import "C"
 
-import "fmt"
 import "unsafe"
 
 type KVStore interface {
@@ -35,7 +34,6 @@ func buildDB(kv KVStore) C.DB {
 
 //export cGet
 func cGet(ptr *C.db_t, key C.Buffer, val C.Buffer) i64 {
-	fmt.Println("cGet")
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := kv.Get(k)
@@ -47,7 +45,6 @@ func cGet(ptr *C.db_t, key C.Buffer, val C.Buffer) i64 {
 
 //export cSet
 func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) {
-	fmt.Println("cSet")
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := receiveSlice(val)

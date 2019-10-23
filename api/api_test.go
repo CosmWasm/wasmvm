@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -22,67 +21,34 @@ func NewLookup() *Lookup {
 
 func (l *Lookup) Get(key []byte) []byte {
 	val := l.data[string(key)]
-	fmt.Printf("Get %s=%s\n", string(key), string(val))
 	return []byte(val)
 }
 
 func (l *Lookup) Set(key, value []byte) {
-	fmt.Printf("Set %s=%s\n", string(key), string(value))
 	l.data[string(key)] = string(value)
 }
 
 var _ KVStore = (*Lookup)(nil)
 
-// func TestDemoDBAccess(t *testing.T) {
-// 	l := NewLookup()
-// 	foo := []byte("foo")
-// 	bar := []byte("bar")
-// 	missing := []byte("missing")
-// 	l.Set(foo, []byte("long text that fills the buffer"))
-// 	l.Set(bar, []byte("short"))
-//
-// 	// long
-// 	err := UpdateDB(l, foo)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "long text that fills the buffer.", string(l.Get(foo)))
-//
-// 	// short
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "short...", string(l.Get(bar)))
-//
-// 	// missing
-// 	err = UpdateDB(l, missing)
-// 	require.NoError(t, err)
-// 	require.Equal(t, ".", string(l.Get(missing)))
-//
-// 	err = UpdateDB(l, nil)
-// 	require.Error(t, err)
-// }
-
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir)
+	_, err := InitCache(dataDir, 3)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	t.Log(tmpdir)
-// 	defer os.RemoveAll(tmpdir)
+	defer os.RemoveAll(tmpdir)
 
-	_, err = InitCache(tmpdir)
+	cache, err := InitCache(tmpdir, 3)
 	require.NoError(t, err)
-// 	ReleaseCache(cache)
+	ReleaseCache(cache)
 }
 
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir)
+	cache, err := InitCache(tmpdir, 3)
 	require.NoError(t, err)
 
 	cleanup := func() {
@@ -116,18 +82,18 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func mockParams() types.Params {
+func mockParams(signer string) types.Params {
 	return types.Params{
 		Block: types.BlockInfo{},
 		Message: types.MessageInfo{
-			Signer: "Signer",
+			Signer: signer,
 			SentFunds: []types.Coin{{
 				Denom: "ATOM",
 				Amount: "100",
 			}},
 		},
 		Contract: types.ContractInfo{
-			Address: "Signer",
+			Address: "contract",
 			Balance: []types.Coin{{
 				Denom: "ATOM",
 				Amount: "100",
@@ -148,7 +114,7 @@ func TestInstantiate(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams())
+	params, err := json.Marshal(mockParams("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -166,16 +132,11 @@ func TestInstantiate(t *testing.T) {
 func TestHandle(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-
-	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-	id, err := Create(cache, wasm)
-	require.NoError(t, err)
+	id := createTestContract(t, cache)
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams())
+	params, err := json.Marshal(mockParams("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -183,15 +144,73 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 
 	// execute with the same store
+	params, err = json.Marshal(mockParams("fred"))
+	require.NoError(t, err)
 	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	// TODO: right now this fails, blocked on https://github.com/confio/cosmwasm/issues/39 and a new release of cosmwasm-vm
-// 	require.Equal(t, "", resp.Err)
-// 	require.Equal(t, 1, len(resp.Ok.Messages))
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+}
+
+func createTestContract(t *testing.T, cache Cache) []byte {
+	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+	id, err := Create(cache, wasm)
+	require.NoError(t, err)
+	return id
+}
+
+func TestMultipleInstances(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	// instance1 controlled by fred
+	store1 := NewLookup()
+	params, err := json.Marshal(mockParams("regen"))
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	_, err = Instantiate(cache, id, params, msg, store1, 100000000)
+	require.NoError(t, err)
+
+	// instance2 controlled by mary
+	store2 := NewLookup()
+	params, err = json.Marshal(mockParams("chorus"))
+	require.NoError(t, err)
+	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
+	_, err = Instantiate(cache, id, params, msg, store2, 100000000)
+	require.NoError(t, err)
+
+	// fail to execute store1 with mary
+	resp := exec(t, cache, id, "mary", store1)
+	require.Equal(t, "Unauthorized", resp.Err)
+
+	// succeed to execute store1 with fred
+	resp = exec(t, cache, id, "fred", store1)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+
+	// succeed to execute store2 with mary
+	resp = exec(t, cache, id, "mary", store2)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+}
+
+// exec runs the handle tx with the given signer
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore) types.CosmosResponse {
+	params, err := json.Marshal(mockParams(signer))
+	require.NoError(t, err)
+	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	require.NoError(t, err)
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	return resp
 }
 
 func TestQueryFails(t *testing.T) {
