@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -18,7 +18,8 @@ circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-cosmwasm-vm = "0.2"
+cosmwasm = "0.3"
+cosmwasm-vm = "0.3.1"
 errno = "0.2"
 failure = "0.1.6"
 
