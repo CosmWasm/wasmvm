@@ -33,56 +33,25 @@ func (l *Lookup) Set(key, value []byte) {
 
 var _ KVStore = (*Lookup)(nil)
 
-// func TestDemoDBAccess(t *testing.T) {
-// 	l := NewLookup()
-// 	foo := []byte("foo")
-// 	bar := []byte("bar")
-// 	missing := []byte("missing")
-// 	l.Set(foo, []byte("long text that fills the buffer"))
-// 	l.Set(bar, []byte("short"))
-//
-// 	// long
-// 	err := UpdateDB(l, foo)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "long text that fills the buffer.", string(l.Get(foo)))
-//
-// 	// short
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	err = UpdateDB(l, bar)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "short...", string(l.Get(bar)))
-//
-// 	// missing
-// 	err = UpdateDB(l, missing)
-// 	require.NoError(t, err)
-// 	require.Equal(t, ".", string(l.Get(missing)))
-//
-// 	err = UpdateDB(l, nil)
-// 	require.Error(t, err)
-// }
-
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir)
+	_, err := InitCache(dataDir, 3)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	t.Log(tmpdir)
-// 	defer os.RemoveAll(tmpdir)
+	defer os.RemoveAll(tmpdir)
 
-	_, err = InitCache(tmpdir)
+	cache, err := InitCache(tmpdir, 3)
 	require.NoError(t, err)
-// 	ReleaseCache(cache)
+	ReleaseCache(cache)
 }
 
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir)
+	cache, err := InitCache(tmpdir, 3)
 	require.NoError(t, err)
 
 	cleanup := func() {
