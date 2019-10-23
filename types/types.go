@@ -16,9 +16,8 @@ type Params struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height int64 `json:"height"`
-	// timestamp of current block as RFC3339
-	// TODO: move to seconds since unix epoch - for cosmwasm 0.3
-	Time    string  `json:"time"`
+	// time in seconds since unix epoch - since cosmwasm 0.3
+	Time    int64  `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 

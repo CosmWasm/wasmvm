@@ -26,8 +26,8 @@ type Wasmer struct {
 
 // NewWasmer creates an new binding, with the given dataDir where
 // it can store raw wasm and the pre-compile cache
-func NewWasmer(dataDir string) (*Wasmer, error) {
-	cache, err := api.InitCache(dataDir)
+func NewWasmer(dataDir string, cacheSize uint64) (*Wasmer, error) {
+	cache, err := api.InitCache(dataDir, cacheSize)
 	if err != nil {
 		return nil, err
 	}
