@@ -132,12 +132,7 @@ func TestInstantiate(t *testing.T) {
 func TestHandle(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-
-	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
-	require.NoError(t, err)
-	id, err := Create(cache, wasm)
-	require.NoError(t, err)
+	id := createTestContract(t, cache)
 
 	// instantiate it with this store
 	store := NewLookup()
@@ -159,6 +154,63 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
+}
+
+func createTestContract(t *testing.T, cache Cache) []byte {
+	wasm, err := ioutil.ReadFile("./testdata/contract.wasm")
+	require.NoError(t, err)
+	id, err := Create(cache, wasm)
+	require.NoError(t, err)
+	return id
+}
+
+func TestMultipleInstances(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	// instance1 controlled by fred
+	store1 := NewLookup()
+	params, err := json.Marshal(mockParams("regen"))
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	_, err = Instantiate(cache, id, params, msg, store1, 100000000)
+	require.NoError(t, err)
+
+	// instance2 controlled by mary
+	store2 := NewLookup()
+	params, err = json.Marshal(mockParams("chorus"))
+	require.NoError(t, err)
+	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
+	_, err = Instantiate(cache, id, params, msg, store2, 100000000)
+	require.NoError(t, err)
+
+	// fail to execute store1 with mary
+	resp := exec(t, cache, id, "mary", store1)
+	require.Equal(t, "Unauthorized", resp.Err)
+
+	// succeed to execute store1 with fred
+	resp = exec(t, cache, id, "fred", store1)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+
+	// succeed to execute store2 with mary
+	resp = exec(t, cache, id, "mary", store2)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+}
+
+// exec runs the handle tx with the given signer
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore) types.CosmosResponse {
+	params, err := json.Marshal(mockParams(signer))
+	require.NoError(t, err)
+	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	require.NoError(t, err)
+
+	var resp types.CosmosResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	return resp
 }
 
 func TestQueryFails(t *testing.T) {
