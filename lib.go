@@ -38,7 +38,7 @@ func NewWasmer(dataDir string, cacheSize uint64) (*Wasmer, error) {
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (w *Wasmer)Cleanup() {
+func (w *Wasmer) Cleanup() {
 	api.ReleaseCache(w.cache)
 }
 
@@ -46,6 +46,10 @@ func (w *Wasmer)Cleanup() {
 // as well as the original code. Both can be referenced later via CodeID
 // This must be done one time for given code, after which it can be
 // instatitated many times, and each instance called many times.
+//
+// For example, the code for all ERC-20 contracts should be the same.
+// This function stores the code for that contract only once, but it can
+// be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
 func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
@@ -67,7 +71,7 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Handle) many times.
 //
-// storage should be set with a PrefixedKVStore that this code can safely access.
+// Storage should be set with a PrefixedKVStore that this code can safely access.
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
