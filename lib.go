@@ -38,7 +38,7 @@ func NewWasmer(dataDir string, cacheSize uint64) (*Wasmer, error) {
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (w *Wasmer)Cleanup() {
+func (w *Wasmer) Cleanup() {
 	api.ReleaseCache(w.cache)
 }
 
@@ -46,6 +46,10 @@ func (w *Wasmer)Cleanup() {
 // as well as the original code. Both can be referenced later via CodeID
 // This must be done one time for given code, after which it can be
 // instatitated many times, and each instance called many times.
+//
+// For example, the code for all ERC-20 contracts should be the same.
+// This function stores the code for that contract only once, but it can
+// be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
 func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
@@ -65,9 +69,9 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives
-// an account and address and can be invoked (Handle) many times.
+// an account and address and can be invoked (Execute) many times.
 //
-// storage should be set with a PrefixedKVStore that this code can safely access.
+// Storage should be set with a PrefixedKVStore that this code can safely access.
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
@@ -95,7 +99,7 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 	return &resp.Ok, nil
 }
 
-// Handle calls a given contract. Since the only difference between contracts with the same CodeID is the
+// Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
 // data in their local storage, and their address in the outside world, we need no ContractID here.
 // (That is a detail for the external, sdk-facing, side).
 //
@@ -103,12 +107,12 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Handle(code CodeID, params types.Params, handleMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
+func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Handle(w.cache, code, paramBin, handleMsg, store, gasLimit)
+	data, err := api.Handle(w.cache, code, paramBin, executeMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}

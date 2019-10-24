@@ -49,10 +49,10 @@ As discussed above, all data structures passed between web assembly and the cosm
 The actual call to create a new contract (upload code) is quite simple, and returns a `ContractID` to be used in all future calls:
 `Create(contract WasmCode) (ContractID, error)`
 
-Both Instantiating a contract, as well as invoking a contract (`Handle` method) have similar interfaces. The difference is that `Instantiate` requires the `store` to be empty, while `Handle` requires it to be non-empty:
+Both Instantiating a contract, as well as invoking a contract (`Execute` method) have similar interfaces. The difference is that `Instantiate` requires the `store` to be empty, while `Execute` requires it to be non-empty:
 
 * `Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
-* `Handle(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
+* `Execute(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
 
 We also expose a Query method to respond to abci.QueryRequests:
 
@@ -168,7 +168,7 @@ type ContractMsg struct {
     // the contract ID and instance ID. The sdk module should maintain a reverse lookup table. 
     ContractAddr string `json:"contract_addr"`
     // Msg is assumed to be a json-encoded message, which will be passed directly
-    // as `userMsg` when calling `Handle` on the above-defined contract
+    // as `userMsg` when calling `Execute` on the above-defined contract
     Msg string `json:"msg"`
 }
 
