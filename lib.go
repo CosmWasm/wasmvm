@@ -69,7 +69,7 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives
-// an account and address and can be invoked (Handle) many times.
+// an account and address and can be invoked (Execute) many times.
 //
 // Storage should be set with a PrefixedKVStore that this code can safely access.
 //
@@ -99,7 +99,7 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 	return &resp.Ok, nil
 }
 
-// Handle calls a given contract. Since the only difference between contracts with the same CodeID is the
+// Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
 // data in their local storage, and their address in the outside world, we need no ContractID here.
 // (That is a detail for the external, sdk-facing, side).
 //
@@ -107,12 +107,12 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Handle(code CodeID, params types.Params, handleMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
+func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Handle(w.cache, code, paramBin, handleMsg, store, gasLimit)
+	data, err := api.Handle(w.cache, code, paramBin, executeMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}
