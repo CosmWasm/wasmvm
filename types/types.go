@@ -37,15 +37,15 @@ type ContractInfo struct {
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
 type Coin struct {
-	Denom  string `json:"denom"`  // string encoing of decimal value, eg. "12.3456"
-	Amount string `json:"amount"` // type, eg. "ATOM"
+	Denom  string `json:"denom"`  // type, eg. "ATOM"
+	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
 }
 
 //------- Results / Msgs -------------
 
 // CosmosResponse is the raw response from the init / handle calls
 type CosmosResponse struct {
-	Ok Result `json:"ok"`
+	Ok  Result `json:"ok"`
 	Err string `json:"err"`
 }
 
