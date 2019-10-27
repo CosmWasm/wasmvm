@@ -52,6 +52,7 @@ static WASM_ARG: &str = "wasm";
 static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
+static GAS_USED_ARG: &str = "gas_used";
 
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB>, Error> {
     let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
@@ -109,12 +110,13 @@ pub extern "C" fn instantiate(
     params: Buffer,
     msg: Buffer,
     db: DB,
-    gas_limit: i64,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_init(c, contract_id, params, msg, db, gas_limit)
+            do_init(c, contract_id, params, msg, db, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -129,15 +131,18 @@ fn do_init(
     params: Buffer,
     msg: Buffer,
     db: DB,
-    // TODO: use gas_limit
-    _gas_limit: i64,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
     let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
     let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
+    instance.set_gas(gas_limit);
     let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
+    *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);
     Ok(res)
 }
@@ -149,12 +154,13 @@ pub extern "C" fn handle(
     params: Buffer,
     msg: Buffer,
     db: DB,
-    gas_limit: i64,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_handle(c, code_id, params, msg, db, gas_limit)
+            do_handle(c, code_id, params, msg, db, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -169,15 +175,18 @@ fn do_handle(
     params: Buffer,
     msg: Buffer,
     db: DB,
-    // TODO: use gas_limit
-    _gas_limit: i64,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
     let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
     let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
+    instance.set_gas(gas_limit);
     let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
+    *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(code_id, instance);
     Ok(res)
 }
@@ -189,7 +198,7 @@ pub extern "C" fn query(
     _path: Buffer,
     _data: Buffer,
     _db: DB,
-    _gas_limit: i64,
+    _gas_limit: u64,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     // TODO
