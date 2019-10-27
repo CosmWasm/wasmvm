@@ -44,7 +44,8 @@ Buffer handle(cache_t *cache,
               Buffer params,
               Buffer msg,
               DB db,
-              int64_t gas_limit,
+              uint64_t gas_limit,
+              uint64_t *gas_used,
               Buffer *err);
 
 cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
@@ -54,15 +55,17 @@ Buffer instantiate(cache_t *cache,
                    Buffer params,
                    Buffer msg,
                    DB db,
-                   int64_t gas_limit,
+                   uint64_t gas_limit,
+                   uint64_t *gas_used,
                    Buffer *err);
 
 Buffer query(cache_t *_cache,
-             Buffer _contract_id,
+             Buffer _code_id,
              Buffer _path,
              Buffer _data,
              DB _db,
-             int64_t _gas_limit,
+             uint64_t _gas_limit,
+             uint64_t *_gas_used,
              Buffer *err);
 
 void release_cache(cache_t *cache);

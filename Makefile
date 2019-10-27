@@ -17,8 +17,7 @@ all: build test
 
 build: build-rust build-go
 
-# build-rust: build-rust-release strip
-build-rust: build-rust-debug
+build-rust: build-rust-release strip
 
 # use debug build for quick testing
 build-rust-debug:

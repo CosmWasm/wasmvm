@@ -199,6 +199,7 @@ pub extern "C" fn query(
     _data: Buffer,
     _db: DB,
     _gas_limit: u64,
+    _gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     // TODO
