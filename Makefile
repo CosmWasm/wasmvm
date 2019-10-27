@@ -21,8 +21,7 @@ build-rust: build-rust-release strip
 
 # use debug build for quick testing
 build-rust-debug:
-	echo $(DLL_EXT)
-	cargo build
+	cargo build --features backtraces
 	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
@@ -40,9 +39,8 @@ else
 strip:
 endif
 
-
 build-go:
-	go build .
+	go build ./...
 
 test:
-	go test -v ./api
+	RUST_BACKTRACES=1 go test -v ./api

@@ -10,6 +10,7 @@ import "fmt"
 // nice aliases to the rust names
 type i32 = C.int32_t
 type i64 = C.int64_t
+type u64 = C.uint64_t
 type u8 = C.uint8_t
 type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
@@ -53,43 +54,46 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveSlice(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
+	var gasUsed u64;
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
+	var gasUsed u64;
 	errmsg := C.Buffer{}
-	res, err := C.handle(cache.ptr, id, p, m, db, i64(gasLimit), &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func Query(cache Cache, code_id []byte, path []byte, data []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	p := sendSlice(path)
 	d := sendSlice(data)
 	db := buildDB(store)
+	var gasUsed u64;
 	errmsg := C.Buffer{}
-	res, err := C.query(cache.ptr, id, p, d, db, i64(gasLimit), &errmsg)
+	res, err := C.query(cache.ptr, id, p, d, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), nil
+	return receiveSlice(res), uint64(gasUsed), nil
 }
 
 /**** To error module ***/

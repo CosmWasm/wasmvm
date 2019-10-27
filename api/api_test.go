@@ -37,7 +37,6 @@ func TestInitAndReleaseCache(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	t.Log(tmpdir)
 	defer os.RemoveAll(tmpdir)
 
 	cache, err := InitCache(tmpdir, 3)
@@ -118,9 +117,10 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, err := Instantiate(cache, id, params, msg, store, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
 	require.Equal(t, `{"ok":{"messages":[],"log":null,"data":null}}`, string(res))
+	require.Equal(t, uint64(35_730), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -140,14 +140,16 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	_, err = Instantiate(cache, id, params, msg, store, 100000000)
+	_, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
+	require.Equal(t, uint64(35_730), cost)
 
 	// execute with the same store
 	params, err = json.Marshal(mockParams("fred"))
 	require.NoError(t, err)
-	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
+	require.Equal(t, uint64(64_332), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -174,38 +176,41 @@ func TestMultipleInstances(t *testing.T) {
 	params, err := json.Marshal(mockParams("regen"))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	_, err = Instantiate(cache, id, params, msg, store1, 100000000)
+	_, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
 	require.NoError(t, err)
+	require.Equal(t, uint64(35_593), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
 	params, err = json.Marshal(mockParams("chorus"))
 	require.NoError(t, err)
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
-	_, err = Instantiate(cache, id, params, msg, store2, 100000000)
+	_, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
 	require.NoError(t, err)
+	require.Equal(t, uint64(34_872), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1)
+	resp := exec(t, cache, id, "mary", store1, 58_497)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1)
+	resp = exec(t, cache, id, "fred", store1, 64_212)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2)
+	resp = exec(t, cache, id, "mary", store2, 64_254)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore) types.CosmosResponse {
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, gas uint64) types.CosmosResponse {
 	params, err := json.Marshal(mockParams(signer))
 	require.NoError(t, err)
-	res, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
+	require.Equal(t, gas, cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -222,7 +227,7 @@ func TestQueryFails(t *testing.T) {
 	data := []byte("{}")
 	db := NewLookup()
 
-	_, err := Query(cache, id, path, data, db, 100000000)
+	_, _, err := Query(cache, id, path, data, db, 100000000)
 	require.Error(t, err)
 	require.Equal(t, "not implemented", err.Error())
 }
