@@ -37,7 +37,6 @@ func TestInitAndReleaseCache(t *testing.T) {
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	t.Log(tmpdir)
 	defer os.RemoveAll(tmpdir)
 
 	cache, err := InitCache(tmpdir, 3)
