@@ -40,7 +40,7 @@ void free_rust(Buffer buf);
 Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
 
 Buffer handle(cache_t *cache,
-              Buffer contract_id,
+              Buffer code_id,
               Buffer params,
               Buffer msg,
               DB db,

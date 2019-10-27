@@ -1,7 +1,38 @@
 use errno::{set_errno, Errno};
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
+
+use snafu::Snafu;
+use cosmwasm_vm::errors::Error as CosmWasmError;
 
 use crate::memory::Buffer;
+
+#[derive(Debug, Snafu)]
+#[snafu(visibility = "pub")]
+pub enum Error {
+    #[snafu(display("Wasm Error: {}", source))]
+    WasmErr {
+        source: CosmWasmError,
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
+    #[snafu(display("Caught Panic"))]
+    Panic {
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
+    #[snafu(display("Null/Empty argument passed: {}", name))]
+    EmptyArg {
+        name: &'static str,
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
+    #[snafu(display("Invalid string format: {}", source))]
+    Utf8Err {
+        source: std::str::Utf8Error,
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
+}
 
 pub fn clear_error() {
     set_errno(Errno(0));
