@@ -5,13 +5,13 @@ mod memory;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
+use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
-use snafu::ResultExt;
 
-use cosmwasm_vm::{CosmCache, call_handle_raw, call_init_raw};
-use crate::error::{EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use crate::error::{clear_error, handle_c_error, set_error};
+use crate::error::{EmptyArg, Error, Panic, Utf8Err, WasmErr};
+use cosmwasm_vm::{call_handle_raw, call_init_raw, CosmCache};
 
 #[repr(C)]
 pub struct cache_t {}
@@ -26,9 +26,13 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB>> {
 }
 
 #[no_mangle]
-pub extern "C" fn init_cache(data_dir: Buffer, cache_size: usize, err: Option<&mut Buffer>) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir, cache_size)).
-        unwrap_or_else(|_| Panic{}.fail());
+pub extern "C" fn init_cache(
+    data_dir: Buffer,
+    cache_size: usize,
+    err: Option<&mut Buffer>,
+) -> *mut cache_t {
+    let r =
+        catch_unwind(|| do_init_cache(data_dir, cache_size)).unwrap_or_else(|_| Panic {}.fail());
     match r {
         Ok(t) => {
             clear_error();
@@ -52,9 +56,9 @@ static PARAMS_ARG: &str = "params";
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB>, Error> {
     let dir = data_dir
         .read()
-        .ok_or_else(|| EmptyArg{name: DATA_DIR_ARG}.fail::<()>().unwrap_err() )?;
-    let dir_str = from_utf8(dir).context(Utf8Err{})?;
-    let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr{})? };
+        .ok_or_else(|| EmptyArg { name: DATA_DIR_ARG }.fail::<()>().unwrap_err())?;
+    let dir_str = from_utf8(dir).context(Utf8Err {})?;
+    let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
     let out = Box::new(cache);
     let res = Ok(Box::into_raw(out));
     res
@@ -71,9 +75,9 @@ pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
 #[no_mangle]
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm))).
-            unwrap_or_else(|_| Panic{}.fail()),
-        None => EmptyArg{name: CACHE_ARG}.fail(),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
+            .unwrap_or_else(|_| Panic {}.fail()),
+        None => EmptyArg { name: CACHE_ARG }.fail(),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -82,24 +86,26 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
 fn do_create(cache: &mut CosmCache<DB>, wasm: Buffer) -> Result<Vec<u8>, Error> {
     let wasm = wasm
         .read()
-        .ok_or_else(|| EmptyArg{name: WASM_ARG}.fail::<()>().unwrap_err())?;
-    cache.save_wasm(wasm).context(WasmErr{})
+        .ok_or_else(|| EmptyArg { name: WASM_ARG }.fail::<()>().unwrap_err())?;
+    cache.save_wasm(wasm).context(WasmErr {})
 }
 
 #[no_mangle]
 pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id))).
-            unwrap_or_else(|_| Panic{}.fail()),
-        None => EmptyArg{name: CACHE_ARG}.fail(),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
+            .unwrap_or_else(|_| Panic {}.fail()),
+        None => EmptyArg { name: CACHE_ARG }.fail(),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
 }
 
 fn do_get_code(cache: &mut CosmCache<DB>, id: Buffer) -> Result<Vec<u8>, Error> {
-    let id = id.read().ok_or_else(|| EmptyArg{name: CACHE_ARG}.fail::<()>().unwrap_err())?;
-    cache.load_wasm(id).context(WasmErr{})
+    let id = id
+        .read()
+        .ok_or_else(|| EmptyArg { name: CACHE_ARG }.fail::<()>().unwrap_err())?;
+    cache.load_wasm(id).context(WasmErr {})
 }
 
 #[no_mangle]
@@ -113,9 +119,11 @@ pub extern "C" fn instantiate(
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_init(c, contract_id, params, msg, db, gas_limit))).
-            unwrap_or_else(|_| Panic{}.fail()),
-        None => EmptyArg{name: CACHE_ARG}.fail(),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_init(c, contract_id, params, msg, db, gas_limit)
+        }))
+        .unwrap_or_else(|_| Panic {}.fail()),
+        None => EmptyArg { name: CACHE_ARG }.fail(),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -130,9 +138,15 @@ fn do_init(
     // TODO: use gas_limit
     _gas_limit: i64,
 ) -> Result<Vec<u8>, Error> {
-    let code_id = code_id.read().ok_or_else(|| EmptyArg{name: CODE_ID_ARG}.fail::<()>().unwrap_err())?;
-    let params = params.read().ok_or_else(|| EmptyArg{name: PARAMS_ARG}.fail::<()>().unwrap_err())?;
-    let msg = msg.read().ok_or_else(|| EmptyArg{name: MSG_ARG}.fail::<()>().unwrap_err())?;
+    let code_id = code_id
+        .read()
+        .ok_or_else(|| EmptyArg { name: CODE_ID_ARG }.fail::<()>().unwrap_err())?;
+    let params = params
+        .read()
+        .ok_or_else(|| EmptyArg { name: PARAMS_ARG }.fail::<()>().unwrap_err())?;
+    let msg = msg
+        .read()
+        .ok_or_else(|| EmptyArg { name: MSG_ARG }.fail::<()>().unwrap_err())?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
     let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
@@ -151,9 +165,11 @@ pub extern "C" fn handle(
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_handle(c, code_id, params, msg, db, gas_limit))).
-            unwrap_or_else(|_| Panic{}.fail()),
-        None => EmptyArg{name: CACHE_ARG}.fail(),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_handle(c, code_id, params, msg, db, gas_limit)
+        }))
+        .unwrap_or_else(|_| Panic {}.fail()),
+        None => EmptyArg { name: CACHE_ARG }.fail(),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -168,9 +184,15 @@ fn do_handle(
     // TODO: use gas_limit
     _gas_limit: i64,
 ) -> Result<Vec<u8>, Error> {
-    let code_id = code_id.read().ok_or_else(|| EmptyArg{name: CODE_ID_ARG}.fail::<()>().unwrap_err())?;
-    let params = params.read().ok_or_else(|| EmptyArg{name: PARAMS_ARG}.fail::<()>().unwrap_err())?;
-    let msg = msg.read().ok_or_else(|| EmptyArg{name: MSG_ARG}.fail::<()>().unwrap_err())?;
+    let code_id = code_id
+        .read()
+        .ok_or_else(|| EmptyArg { name: CODE_ID_ARG }.fail::<()>().unwrap_err())?;
+    let params = params
+        .read()
+        .ok_or_else(|| EmptyArg { name: PARAMS_ARG }.fail::<()>().unwrap_err())?;
+    let msg = msg
+        .read()
+        .ok_or_else(|| EmptyArg { name: MSG_ARG }.fail::<()>().unwrap_err())?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
     let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
