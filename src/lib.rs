@@ -10,7 +10,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
-use crate::error::{EmptyArg, Error, Panic, Utf8Err, WasmErr};
+use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_vm::{call_handle_raw, call_init_raw, CosmCache};
 
 #[repr(C)]
@@ -54,9 +54,7 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB>, Error> {
-    let dir = data_dir
-        .read()
-        .ok_or_else(|| EmptyArg { name: DATA_DIR_ARG }.fail::<()>().unwrap_err())?;
+    let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
     let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
     let out = Box::new(cache);
@@ -84,9 +82,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
 }
 
 fn do_create(cache: &mut CosmCache<DB>, wasm: Buffer) -> Result<Vec<u8>, Error> {
-    let wasm = wasm
-        .read()
-        .ok_or_else(|| EmptyArg { name: WASM_ARG }.fail::<()>().unwrap_err())?;
+    let wasm = wasm.read().ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
 
@@ -102,9 +98,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
 }
 
 fn do_get_code(cache: &mut CosmCache<DB>, id: Buffer) -> Result<Vec<u8>, Error> {
-    let id = id
-        .read()
-        .ok_or_else(|| EmptyArg { name: CACHE_ARG }.fail::<()>().unwrap_err())?;
+    let id = id.read().ok_or_else(|| empty_err(CACHE_ARG))?;
     cache.load_wasm(id).context(WasmErr {})
 }
 
@@ -138,15 +132,9 @@ fn do_init(
     // TODO: use gas_limit
     _gas_limit: i64,
 ) -> Result<Vec<u8>, Error> {
-    let code_id = code_id
-        .read()
-        .ok_or_else(|| EmptyArg { name: CODE_ID_ARG }.fail::<()>().unwrap_err())?;
-    let params = params
-        .read()
-        .ok_or_else(|| EmptyArg { name: PARAMS_ARG }.fail::<()>().unwrap_err())?;
-    let msg = msg
-        .read()
-        .ok_or_else(|| EmptyArg { name: MSG_ARG }.fail::<()>().unwrap_err())?;
+    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
+    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
     let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
@@ -184,15 +172,9 @@ fn do_handle(
     // TODO: use gas_limit
     _gas_limit: i64,
 ) -> Result<Vec<u8>, Error> {
-    let code_id = code_id
-        .read()
-        .ok_or_else(|| EmptyArg { name: CODE_ID_ARG }.fail::<()>().unwrap_err())?;
-    let params = params
-        .read()
-        .ok_or_else(|| EmptyArg { name: PARAMS_ARG }.fail::<()>().unwrap_err())?;
-    let msg = msg
-        .read()
-        .ok_or_else(|| EmptyArg { name: MSG_ARG }.fail::<()>().unwrap_err())?;
+    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
+    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
     let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
     let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
