@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -151,7 +150,7 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
-	require.Equal(t, uint64(64_307), cost)
+	require.Equal(t, uint64(64_332), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -192,16 +191,16 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, uint64(34_872), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, 58_501)
+	resp := exec(t, cache, id, "mary", store1, 58_497)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, 64_187)
+	resp = exec(t, cache, id, "fred", store1, 64_212)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, 64_187)
+	resp = exec(t, cache, id, "mary", store2, 64_254)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 }
@@ -215,7 +214,6 @@ func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, ga
 	require.Equal(t, gas, cost)
 
 	var resp types.CosmosResponse
-	fmt.Println(string(res))
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	return resp
