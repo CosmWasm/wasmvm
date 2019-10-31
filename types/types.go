@@ -53,7 +53,7 @@ type CosmosResponse struct {
 type Result struct {
 	// GasUsed is what is calculated from the VM, assuming it didn't run out of gas
 	// This is set by the calling code, not the contract itself
-	GasUsed int64 `json:"gas_used"`
+	GasUsed uint64 `json:"gas_used"`
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field

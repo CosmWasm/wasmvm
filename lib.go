@@ -78,12 +78,12 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
+func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, store KVStore, gasLimit uint64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, gasLimit)
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +96,7 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 	if resp.Err != "" {
 		return nil, fmt.Errorf(resp.Err)
 	}
+	resp.Ok.GasUsed = gasUsed
 	return &resp.Ok, nil
 }
 
@@ -107,12 +108,12 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit int64) (*types.Result, error) {
+func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit uint64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.Handle(w.cache, code, paramBin, executeMsg, store, gasLimit)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +126,13 @@ func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, st
 	if resp.Err != "" {
 		return nil, fmt.Errorf(resp.Err)
 	}
+	resp.Ok.GasUsed = gasUsed
 	return &resp.Ok, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
-func (w *Wasmer) Query(code CodeID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error) {
+func (w *Wasmer) Query(code CodeID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, uint64, error) {
 	panic("unimplemented!")
-	// TODO
-	return nil, nil
 }
