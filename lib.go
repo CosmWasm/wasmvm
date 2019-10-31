@@ -78,25 +78,26 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, store KVStore, gasLimit uint64) (*types.Result, uint64, error) {
+func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, store KVStore, gasLimit uint64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, gasLimit)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	if resp.Err != "" {
-		return nil, 0, fmt.Errorf(resp.Err)
+		return nil, fmt.Errorf(resp.Err)
 	}
-	return &resp.Ok, gasUsed, nil
+	resp.Ok.GasUsed = gasUsed
+	return &resp.Ok, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -107,25 +108,26 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 // and setting the params with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit uint64) (*types.Result, uint64, error) {
+func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, store KVStore, gasLimit uint64) (*types.Result, error) {
 	paramBin, err := json.Marshal(params)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, gasLimit)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	if resp.Err != "" {
-		return nil, 0, fmt.Errorf(resp.Err)
+		return nil, fmt.Errorf(resp.Err)
 	}
-	return &resp.Ok, gasUsed, nil
+	resp.Ok.GasUsed = gasUsed
+	return &resp.Ok, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
