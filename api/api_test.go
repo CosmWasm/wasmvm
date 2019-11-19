@@ -2,10 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/confio/go-cosmwasm/types"
@@ -87,14 +90,14 @@ func mockParams(signer string) types.Params {
 		Message: types.MessageInfo{
 			Signer: signer,
 			SentFunds: []types.Coin{{
-				Denom: "ATOM",
+				Denom:  "ATOM",
 				Amount: "100",
 			}},
 		},
 		Contract: types.ContractInfo{
 			Address: "contract",
 			Balance: []types.Coin{{
-				Denom: "ATOM",
+				Denom:  "ATOM",
 				Amount: "100",
 			}},
 		},
@@ -120,7 +123,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
 	require.Equal(t, `{"ok":{"messages":[],"log":null,"data":null}}`, string(res))
-	require.Equal(t, uint64(35_730), cost)
+	require.Equal(t, uint64(35_984), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -140,16 +143,22 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
+	start := time.Now()
 	_, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
+	diff := time.Now().Sub(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(35_730), cost)
+	require.Equal(t, uint64(35_984), cost)
+	fmt.Printf("Time (35_984 gas): %s\n", diff)
 
 	// execute with the same store
 	params, err = json.Marshal(mockParams("fred"))
 	require.NoError(t, err)
+	start = time.Now()
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(64_332), cost)
+	require.Equal(t, uint64(64_599), cost)
+	fmt.Printf("Time (64_599 gas): %s\n", diff)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -178,7 +187,7 @@ func TestMultipleInstances(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	_, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
 	require.NoError(t, err)
-	require.Equal(t, uint64(35_593), cost)
+	require.Equal(t, uint64(35_847), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -187,19 +196,19 @@ func TestMultipleInstances(t *testing.T) {
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
 	_, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
 	require.NoError(t, err)
-	require.Equal(t, uint64(34_872), cost)
+	require.Equal(t, uint64(35_126), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, 58_497)
+	resp := exec(t, cache, id, "mary", store1, 58_753)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, 64_212)
+	resp = exec(t, cache, id, "fred", store1, 64_479)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, 64_254)
+	resp = exec(t, cache, id, "mary", store2, 64_521)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 }
@@ -210,7 +219,7 @@ func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, ga
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
-	require.Equal(t, gas, cost)
+	assert.Equal(t, gas, cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
