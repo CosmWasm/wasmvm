@@ -8,12 +8,14 @@ RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
 RUN apt install -y build-essential cmake
 
 # add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
-# RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
-# RUN apt-get update
-# RUN apt-get install libllvm8 llvm-8 llvm-8-dev llvm-8-runtime
-# ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
+RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt install -y libllvm8 llvm-8 llvm-8-dev llvm-8-runtime
+ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 
-WORKDIR /root
+## ADD MACOS SUPPORT
+
+WORKDIR /opt
 
 # Add macOS Rust target
 RUN rustup target add x86_64-apple-darwin
@@ -24,20 +26,33 @@ RUN cd osxcross && \
 	wget -nc https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz && \
     mv MacOSX10.10.sdk.tar.xz tarballs/ && \
     UNATTENDED=yes OSX_VERSION_MIN=10.7 ./build.sh
-
-# pre-fetch many deps
-WORKDIR /scratch
-COPY Cargo.toml /scratch/
-COPY src /scratch/src
-RUN cargo fetch
+RUN chmod +rx /opt/osxcross
+RUN chmod +rx /opt/osxcross/target
+RUN chmod -R +rx /opt/osxcross/target/bin
 
 ## TODO: add support for windows cross-compile
+
+# PRE-FETCH MANY DEPS
+WORKDIR /scratch
+COPY Cargo.toml /scratch/
+COPY Cargo.lock /scratch/
+COPY src /scratch/src
+RUN cargo fetch
+# allow non-root user to download more deps later
+RUN chmod -R 777 /usr/local/cargo
+
+## COPY BUILD SCRIPTS
 
 WORKDIR /code
 RUN rm -rf /scratch
 
-COPY build/build_linux.sh /root
-COPY build/build_osx.sh /root
-COPY build/build.sh /root
+COPY build/build_linux.sh /opt
+COPY build/build_osx.sh /opt
+COPY build/build.sh /opt
+RUN chmod +x /opt/build*
 
-CMD ["/root/build.sh"]
+# RUN mkdir /.cargo
+# RUN chmod +rx /.cargo
+# COPY build/cargo-config /.cargo/config
+
+CMD ["/opt/build.sh"]

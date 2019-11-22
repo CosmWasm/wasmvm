@@ -1,7 +1,3 @@
 /target
 **/*.rs.bk
 *.iml
-
-# remove these for production
-Cargo.lock
-*.so
