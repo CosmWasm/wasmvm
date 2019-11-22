@@ -38,7 +38,7 @@ cbindgen = { version = "0.9.1" }
 opt-level = 3
 debug = false
 rpath = true
-lto = true
+lto = false
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'

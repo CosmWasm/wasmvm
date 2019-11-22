@@ -53,4 +53,4 @@ docker-image:
 	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
 
 docker-build:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code confio/go-cosmwasm:$(DOCKER_TAG) /opt/build_linux.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code confio/go-cosmwasm:$(DOCKER_TAG)

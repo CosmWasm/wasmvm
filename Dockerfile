@@ -51,8 +51,8 @@ COPY build/build_osx.sh /opt
 COPY build/build.sh /opt
 RUN chmod +x /opt/build*
 
-# RUN mkdir /.cargo
-# RUN chmod +rx /.cargo
-# COPY build/cargo-config /.cargo/config
+RUN mkdir /.cargo
+RUN chmod +rx /.cargo
+COPY build/cargo-config /.cargo/config
 
 CMD ["/opt/build.sh"]
