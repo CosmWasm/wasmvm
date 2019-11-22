@@ -1,12 +1,17 @@
-FROM rust:1.38
-
-# Usage: docker run --rm -v $(pwd):/code confio/go-cosmwasm:demo /root/build_osx.sh
+# FROM rust:1.39
+# We need nightly currently for compiling with singlepass
+FROM rustlang/rust:nightly
 
 # Install build dependencies
 RUN apt-get update
 RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
 RUN apt install -y build-essential cmake
-## TODO: install LLVM
+
+# add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
+# RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
+# RUN apt-get update
+# RUN apt-get install libllvm8 llvm-8 llvm-8-dev llvm-8-runtime
+# ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 
 WORKDIR /root
 
