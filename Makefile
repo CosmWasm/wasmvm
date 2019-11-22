@@ -1,4 +1,8 @@
-.PHONY: all build build-rust build-go test
+.PHONY: all build build-rust build-go test docker-image docker-build
+
+DOCKER_TAG := demo
+USER_ID := $(shell id -u)
+USER_GROUP = $(shell id -g)
 
 DLL_EXT = ""
 ifeq ($(OS),Windows_NT)
@@ -44,3 +48,9 @@ build-go:
 
 test:
 	RUST_BACKTRACES=1 go test -v ./api
+
+docker-image:
+	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
+
+docker-build:
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code confio/go-cosmwasm:$(DOCKER_TAG)
