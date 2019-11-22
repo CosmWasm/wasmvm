@@ -436,7 +436,7 @@ dependencies = [
 
 [[package]]
 name = "go-cosmwasm"
-version = "0.2.0"
+version = "0.3.2"
 dependencies = [
  "cbindgen 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cosmwasm 0.4.2 (git+https://github.com/confio/cosmwasm.git?branch=cross-compile)",
@@ -991,7 +991,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "wasmer-clif-backend"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cranelift-codegen 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1041,7 +1041,7 @@ dependencies = [
 [[package]]
 name = "wasmer-middleware-common"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "wasmer-runtime-core 0.10.2 (git+https://github.com/confio/wasmer.git?branch=target-fix-0.10)",
 ]
@@ -1049,7 +1049,7 @@ dependencies = [
 [[package]]
 name = "wasmer-runtime"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1060,7 +1060,7 @@ dependencies = [
 [[package]]
 name = "wasmer-runtime-core"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "bincode 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2b_simd 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1087,7 +1087,7 @@ dependencies = [
 [[package]]
 name = "wasmer-singlepass-backend"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "dynasm 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1102,7 +1102,7 @@ dependencies = [
 [[package]]
 name = "wasmer-win-exception-handler"
 version = "0.10.2"
-source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#28522ffefc9183c7d059a7c3a9aace7f9286bcc2"
+source = "git+https://github.com/confio/wasmer.git?branch=target-fix-0.10#c220be041aed9e4a2ff71a0f85dbea3fe4d31fe2"
 dependencies = [
  "cmake 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",

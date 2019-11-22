@@ -14,17 +14,11 @@ can do the cross-compilation.
 
 ## Usage
 
-1. Set `SOURCE_DIR` to the directory where `Cargo.toml` is located (likely `$(pwd)/..`).
-1. Set `BUILD_DIR` to some empty directory we can use for build output (eg. `$HOME/go-out`)
-1. `docker run --rm --mount type=bind,src=$SOURCE_DIR,dst=/code --mount type=bind,src=$BUILD_DIR,dst=/code/target confio/go-cosmwasm:latest`
+`make docker-image` will create a local docker image, capable of cross-compling linux and macos dynamic libs.
 
-Then look inside `$OUTDIR` and you should see:
+`make docker-build` will use the above docker image and copy the generated `{so,dylib}` files into `api` directory to be linked.
 
-**TODO** locate where the files are
+## Future Work
 
-**TODO** copy to final location
-
-## Development and Testing
-
-* `docker build . -t confio/go-cosmwasm:latest`
-* `docker run -it --rm --mount type=bind,src=$SOURCE_DIR,dst=/code --mount type=bind,src=$BUILD_DIR,dst=/code/target confio/go-cosmwasm:latest /bin/bash`
+* Add support for cross-compiling to Windows as well.
+* Publish docker images when they are stable
