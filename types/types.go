@@ -121,7 +121,7 @@ type QueryResponse struct {
 }
 
 type QueryResult struct {
-	Results []Model `json:"model"`
+	Results []Model `json:"results"`
 }
 
 type Model struct {

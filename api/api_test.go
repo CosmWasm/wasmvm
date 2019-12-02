@@ -227,15 +227,38 @@ func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, ga
 	return resp
 }
 
-func TestQueryFails(t *testing.T) {
+func TestQuery(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
+	id := createTestContract(t, cache)
 
-	id := []byte("foo")
-	msg := []byte(`{"raw":{"key":"config"}}`)
-	db := NewLookup()
+	// set up contract
+	store := NewLookup()
+	params, err := json.Marshal(mockParams("creator"))
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	_, _, err = Instantiate(cache, id, params, msg, store, 100000000)
+	require.NoError(t, err)
 
-	_, _, err := Query(cache, id, msg, db, 100000000)
-	require.Error(t, err)
-	require.Equal(t, "not implemented", err.Error())
+	// invalid query
+	query := []byte(`{"Raw":{"val":"config"}}`)
+	data, _, err := Query(cache, id, query, store, 100000000)
+	require.NoError(t, err)
+	var badResp types.QueryResponse
+	err = json.Unmarshal(data, &badResp)
+	require.NoError(t, err)
+	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `raw`")
+
+	// make a valid query
+	query = []byte(`{"raw":{"key":"config"}}`)
+	data, _, err = Query(cache, id, query, store, 100000000)
+	require.NoError(t, err)
+	var resp types.QueryResponse
+	err = json.Unmarshal(data, &resp)
+	require.NoError(t, err)
+	require.Empty(t, resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Results))
+	model := resp.Ok.Results[0]
+	require.Equal(t, "config", model.Key)
+	require.Equal(t, `{"verifier":"fred","beneficiary":"bob","funder":"creator"}`, string(model.Value))
 }
