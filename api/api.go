@@ -82,14 +82,13 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, path []byte, data []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
+func Query(cache Cache, code_id []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
-	p := sendSlice(path)
-	d := sendSlice(data)
+	m := sendSlice(msg)
 	db := buildDB(store)
 	var gasUsed u64;
 	errmsg := C.Buffer{}
-	res, err := C.query(cache.ptr, id, p, d, db, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, id, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}

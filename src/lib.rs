@@ -11,7 +11,7 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_vm::{call_handle_raw, call_init_raw, CosmCache};
+use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
 
 #[repr(C)]
 pub struct cache_t {}
@@ -193,16 +193,41 @@ fn do_handle(
 
 #[no_mangle]
 pub extern "C" fn query(
-    _cache: *mut cache_t,
-    _code_id: Buffer,
-    _path: Buffer,
-    _data: Buffer,
-    _db: DB,
-    _gas_limit: u64,
-    _gas_used: Option<&mut u64>,
+    cache: *mut cache_t,
+    code_id: Buffer,
+    msg: Buffer,
+    db: DB,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    // TODO
-    set_error("not implemented".to_string(), err);
-    Buffer::default()
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_query(c, code_id, msg, db, gas_limit, gas_used)
+        }))
+        .unwrap_or_else(|_| Panic {}.fail()),
+        None => EmptyArg { name: CACHE_ARG }.fail(),
+    };
+    let v = handle_c_error(r, err);
+    Buffer::from_vec(v)
+}
+
+fn do_query(
+    cache: &mut CosmCache<DB>,
+    code_id: Buffer,
+    msg: Buffer,
+    db: DB,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
+    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
+
+    let mut instance = cache.get_instance(code_id, db).context(WasmErr {})?;
+    instance.set_gas(gas_limit);
+    let res = call_query_raw(&mut instance, msg).context(WasmErr {})?;
+    *gas_used = gas_limit - instance.get_gas();
+    cache.store_instance(code_id, instance);
+    Ok(res)
 }

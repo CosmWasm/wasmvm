@@ -232,11 +232,10 @@ func TestQueryFails(t *testing.T) {
 	defer cleanup()
 
 	id := []byte("foo")
-	path := []byte("/some/stuff")
-	data := []byte("{}")
+	msg := []byte(`{"raw":{"key":"config"}}`)
 	db := NewLookup()
 
-	_, _, err := Query(cache, id, path, data, db, 100000000)
+	_, _, err := Query(cache, id, msg, db, 100000000)
 	require.Error(t, err)
 	require.Equal(t, "not implemented", err.Error())
 }
