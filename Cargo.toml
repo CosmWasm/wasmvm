@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -24,10 +24,8 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = { git = "https://github.com/confio/cosmwasm.git", branch = "cross-compile"}
-cosmwasm-vm = { git = "https://github.com/confio/cosmwasm.git", branch = "cross-compile"}
-# cosmwasm = "0.4.2"
-# cosmwasm-vm = "0.4.2"
+cosmwasm = "0.5.2"
+cosmwasm-vm = "0.5.2"
 errno = "0.2"
 snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
 

@@ -25,12 +25,12 @@ build-rust: build-rust-release strip
 
 # use debug build for quick testing
 build-rust-debug:
-	cargo build --features backtraces
+	rustup run nightly cargo build --features backtraces
 	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
-	cargo build --release
+	rustup run nightly cargo build --release --features backtraces
 	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 

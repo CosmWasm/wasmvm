@@ -59,13 +59,12 @@ Buffer instantiate(cache_t *cache,
                    uint64_t *gas_used,
                    Buffer *err);
 
-Buffer query(cache_t *_cache,
-             Buffer _code_id,
-             Buffer _path,
-             Buffer _data,
-             DB _db,
-             uint64_t _gas_limit,
-             uint64_t *_gas_used,
+Buffer query(cache_t *cache,
+             Buffer code_id,
+             Buffer msg,
+             DB db,
+             uint64_t gas_limit,
+             uint64_t *gas_used,
              Buffer *err);
 
 void release_cache(cache_t *cache);

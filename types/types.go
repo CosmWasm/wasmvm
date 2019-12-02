@@ -115,32 +115,16 @@ type OpaqueMsg struct {
 
 //-------- Queries --------
 
-// QueryRequest is an enum. Exactly one field should be non-empty
-type QueryRequest struct {
-	Account AccountRequest `json:"account"`
+type QueryResponse struct {
+	Ok  QueryResult `json:"ok"`
+	Err string      `json:"err"`
 }
 
-// QueryModels is an enum. Exactly one field should be non-empty: the same one corresponding to the Request
-type QueryModels struct {
-	Account []AccountModel `json:"account"`
+type QueryResult struct {
+	Results []Model `json:"results"`
 }
 
-// AccountRequest asks to read the state of a given account
-type AccountRequest struct {
-	// bech32 encoded sdk.AccAddres
-	Address string `json:"address"`
-}
-
-// AccountModel is a basic description of an account
-// (more fields may be added later, but none should change)
-type AccountModel struct {
-	Address string `json:"address"`
-	Balance []Coin `json:"balance"`
-	// pubkey may be empty
-	PubKey struct {
-		// hex-encoded bytes of the raw public key
-		Data string `json:"data"`
-		// the algorithm of the pubkey, currently "secp256k1", possibly others in the future
-		Algo string `json:"algo"`
-	} `json:"pub_key"`
+type Model struct {
+	Key   string `json:"key"`
+	Value []byte `json:"val"`
 }
