@@ -133,6 +133,19 @@ func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, st
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
-func (w *Wasmer) Query(code CodeID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, uint64, error) {
-	panic("unimplemented!")
+func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, gasLimit uint64) (*types.QueryResult, uint64, error) {
+	data, gasUsed, err := api.Query(w.cache, code, queryMsg, store, gasLimit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var resp types.QueryResponse
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf(resp.Err)
+	}
+	return &resp.Ok, gasUsed, nil
 }
