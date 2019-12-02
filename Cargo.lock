@@ -207,7 +207,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "cosmwasm"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "schemars 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -218,10 +218,10 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "cosmwasm 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lru 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -436,11 +436,11 @@ dependencies = [
 
 [[package]]
 name = "go-cosmwasm"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "cbindgen 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cosmwasm 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cosmwasm-vm 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm-vm 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "errno 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "snafu 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1187,8 +1187,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum const-random 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "7b641a8c9867e341f3295564203b1c250eb8ce6cb6126e007941f78c4d2ed7fe"
 "checksum const-random-macro 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c750ec12b83377637110d5a57f5ae08e895b06c4b16e2bdbf1a94ef717428c59"
 "checksum constant_time_eq 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "995a44c877f9212528ccc74b21a232f66ad69001e40ede5bcee2ac9ef2657120"
-"checksum cosmwasm 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "421795f63fb6b5b176ff9c0147d04eab4b450b3af3b9f058f9d5ee4acaff2c2b"
-"checksum cosmwasm-vm 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "82682509b316b6d033b240fcbdbc647c39c2ab85453a2bea8765f2e4187a430c"
+"checksum cosmwasm 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6f57d9092a21bc6fdb4d6b657845a93113e03a637220a25dbf456c0b75876f3a"
+"checksum cosmwasm-vm 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fff9dbac6ae562eba4453fa9cdc3c0ee146c08bacc2cdd9bd4e2c420aa210c5c"
 "checksum cranelift-bforest 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fff04f4ad82c9704a22e753c6268cc6a89add76f094b837cefbba1c665411451"
 "checksum cranelift-codegen 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6ff4a221ec1b95df4b1d20a99fec4fe92a28bebf3a815f2eca72b26f9a627485"
 "checksum cranelift-codegen-meta 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)" = "dd47f665e2ee8f177b97d1f5ce2bd70f54d3b793abb26d92942bfaa4a381fe9f"
