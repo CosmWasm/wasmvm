@@ -1,5 +1,9 @@
 package types
 
+import (
+    "encoding/json"
+)
+
 //---------- Params ---------
 
 // Params defines the state of the blockchain environment this contract is
@@ -22,15 +26,15 @@ type BlockInfo struct {
 }
 
 type MessageInfo struct {
-	// bech32 encoding of sdk.AccAddress executing the contract
-	Signer string `json:"signer"`
+	// binary encoding of sdk.AccAddress executing the contract
+	Signer CanonicalAddress `json:"signer"`
 	// amount of funds send to the contract along with this message
 	SentFunds []Coin `json:"sent_funds"`
 }
 
 type ContractInfo struct {
-	// sdk.AccAddress of the contract, to be used when sending messages
-	Address string `json:"address"`
+	// binary encoding of sdk.AccAddress of the contract, to be used when sending messages
+	Address CanonicalAddress `json:"address"`
 	// current balance of the account controlled by the contract
 	Balance []Coin `json:"balance"`
 }
@@ -39,6 +43,32 @@ type ContractInfo struct {
 type Coin struct {
 	Denom  string `json:"denom"`  // type, eg. "ATOM"
 	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
+}
+
+// we use a type here to force compatible encoding
+// TODO: remove this when cosmwasm updated
+type CanonicalAddress []byte
+
+func (c CanonicalAddress)MarshalJSON() ([]byte, error) {
+    ints := make([]int, len(c))
+    for i, v := range c {
+        ints[i] = int(v)
+    }
+    return json.Marshal(ints)
+}
+
+func (c *CanonicalAddress)UnmarshalJSON(bz []byte) error {
+    var ints []int
+    err := json.Unmarshal(bz, &ints)
+    if err != nil {
+        return err
+    }
+    res := make([]byte, len(ints))
+    for i, v := range ints {
+        res[i] = byte(v)
+    }
+    *c = res
+    return nil
 }
 
 //------- Results / Msgs -------------
