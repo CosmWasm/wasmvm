@@ -146,15 +146,6 @@ type OpaqueMsg struct {
 //-------- Queries --------
 
 type QueryResponse struct {
-	Ok  QueryResult `json:"ok"`
+	Ok  []byte `json:"ok"`
 	Err string      `json:"err"`
-}
-
-type QueryResult struct {
-	Results []Model `json:"results"`
-}
-
-type Model struct {
-	Key   string `json:"key"`
-	Value []byte `json:"val"`
 }

@@ -263,18 +263,15 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `raw`")
+	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `verifier`")
 
 	// make a valid query
-	query = []byte(`{"raw":{"key":"config"}}`)
+	query = []byte(`{"verifier":{}}`)
 	data, _, err = Query(cache, id, query, store, 100000000)
 	require.NoError(t, err)
-	var resp types.QueryResponse
-	err = json.Unmarshal(data, &resp)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Empty(t, resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Results))
-	model := resp.Ok.Results[0]
-	require.Equal(t, "config", model.Key)
-	require.Equal(t, `{"verifier":"fred","beneficiary":"bob","funder":"creator"}`, string(model.Value))
+	require.Equal(t, qres.Err, "")
+	require.Equal(t, string(qres.Ok), "fred")
 }
