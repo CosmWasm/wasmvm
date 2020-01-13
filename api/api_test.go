@@ -133,7 +133,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
     requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(87_433), cost)
+	assert.Equal(t, uint64(87_748), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -158,7 +158,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
     requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(87_433), cost)
+	assert.Equal(t, uint64(87_748), cost)
 	fmt.Printf("Time (87_433 gas): %s\n", diff)
 
 	// execute with the same store
@@ -169,8 +169,8 @@ func TestHandle(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
     requireOkResponse(t, res, 1)
-	require.Equal(t, uint64(131_207), cost)
-	fmt.Printf("Time (131_207 gas): %s\n", diff)
+	assert.Equal(t, uint64(131_864), cost)
+	fmt.Printf("Time (131_864 gas): %s\n", diff)
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -186,7 +186,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
 	require.NoError(t, err)
     requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(86_800), cost)
+	assert.Equal(t, uint64(87_115), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -196,19 +196,19 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
 	require.NoError(t, err)
     requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(86_178), cost)
+	assert.Equal(t, uint64(86_493), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, 117_040)
+	resp := exec(t, cache, id, "mary", store1, 117_200)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, 130_937)
+	resp = exec(t, cache, id, "fred", store1, 131_594)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, 130_785)
+	resp = exec(t, cache, id, "mary", store2, 131_442)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 }
