@@ -3,6 +3,8 @@
 DOCKER_TAG := demo
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
+FLAGS = RUSTFLAGS='-C target-feature=+crt-static'
+
 
 DLL_EXT = ""
 ifeq ($(OS),Windows_NT)
@@ -25,12 +27,12 @@ build-rust: build-rust-release strip
 
 # use debug build for quick testing
 build-rust-debug:
-	rustup run nightly cargo build --features backtraces
+	$(FLAGS) rustup run nightly cargo build --features backtraces --target x86_64-unknown-linux-gnu
 	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
-	rustup run nightly cargo build --release --features backtraces
+	$(FLAGS) rustup run nightly cargo build --release --features backtraces
 	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
@@ -47,7 +49,7 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACES=1 go test -v ./api
+	RUST_BACKTRACES=1 go test -v . ./api ./types
 
 docker-image:
 	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
