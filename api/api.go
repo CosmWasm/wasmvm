@@ -59,7 +59,7 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
-	var gasUsed u64;
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.instantiate(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
@@ -73,7 +73,7 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	p := sendSlice(params)
 	m := sendSlice(msg)
 	db := buildDB(store)
-	var gasUsed u64;
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.handle(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
@@ -86,7 +86,7 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, gasLimit uint
 	id := sendSlice(code_id)
 	m := sendSlice(msg)
 	db := buildDB(store)
-	var gasUsed u64;
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.query(cache.ptr, id, m, db, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {

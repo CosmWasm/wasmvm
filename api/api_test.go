@@ -87,9 +87,9 @@ func TestCreateFailsWithBadData(t *testing.T) {
 func mockParams(signer []byte) types.Params {
 	return types.Params{
 		Block: types.BlockInfo{
-		    Height: 123,
-		    Time: 1578939743,
-		    ChainID: "foobar",
+			Height:  123,
+			Time:    1578939743,
+			ChainID: "foobar",
 		},
 		Message: types.MessageInfo{
 			Signer: signer,
@@ -109,9 +109,9 @@ func mockParams(signer []byte) types.Params {
 }
 
 func binaryAddr(human string) []byte {
-    res := make([]byte, 42)
-    copy(res, []byte(human))
-    return res
+	res := make([]byte, 42)
+	copy(res, []byte(human))
+	return res
 }
 
 func TestInstantiate(t *testing.T) {
@@ -132,7 +132,7 @@ func TestInstantiate(t *testing.T) {
 
 	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
-    requireOkResponse(t, res, 0)
+	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(87_748), cost)
 
 	var resp types.CosmosResponse
@@ -157,7 +157,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
-    requireOkResponse(t, res, 0)
+	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(87_748), cost)
 	fmt.Printf("Time (87_433 gas): %s\n", diff)
 
@@ -168,7 +168,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-    requireOkResponse(t, res, 1)
+	requireOkResponse(t, res, 1)
 	assert.Equal(t, uint64(131_864), cost)
 	fmt.Printf("Time (131_864 gas): %s\n", diff)
 }
@@ -185,7 +185,7 @@ func TestMultipleInstances(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	res, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
 	require.NoError(t, err)
-    requireOkResponse(t, res, 0)
+	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(87_115), cost)
 
 	// instance2 controlled by mary
@@ -195,7 +195,7 @@ func TestMultipleInstances(t *testing.T) {
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
 	res, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
 	require.NoError(t, err)
-    requireOkResponse(t, res, 0)
+	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(86_493), cost)
 
 	// fail to execute store1 with mary
@@ -214,7 +214,7 @@ func TestMultipleInstances(t *testing.T) {
 }
 
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
-    var resp types.CosmosResponse
+	var resp types.CosmosResponse
 	err := json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	require.Equal(t, "", resp.Err)

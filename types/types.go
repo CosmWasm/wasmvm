@@ -1,7 +1,7 @@
 package types
 
 import (
-    "encoding/json"
+	"encoding/json"
 )
 
 //---------- Params ---------
@@ -49,26 +49,26 @@ type Coin struct {
 // TODO: remove this when cosmwasm updated
 type CanonicalAddress []byte
 
-func (c CanonicalAddress)MarshalJSON() ([]byte, error) {
-    ints := make([]int, len(c))
-    for i, v := range c {
-        ints[i] = int(v)
-    }
-    return json.Marshal(ints)
+func (c CanonicalAddress) MarshalJSON() ([]byte, error) {
+	ints := make([]int, len(c))
+	for i, v := range c {
+		ints[i] = int(v)
+	}
+	return json.Marshal(ints)
 }
 
-func (c *CanonicalAddress)UnmarshalJSON(bz []byte) error {
-    var ints []int
-    err := json.Unmarshal(bz, &ints)
-    if err != nil {
-        return err
-    }
-    res := make([]byte, len(ints))
-    for i, v := range ints {
-        res[i] = byte(v)
-    }
-    *c = res
-    return nil
+func (c *CanonicalAddress) UnmarshalJSON(bz []byte) error {
+	var ints []int
+	err := json.Unmarshal(bz, &ints)
+	if err != nil {
+		return err
+	}
+	res := make([]byte, len(ints))
+	for i, v := range ints {
+		res[i] = byte(v)
+	}
+	*c = res
+	return nil
 }
 
 //------- Results / Msgs -------------
@@ -147,5 +147,5 @@ type OpaqueMsg struct {
 
 type QueryResponse struct {
 	Ok  []byte `json:"ok"`
-	Err string      `json:"err"`
+	Err string `json:"err"`
 }

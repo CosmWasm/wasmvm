@@ -27,7 +27,7 @@ var DBvtable = C.DB_vtable{
 
 func buildDB(kv KVStore) C.DB {
 	return C.DB{
-		state: (*C.db_t)(unsafe.Pointer(&kv)),
+		state:  (*C.db_t)(unsafe.Pointer(&kv)),
 		vtable: DBvtable,
 	}
 }
