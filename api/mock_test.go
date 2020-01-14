@@ -58,8 +58,8 @@ func MockHumanAddress(canon []byte) (string, error) {
 	return human, nil
 }
 
-func NewMockAPI() GoAPI {
-	return GoAPI{
+func NewMockAPI() *GoAPI {
+	return &GoAPI{
 		HumanAddress:     MockHumanAddress,
 		CanonicalAddress: MockCanonicalAddress,
 	}

@@ -86,7 +86,7 @@ func (w *Wasmer) Instantiate(code CodeID, params types.Params, initMsg []byte, s
 	if err != nil {
 		return nil, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, goapi, gasLimit)
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, &goapi, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, st
 	if err != nil {
 		return nil, err
 	}
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, goapi, gasLimit)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, &goapi, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (w *Wasmer) Execute(code CodeID, params types.Params, executeMsg []byte, st
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI, gasLimit uint64) ([]byte, uint64, error) {
-	data, gasUsed, err := api.Query(w.cache, code, queryMsg, store, goapi, gasLimit)
+	data, gasUsed, err := api.Query(w.cache, code, queryMsg, store, &goapi, gasLimit)
 	if err != nil {
 		return nil, 0, err
 	}

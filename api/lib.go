@@ -54,7 +54,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveSlice(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
@@ -69,7 +69,7 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	p := sendSlice(params)
 	m := sendSlice(msg)
@@ -84,7 +84,7 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	return receiveSlice(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	m := sendSlice(msg)
 	db := buildDB(store)

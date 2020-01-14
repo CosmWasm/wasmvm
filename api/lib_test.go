@@ -214,7 +214,7 @@ func createTestContract(t *testing.T, cache Cache) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api GoAPI, gas uint64) types.CosmosResponse {
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, gas uint64) types.CosmosResponse {
 	params, err := json.Marshal(mockParams(binaryAddr(signer)))
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
