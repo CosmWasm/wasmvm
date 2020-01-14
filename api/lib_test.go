@@ -14,6 +14,8 @@ import (
 	"github.com/confio/go-cosmwasm/types"
 )
 
+/*** Mock KVStore ****/
+
 type Lookup struct {
 	data map[string]string
 }
@@ -32,6 +34,11 @@ func (l *Lookup) Set(key, value []byte) {
 }
 
 var _ KVStore = (*Lookup)(nil)
+
+/***** Mock GoAPI ****/
+
+
+
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
