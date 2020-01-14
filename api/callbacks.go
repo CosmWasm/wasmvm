@@ -67,8 +67,8 @@ func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) {
 
 /***** GoAPI *******/
 
-type HumanAddress func([]byte) string
-type CanonicalAddress func(string) []byte
+type HumanAddress func([]byte) (string, error)
+type CanonicalAddress func(string) ([]byte, error)
 
 type GoAPI struct {
     HumanAddress HumanAddress
@@ -91,7 +91,10 @@ func buildAPI(api GoAPI) C.GoApi {
 func cHumanAddress(ptr *C.api_t, canon C.Buffer, human C.Buffer) i32 {
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
-	h := api.HumanAddress(c)
+	h, err := api.HumanAddress(c)
+	if err != nil {
+	    return -1
+	}
 	if len(h) == 0 {
 		return 0
 	}
@@ -102,7 +105,10 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human C.Buffer) i32 {
 func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon C.Buffer) i32 {
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	h := string(receiveSlice(human))
-	c := api.CanonicalAddress(h)
+	c, err := api.CanonicalAddress(h)
+	if err != nil {
+	    return -1
+	}
 	if len(c) == 0 {
 		return 0
 	}
