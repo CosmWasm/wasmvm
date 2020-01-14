@@ -33,6 +33,20 @@ typedef struct DB {
   DB_vtable vtable;
 } DB;
 
+typedef struct api_t {
+
+} api_t;
+
+typedef struct GoApi_vtable {
+  int32_t (*c_human_address)(api_t*, Buffer, Buffer);
+  int32_t (*c_canonical_address)(api_t*, Buffer, Buffer);
+} GoApi_vtable;
+
+typedef struct GoApi {
+  api_t *state;
+  GoApi_vtable vtable;
+} GoApi;
+
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 void free_rust(Buffer buf);
@@ -44,6 +58,7 @@ Buffer handle(cache_t *cache,
               Buffer params,
               Buffer msg,
               DB db,
+              GoApi api,
               uint64_t gas_limit,
               uint64_t *gas_used,
               Buffer *err);
@@ -55,6 +70,7 @@ Buffer instantiate(cache_t *cache,
                    Buffer params,
                    Buffer msg,
                    DB db,
+                   GoApi api,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err);
@@ -63,8 +79,17 @@ Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer msg,
              DB db,
+             GoApi api,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);
 
+/**
+ * frees a cache reference
+ *
+ * # Safety
+ *
+ * This must be called exactly once for any `*cache_t` returned by `init_cache`
+ * and cannot be called on any other pointer.
+ */
 void release_cache(cache_t *cache);

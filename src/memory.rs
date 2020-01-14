@@ -39,8 +39,14 @@ impl Buffer {
         }
     }
 
-    // consume must only be used on memory previously released by from_vec
-    // when the Vec is out of scope, it will deallocate the memory previously referenced by Buffer
+    /// consume must only be used on memory previously released by from_vec
+    /// when the Vec is out of scope, it will deallocate the memory previously referenced by Buffer
+    ///
+    /// # Safety
+    ///
+    /// if not empty, `ptr` must be a valid memory reference, which was previously
+    /// created by `from_vec`. You may not consume a slice twice.
+    /// Otherwise you risk double free panics
     pub unsafe fn consume(self) -> Vec<u8> {
         if self.is_empty() {
             return Vec::new();

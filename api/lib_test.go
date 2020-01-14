@@ -14,25 +14,6 @@ import (
 	"github.com/confio/go-cosmwasm/types"
 )
 
-type Lookup struct {
-	data map[string]string
-}
-
-func NewLookup() *Lookup {
-	return &Lookup{data: make(map[string]string)}
-}
-
-func (l *Lookup) Get(key []byte) []byte {
-	val := l.data[string(key)]
-	return []byte(val)
-}
-
-func (l *Lookup) Set(key, value []byte) {
-	l.data[string(key)] = string(value)
-}
-
-var _ KVStore = (*Lookup)(nil)
-
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
 	_, err := InitCache(dataDir, 3)
@@ -126,11 +107,12 @@ func TestInstantiate(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
+	api := NewMockAPI()
 	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(87_748), cost)
@@ -149,12 +131,13 @@ func TestHandle(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
+	api := NewMockAPI()
 	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -165,7 +148,7 @@ func TestHandle(t *testing.T) {
 	params, err = json.Marshal(mockParams(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 1)
@@ -180,10 +163,11 @@ func TestMultipleInstances(t *testing.T) {
 
 	// instance1 controlled by fred
 	store1 := NewLookup()
+	api := NewMockAPI()
 	params, err := json.Marshal(mockParams(binaryAddr("regen")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(87_115), cost)
@@ -193,22 +177,22 @@ func TestMultipleInstances(t *testing.T) {
 	params, err = json.Marshal(mockParams(binaryAddr("chorus")))
 	require.NoError(t, err)
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
-	res, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
+	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(86_493), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, 117_200)
+	resp := exec(t, cache, id, "mary", store1, api, 117_200)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, 131_594)
+	resp = exec(t, cache, id, "fred", store1, api, 131_594)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, 131_442)
+	resp = exec(t, cache, id, "mary", store2, api, 131_442)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 }
@@ -230,10 +214,10 @@ func createTestContract(t *testing.T, cache Cache) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, gas uint64) types.CosmosResponse {
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, gas uint64) types.CosmosResponse {
 	params, err := json.Marshal(mockParams(binaryAddr(signer)))
 	require.NoError(t, err)
-	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
 	require.NoError(t, err)
 	assert.Equal(t, gas, cost)
 
@@ -250,15 +234,16 @@ func TestQuery(t *testing.T) {
 
 	// set up contract
 	store := NewLookup()
+	api := NewMockAPI()
 	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	_, _, err = Instantiate(cache, id, params, msg, store, 100000000)
+	_, _, err = Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 
 	// invalid query
 	query := []byte(`{"Raw":{"val":"config"}}`)
-	data, _, err := Query(cache, id, query, store, 100000000)
+	data, _, err := Query(cache, id, query, store, api, 100000000)
 	require.NoError(t, err)
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
@@ -267,7 +252,7 @@ func TestQuery(t *testing.T) {
 
 	// make a valid query
 	query = []byte(`{"verifier":{}}`)
-	data, _, err = Query(cache, id, query, store, 100000000)
+	data, _, err = Query(cache, id, query, store, api, 100000000)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
