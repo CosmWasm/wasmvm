@@ -1,4 +1,4 @@
-use cosmwasm::storage::Storage;
+use cosmwasm::traits::{ReadonlyStorage, Storage};
 
 use crate::memory::Buffer;
 
@@ -18,7 +18,7 @@ pub struct DB {
     pub vtable: DB_vtable,
 }
 
-impl Storage for DB {
+impl ReadonlyStorage for DB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let buf = Buffer::from_vec(key.to_vec());
         // TODO: dynamic size
@@ -36,7 +36,9 @@ impl Storage for DB {
         buf2.len = res as usize;
         unsafe { Some(buf2.consume()) }
     }
+}
 
+impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) {
         let buf = Buffer::from_vec(key.to_vec());
         let buf2 = Buffer::from_vec(value.to_vec());

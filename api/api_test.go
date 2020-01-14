@@ -84,9 +84,13 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func mockParams(signer string) types.Params {
+func mockParams(signer []byte) types.Params {
 	return types.Params{
-		Block: types.BlockInfo{},
+		Block: types.BlockInfo{
+			Height:  123,
+			Time:    1578939743,
+			ChainID: "foobar",
+		},
 		Message: types.MessageInfo{
 			Signer: signer,
 			SentFunds: []types.Coin{{
@@ -95,13 +99,19 @@ func mockParams(signer string) types.Params {
 			}},
 		},
 		Contract: types.ContractInfo{
-			Address: "contract",
+			Address: binaryAddr("contract"),
 			Balance: []types.Coin{{
 				Denom:  "ATOM",
 				Amount: "100",
 			}},
 		},
 	}
+}
+
+func binaryAddr(human string) []byte {
+	res := make([]byte, 42)
+	copy(res, []byte(human))
+	return res
 }
 
 func TestInstantiate(t *testing.T) {
@@ -116,14 +126,14 @@ func TestInstantiate(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams("creator"))
+	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	require.NoError(t, err)
-	require.Equal(t, `{"ok":{"messages":[],"log":null,"data":null}}`, string(res))
-	require.Equal(t, uint64(36_186), cost)
+	requireOkResponse(t, res, 0)
+	assert.Equal(t, uint64(87_748), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -139,32 +149,76 @@ func TestHandle(t *testing.T) {
 
 	// instantiate it with this store
 	store := NewLookup()
-	params, err := json.Marshal(mockParams("creator"))
+	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	_, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
+	res, cost, err := Instantiate(cache, id, params, msg, store, 100000000)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(36_186), cost)
-	fmt.Printf("Time (36_186 gas): %s\n", diff)
+	requireOkResponse(t, res, 0)
+	assert.Equal(t, uint64(87_748), cost)
+	fmt.Printf("Time (87_433 gas): %s\n", diff)
 
 	// execute with the same store
-	params, err = json.Marshal(mockParams("fred"))
+	params, err = json.Marshal(mockParams(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
+	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(64_837), cost)
-	fmt.Printf("Time (64_837 gas): %s\n", diff)
+	requireOkResponse(t, res, 1)
+	assert.Equal(t, uint64(131_864), cost)
+	fmt.Printf("Time (131_864 gas): %s\n", diff)
+}
 
-	var resp types.CosmosResponse
-	err = json.Unmarshal(res, &resp)
+func TestMultipleInstances(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	// instance1 controlled by fred
+	store1 := NewLookup()
+	params, err := json.Marshal(mockParams(binaryAddr("regen")))
 	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	res, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+	assert.Equal(t, uint64(87_115), cost)
+
+	// instance2 controlled by mary
+	store2 := NewLookup()
+	params, err = json.Marshal(mockParams(binaryAddr("chorus")))
+	require.NoError(t, err)
+	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
+	res, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+	assert.Equal(t, uint64(86_493), cost)
+
+	// fail to execute store1 with mary
+	resp := exec(t, cache, id, "mary", store1, 117_200)
+	require.Equal(t, "Unauthorized", resp.Err)
+
+	// succeed to execute store1 with fred
+	resp = exec(t, cache, id, "fred", store1, 131_594)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
+
+	// succeed to execute store2 with mary
+	resp = exec(t, cache, id, "mary", store2, 131_442)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+}
+
+func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
+	var resp types.CosmosResponse
+	err := json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	require.Equal(t, "", resp.Err)
+	require.Equal(t, expectedMsgs, len(resp.Ok.Messages))
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
@@ -175,47 +229,9 @@ func createTestContract(t *testing.T, cache Cache) []byte {
 	return id
 }
 
-func TestMultipleInstances(t *testing.T) {
-	cache, cleanup := withCache(t)
-	defer cleanup()
-	id := createTestContract(t, cache)
-
-	// instance1 controlled by fred
-	store1 := NewLookup()
-	params, err := json.Marshal(mockParams("regen"))
-	require.NoError(t, err)
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	_, cost, err := Instantiate(cache, id, params, msg, store1, 100000000)
-	require.NoError(t, err)
-	require.Equal(t, uint64(36_049), cost)
-
-	// instance2 controlled by mary
-	store2 := NewLookup()
-	params, err = json.Marshal(mockParams("chorus"))
-	require.NoError(t, err)
-	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
-	_, cost, err = Instantiate(cache, id, params, msg, store2, 100000000)
-	require.NoError(t, err)
-	require.Equal(t, uint64(35_326), cost)
-
-	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, 58_782)
-	require.Equal(t, "Unauthorized", resp.Err)
-
-	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, 64_721)
-	require.Equal(t, "", resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Messages))
-
-	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, 64_779)
-	require.Equal(t, "", resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Messages))
-}
-
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, gas uint64) types.CosmosResponse {
-	params, err := json.Marshal(mockParams(signer))
+	params, err := json.Marshal(mockParams(binaryAddr(signer)))
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, 100000000)
 	require.NoError(t, err)
@@ -234,7 +250,7 @@ func TestQuery(t *testing.T) {
 
 	// set up contract
 	store := NewLookup()
-	params, err := json.Marshal(mockParams("creator"))
+	params, err := json.Marshal(mockParams(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	_, _, err = Instantiate(cache, id, params, msg, store, 100000000)
@@ -247,18 +263,15 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `raw`")
+	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `verifier`")
 
 	// make a valid query
-	query = []byte(`{"raw":{"key":"config"}}`)
+	query = []byte(`{"verifier":{}}`)
 	data, _, err = Query(cache, id, query, store, 100000000)
 	require.NoError(t, err)
-	var resp types.QueryResponse
-	err = json.Unmarshal(data, &resp)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Empty(t, resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Results))
-	model := resp.Ok.Results[0]
-	require.Equal(t, "config", model.Key)
-	require.Equal(t, `{"verifier":"fred","beneficiary":"bob","funder":"creator"}`, string(model.Value))
+	require.Equal(t, qres.Err, "")
+	require.Equal(t, string(qres.Ok), "fred")
 }
