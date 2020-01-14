@@ -1,106 +1,52 @@
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm
-// #include <stdlib.h>
-// #include "bindings.h"
+/*
+#include "bindings.h"
+
+// typedefs for _cgo functions
+typedef int32_t (*human_address_fn)(Buffer, Buffer);
+typedef int32_t (*canonical_address_fn)(Buffer, Buffer);
+
+// forward declarations (api_cgo.go)
+int32_t cHumanAddress_cgo(Buffer canon, Buffer human);
+int32_t cCanonicalAddress_cgo(Buffer human, Buffer canon);
+*/
 import "C"
 
-import "fmt"
+import "unsafe"
 
-// nice aliases to the rust names
-type i32 = C.int32_t
-type i64 = C.int64_t
-type u64 = C.uint64_t
-type u8 = C.uint8_t
-type u8_ptr = *C.uint8_t
-type usize = C.uintptr_t
-type cint = C.int
-
-type Cache struct {
-	ptr *C.cache_t
+type GoAPI struct {
+    HumanAddress func(canon []byte) string
+    CanonicalAddress func(human string) []byte
 }
 
-func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
-	dir := sendSlice([]byte(dataDir))
-	errmsg := C.Buffer{}
-	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
-	if err != nil {
-		return Cache{}, errorWithMessage(err, errmsg)
+// var DBvtable = C.DB_vtable{
+// 	c_get: (C.get_fn)(C.cGet_cgo),
+// 	c_set: (C.set_fn)(C.cSet_cgo),
+// }
+
+func buildApi(api GoAPI) C.GoApi {
+	return C.GoApi{
+	    c_human_address: (C.human_address_fn)(C.cHumanAddress_cgo),
+	    c_canonical_address: (C.canonical_address_fn)(C.cCanonicalAddress_cgo),
 	}
-	return Cache{ptr: ptr}, nil
 }
 
-func ReleaseCache(cache Cache) {
-	C.release_cache(cache.ptr)
-}
-
-func Create(cache Cache, wasm []byte) ([]byte, error) {
-	code := sendSlice(wasm)
-	errmsg := C.Buffer{}
-	id, err := C.create(cache.ptr, code, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+//export cGet
+func cGet(ptr *C.db_t, key C.Buffer, val C.Buffer) i64 {
+	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	k := receiveSlice(key)
+	v := kv.Get(k)
+	if len(v) == 0 {
+		return 0
 	}
-	return receiveSlice(id), nil
+	return writeToBuffer(val, v)
 }
 
-func GetCode(cache Cache, code_id []byte) ([]byte, error) {
-	id := sendSlice(code_id)
-	errmsg := C.Buffer{}
-	code, err := C.get_code(cache.ptr, id, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
-	return receiveSlice(code), nil
-}
-
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	p := sendSlice(params)
-	m := sendSlice(msg)
-	db := buildDB(store)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
-	}
-	return receiveSlice(res), uint64(gasUsed), nil
-}
-
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	p := sendSlice(params)
-	m := sendSlice(msg)
-	db := buildDB(store)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-	res, err := C.handle(cache.ptr, id, p, m, db, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
-	}
-	return receiveSlice(res), uint64(gasUsed), nil
-}
-
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, gasLimit uint64) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	m := sendSlice(msg)
-	db := buildDB(store)
-	var gasUsed u64
-	errmsg := C.Buffer{}
-	res, err := C.query(cache.ptr, id, m, db, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
-	}
-	return receiveSlice(res), uint64(gasUsed), nil
-}
-
-/**** To error module ***/
-
-func errorWithMessage(err error, b C.Buffer) error {
-	msg := receiveSlice(b)
-	if msg == nil {
-		return err
-	}
-	return fmt.Errorf("%s", string(msg))
+//export cSet
+func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) {
+	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	k := receiveSlice(key)
+	v := receiveSlice(val)
+	kv.Set(k, v)
 }

@@ -33,9 +33,18 @@ typedef struct DB {
   DB_vtable vtable;
 } DB;
 
+typedef struct api_t {
+
+} api_t;
+
+typedef struct GoApi_vtable {
+  int32_t (*c_human_address)(api_t*, Buffer, Buffer);
+  int32_t (*c_canonical_address)(api_t*, Buffer, Buffer);
+} GoApi_vtable;
+
 typedef struct GoApi {
-  int32_t (*c_human_address)(Buffer, Buffer);
-  int32_t (*c_canonical_address)(Buffer, Buffer);
+  api_t *state;
+  GoApi_vtable vtable;
 } GoApi;
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);

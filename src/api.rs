@@ -6,12 +6,23 @@ use cosmwasm::traits::{Api};
 
 use crate::memory::Buffer;
 
+// this represents something passed in from the caller side of FFI
+// in this case a struct with go function pointers
+#[repr(C)]
+pub struct api_t {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct GoApi_vtable {
+    pub c_human_address: extern "C" fn(*mut api_t, Buffer, Buffer) -> i32,
+    pub c_canonical_address: extern "C" fn(*mut api_t, Buffer, Buffer) -> i32,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi {
-    pub c_human_address: extern "C" fn(Buffer, Buffer) -> i32,
-    pub c_canonical_address: extern "C" fn(Buffer, Buffer) -> i32,
+    pub state: *mut api_t,
+    pub vtable: GoApi_vtable,
 }
 
 const MAX_ADDRESS_BYTES: usize = 100;
@@ -21,7 +32,7 @@ impl Api for GoApi {
         let human = human.as_str().as_bytes();
         let input = Buffer::from_vec(human.to_vec());
         let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
-        let read = (self.c_human_address)(input, output);
+        let read = (self.vtable.c_human_address)(self.state, input, output);
         if read < 0 {
             return ContractErr {
                 msg: "human_address returned error",
@@ -36,7 +47,7 @@ impl Api for GoApi {
         let canonical = canonical.as_bytes();
         let input = Buffer::from_vec(canonical.to_vec());
         let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
-        let read = (self.c_canonical_address)(input, output);
+        let read = (self.vtable.c_canonical_address)(self.state, input, output);
         if read < 0 {
             return ContractErr {
                 msg: "canonical_address returned error",
