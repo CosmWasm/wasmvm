@@ -9,12 +9,6 @@ use crate::memory::Buffer;
 #[derive(Debug, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum Error {
-    #[snafu(display("Api Error: {}", msg))]
-    ApiErr {
-        msg: &'static str,
-        #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
-    },
     #[snafu(display("Wasm Error: {}", source))]
     WasmErr {
         source: CosmWasmError,
@@ -39,8 +33,6 @@ pub enum Error {
         backtrace: snafu::Backtrace,
     },
 }
-
-pub type Result<T, E=Error> = std::result::Result<T, E>;
 
 /// empty_err returns an error with stack trace.
 /// helper to construct Error::EmptyArg over and over.

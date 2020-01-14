@@ -3,20 +3,17 @@ package api
 /*
 #include "bindings.h"
 
-// typedefs for _cgo functions
+// typedefs for _cgo functions (db)
 typedef int64_t (*get_fn)(db_t *ptr, Buffer key, Buffer val);
 typedef void (*set_fn)(db_t *ptr, Buffer key, Buffer val);
-
-// forward declarations (db_cgo.go)
-int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
-void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
-
-
-// typedefs for _cgo functions
+// and api
 typedef int32_t (*human_address_fn)(api_t*, Buffer, Buffer);
 typedef int32_t (*canonical_address_fn)(api_t*, Buffer, Buffer);
 
-// forward declarations (api_cgo.go)
+// forward declarations (db)
+int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
+void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
+// and api
 int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer human);
 int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer canon);
 */
@@ -39,6 +36,8 @@ var db_vtable = C.DB_vtable{
 	c_set: (C.set_fn)(C.cSet_cgo),
 }
 
+// contract: original pointer/struct referenced must live longer than C.DB struct
+// since this is only used internally, we can verify the code that this is the case
 func buildDB(kv KVStore) C.DB {
 	return C.DB{
 		state:  (*C.db_t)(unsafe.Pointer(&kv)),
@@ -80,9 +79,11 @@ var api_vtable = C.GoApi_vtable{
 	c_canonical_address: (C.canonical_address_fn)(C.cCanonicalAddress_cgo),
 }
 
-func buildAPI(api GoAPI) C.GoApi {
+// contract: original pointer/struct referenced must live longer than C.GoApi struct
+// since this is only used internally, we can verify the code that this is the case
+func buildAPI(api *GoAPI) C.GoApi {
 	return C.GoApi{
-		state:  (*C.api_t)(unsafe.Pointer(&api)),
+		state:  (*C.api_t)(unsafe.Pointer(api)),
 		vtable: api_vtable,
 	}
 }
