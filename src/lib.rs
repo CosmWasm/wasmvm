@@ -3,7 +3,7 @@ mod db;
 mod error;
 mod memory;
 
-pub use api::{Precompiles, mock_api};
+pub use api::{GoApi};
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
@@ -19,16 +19,16 @@ use cosmwasm::traits::Extern;
 #[repr(C)]
 pub struct cache_t {}
 
-fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, Precompiles>> {
+fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut CosmCache<DB, Precompiles>) };
+        let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi>) };
         Some(c)
     }
 }
 
-fn to_extern(storage: DB, api: Precompiles) -> Extern<DB, Precompiles> {
+fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
     Extern{storage, api}
 }
 
@@ -61,7 +61,7 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 
-fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, Precompiles>, Error> {
+fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
     let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
     let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
@@ -74,7 +74,7 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
 pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = Box::from_raw(cache as *mut CosmCache<DB, Precompiles>);
+        let _ = Box::from_raw(cache as *mut CosmCache<DB, GoApi>);
     }
 }
 
@@ -89,7 +89,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_create(cache: &mut CosmCache<DB, Precompiles>, wasm: Buffer) -> Result<Vec<u8>, Error> {
+fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, Error> {
     let wasm = wasm.read().ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
@@ -105,7 +105,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_get_code(cache: &mut CosmCache<DB, Precompiles>, id: Buffer) -> Result<Vec<u8>, Error> {
+fn do_get_code(cache: &mut CosmCache<DB, GoApi>, id: Buffer) -> Result<Vec<u8>, Error> {
     let id = id.read().ok_or_else(|| empty_err(CACHE_ARG))?;
     cache.load_wasm(id).context(WasmErr {})
 }
@@ -117,13 +117,14 @@ pub extern "C" fn instantiate(
     params: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_init(c, contract_id, params, msg, db, gas_limit, gas_used)
+            do_init(c, contract_id, params, msg, db, api, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -133,11 +134,12 @@ pub extern "C" fn instantiate(
 }
 
 fn do_init(
-    cache: &mut CosmCache<DB, Precompiles>,
+    cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     params: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -146,7 +148,6 @@ fn do_init(
     let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let api = mock_api();
     let deps = to_extern(db, api);
     let mut instance = cache.get_instance(code_id, deps).context(WasmErr {})?;
     instance.set_gas(gas_limit);
@@ -163,13 +164,14 @@ pub extern "C" fn handle(
     params: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_handle(c, code_id, params, msg, db, gas_limit, gas_used)
+            do_handle(c, code_id, params, msg, db, api, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -179,11 +181,12 @@ pub extern "C" fn handle(
 }
 
 fn do_handle(
-    cache: &mut CosmCache<DB, Precompiles>,
+    cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     params: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -192,7 +195,6 @@ fn do_handle(
     let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let api = mock_api();
     let deps = to_extern(db, api);
     let mut instance = cache.get_instance(code_id, deps).context(WasmErr {})?;
     instance.set_gas(gas_limit);
@@ -208,13 +210,14 @@ pub extern "C" fn query(
     code_id: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, msg, db, gas_limit, gas_used)
+            do_query(c, code_id, msg, db, api, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -224,10 +227,11 @@ pub extern "C" fn query(
 }
 
 fn do_query(
-    cache: &mut CosmCache<DB, Precompiles>,
+    cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     msg: Buffer,
     db: DB,
+    api: GoApi,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -235,7 +239,6 @@ fn do_query(
     let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
     let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let api = mock_api();
     let deps = to_extern(db, api);
     let mut instance = cache.get_instance(code_id, deps).context(WasmErr {})?;
     instance.set_gas(gas_limit);

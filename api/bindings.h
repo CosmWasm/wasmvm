@@ -33,6 +33,11 @@ typedef struct DB {
   DB_vtable vtable;
 } DB;
 
+typedef struct GoApi {
+  int32_t (*c_human_address)(Buffer, Buffer);
+  int32_t (*c_canonical_address)(Buffer, Buffer);
+} GoApi;
+
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 void free_rust(Buffer buf);
@@ -44,6 +49,7 @@ Buffer handle(cache_t *cache,
               Buffer params,
               Buffer msg,
               DB db,
+              GoApi api,
               uint64_t gas_limit,
               uint64_t *gas_used,
               Buffer *err);
@@ -55,6 +61,7 @@ Buffer instantiate(cache_t *cache,
                    Buffer params,
                    Buffer msg,
                    DB db,
+                   GoApi api,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err);
@@ -63,6 +70,7 @@ Buffer query(cache_t *cache,
              Buffer code_id,
              Buffer msg,
              DB db,
+             GoApi api,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);

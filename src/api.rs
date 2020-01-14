@@ -1,16 +1,52 @@
-//use cosmwasm::traits::{Api};
-use cosmwasm::mock::MockApi;
+use snafu::{ResultExt};
 
-//#[repr(C)]
-//pub struct Precompiles {
-//    pub c_human_address: extern "C" fn(*mut db_t, Buffer, Buffer) -> i64,
-//    pub c_canonical_address: extern "C" fn(*mut db_t, Buffer, Buffer),
-//}
+use cosmwasm::errors::{ContractErr, Result, Utf8Err};
+use cosmwasm::types::{CanonicalAddr, HumanAddr};
+use cosmwasm::traits::{Api};
 
-// This is a stub with mock implementation until we support
-// passing in functions from go
-pub type Precompiles = MockApi;
+use crate::memory::Buffer;
 
-pub fn mock_api() -> Precompiles {
-    Precompiles::new(42)
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct GoApi {
+    pub c_human_address: extern "C" fn(Buffer, Buffer) -> i32,
+    pub c_canonical_address: extern "C" fn(Buffer, Buffer) -> i32,
+}
+
+const MAX_ADDRESS_BYTES: usize = 100;
+
+impl Api for GoApi {
+    fn canonical_address(&self, human: &HumanAddr) -> Result<CanonicalAddr> {
+        let human = human.as_str().as_bytes();
+        let input = Buffer::from_vec(human.to_vec());
+        let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
+        let read = (self.c_human_address)(input, output);
+        if read < 0 {
+            return ContractErr {
+                msg: "human_address returned error",
+            }.fail();
+        }
+        output.len = read as usize;
+        let canon = unsafe { output.consume() };
+        Ok(CanonicalAddr(canon))
+    }
+
+    fn human_address(&self, canonical: &CanonicalAddr) -> Result<HumanAddr> {
+        let canonical = canonical.as_bytes();
+        let input = Buffer::from_vec(canonical.to_vec());
+        let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
+        let read = (self.c_canonical_address)(input, output);
+        if read < 0 {
+            return ContractErr {
+                msg: "canonical_address returned error",
+            }.fail();
+        }
+        output.len = read as usize;
+        let result = unsafe { output.consume() };
+        // TODO: let's change the Utf8Err definition in cosmwasm to avoid a copy
+//        let human = String::from_utf8(result).context(Utf8Err{})?;
+        let human = std::str::from_utf8(&result).context(Utf8Err{})?.to_string();
+        Ok(HumanAddr(human))
+    }
 }
