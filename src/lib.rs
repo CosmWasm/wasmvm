@@ -3,7 +3,7 @@ mod db;
 mod error;
 mod memory;
 
-pub use api::{GoApi};
+pub use api::GoApi;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 
@@ -13,8 +13,8 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
 use cosmwasm::traits::Extern;
+use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
 
 #[repr(C)]
 pub struct cache_t {}
@@ -29,7 +29,7 @@ fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
 }
 
 fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
-    Extern{storage, api}
+    Extern { storage, api }
 }
 
 #[no_mangle]
@@ -66,10 +66,15 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
     let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
     let out = Box::new(cache);
-    let res = Ok(Box::into_raw(out));
-    res
+    Ok(Box::into_raw(out))
 }
 
+/// frees a cache reference
+///
+/// # Safety
+///
+/// This must be called exactly once for any `*cache_t` returned by `init_cache`
+/// and cannot be called on any other pointer.
 #[no_mangle]
 pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {

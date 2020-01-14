@@ -70,12 +70,12 @@ type HumanAddress func([]byte) (string, error)
 type CanonicalAddress func(string) ([]byte, error)
 
 type GoAPI struct {
-    HumanAddress HumanAddress
-    CanonicalAddress CanonicalAddress
+	HumanAddress     HumanAddress
+	CanonicalAddress CanonicalAddress
 }
 
 var api_vtable = C.GoApi_vtable{
-	c_human_address: (C.human_address_fn)(C.cHumanAddress_cgo),
+	c_human_address:     (C.human_address_fn)(C.cHumanAddress_cgo),
 	c_canonical_address: (C.canonical_address_fn)(C.cCanonicalAddress_cgo),
 }
 
@@ -94,7 +94,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human C.Buffer) i32 {
 	c := receiveSlice(canon)
 	h, err := api.HumanAddress(c)
 	if err != nil {
-	    return -1
+		return -1
 	}
 	if len(h) == 0 {
 		return 0
@@ -108,7 +108,7 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon C.Buffer) i32 {
 	h := string(receiveSlice(human))
 	c, err := api.CanonicalAddress(h)
 	if err != nil {
-	    return -1
+		return -1
 	}
 	if len(c) == 0 {
 		return 0

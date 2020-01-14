@@ -84,4 +84,12 @@ Buffer query(cache_t *cache,
              uint64_t *gas_used,
              Buffer *err);
 
+/**
+ * frees a cache reference
+ *
+ * # Safety
+ *
+ * This must be called exactly once for any `*cache_t` returned by `init_cache`
+ * and cannot be called on any other pointer.
+ */
 void release_cache(cache_t *cache);

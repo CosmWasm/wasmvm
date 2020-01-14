@@ -1,8 +1,8 @@
-use snafu::{ResultExt};
+use snafu::ResultExt;
 
 use cosmwasm::errors::{ContractErr, Result, Utf8Err};
+use cosmwasm::traits::Api;
 use cosmwasm::types::{CanonicalAddr, HumanAddr};
-use cosmwasm::traits::{Api};
 
 use crate::memory::Buffer;
 
@@ -36,7 +36,8 @@ impl Api for GoApi {
         if read < 0 {
             return ContractErr {
                 msg: "human_address returned error",
-            }.fail();
+            }
+            .fail();
         }
         output.len = read as usize;
         let canon = unsafe { output.consume() };
@@ -51,13 +52,16 @@ impl Api for GoApi {
         if read < 0 {
             return ContractErr {
                 msg: "canonical_address returned error",
-            }.fail();
+            }
+            .fail();
         }
         output.len = read as usize;
         let result = unsafe { output.consume() };
         // TODO: let's change the Utf8Err definition in cosmwasm to avoid a copy
-//        let human = String::from_utf8(result).context(Utf8Err{})?;
-        let human = std::str::from_utf8(&result).context(Utf8Err{})?.to_string();
+        //        let human = String::from_utf8(result).context(Utf8Err{})?;
+        let human = std::str::from_utf8(&result)
+            .context(Utf8Err {})?
+            .to_string();
         Ok(HumanAddr(human))
     }
 }
