@@ -3,16 +3,19 @@
 DOCKER_TAG := demo
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
-FLAGS = RUSTFLAGS='-C target-feature=+crt-static'
+FLAGS = RUSTFLAGS='--print=native-static-libs'
+# produces:
+# note: Link against the following native artifacts when linking against this static library. The order and any duplication can be significant on some platforms.
+#  note: native-static-libs: -lutil -lutil -ldl -lrt -lpthread -lgcc_s -lc -lm -lrt -lpthread -lutil -lutil
 
 
 DLL_EXT = ""
 ifeq ($(OS),Windows_NT)
-	DLL_EXT = dll
+	DLL_EXT = lib
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
-		DLL_EXT = so
+		DLL_EXT = a
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		DLL_EXT = dylib
@@ -27,7 +30,7 @@ build-rust: build-rust-release strip
 
 # use debug build for quick testing
 build-rust-debug:
-	$(FLAGS) rustup run nightly cargo build --features backtraces --target x86_64-unknown-linux-gnu
+	$(FLAGS) rustup run nightly cargo build --features backtraces
 	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster

@@ -1,6 +1,6 @@
 package api
 
-// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm
+// #cgo LDFLAGS: -Wl,-rpath,${SRCDIR} -L${SRCDIR} -lgo_cosmwasm -lutil -ldl -lrt -lpthread -lgcc_s -lc -lm -lrt
 // #include <stdlib.h>
 // #include "bindings.h"
 import "C"
