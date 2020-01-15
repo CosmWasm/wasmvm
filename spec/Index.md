@@ -65,4 +65,4 @@ More information on the current Web Assembly framework design:
 
 * [Architecture](./Architecture.md) - a high-level view of what capabilities we expose to the Wasm contracts
 * [Specification](./Specification.md) - a more detailed look at interfaces, methods, and structs to be used
-* [Tutorial](./Tutorial.md) - a quick guide on how to use this library
+* [Tutorial](https://www.cosmwasm.com) - tutorials and reference on building with cosmwasm
