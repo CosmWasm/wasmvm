@@ -47,7 +47,7 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACES=1 go test -v ./api
+	RUST_BACKTRACES=1 go test -v ./api ./types
 
 docker-image:
 	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
