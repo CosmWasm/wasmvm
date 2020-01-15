@@ -1,4 +1,4 @@
-.PHONY: all build build-rust build-go test docker-image docker-build
+.PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
 DOCKER_TAG := demo
 USER_ID := $(shell id -u)
@@ -51,6 +51,9 @@ test:
 
 docker-image:
 	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
+
+docker-image-centos7:
+	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG) -f ./Dockerfile.centos7
 
 docker-build:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code confio/go-cosmwasm:$(DOCKER_TAG)
