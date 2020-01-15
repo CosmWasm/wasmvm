@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
 
-DOCKER_TAG := 0.8.2
+DOCKER_TAG := 0.9.0-dev
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 

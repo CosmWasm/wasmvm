@@ -7,19 +7,24 @@ RUN apt-get update
 RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
 RUN apt install -y build-essential cmake
 
+## add support for windows cross-compile
+RUN apt install -y mingw-w64
+
 # add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
 RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
 RUN apt-get update
 RUN apt install -y libllvm8 llvm-8 llvm-8-dev llvm-8-runtime
 ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 
-## ADD MACOS SUPPORT
-
 WORKDIR /opt
 
 # Pin to proper nightly and add macOS Rust target
 RUN rustup default nightly-2020-06-08
+
+# Add macOS and Windows Rust target
 RUN rustup target add x86_64-apple-darwin
+RUN rustup target add x86_64-pc-windows-msvc
+RUN rustup target add x86_64-pc-windows-gnu
 
 # Build osxcross
 RUN git clone https://github.com/tpoechtrager/osxcross
@@ -31,8 +36,6 @@ RUN chmod +rx /opt/osxcross
 RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
 
-## TODO: add support for windows cross-compile
-
 # PRE-FETCH MANY DEPS
 WORKDIR /scratch
 COPY Cargo.toml /scratch/
@@ -43,7 +46,6 @@ RUN cargo fetch
 RUN chmod -R 777 /usr/local/cargo
 
 ## COPY BUILD SCRIPTS
-
 WORKDIR /code
 RUN rm -rf /scratch
 
@@ -54,4 +56,4 @@ RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY build/cargo-config /.cargo/config
 
-CMD ["/opt/build_osx.sh"]
+CMD ["/opt/build_cross.sh"]
