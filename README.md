@@ -4,6 +4,9 @@ This provides go bindings to the [cosmwasm](https://github.com/confio/cosmwasm) 
 contract framework. In particular, it allows you to easily compile, initialize,
 and execute these contracts from Go.
 
+As of the 0.6.0 release, we support [cosmwasm](https://github.com/confio/cosmwasm) 0.6.3
+and any compatible smart contracts.
+
 ## Structure
 
 This repo contains both Rust and Go code. The rust code is compiled into a dll/so
@@ -11,6 +14,16 @@ to be linked via cgo and wrapped with a pleasant Go API. The full build step
 involves compiling rust -> C library, and linking that library to the Go code.
 For ergonomics of the user, we will include pre-compiled libraries to easily
 link with, and Go developers should just be able to import this directly.
+
+## Supported Platforms
+
+Since this package includes a rust prebuilt dll, you cannot just import the go code,
+but need to be on a system that works with an existing dll. Currently this is Linux
+(tested on Ubuntu, Debian, and CentOS7) and MacOS. We have a build system for Windows,
+but it is not supported by the wasmer singlepass backend which we rely upon for gas
+metering.
+
+*Note: Windows is not supported currently*
 
 ## Design
 
