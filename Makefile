@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
-DOCKER_TAG := demo
+DOCKER_TAG := 0.6
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -49,11 +49,12 @@ build-go:
 test:
 	RUST_BACKTRACES=1 go test -v ./api ./types
 
-docker-image:
-	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG)
-
 docker-image-centos7:
-	docker build . -t confio/go-cosmwasm:$(DOCKER_TAG) -f ./Dockerfile.centos7
+	docker build . -t go-cosmwasm:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
 
-docker-build:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code confio/go-cosmwasm:$(DOCKER_TAG)
+docker-image-cross:
+	docker build . -t go-cosmwasm:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
+
+release: docker-image-cross docker-image-centos7
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-cross
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-centos
