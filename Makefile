@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
-DOCKER_TAG := 0.6
+DOCKER_TAG := 0.6.0
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -47,7 +47,7 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACES=1 go test -v ./api ./types
+	RUST_BACKTRACE=1 go test -v ./api ./types
 
 docker-image-centos7:
 	docker build . -t go-cosmwasm:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
