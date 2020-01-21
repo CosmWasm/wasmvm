@@ -38,7 +38,7 @@ a proper dll built for your platform. This should be `api/libgo_cosmwasm.X`, whe
 
 * `so` for Linux systems
 * `dylib` for MacOS
-* `dll` for Windows
+* `dll` for Windows - Not currently supported due to upstream dependency
 
 If this is present, then `make test` will run the Go test suite and you can import this code freely.
 If it is not present you will have to build it for your system, and ideally add it to this repo
