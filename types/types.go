@@ -95,9 +95,9 @@ type Result struct {
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
-	Send     SendMsg     `json:"send"`
-	Contract ContractMsg `json:"contract"`
-	Opaque   OpaqueMsg   `json:"opaque"`
+	Send     *SendMsg     `json:"send,omitempty"`
+	Contract *ContractMsg `json:"contract,omitempty"`
+	Opaque   *OpaqueMsg   `json:"opaque,omitempty"`
 }
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
