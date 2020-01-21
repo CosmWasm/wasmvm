@@ -123,7 +123,7 @@ type ContractMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg string `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send []Coin `json:"amount"`
+	Send []Coin `json:"send"`
 }
 
 // OpaqueMsg is some raw sdk-transaction that is passed in from a user and then relayed
