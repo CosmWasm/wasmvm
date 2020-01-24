@@ -32,13 +32,19 @@ build-rust-debug:
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
-	cargo build --release --features backtraces
+	RUSTFLAGS="-C target-feature=-crt-static" cargo build --release --features backtraces --target x86_64-unknown-linux-musl
 	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
-	@ #this pulls out ELF symbols, 80% size reduction!
+
+install-release-tools:
+	sudo apt install musl-tools
+	rustup target add x86_64-unknown-linux-musl
+	rustup target add x86_64-unknown-linux-musl --toolchain=nightly
+
 
 # implement stripping based on os
 ifeq ($(DLL_EXT),so)
 strip:
+	@ #this pulls out ELF symbols, 80% size reduction!
 	strip api/libgo_cosmwasm.so
 else
 # TODO: add for windows and osx
