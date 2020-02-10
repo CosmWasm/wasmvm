@@ -21,7 +21,9 @@ all: build test
 
 build: build-rust build-go
 
-build-rust: build-rust-release strip
+# don't strip for now, for better error reporting
+# build-rust: build-rust-release strip
+build-rust: build-rust-release
 
 # use debug build for quick testing
 build-rust-debug:

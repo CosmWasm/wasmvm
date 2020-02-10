@@ -23,6 +23,7 @@ type Cache struct {
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	errmsg := C.Buffer{}
+
 	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
