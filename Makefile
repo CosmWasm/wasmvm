@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test docker-image docker-build docker-image-centos7
 
-DOCKER_TAG := 0.6.2
+DOCKER_TAG := 0.6.3
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -59,4 +59,4 @@ docker-image-cross:
 
 release: docker-image-cross docker-image-centos7
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-cross
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-centos
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code go-cosmwasm:$(DOCKER_TAG)-centos7
