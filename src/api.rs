@@ -14,16 +14,23 @@ pub struct api_t {}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
-    pub c_human_address: extern "C" fn(*mut api_t, Buffer, Buffer) -> i32,
-    pub c_canonical_address: extern "C" fn(*mut api_t, Buffer, Buffer) -> i32,
+    pub c_human_address: extern "C" fn(*const api_t, Buffer, Buffer) -> i32,
+    pub c_canonical_address: extern "C" fn(*const api_t, Buffer, Buffer) -> i32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi {
-    pub state: *mut api_t,
+    pub state: *const api_t,
     pub vtable: GoApi_vtable,
 }
+
+// We must declare that these are safe to Send, to use in wasm.
+// The known go caller passes in immutable function pointers, but this is indeed
+// unsafe for possible other callers.
+//
+// see: https://stackoverflow.com/questions/50258359/can-a-struct-containing-a-raw-pointer-implement-send-and-be-ffi-safe
+unsafe impl Send for GoApi {}
 
 const MAX_ADDRESS_BYTES: usize = 100;
 

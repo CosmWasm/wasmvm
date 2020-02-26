@@ -38,12 +38,12 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*c_human_address)(api_t*, Buffer, Buffer);
-  int32_t (*c_canonical_address)(api_t*, Buffer, Buffer);
+  int32_t (*c_human_address)(const api_t*, Buffer, Buffer);
+  int32_t (*c_canonical_address)(const api_t*, Buffer, Buffer);
 } GoApi_vtable;
 
 typedef struct GoApi {
-  api_t *state;
+  const api_t *state;
   GoApi_vtable vtable;
 } GoApi;
 
