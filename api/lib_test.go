@@ -65,8 +65,8 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func mockParams(signer []byte) types.Params {
-	return types.Params{
+func mockEnv(signer []byte) types.Env {
+	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
 			Time:    1578939743,
@@ -108,7 +108,7 @@ func TestInstantiate(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup()
 	api := NewMockAPI()
-	params, err := json.Marshal(mockParams(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -132,7 +132,7 @@ func TestHandle(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup()
 	api := NewMockAPI()
-	params, err := json.Marshal(mockParams(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -145,7 +145,7 @@ func TestHandle(t *testing.T) {
 	fmt.Printf("Time (87_433 gas): %s\n", diff)
 
 	// execute with the same store
-	params, err = json.Marshal(mockParams(binaryAddr("fred")))
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
 	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
@@ -164,7 +164,7 @@ func TestMultipleInstances(t *testing.T) {
 	// instance1 controlled by fred
 	store1 := NewLookup()
 	api := NewMockAPI()
-	params, err := json.Marshal(mockParams(binaryAddr("regen")))
+	params, err := json.Marshal(mockEnv(binaryAddr("regen")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
@@ -174,7 +174,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
-	params, err = json.Marshal(mockParams(binaryAddr("chorus")))
+	params, err = json.Marshal(mockEnv(binaryAddr("chorus")))
 	require.NoError(t, err)
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
@@ -215,7 +215,7 @@ func createTestContract(t *testing.T, cache Cache) []byte {
 
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, gas uint64) types.CosmosResponse {
-	params, err := json.Marshal(mockParams(binaryAddr(signer)))
+	params, err := json.Marshal(mockEnv(binaryAddr(signer)))
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
 	require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestQuery(t *testing.T) {
 	// set up contract
 	store := NewLookup()
 	api := NewMockAPI()
-	params, err := json.Marshal(mockParams(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	_, _, err = Instantiate(cache, id, params, msg, store, api, 100000000)
