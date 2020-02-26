@@ -23,7 +23,7 @@ build: build-rust build-go
 
 # don't strip for now, for better error reporting
 # build-rust: build-rust-release strip
-build-rust: build-rust-release
+build-rust: build-rust-static
 
 # use debug build for quick testing
 build-rust-debug:
@@ -32,8 +32,17 @@ build-rust-debug:
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
-	RUSTFLAGS="-C target-feature=-crt-static" cargo build --release --features backtraces --target x86_64-unknown-linux-musl
+# 	RUSTFLAGS="-C target-feature=-crt-static" cargo build --release --features backtraces --target x86_64-unknown-linux-musl
+	cargo build --release --features backtraces
+	rm -f api/libgo_cosmwasm.{a,$(DLL_EXT)}
 	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
+
+# static is like release, but bigger, but much more portable (doesn't depend on host libraries)
+build-rust-static:
+	RUSTFLAGS="-C target-feature=-crt-static" rustup run nightly cargo build --release --features backtraces --target x86_64-unknown-linux-musl
+	rm -f api/libgo_cosmwasm.{a,$(DLL_EXT)}
+	cp target/x86_64-unknown-linux-musl/release/libgo_cosmwasm.a api
+
 
 install-release-tools:
 	sudo apt install musl-tools
@@ -55,7 +64,8 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACE=1 go test -v ./api .
+    # note: you must modify api/lib.go somehow after rebuilding the rust dll to relink it
+	RUST_BACKTRACE=1 go test -v -count=1 ./api .
 
 docker-image-centos7:
 	docker build . -t go-cosmwasm:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
