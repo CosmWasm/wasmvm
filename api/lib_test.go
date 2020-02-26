@@ -115,7 +115,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(87_749), cost)
+	assert.Equal(t, uint64(64_095), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -141,19 +141,19 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(87_749), cost)
-	fmt.Printf("Time (87_433 gas): %s\n", diff)
+	assert.Equal(t, uint64(64_095), cost)
+	fmt.Printf("Time (64_095 gas): %s\n", diff)
 
 	// execute with the same store
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
+	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), store, api, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 1)
-	assert.Equal(t, uint64(130_070), cost)
-	fmt.Printf("Time (130_070 gas): %s\n", diff)
+	assert.Equal(t, uint64(101_455), cost)
+	fmt.Printf("Time (101_455 gas): %s\n", diff)
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -170,7 +170,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(87_116), cost)
+	assert.Equal(t, uint64(64_095), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -180,21 +180,29 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(86_494), cost)
+	assert.Equal(t, uint64(63_255), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, 117_201)
+	resp := exec(t, cache, id, "mary", store1, api, 87_509)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, 129_800)
+	resp = exec(t, cache, id, "fred", store1, api, 101_455)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
+	logs := resp.Ok.Log
+	require.Equal(t, 2, len(logs))
+	require.Equal(t, "destination", logs[1].Key)
+	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, 129_648)
+	resp = exec(t, cache, id, "mary", store2, api, 101_455)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
+	logs = resp.Ok.Log
+	require.Equal(t, 2, len(logs))
+	require.Equal(t, "destination", logs[1].Key)
+	require.Equal(t, "sue", logs[1].Value)
 }
 
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
@@ -217,7 +225,7 @@ func createTestContract(t *testing.T, cache Cache) []byte {
 func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, gas uint64) types.CosmosResponse {
 	params, err := json.Marshal(mockEnv(binaryAddr(signer)))
 	require.NoError(t, err)
-	res, cost, err := Handle(cache, id, params, []byte(`{}`), store, api, 100000000)
+	res, cost, err := Handle(cache, id, params, []byte(`{"release":{}}`), store, api, 100000000)
 	require.NoError(t, err)
 	assert.Equal(t, gas, cost)
 
