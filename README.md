@@ -46,5 +46,6 @@ with a PR (on your fork). We will set up a proper CI system for building these b
 but we are not there yet.
 
 To build the rust side, try `make build-rust` and wait for it to compile. This depends on
-`cargo` being installed with `rustc` version 1.37+. Generally, you can just use `rustup` to
-install all this with no problems.
+`cargo` being installed with `rustc` version 1.39+. Generally, you can just use `rustup` to
+install all this with no problems. You will also need to run `make install-release-tools`
+once to ensure you have the needed libraries to compile (for Ubuntu/Debian build, not needed for OSX).
