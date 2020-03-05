@@ -7,6 +7,10 @@ jobs:
       - run: rustup toolchain install nightly
       - checkout
       - run: make build-rust
+      - persist_to_workspace:
+          root: ./api
+          paths:
+            - libgo_cosmwasm.so
   test:
     working_directory: /go/src/github.com/confio/go-cosmwasm
     docker:
@@ -16,6 +20,9 @@ jobs:
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
     steps:
       - checkout
+      - attach_workspace:
+          at: /tmp/builds
+      - run: cp /tmp/builds/libgo_cosmwasm.so ./api
       - run: make test
       - run: make build-go
 workflows:
