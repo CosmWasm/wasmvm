@@ -37,32 +37,28 @@ jobs:
             - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
       - run: echo $CIRCLE_BRANCH
-# TODO: re-enable for merge
-#      - run: make release
+      - run: make release
       - run: ls -l ./api
       - run: git config user.email "bot@circleci.com"
       - run: git config user.name "CircleCI Bot"
       - run: git add .
-      # CIRCLE_BRANCH doesn't give us info, assume it is master
-#      - run: git checkout master
       - run: git commit --allow-empty -m '[skip ci] Built release libraries'
       - run: git push origin $CIRCLE_BRANCH
-#      - run: git push origin master
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-#      - build
-#      - test:
-#          requires:
-#            - build
+      - build
+      - test:
+          requires:
+            - build
       # release only on master, not on tags (auto-build on merge PR)
-      - release
-#          filters:
-#            tags:
-#              ignore:
-#                - /.*/
-#            branches:
-#              only:
-#                - master
+      - release:
+          filters:
+            tags:
+              ignore:
+                - /.*/
+            branches:
+              only:
+                - master
