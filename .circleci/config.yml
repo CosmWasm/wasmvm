@@ -29,7 +29,7 @@ jobs:
   # TODO: only run this on master (and not on tags)
   release:
     machine:
-      - image: ubuntu-1604:201903-01
+      image: ubuntu-1604:201903-01
     steps:
       - checkout
       - run: make release
