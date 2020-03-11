@@ -4,7 +4,7 @@ version = "0.7.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
-repository = "https://github.com/confio/go-cosmwasm"
+repository = "https://github.com/CosmWasm/go-cosmwasm"
 license = "Apache-2.0"
 readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [badges]
-circle-ci = { repository = "confio/go-cosmwasm", branch = "master" }
+circle-ci = { repository = "CosmWasm/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
