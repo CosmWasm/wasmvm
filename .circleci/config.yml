@@ -33,16 +33,14 @@ jobs:
     steps:
       - checkout
 #      - run: make release
-      - run: echo $CIRCLE_BRANCH
-      - run: echo $CIRCLE_REPOSITORY_URL
-      - run: echo $CIRCLE_PULL_REQUEST
       - run: ls -l ./api
       - run: git config user.email "bot@circleci.com"
       - run: git config user.name "CircleCI Bot"
       - run: git add .
-      - run: git checkout $CIRCLE_BRANCH
+      # CIRCLE_BRANCH doesn't give us info, assume it is master
+      - run: git checkout master
       - run: git commit --allow-empty -m '[skip ci] Built release libraries'
-      - run: git push origin $CIRCLE_BRANCH
+      - run: git push origin master
 
 workflows:
   version: 2

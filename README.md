@@ -23,6 +23,8 @@ but need to be on a system that works with an existing dll. Currently this is Li
 but it is not supported by the wasmer singlepass backend which we rely upon for gas
 metering.
 
+*Note: CentOS support is currently disabled due to work on CD tooling. We require Linux with glibc 2.18+*
+
 *Note: Windows is not supported currently*
 
 *Note: We only currently support i686/amd64 architectures, although AMD support is an open issue*
