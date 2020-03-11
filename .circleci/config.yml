@@ -56,9 +56,8 @@ workflows:
       - test:
           requires:
             - build
-      - release:
       # release only on master, not on tags (auto-build on merge PR)
-      - release:
+      - release
 #          filters:
 #            tags:
 #              ignore:
