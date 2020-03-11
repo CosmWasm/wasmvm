@@ -26,6 +26,22 @@ jobs:
       - run: cp /tmp/builds/libgo_cosmwasm.so ./api
       - run: make test
       - run: make build-go
+  # TODO: only run this on master (and not on tags)
+  release:
+    docker:
+      - image: circleci/rust:1.41-stretch
+    steps:
+      - run: rustup toolchain install nightly
+      - checkout
+      - run: make release
+      - run: ls -l ./api
+      # TODO: check if there is a diff (only commit then)
+      - run: git config user.email "bot@circleci.com"
+      - run: git config user.name "CircleCI Bot"
+      - run: git add .
+      - run: git commit -m '[skip ci] Built release libraries'
+      # TODO: git push
+
 
 workflows:
   version: 2
@@ -35,3 +51,6 @@ workflows:
       - test:
           requires:
             - build
+      - release:
+          requires:
+            - test
