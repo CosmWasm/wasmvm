@@ -58,13 +58,14 @@ docker-image-centos7:
 docker-image-cross:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
 
-docker-images: docker-image-centos7 docker-image-cross
+# docker-images: docker-image-centos7 docker-image-cross
+docker-images: docker-image-cross
 
 docker-publish: docker-images
-	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
+# 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
 
 # and use them to compile release builds
 release:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+# 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
