@@ -53,10 +53,10 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
-      - test:
-          requires:
-            - build
+#      - build
+#      - test:
+#          requires:
+#            - build
       # release only on master, not on tags (auto-build on merge PR)
       - release
 #          filters:
