@@ -36,6 +36,7 @@ jobs:
           fingerprints:
             - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
+      - run: echo $CIRCLE_BRANCH
 # TODO: re-enable for merge
 #      - run: make release
       - run: ls -l ./api
