@@ -19,6 +19,7 @@ WORKDIR /opt
 
 # Pin to proper nightly and add macOS Rust target
 RUN rustup toolchain install nightly-2020-03-05
+RUN rustup default nightly-2020-03-05
 RUN rustup target add x86_64-apple-darwin
 
 # Build osxcross
