@@ -22,7 +22,7 @@ impl Buffer {
     // data is only guaranteed to live as long as the Buffer
     // (or the scope of the extern "C" call it came from)
     pub fn read(&self) -> Option<&[u8]> {
-        if self.is_empty() {
+        if self.len == 0 {
             None
         } else {
             unsafe { Some(slice::from_raw_parts(self.ptr, self.len)) }
@@ -54,10 +54,6 @@ impl Buffer {
             len: v.len(),
             cap: v.capacity(),
         }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.ptr.is_null() || self.len == 0 || self.cap == 0
     }
 }
 
