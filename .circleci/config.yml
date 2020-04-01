@@ -6,6 +6,9 @@ jobs:
       - image: circleci/rust:1.41-stretch
     steps:
       - run: rustup toolchain install nightly
+      - run:
+          name: Show version information
+          command: rustc --version; cargo --version; rustup --version
       - checkout
       - run:
           name: Run tests
