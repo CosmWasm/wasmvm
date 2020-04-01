@@ -47,13 +47,13 @@ impl Buffer {
     }
 
     // this releases our memory to the caller
-    pub fn from_vec(mut v: Vec<u8>) -> Self {
+    pub fn from_vec(v: Vec<u8>) -> Self {
+        let mut v = mem::ManuallyDrop::new(v);
         let buf = Buffer {
             ptr: v.as_mut_ptr(),
             len: v.len(),
             cap: v.capacity(),
         };
-        mem::forget(v);
         buf
     }
 
