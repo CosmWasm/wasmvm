@@ -1,13 +1,21 @@
 version: 2
 
 jobs:
-  build:
+  build_libgo_cosmwasm:
     docker:
       - image: circleci/rust:1.41-stretch
     steps:
       - run: rustup toolchain install nightly
+      - run:
+          name: Show version information
+          command: rustc --version; cargo --version; rustup --version
       - checkout
-      - run: make build-rust
+      - run:
+          name: Run tests
+          command: cargo test
+      - run:
+          name: Create release build of libgo_cosmwasm
+          command: make build-rust
       - persist_to_workspace:
           root: ./api
           paths:
@@ -49,10 +57,10 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - build_libgo_cosmwasm
       - test:
           requires:
-            - build
+            - build_libgo_cosmwasm
       # release only on master, not on tags (auto-build on merge PR)
       - release:
           filters:
