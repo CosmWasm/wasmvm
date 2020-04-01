@@ -56,6 +56,11 @@ impl Buffer {
         v
     }
 
+    /// Creates a new zero length Buffer with the given capacity
+    pub fn with_capacity(capacity: usize) -> Self {
+        Buffer::from_vec(Vec::<u8>::with_capacity(capacity))
+    }
+
     // this releases our memory to the caller
     pub fn from_vec(mut v: Vec<u8>) -> Self {
         let buf = Buffer {
@@ -69,5 +74,21 @@ impl Buffer {
 
     pub fn is_empty(&self) -> bool {
         self.ptr.is_null() || self.len == 0 || self.cap == 0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn with_capacity_works() {
+        let buffer = Buffer::with_capacity(7);
+        assert_eq!(buffer.ptr.is_null(), false);
+        assert_eq!(buffer.len, 0);
+        assert_eq!(buffer.cap, 7);
+
+        // Cleanup
+        unsafe { buffer.consume() };
     }
 }

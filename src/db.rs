@@ -24,7 +24,7 @@ impl ReadonlyStorage for DB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let buf = Buffer::from_vec(key.to_vec());
         // TODO: dynamic size (https://github.com/CosmWasm/go-cosmwasm/issues/59)
-        let mut result_buf = Buffer::from_vec(Vec::<u8>::with_capacity(DB_GET_MAX_RESULT_LENGTH));
+        let mut result_buf = Buffer::with_capacity(DB_GET_MAX_RESULT_LENGTH);
         let res = (self.vtable.read_db)(self.state, buf, result_buf);
 
         // read in the number of bytes returned
