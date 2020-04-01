@@ -81,4 +81,21 @@ mod test {
         // Cleanup
         unsafe { buffer.consume() };
     }
+
+    #[test]
+    fn from_vec_and_consume_work() {
+        let mut original: Vec<u8> = vec![0x00, 0xaa, 0x76];
+        original.reserve_exact(2);
+        let original_ptr = original.as_ptr();
+
+        let buffer = Buffer::from_vec(original);
+        assert_eq!(buffer.ptr.is_null(), false);
+        assert_eq!(buffer.len, 3);
+        assert_eq!(buffer.cap, 5);
+
+        let restored = unsafe { buffer.consume() };
+        assert_eq!(restored.as_ptr(), original_ptr);
+        assert_eq!(restored.len(), 3);
+        assert_eq!(restored.capacity(), 3); // TODO: do we want this reallocation?
+    }
 }
