@@ -49,12 +49,11 @@ impl Buffer {
     // this releases our memory to the caller
     pub fn from_vec(v: Vec<u8>) -> Self {
         let mut v = mem::ManuallyDrop::new(v);
-        let buf = Buffer {
+        Buffer {
             ptr: v.as_mut_ptr(),
             len: v.len(),
             cap: v.capacity(),
-        };
-        buf
+        }
     }
 
     pub fn is_empty(&self) -> bool {
