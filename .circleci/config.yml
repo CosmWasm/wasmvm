@@ -1,7 +1,7 @@
 version: 2
 
 jobs:
-  build:
+  build_libgo_cosmwasm:
     docker:
       - image: circleci/rust:1.41-stretch
     steps:
@@ -49,10 +49,10 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - build_libgo_cosmwasm
       - test:
           requires:
-            - build
+            - build_libgo_cosmwasm
       # release only on master, not on tags (auto-build on merge PR)
       - release:
           filters:
