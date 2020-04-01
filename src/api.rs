@@ -39,7 +39,7 @@ impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> Result<CanonicalAddr> {
         let human = human.as_str().as_bytes();
         let input = Buffer::from_vec(human.to_vec());
-        let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
+        let mut output = Buffer::with_capacity(MAX_ADDRESS_BYTES);
         let read = (self.vtable.canonicalize_address)(self.state, input, output);
         if read < 0 {
             return ContractErr {
@@ -55,7 +55,7 @@ impl Api for GoApi {
     fn human_address(&self, canonical: &CanonicalAddr) -> Result<HumanAddr> {
         let canonical = canonical.as_slice();
         let input = Buffer::from_vec(canonical.to_vec());
-        let mut output = Buffer::from_vec(vec![0u8; MAX_ADDRESS_BYTES]);
+        let mut output = Buffer::with_capacity(MAX_ADDRESS_BYTES);
         let read = (self.vtable.humanize_address)(self.state, input, output);
         if read < 0 {
             return ContractErr {
