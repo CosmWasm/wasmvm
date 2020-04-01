@@ -17,16 +17,6 @@ pub struct Buffer {
     pub cap: usize,
 }
 
-impl Default for Buffer {
-    fn default() -> Self {
-        Buffer {
-            ptr: std::ptr::null_mut(),
-            len: 0,
-            cap: 0,
-        }
-    }
-}
-
 impl Buffer {
     // read provides a reference to the included data to be parsed or copied elsewhere
     // data is only guaranteed to live as long as the Buffer
