@@ -38,12 +38,7 @@ impl Buffer {
     /// created by `from_vec`. You may not consume a slice twice.
     /// Otherwise you risk double free panics
     pub unsafe fn consume(self) -> Vec<u8> {
-        if self.is_empty() {
-            return Vec::new();
-        }
-        let mut v = Vec::from_raw_parts(self.ptr, self.len, self.cap);
-        v.shrink_to_fit();
-        v
+        Vec::from_raw_parts(self.ptr, self.len, self.cap)
     }
 
     /// Creates a new zero length Buffer with the given capacity
@@ -96,6 +91,23 @@ mod test {
         let restored = unsafe { buffer.consume() };
         assert_eq!(restored.as_ptr(), original_ptr);
         assert_eq!(restored.len(), 3);
-        assert_eq!(restored.capacity(), 3); // TODO: do we want this reallocation?
+        assert_eq!(restored.capacity(), 5);
+    }
+
+    #[test]
+    fn from_vec_and_consume_work_for_zero_len() {
+        let mut original: Vec<u8> = vec![];
+        original.reserve_exact(2);
+        let original_ptr = original.as_ptr();
+
+        let buffer = Buffer::from_vec(original);
+        assert_eq!(buffer.ptr.is_null(), false);
+        assert_eq!(buffer.len, 0);
+        assert_eq!(buffer.cap, 2);
+
+        let restored = unsafe { buffer.consume() };
+        assert_eq!(restored.as_ptr(), original_ptr);
+        assert_eq!(restored.len(), 0);
+        assert_eq!(restored.capacity(), 2);
     }
 }
