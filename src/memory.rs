@@ -92,6 +92,7 @@ mod test {
         assert_eq!(restored.as_ptr(), original_ptr);
         assert_eq!(restored.len(), 3);
         assert_eq!(restored.capacity(), 5);
+        assert_eq!(&restored, &[0x00, 0xaa, 0x76]);
     }
 
     #[test]
