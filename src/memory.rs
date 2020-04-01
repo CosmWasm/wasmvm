@@ -66,6 +66,27 @@ mod test {
     use super::*;
 
     #[test]
+    fn read_works() {
+        let buffer1 = Buffer::from_vec(vec![0xAA]);
+        assert_eq!(buffer1.read(), Some(&[0xAAu8] as &[u8]));
+
+        let buffer2 = Buffer::from_vec(vec![0xAA, 0xBB, 0xCC]);
+        assert_eq!(buffer2.read(), Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8]));
+
+        let buffer3 = Buffer::from_vec(Vec::new());
+        assert_eq!(buffer3.read(), None);
+
+        let buffer4 = Buffer::with_capacity(7);
+        assert_eq!(buffer4.read(), None);
+
+        // Cleanup
+        unsafe { buffer1.consume() };
+        unsafe { buffer2.consume() };
+        unsafe { buffer3.consume() };
+        unsafe { buffer4.consume() };
+    }
+
+    #[test]
     fn with_capacity_works() {
         let buffer = Buffer::with_capacity(7);
         assert_eq!(buffer.ptr.is_null(), false);
