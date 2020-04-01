@@ -7,7 +7,12 @@ jobs:
     steps:
       - run: rustup toolchain install nightly
       - checkout
-      - run: make build-rust
+      - run:
+          name: Run tests
+          command: cargo test
+      - run:
+          name: Create release build of libgo_cosmwasm
+          command: make build-rust
       - persist_to_workspace:
           root: ./api
           paths:
