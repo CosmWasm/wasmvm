@@ -110,4 +110,20 @@ mod test {
         assert_eq!(restored.len(), 0);
         assert_eq!(restored.capacity(), 2);
     }
+
+    #[test]
+    fn from_vec_and_consume_work_for_zero_capacity() {
+        let original: Vec<u8> = vec![];
+        let original_ptr = original.as_ptr();
+
+        let buffer = Buffer::from_vec(original);
+        // Skip ptr test here. Since Vec does not allocate memory when capacity is 0, this could be anything
+        assert_eq!(buffer.len, 0);
+        assert_eq!(buffer.cap, 0);
+
+        let restored = unsafe { buffer.consume() };
+        assert_eq!(restored.as_ptr(), original_ptr);
+        assert_eq!(restored.len(), 0);
+        assert_eq!(restored.capacity(), 0);
+    }
 }
