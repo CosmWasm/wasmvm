@@ -2,6 +2,8 @@ use cosmwasm::traits::{ReadonlyStorage, Storage};
 
 use crate::memory::Buffer;
 
+static DB_GET_MAX_RESULT_LENGTH: usize = 2000;
+
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
 pub struct db_t {}
@@ -22,8 +24,8 @@ impl ReadonlyStorage for DB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let buf = Buffer::from_vec(key.to_vec());
         // TODO: dynamic size
-        let mut buf2 = Buffer::from_vec(vec![0u8; 2000]);
-        let res = (self.vtable.read_db)(self.state, buf, buf2);
+        let mut result_buf = Buffer::from_vec(Vec::<u8>::with_capacity(DB_GET_MAX_RESULT_LENGTH));
+        let res = (self.vtable.read_db)(self.state, buf, result_buf);
 
         // read in the number of bytes returned
         if res < 0 {
@@ -33,8 +35,8 @@ impl ReadonlyStorage for DB {
         if res == 0 {
             return None;
         }
-        buf2.len = res as usize;
-        unsafe { Some(buf2.consume()) }
+        result_buf.len = res as usize;
+        unsafe { Some(result_buf.consume()) }
     }
 }
 
