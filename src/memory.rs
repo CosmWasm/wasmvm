@@ -22,7 +22,7 @@ impl Buffer {
     // data is only guaranteed to live as long as the Buffer
     // (or the scope of the extern "C" call it came from)
     pub fn read(&self) -> Option<&[u8]> {
-        if self.is_empty() {
+        if self.len == 0 {
             None
         } else {
             unsafe { Some(slice::from_raw_parts(self.ptr, self.len)) }
@@ -55,15 +55,32 @@ impl Buffer {
             cap: v.capacity(),
         }
     }
-
-    pub fn is_empty(&self) -> bool {
-        self.ptr.is_null() || self.len == 0 || self.cap == 0
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn read_works() {
+        let buffer1 = Buffer::from_vec(vec![0xAA]);
+        assert_eq!(buffer1.read(), Some(&[0xAAu8] as &[u8]));
+
+        let buffer2 = Buffer::from_vec(vec![0xAA, 0xBB, 0xCC]);
+        assert_eq!(buffer2.read(), Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8]));
+
+        let buffer3 = Buffer::from_vec(Vec::new());
+        assert_eq!(buffer3.read(), None);
+
+        let buffer4 = Buffer::with_capacity(7);
+        assert_eq!(buffer4.read(), None);
+
+        // Cleanup
+        unsafe { buffer1.consume() };
+        unsafe { buffer2.consume() };
+        unsafe { buffer3.consume() };
+        unsafe { buffer4.consume() };
+    }
 
     #[test]
     fn with_capacity_works() {
