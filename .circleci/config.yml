@@ -13,6 +13,12 @@ jobs:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
       - run:
+          name: Add clippy component
+          command: rustup component add clippy
+      - run:
+          name: Run linter
+          command: cargo clippy -- -D warnings
+      - run:
           name: Run tests
           command: cargo test
       - run:
