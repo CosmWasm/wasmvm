@@ -5,11 +5,13 @@ jobs:
     docker:
       - image: circleci/rust:1.41-stretch
     steps:
-      - run: rustup toolchain install nightly
+      - checkout
+      - run:
+          name: Setup Rust toolchain from ./rust-toolchain
+          command: echo "RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN" && rustup show
       - run:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
-      - checkout
       - run:
           name: Run tests
           command: cargo test
