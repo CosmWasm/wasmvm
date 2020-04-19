@@ -39,7 +39,7 @@ pub extern "C" fn init_cache(
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
     let r =
-        catch_unwind(|| do_init_cache(data_dir, cache_size)).unwrap_or_else(|_| Panic {}.fail());
+        catch_unwind(|| unsafe { do_init_cache(data_dir, cache_size) }).unwrap_or_else(|_| Panic {}.fail());
     match r {
         Ok(t) => {
             clear_error();
@@ -61,10 +61,10 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 
-fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
+unsafe fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
     let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
-    let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
+    let cache = CosmCache::new(dir_str, cache_size).context(WasmErr {})?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
 #[no_mangle]
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || unsafe { do_create(c, wasm) }))
             .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
     };
@@ -94,7 +94,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, Error> {
+unsafe fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, Error> {
     let wasm = wasm.read().ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
@@ -102,7 +102,7 @@ fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, 
 #[no_mangle]
 pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || unsafe { do_get_code(c, id) }))
             .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
     };
@@ -110,7 +110,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_get_code(cache: &mut CosmCache<DB, GoApi>, id: Buffer) -> Result<Vec<u8>, Error> {
+unsafe fn do_get_code(cache: &mut CosmCache<DB, GoApi>, id: Buffer) -> Result<Vec<u8>, Error> {
     let id = id.read().ok_or_else(|| empty_err(CACHE_ARG))?;
     cache.load_wasm(id).context(WasmErr {})
 }
@@ -129,7 +129,7 @@ pub extern "C" fn instantiate(
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_init(c, contract_id, params, msg, db, api, gas_limit, gas_used)
+            unsafe { do_init(c, contract_id, params, msg, db, api, gas_limit, gas_used) }
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -138,7 +138,7 @@ pub extern "C" fn instantiate(
     Buffer::from_vec(v)
 }
 
-fn do_init(
+unsafe fn do_init(
     cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     params: Buffer,
@@ -177,7 +177,7 @@ pub extern "C" fn handle(
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_handle(c, code_id, params, msg, db, api, gas_limit, gas_used)
+            unsafe { do_handle(c, code_id, params, msg, db, api, gas_limit, gas_used) }
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -186,7 +186,7 @@ pub extern "C" fn handle(
     Buffer::from_vec(v)
 }
 
-fn do_handle(
+unsafe fn do_handle(
     cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     params: Buffer,
@@ -224,7 +224,7 @@ pub extern "C" fn query(
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, msg, db, api, gas_limit, gas_used)
+            unsafe { do_query(c, code_id, msg, db, api, gas_limit, gas_used) }
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -233,7 +233,7 @@ pub extern "C" fn query(
     Buffer::from_vec(v)
 }
 
-fn do_query(
+unsafe fn do_query(
     cache: &mut CosmCache<DB, GoApi>,
     code_id: Buffer,
     msg: Buffer,
