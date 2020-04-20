@@ -18,9 +18,11 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    // read provides a reference to the included data to be parsed or copied elsewhere
-    // data is only guaranteed to live as long as the Buffer
-    // (or the scope of the extern "C" call it came from)
+    /// `read` provides a reference to the included data to be parsed or copied elsewhere
+    ///
+    /// # Safety
+    ///
+    /// The caller must make sure that the `Buffer` points to valid and initialized memory
     pub unsafe fn read(&self) -> Option<&[u8]> {
         if self.ptr.is_null() {
             None
