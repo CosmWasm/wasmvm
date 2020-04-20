@@ -2,3 +2,5 @@
 **/*.rs.bk
 *.iml
 .idea
+
+api/libgo_cosmwasm.so
