@@ -22,6 +22,7 @@ type Cache struct {
 
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
+	defer freeAfterSend(dir)
 	errmsg := C.Buffer{}
 
 	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
@@ -37,6 +38,7 @@ func ReleaseCache(cache Cache) {
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
+	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
 	id, err := C.create(cache.ptr, code, &errmsg)
 	if err != nil {
@@ -47,6 +49,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	errmsg := C.Buffer{}
 	code, err := C.get_code(cache.ptr, id, &errmsg)
 	if err != nil {
@@ -57,8 +60,11 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 
 func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
@@ -72,8 +78,11 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 
 func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
@@ -87,7 +96,9 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 
 func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
