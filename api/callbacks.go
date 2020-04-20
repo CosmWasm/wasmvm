@@ -7,15 +7,15 @@ package api
 typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
-typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer);
-typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer);
+typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer*);
+typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 
 // forward declarations (db)
 int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
-int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer human);
-int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer canon);
+int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
+int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 */
 import "C"
 
@@ -102,29 +102,43 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human C.Buffer) i32 {
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret i32) {
+	// If the SDK panics, return -1 to inform the rust side something failed
+	defer func() { if recover() != nil { ret = -1 } }()
+	if human == nil {
+		// we received an invalid pointer
+		return -1
+	}
+
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
 	h, err := api.HumanAddress(c)
 	if err != nil {
 		return -1
 	}
-	if len(h) == 0 {
-		return 0
-	}
-	return i32(writeToBuffer(human, []byte(h)))
+	*human = allocateRust([]byte(h))
+	return 0
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon C.Buffer) i32 {
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret i32) {
+	// If the SDK panics, return -1 to inform the rust side something failed
+	defer func() { if recover() != nil { ret = -1 } }()
+	if canon == nil {
+		// we received an invalid pointer
+		return -1
+	}
+
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	h := string(receiveSlice(human))
 	c, err := api.CanonicalAddress(h)
 	if err != nil {
 		return -1
 	}
-	if len(c) == 0 {
-		return 0
+	if c != nil {
+		*canon = allocateRust(c)
 	}
-	return i32(writeToBuffer(canon, c))
+
+	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
+	return 0
 }

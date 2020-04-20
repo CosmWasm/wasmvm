@@ -38,8 +38,8 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, Buffer, Buffer);
-  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer);
+  int32_t (*humanize_address)(const api_t*, Buffer, Buffer*);
+  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer*);
 } GoApi_vtable;
 
 typedef struct GoApi {
