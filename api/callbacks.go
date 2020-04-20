@@ -49,6 +49,10 @@ func buildDB(kv KVStore) C.DB {
 func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i64) {
 	// If the SDK panics, return -1 to inform the rust side something failed
 	defer func() { if recover() != nil { ret = -1 } }()
+	if val == nil {
+		// we received an invalid pointer
+		return -1
+	}
 
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
