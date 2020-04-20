@@ -49,5 +49,5 @@ func freeAfterSend(b C.Buffer) {
 }
 
 func emptyBuf(b C.Buffer) bool {
-	return b.ptr == u8_ptr(nil) || b.len == usize(0) || b.cap == usize(0)
+	return b.ptr == u8_ptr(nil)
 }
