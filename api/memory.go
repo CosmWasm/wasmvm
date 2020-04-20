@@ -22,6 +22,10 @@ func writeToBuffer(buf C.Buffer, data []byte) i64 {
 	return C.write_to_buffer(buf, u8_ptr(unsafe.Pointer(&data[0])), i64(len(data)))
 }
 
+func allocateRust(data []byte) C.Buffer {
+	return C.allocate_rust(u8_ptr(unsafe.Pointer(&data[0])), usize(len(data)))
+}
+
 func sendSlice(s []byte) C.Buffer {
 	if s == nil {
 		return C.Buffer{ptr: u8_ptr(nil), len: usize(0), cap: usize(0)}

@@ -1,6 +1,11 @@
 use std::mem;
 use std::slice;
 
+#[no_mangle]
+pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
+    Buffer::from_vec(Vec::from(unsafe { slice::from_raw_parts(ptr, length) }))
+}
+
 // this frees memory we released earlier
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
@@ -55,6 +60,16 @@ impl Buffer {
             ptr: v.as_mut_ptr(),
             len: v.len(),
             cap: v.capacity(),
+        }
+    }
+}
+
+impl Default for Buffer {
+    fn default() -> Self {
+        Buffer {
+            ptr: std::ptr::null_mut::<u8>(),
+            len: 0,
+            cap: 0,
         }
     }
 }

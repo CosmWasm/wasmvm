@@ -4,14 +4,14 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer val);
+typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
 typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer);
 typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer);
 
 // forward declarations (db)
-int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer val);
+int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
 int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer human);
@@ -46,14 +46,23 @@ func buildDB(kv KVStore) C.DB {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, key C.Buffer, val C.Buffer) i64 {
+func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i64) {
+	// If the SDK panics, return -1 to inform the rust side something failed
+	defer func() { if recover() != nil { ret = -1 } }()
+
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := kv.Get(k)
-	if len(v) == 0 {
-		return 0
+	// v will equal nil when the key is missing
+	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
+	if v != nil {
+		*val = allocateRust(v)
 	}
-	return writeToBuffer(val, v)
+	// else: the Buffer on the rust side is initialised as a "null" buffer,
+	// so if we don't write a non-null address to it, it will understand that
+	// the key it requested does not exist in the kv store
+
+	return 0
 }
 
 //export cSet

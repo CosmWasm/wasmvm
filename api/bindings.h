@@ -24,7 +24,7 @@ typedef struct db_t {
 } db_t;
 
 typedef struct DB_vtable {
-  int64_t (*read_db)(db_t*, Buffer, Buffer);
+  int64_t (*read_db)(db_t*, Buffer, Buffer*);
   void (*write_db)(db_t*, Buffer, Buffer);
 } DB_vtable;
 
@@ -46,6 +46,8 @@ typedef struct GoApi {
   const api_t *state;
   GoApi_vtable vtable;
 } GoApi;
+
+Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
