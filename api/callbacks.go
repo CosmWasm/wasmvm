@@ -5,14 +5,14 @@ package api
 
 // typedefs for _cgo functions (db)
 typedef GoResult (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
-typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
+typedef GoResult (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
-void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
+GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
@@ -69,11 +69,14 @@ func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
 }
 
 //export cSet
-func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) {
+func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) (ret C.GoResult) {
+	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
+
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := receiveSlice(val)
 	kv.Set(k, v)
+	return C.GoResult_Ok
 }
 
 /***** GoAPI *******/

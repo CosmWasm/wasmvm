@@ -5,7 +5,7 @@ package api
 #include <stdio.h>
 
 // imports (db)
-void cSet(db_t *ptr, Buffer key, Buffer val);
+GoResult cSet(db_t *ptr, Buffer key, Buffer val);
 GoResult cGet(db_t *ptr, Buffer key, Buffer *val);
 // imports (api)
 GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human);
@@ -15,8 +15,8 @@ GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon);
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val) {
 	return cGet(ptr, key, val);
 }
-void cSet_cgo(db_t *ptr, Buffer key, Buffer val) {
-	cSet(ptr, key, val);
+GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val) {
+	return cSet(ptr, key, val);
 }
 
 // Gateway functions (api)
