@@ -24,7 +24,7 @@ typedef struct db_t {
 } db_t;
 
 typedef struct DB_vtable {
-  int64_t (*read_db)(db_t*, Buffer, Buffer*);
+  int32_t (*read_db)(db_t*, Buffer, Buffer*);
   void (*write_db)(db_t*, Buffer, Buffer);
 } DB_vtable;
 
