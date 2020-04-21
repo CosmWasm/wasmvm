@@ -23,7 +23,7 @@ func sendSlice(s []byte) C.Buffer {
 }
 
 func receiveSlice(b C.Buffer) []byte {
-	if emptyBuf(b) {
+	if bufIsNil(b) {
 		return nil
 	}
 	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
@@ -32,11 +32,11 @@ func receiveSlice(b C.Buffer) []byte {
 }
 
 func freeAfterSend(b C.Buffer) {
-	if !emptyBuf(b) {
+	if !bufIsNil(b) {
 		C.free(unsafe.Pointer(b.ptr))
 	}
 }
 
-func emptyBuf(b C.Buffer) bool {
+func bufIsNil(b C.Buffer) bool {
 	return b.ptr == u8_ptr(nil)
 }
