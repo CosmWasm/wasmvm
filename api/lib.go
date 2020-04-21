@@ -44,7 +44,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(id), nil
+	return receiveVector(id), nil
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
@@ -55,7 +55,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(code), nil
+	return receiveVector(code), nil
 }
 
 func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
@@ -73,7 +73,7 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
@@ -91,7 +91,7 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
@@ -107,13 +107,13 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {
-	msg := receiveSlice(b)
+	msg := receiveVector(b)
 	if msg == nil {
 		return err
 	}

@@ -26,18 +26,17 @@ pub struct DB {
 
 impl ReadonlyStorage for DB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let buf = Buffer::from_vec(key.to_vec());
+        let key = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.read_db)(self.state, buf, &mut result_buf as *mut Buffer).into();
+            (self.vtable.read_db)(self.state, key, &mut result_buf as *mut Buffer).into();
+        let key = unsafe { key.consume() };
         match go_result {
             GoResult::Ok => { /* continue */ }
             _ => {
                 // TODO handle this better. in
                 // This `.consume()` is safe because we initialise `buf` from a vec just a few lines above here
-                panic!("Go panicked while reading key {:?}", unsafe {
-                    buf.consume()
-                });
+                panic!("Go panicked while reading key {:?}", key);
             }
         }
 
@@ -53,18 +52,18 @@ impl ReadonlyStorage for DB {
 
 impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) {
-        let buf = Buffer::from_vec(key.to_vec());
-        let buf2 = Buffer::from_vec(value.to_vec());
+        let key = Buffer::from_vec(key.to_vec());
+        let value = Buffer::from_vec(value.to_vec());
         // caller will free input
-        let go_result: GoResult = (self.vtable.write_db)(self.state, buf, buf2).into();
+        let go_result: GoResult = (self.vtable.write_db)(self.state, key, value).into();
+        let key = unsafe { key.consume() };
+        let _value = unsafe { value.consume() };
         match go_result {
             GoResult::Ok => { /* continue */ }
             _ => {
                 // TODO handle this better. in
                 // This `.consume()` is safe because we initialise `buf` from a vec just a few lines above here
-                panic!("Go panicked while writing key {:?}", unsafe {
-                    buf.consume()
-                });
+                panic!("Go panicked while writing key {:?}", key);
             }
         }
     }

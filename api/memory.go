@@ -22,12 +22,26 @@ func sendSlice(s []byte) C.Buffer {
 	}
 }
 
-func receiveSlice(b C.Buffer) []byte {
+// Take an owned vector that was passed to us, copy it, and then free it on the Rust side.
+// This should only be used for vectors that will never be observed again on the Rust side
+func receiveVector(b C.Buffer) []byte {
 	if bufIsNil(b) {
 		return nil
 	}
 	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
 	C.free_rust(b)
+	return res
+}
+
+// Copy the contents of a vector that was allocated on the Rust side.
+// Unlike receiveVector, we do not free it, because it will be manually
+// freed on the Rust side after control returns to it.
+//This should be used in places like callbacks from Rust to Go.
+func receiveSlice(b C.Buffer) []byte {
+	if bufIsNil(b) {
+		return nil
+	}
+	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
 	return res
 }
 

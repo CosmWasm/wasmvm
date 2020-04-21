@@ -41,11 +41,12 @@ unsafe impl Send for GoApi {}
 impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> Result<CanonicalAddr> {
         let human = human.as_str().as_bytes();
-        let input = Buffer::from_vec(human.to_vec());
+        let human = Buffer::from_vec(human.to_vec());
         let mut output = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.canonicalize_address)(self.state, input, &mut output as *mut Buffer)
+            (self.vtable.canonicalize_address)(self.state, human, &mut output as *mut Buffer)
                 .into();
+        let _human = unsafe { human.consume() };
         match go_result {
             GoResult::Ok => { /* continue */ }
             // TODO check if the Go implementation panicked or ran out of gas
@@ -69,10 +70,12 @@ impl Api for GoApi {
 
     fn human_address(&self, canonical: &CanonicalAddr) -> Result<HumanAddr> {
         let canonical = canonical.as_slice();
-        let input = Buffer::from_vec(canonical.to_vec());
+        let canonical = Buffer::from_vec(canonical.to_vec());
         let mut output = Buffer::default();
         let go_result =
-            (self.vtable.humanize_address)(self.state, input, &mut output as *mut Buffer).into();
+            (self.vtable.humanize_address)(self.state, canonical, &mut output as *mut Buffer)
+                .into();
+        let _canonical = unsafe { canonical.consume() };
         match go_result {
             GoResult::Ok => { /* continue */ }
             // TODO check if the Go implementation panicked or ran out of gas
