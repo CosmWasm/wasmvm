@@ -28,7 +28,9 @@ impl ReadonlyStorage for DB {
         if res < 0 {
             // TODO handle this better
             // This `.consume()` is safe because we initialise `buf` from a vec just a few lines above here
-            panic!("Go panicked while reading key {:?}", unsafe { buf.consume() });
+            panic!("Go panicked while reading key {:?}", unsafe {
+                buf.consume()
+            });
         }
 
         if result_buf.ptr.is_null() {
