@@ -89,11 +89,13 @@ mod test {
             Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8])
         );
 
+        let empty: &[u8] = b"";
+
         let buffer3 = Buffer::from_vec(Vec::new());
-        assert_eq!(unsafe { buffer3.read() }, None);
+        assert_eq!(unsafe { buffer3.read() }, Some(empty));
 
         let buffer4 = Buffer::with_capacity(7);
-        assert_eq!(unsafe { buffer4.read() }, None);
+        assert_eq!(unsafe { buffer4.read() }, Some(empty));
 
         // Cleanup
         unsafe { buffer1.consume() };
