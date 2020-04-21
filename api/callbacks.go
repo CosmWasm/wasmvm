@@ -4,14 +4,14 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef int64_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
+typedef int32_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
 typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 
 // forward declarations (db)
-int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
+int32_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
 int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
@@ -46,7 +46,7 @@ func buildDB(kv KVStore) C.DB {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i64) {
+func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i32) {
 	// If the SDK panics, return -1 to inform the rust side something failed
 	defer func() { if recover() != nil { ret = -1 } }()
 	if val == nil {

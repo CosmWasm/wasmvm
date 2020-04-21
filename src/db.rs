@@ -8,7 +8,7 @@ pub struct db_t {}
 
 #[repr(C)]
 pub struct DB_vtable {
-    pub read_db: extern "C" fn(*mut db_t, Buffer, *mut Buffer) -> i64,
+    pub read_db: extern "C" fn(*mut db_t, Buffer, *mut Buffer) -> i32,
     pub write_db: extern "C" fn(*mut db_t, Buffer, Buffer),
 }
 

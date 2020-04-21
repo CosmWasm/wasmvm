@@ -6,13 +6,13 @@ package api
 
 // imports (db)
 void cSet(db_t *ptr, Buffer key, Buffer val);
-int64_t cGet(db_t *ptr, Buffer key, Buffer *val);
+int32_t cGet(db_t *ptr, Buffer key, Buffer *val);
 // imports (api)
 int32_t cHumanAddress(api_t *ptr, Buffer canon, Buffer *human);
 int32_t cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon);
 
 // Gateway functions (db)
-int64_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val) {
+int32_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val) {
 	return cGet(ptr, key, val);
 }
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val) {
