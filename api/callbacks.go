@@ -21,8 +21,30 @@ import "C"
 
 import "unsafe"
 
+import cosmosStoreTypes "github.com/cosmos/cosmos-sdk/store/types"
+
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
+
+func recoverPanic(ret *C.GoResult) {
+	switch recover().(type) {
+	case nil:
+		// Do nothing, there was no panic
+	// These two cases are for types thrown in panics from this module:
+	// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/store/types/gas.go
+	// Both of them need to be propagated through the rust code and back into go code, where they should
+	// probably be thrown in a panic again.
+	// TODO figure out how to pass the text in their `Descriptor` field through all the FFI
+	// TODO handle these cases on the Rust side in the first place
+	case cosmosStoreTypes.ErrorOutOfGas:
+		*ret = C.GoResult_OutOfGas
+	case cosmosStoreTypes.ErrorGasOverflow:
+		// TODO should we handle these differently?
+		*ret = C.GoResult_Panic
+	default:
+		*ret = C.GoResult_Panic
+	}
+}
 
 /****** DB ********/
 
@@ -47,7 +69,7 @@ func buildDB(kv KVStore) C.DB {
 
 //export cGet
 func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
-	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
+	defer recoverPanic(&ret)
 	if val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
@@ -70,7 +92,7 @@ func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
 
 //export cSet
 func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) (ret C.GoResult) {
-	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
+	defer recoverPanic(&ret)
 
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
@@ -105,7 +127,7 @@ func buildAPI(api *GoAPI) C.GoApi {
 
 //export cHumanAddress
 func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResult) {
-	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
+	defer recoverPanic(&ret)
 	if human == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
@@ -123,7 +145,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 
 //export cCanonicalAddress
 func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoResult) {
-	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
+	defer recoverPanic(&ret)
 	if canon == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
