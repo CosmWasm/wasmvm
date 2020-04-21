@@ -5,6 +5,7 @@ use cosmwasm::errors::{ContractErr, Result, Utf8Err};
 use cosmwasm::traits::Api;
 use cosmwasm::types::{CanonicalAddr, HumanAddr};
 
+use crate::error::GoResult;
 use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
@@ -12,6 +13,8 @@ use crate::memory::Buffer;
 #[repr(C)]
 pub struct api_t {}
 
+// These functions should return GoResult but because we don't trust them here, we treat the return value as i32
+// and then check it when converting to GoResult manually
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
@@ -38,14 +41,20 @@ impl Api for GoApi {
         let human = human.as_str().as_bytes();
         let input = Buffer::from_vec(human.to_vec());
         let mut output = Buffer::default();
-        let res = (self.vtable.canonicalize_address)(self.state, input, &mut output as *mut Buffer);
-        // check if the Go implementation panicked
-        if res < 0 {
-            return ContractErr {
-                msg: "human_address returned error",
+        let go_result: GoResult =
+            (self.vtable.canonicalize_address)(self.state, input, &mut output as *mut Buffer)
+                .into();
+        match go_result {
+            GoResult::Ok => { /* continue */ }
+            // TODO check if the Go implementation panicked or ran out of gas
+            _ => {
+                return ContractErr {
+                    msg: "human_address returned error",
+                }
+                .fail();
             }
-            .fail();
         }
+
         let canon = if output.ptr.is_null() {
             Vec::new()
         } else {
@@ -60,13 +69,17 @@ impl Api for GoApi {
         let canonical = canonical.as_slice();
         let input = Buffer::from_vec(canonical.to_vec());
         let mut output = Buffer::default();
-        let read = (self.vtable.humanize_address)(self.state, input, &mut output as *mut Buffer);
-        // check if the Go implementation panicked
-        if read < 0 {
-            return ContractErr {
-                msg: "canonical_address returned error",
+        let go_result =
+            (self.vtable.humanize_address)(self.state, input, &mut output as *mut Buffer).into();
+        match go_result {
+            GoResult::Ok => { /* continue */ }
+            // TODO check if the Go implementation panicked or ran out of gas
+            _ => {
+                return ContractErr {
+                    msg: "canonical_address returned error",
+                }
+                .fail();
             }
-            .fail();
         }
         let result = if output.ptr.is_null() {
             Vec::new()

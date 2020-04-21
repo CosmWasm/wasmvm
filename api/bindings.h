@@ -9,6 +9,33 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/**
+ * This enum gives names to the status codes returned from Go callbacks to Rust.
+ *
+ * The go code will return one of these variants when returning.
+ *
+ */
+enum GoResult {
+  GoResult_Ok = 0,
+  /**
+   * Go panicked for an unexpected reason.
+   */
+  GoResult_Panic = 1,
+  /**
+   * Go received a bad argument from Rust
+   */
+  GoResult_BadArgument = 2,
+  /**
+   * Ran out of gas while using the SDK (e.g. storage)
+   */
+  GoResult_OutOfGas = 3,
+  /**
+   * An error happened during normal operation of a Go callback
+   */
+  GoResult_Other = 4,
+};
+typedef int32_t GoResult;
+
 typedef struct Buffer {
   uint8_t *ptr;
   uintptr_t len;

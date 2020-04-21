@@ -4,18 +4,18 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef int32_t (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
+typedef GoResult (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef void (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 // and api
-typedef int32_t (*humanize_address_fn)(api_t*, Buffer, Buffer*);
-typedef int32_t (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
+typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
+typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 
 // forward declarations (db)
-int32_t cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
+GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 void cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 // and api
-int32_t cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
-int32_t cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
+GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
+GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 */
 import "C"
 
@@ -46,12 +46,11 @@ func buildDB(kv KVStore) C.DB {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i32) {
-	// If the SDK panics, return -1 to inform the rust side something failed
-	defer func() { if recover() != nil { ret = -1 } }()
+func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
+	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
 	if val == nil {
 		// we received an invalid pointer
-		return -1
+		return C.GoResult_BadArgument
 	}
 
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
@@ -66,7 +65,7 @@ func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret i32) {
 	// so if we don't write a non-null address to it, it will understand that
 	// the key it requested does not exist in the kv store
 
-	return 0
+	return C.GoResult_Ok
 }
 
 //export cSet
@@ -102,43 +101,41 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret i32) {
-	// If the SDK panics, return -1 to inform the rust side something failed
-	defer func() { if recover() != nil { ret = -1 } }()
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResult) {
+	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
 	if human == nil {
 		// we received an invalid pointer
-		return -1
+		return C.GoResult_BadArgument
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
 	h, err := api.HumanAddress(c)
 	if err != nil {
-		return -1
+		return C.GoResult_Other
 	}
 	*human = allocateRust([]byte(h))
-	return 0
+	return C.GoResult_Ok
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret i32) {
-	// If the SDK panics, return -1 to inform the rust side something failed
-	defer func() { if recover() != nil { ret = -1 } }()
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoResult) {
+	defer func() { if recover() != nil { ret = C.GoResult_Panic } }()
 	if canon == nil {
 		// we received an invalid pointer
-		return -1
+		return C.GoResult_BadArgument
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	h := string(receiveSlice(human))
 	c, err := api.CanonicalAddress(h)
 	if err != nil {
-		return -1
+		return C.GoResult_Other
 	}
 	if c != nil {
 		*canon = allocateRust(c)
 	}
 
 	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
-	return 0
+	return C.GoResult_Ok
 }
