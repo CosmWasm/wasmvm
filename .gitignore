@@ -4,4 +4,3 @@
 .idea
 
 api/libgo_cosmwasm.so
-api/libgo_cosmwasm.dylib
