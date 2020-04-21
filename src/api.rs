@@ -11,7 +11,9 @@ use crate::memory::Buffer;
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
 #[repr(C)]
-pub struct api_t {}
+pub struct api_t {
+    _private: [u8; 0],
+}
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoResult manually

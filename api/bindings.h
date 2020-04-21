@@ -47,7 +47,7 @@ typedef struct cache_t {
 } cache_t;
 
 typedef struct db_t {
-
+  uint8_t _private[0];
 } db_t;
 
 typedef struct DB_vtable {
@@ -61,7 +61,7 @@ typedef struct DB {
 } DB;
 
 typedef struct api_t {
-
+  uint8_t _private[0];
 } api_t;
 
 typedef struct GoApi_vtable {

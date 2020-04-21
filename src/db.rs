@@ -5,7 +5,9 @@ use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
-pub struct db_t {}
+pub struct db_t {
+    _private: [u8; 0],
+}
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
