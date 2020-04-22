@@ -35,7 +35,6 @@ impl ReadonlyStorage for DB {
             GoResult::Ok => { /* continue */ }
             _ => {
                 // TODO handle this better. in
-                // This `.consume()` is safe because we initialise `buf` from a vec just a few lines above here
                 panic!("Go panicked while reading key {:?}", key);
             }
         }
@@ -62,7 +61,6 @@ impl Storage for DB {
             GoResult::Ok => { /* continue */ }
             _ => {
                 // TODO handle this better. in
-                // This `.consume()` is safe because we initialise `buf` from a vec just a few lines above here
                 panic!("Go panicked while writing key {:?}", key);
             }
         }
