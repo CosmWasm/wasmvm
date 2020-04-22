@@ -8,7 +8,22 @@ import "C"
 import "unsafe"
 
 func allocateRust(data []byte) C.Buffer {
-	return C.allocate_rust(u8_ptr(unsafe.Pointer(&data[0])), usize(len(data)))
+	var ret C.Buffer
+	if data == nil {
+		// Just return a null buffer
+		ret = C.Buffer{
+			ptr: u8_ptr(nil),
+			len: usize(0),
+			cap: usize(0),
+		}
+	} else if len(data) == 0 {
+		// This will create an empty vector
+		ret = C.allocate_rust(u8_ptr(nil), usize(0))
+	} else {
+		// This will allocate a proper vector with content and return a description of it
+		ret = C.allocate_rust(u8_ptr(unsafe.Pointer(&data[0])), usize(len(data)))
+	}
+	return ret
 }
 
 func sendSlice(s []byte) C.Buffer {
