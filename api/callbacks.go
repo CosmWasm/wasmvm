@@ -38,10 +38,10 @@ func recoverPanic(ret *C.GoResult) {
 	// TODO handle these cases on the Rust side in the first place
 	case cosmosStoreTypes.ErrorOutOfGas:
 		*ret = C.GoResult_OutOfGas
+	// Looks like this error is not treated specially upstream:
+	// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
+	// but this needs to be periodically verified, in case they do start checking for this type
 	case cosmosStoreTypes.ErrorGasOverflow:
-		// Looks like this error is not treated specially upstream:
-		// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
-		// but this needs to be periodically verified, in case they do start checking for this typw
 		*ret = C.GoResult_Panic
 	default:
 		*ret = C.GoResult_Panic
