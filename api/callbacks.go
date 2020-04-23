@@ -19,7 +19,10 @@ GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 */
 import "C"
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 import cosmosStoreTypes "github.com/cosmos/cosmos-sdk/store/types"
 
@@ -141,6 +144,9 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 	if err != nil {
 		return C.GoResult_Other
 	}
+	if len(h) == 0 {
+		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", c))
+	}
 	*human = allocateRust([]byte(h))
 	return C.GoResult_Ok
 }
@@ -159,9 +165,10 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoR
 	if err != nil {
 		return C.GoResult_Other
 	}
-	if c != nil {
-		*canon = allocateRust(c)
+	if len(c) == 0 {
+		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", h))
 	}
+	*canon = allocateRust(c)
 
 	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
 	return C.GoResult_Ok
