@@ -9,6 +9,33 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/**
+ * This enum gives names to the status codes returned from Go callbacks to Rust.
+ *
+ * The go code will return one of these variants when returning.
+ *
+ */
+enum GoResult {
+  GoResult_Ok = 0,
+  /**
+   * Go panicked for an unexpected reason.
+   */
+  GoResult_Panic = 1,
+  /**
+   * Go received a bad argument from Rust
+   */
+  GoResult_BadArgument = 2,
+  /**
+   * Ran out of gas while using the SDK (e.g. storage)
+   */
+  GoResult_OutOfGas = 3,
+  /**
+   * An error happened during normal operation of a Go callback
+   */
+  GoResult_Other = 4,
+};
+typedef int32_t GoResult;
+
 typedef struct Buffer {
   uint8_t *ptr;
   uintptr_t len;
@@ -20,12 +47,12 @@ typedef struct cache_t {
 } cache_t;
 
 typedef struct db_t {
-
+  uint8_t _private[0];
 } db_t;
 
 typedef struct DB_vtable {
-  int64_t (*read_db)(db_t*, Buffer, Buffer);
-  void (*write_db)(db_t*, Buffer, Buffer);
+  int32_t (*read_db)(db_t*, Buffer, Buffer*);
+  int32_t (*write_db)(db_t*, Buffer, Buffer);
 } DB_vtable;
 
 typedef struct DB {
@@ -34,18 +61,20 @@ typedef struct DB {
 } DB;
 
 typedef struct api_t {
-
+  uint8_t _private[0];
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, Buffer, Buffer);
-  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer);
+  int32_t (*humanize_address)(const api_t*, Buffer, Buffer*);
+  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer*);
 } GoApi_vtable;
 
 typedef struct GoApi {
   const api_t *state;
   GoApi_vtable vtable;
 } GoApi;
+
+Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 

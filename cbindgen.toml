@@ -49,7 +49,7 @@ style = "both"
 
 
 [export]
-include = []
+include = ["GoResult"]
 exclude = []
 # prefix = "CAPI_"
 item_types = []

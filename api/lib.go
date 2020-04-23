@@ -22,6 +22,7 @@ type Cache struct {
 
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
+	defer freeAfterSend(dir)
 	errmsg := C.Buffer{}
 
 	ptr, err := C.init_cache(dir, usize(cacheSize), &errmsg)
@@ -37,28 +38,33 @@ func ReleaseCache(cache Cache) {
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
+	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
 	id, err := C.create(cache.ptr, code, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(id), nil
+	return receiveVector(id), nil
 }
 
 func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	errmsg := C.Buffer{}
 	code, err := C.get_code(cache.ptr, id, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(code), nil
+	return receiveVector(code), nil
 }
 
 func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
@@ -67,13 +73,16 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	p := sendSlice(params)
+	defer freeAfterSend(p)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
@@ -82,12 +91,14 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
+	defer freeAfterSend(id)
 	m := sendSlice(msg)
+	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
 	var gasUsed u64
@@ -96,13 +107,13 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, g
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
-	return receiveSlice(res), uint64(gasUsed), nil
+	return receiveVector(res), uint64(gasUsed), nil
 }
 
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {
-	msg := receiveSlice(b)
+	msg := receiveVector(b)
 	if msg == nil {
 		return err
 	}

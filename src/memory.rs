@@ -1,6 +1,18 @@
 use std::mem;
 use std::slice;
 
+#[no_mangle]
+pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
+    // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
+    // equal to the offset of the type, which would be equal to 1 in this case)
+    // so when it wants to represent an empty buffer, it passes a null pointer with 0 length here.
+    if length == 0 {
+        Buffer::from_vec(Vec::new())
+    } else {
+        Buffer::from_vec(Vec::from(unsafe { slice::from_raw_parts(ptr, length) }))
+    }
+}
+
 // this frees memory we released earlier
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
@@ -18,14 +30,16 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    // read provides a reference to the included data to be parsed or copied elsewhere
-    // data is only guaranteed to live as long as the Buffer
-    // (or the scope of the extern "C" call it came from)
-    pub fn read(&self) -> Option<&[u8]> {
-        if self.len == 0 {
+    /// `read` provides a reference to the included data to be parsed or copied elsewhere
+    ///
+    /// # Safety
+    ///
+    /// The caller must make sure that the `Buffer` points to valid and initialized memory
+    pub unsafe fn read(&self) -> Option<&[u8]> {
+        if self.ptr.is_null() {
             None
         } else {
-            unsafe { Some(slice::from_raw_parts(self.ptr, self.len)) }
+            Some(slice::from_raw_parts(self.ptr, self.len))
         }
     }
 
@@ -57,6 +71,16 @@ impl Buffer {
     }
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Buffer {
+            ptr: std::ptr::null_mut::<u8>(),
+            len: 0,
+            cap: 0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -64,16 +88,21 @@ mod test {
     #[test]
     fn read_works() {
         let buffer1 = Buffer::from_vec(vec![0xAA]);
-        assert_eq!(buffer1.read(), Some(&[0xAAu8] as &[u8]));
+        assert_eq!(unsafe { buffer1.read() }, Some(&[0xAAu8] as &[u8]));
 
         let buffer2 = Buffer::from_vec(vec![0xAA, 0xBB, 0xCC]);
-        assert_eq!(buffer2.read(), Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8]));
+        assert_eq!(
+            unsafe { buffer2.read() },
+            Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8])
+        );
+
+        let empty: &[u8] = b"";
 
         let buffer3 = Buffer::from_vec(Vec::new());
-        assert_eq!(buffer3.read(), None);
+        assert_eq!(unsafe { buffer3.read() }, Some(empty));
 
         let buffer4 = Buffer::with_capacity(7);
-        assert_eq!(buffer4.read(), None);
+        assert_eq!(unsafe { buffer4.read() }, Some(empty));
 
         // Cleanup
         unsafe { buffer1.consume() };

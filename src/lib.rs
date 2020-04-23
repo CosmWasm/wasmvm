@@ -62,9 +62,9 @@ static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 
 fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
-    let dir = data_dir.read().ok_or_else(|| empty_err(DATA_DIR_ARG))?;
+    let dir = unsafe { data_dir.read() }.ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
-    let cache = unsafe { CosmCache::new(dir_str, cache_size).context(WasmErr {})? };
+    let cache = unsafe { CosmCache::new(dir_str, cache_size) }.context(WasmErr {})?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -76,10 +76,10 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
 /// This must be called exactly once for any `*cache_t` returned by `init_cache`
 /// and cannot be called on any other pointer.
 #[no_mangle]
-pub unsafe extern "C" fn release_cache(cache: *mut cache_t) {
+pub extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = Box::from_raw(cache as *mut CosmCache<DB, GoApi>);
+        let _ = unsafe { Box::from_raw(cache as *mut CosmCache<DB, GoApi>) };
     }
 }
 
@@ -95,7 +95,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
 }
 
 fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, Error> {
-    let wasm = wasm.read().ok_or_else(|| empty_err(WASM_ARG))?;
+    let wasm = unsafe { wasm.read() }.ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
 
@@ -111,7 +111,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
 }
 
 fn do_get_code(cache: &mut CosmCache<DB, GoApi>, id: Buffer) -> Result<Vec<u8>, Error> {
-    let id = id.read().ok_or_else(|| empty_err(CACHE_ARG))?;
+    let id = unsafe { id.read() }.ok_or_else(|| empty_err(CACHE_ARG))?;
     cache.load_wasm(id).context(WasmErr {})
 }
 
@@ -149,9 +149,9 @@ fn do_init(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
-    let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
-    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
+    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
     let mut instance = cache
@@ -197,9 +197,9 @@ fn do_handle(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
-    let params = params.read().ok_or_else(|| empty_err(PARAMS_ARG))?;
-    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
+    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
     let mut instance = cache
@@ -243,8 +243,8 @@ fn do_query(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = code_id.read().ok_or_else(|| empty_err(CODE_ID_ARG))?;
-    let msg = msg.read().ok_or_else(|| empty_err(MSG_ARG))?;
+    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api);
     let mut instance = cache
