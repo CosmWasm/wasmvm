@@ -21,6 +21,7 @@ import "C"
 
 import (
 	"fmt"
+	"log"
 	"unsafe"
 )
 
@@ -30,7 +31,8 @@ import cosmosStoreTypes "github.com/cosmos/cosmos-sdk/store/types"
 // or get odd cgo build errors about duplicate definitions
 
 func recoverPanic(ret *C.GoResult) {
-	switch recover().(type) {
+	rec := recover()
+	switch rec.(type) {
 	case nil:
 		// Do nothing, there was no panic
 	// These two cases are for types thrown in panics from this module:
@@ -45,8 +47,10 @@ func recoverPanic(ret *C.GoResult) {
 	// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
 	// but this needs to be periodically verified, in case they do start checking for this type
 	case cosmosStoreTypes.ErrorGasOverflow:
+		log.Printf("Panic in Go callback: %#v\n", rec)
 		*ret = C.GoResult_Panic
 	default:
+		log.Printf("Panic in Go callback: %#v\n", rec)
 		*ret = C.GoResult_Panic
 	}
 }
