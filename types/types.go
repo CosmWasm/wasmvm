@@ -156,10 +156,10 @@ type LogAttribute struct {
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
-	Bank   *BankMsg        `json:"bank,omitempty"`
-	Custom json.RawMessage `json:"custom,omitempty"`
-	// 	Staking *StakingMsg `json:"staking,omitempty"`
-	Wasm *WasmMsg `json:"wasm,omitempty"`
+	Bank    *BankMsg        `json:"bank,omitempty"`
+	Custom  json.RawMessage `json:"custom,omitempty"`
+	Staking *StakingMsg     `json:"staking,omitempty"`
+	Wasm    *WasmMsg        `json:"wasm,omitempty"`
 }
 
 type BankMsg struct {
@@ -172,6 +172,35 @@ type SendMsg struct {
 	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
 	Amount      []Coin `json:"amount"`
+}
+
+type StakingMsg struct {
+	Delegate   *DelegateMsg   `json:"delegate,omitempty"`
+	Undelegate *UndelegateMsg `json:"undelegate,omitempty"`
+	Redelegate *RedelegateMsg `json:"redelegate,omitempty"`
+	Withdraw   *WithdrawMsg   `json:"withdraw,omitempty"`
+}
+
+type DelegateMsg struct {
+	Validator string `json:"validator"`
+	Amount    Coin   `json:"amount"`
+}
+
+type UndelegateMsg struct {
+	Validator string `json:"validator"`
+	Amount    Coin   `json:"amount"`
+}
+
+type RedelegateMsg struct {
+	SrcValidator string `json:"src_validator"`
+	DstValidator string `json:"dst_validator"`
+	Amount       Coin   `json:"amount"`
+}
+
+type WithdrawMsg struct {
+	Validator string `json:"validator"`
+	// this is optional
+	Recipient string `json:"recipient,omitempty"`
 }
 
 type WasmMsg struct {

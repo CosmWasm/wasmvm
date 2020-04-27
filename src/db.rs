@@ -52,7 +52,6 @@ impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) -> StdResult<()> {
         let key = Buffer::from_vec(key.to_vec());
         let value = Buffer::from_vec(value.to_vec());
-        // caller will free input
         let go_result: GoResult = (self.vtable.write_db)(self.state, key, value).into();
         let _key = unsafe { key.consume() };
         let _value = unsafe { value.consume() };
@@ -67,7 +66,6 @@ impl Storage for DB {
 
     fn remove(&mut self, key: &[u8]) -> StdResult<()> {
         let key = Buffer::from_vec(key.to_vec());
-        // caller will free input
         let go_result: GoResult = (self.vtable.remove_db)(self.state, key).into();
         let _key = unsafe { key.consume() };
         if !go_result.is_ok() {
