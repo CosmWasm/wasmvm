@@ -186,7 +186,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// succeed to execute store1 with fred
 	resp = exec(t, cache, id, "fred", store1, api, 57_432)
-	require.Nil(t, resp.Err)
+	require.Nil(t, resp.Err, resp.Err.String())
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
 	require.Equal(t, 2, len(logs))
@@ -207,10 +207,7 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 	var resp types.CosmosResponse
 	err := json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-// 	if resp.Err != nil {
-// 		t.Fatalf(string(*resp.Err))
-// 	}
-	require.Nil(t, resp.Err)
+	require.Nil(t, resp.Err, resp.Err.String())
 	require.Equal(t, expectedMsgs, len(resp.Ok.Messages))
 }
 
@@ -271,6 +268,6 @@ func TestQuery(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, qres.Err.ContractErr)
+	require.Nil(t, qres.Err, qres.Err.String())
 	require.Equal(t, string(qres.Ok), "fred")
 }

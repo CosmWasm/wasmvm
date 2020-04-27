@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 //---------- Env ---------
@@ -52,7 +53,6 @@ type CanonicalAddress = []byte
 type CosmosResponse struct {
 	Ok  *Result   `json:"Ok,omitempty"`
 	Err *ApiError `json:"Err,omitempty"`
-// 	Err *json.RawMessage `json:"Err,omitempty"`
 }
 
 // Result defines the return value on a successful
@@ -78,10 +78,44 @@ type ApiError struct {
 	ParseErr       *JSONErr       `json:"parse_err,omitempty"`
 	SerializeErr   *JSONErr       `json:"serialize_err,omitempty"`
 	Unauthorized   *struct{}      `json:"unauthorized,omitempty"`
+	UnderflowErr   *UnderflowErr  `json:"underflow_err,omitempty"`
 	Utf8Err        *SourceErr     `json:"utf8_err,omitempty"`
 	Utf8StringErr  *SourceErr     `json:"utf8_string_err,omitempty"`
 	ValidationErr  *ValidationErr `json:"validation_err,omitempty"`
-	// TODO: underflow
+}
+
+func (a *ApiError) String() string {
+	if a == nil {
+		return "(nil)"
+	}
+	switch {
+	case a.Base64Err != nil:
+		return fmt.Sprintf("base64: %#v", a.Base64Err)
+	case a.ContractErr != nil:
+		return fmt.Sprintf("contract: %#v", a.ContractErr)
+	case a.DynContractErr != nil:
+		return fmt.Sprintf("dyn_contract: %#v", a.DynContractErr)
+	case a.NotFound != nil:
+		return fmt.Sprintf("not_found: %#v", a.NotFound)
+	case a.NullPointer != nil:
+		return fmt.Sprintf("null_pointer")
+	case a.ParseErr != nil:
+		return fmt.Sprintf("parse: %#v", a.ParseErr)
+	case a.SerializeErr != nil:
+		return fmt.Sprintf("serialize: %#v", a.SerializeErr)
+	case a.Unauthorized != nil:
+		return fmt.Sprintf("unauthorized")
+	case a.UnderflowErr != nil:
+		return fmt.Sprintf("underflow: %#v", a.UnderflowErr)
+	case a.Utf8Err != nil:
+		return fmt.Sprintf("utf8: %#v", a.Utf8Err)
+	case a.Utf8StringErr != nil:
+		return fmt.Sprintf("utf8: %#v", a.Utf8StringErr)
+	case a.ValidationErr != nil:
+		return fmt.Sprintf("validation: %#v", a.ValidationErr)
+	default:
+		return "unknown error variant"
+	}
 }
 
 type NotFoundErr struct {
@@ -108,22 +142,10 @@ type MsgErr struct {
 	Msg string `json:"msg,omitempty"`
 }
 
-// pub enum ApiError {
-//     Base64Err { source: String },
-//     ContractErr { msg: String },
-//     DynContractErr { msg: String },
-//     NotFound { kind: String },
-//     NullPointer {},
-//     ParseErr { kind: String, source: String },
-//     SerializeErr { kind: String, source: String },
-//     Unauthorized {},
-//     Underflow { minuend: String, subtrahend: String },
-//     // This is used for std::str::from_utf8, which we may well deprecate
-//     Utf8Err { source: String },
-//     // This is used for String::from_utf8, which does zero-copy from Vec<u8>, moving towards this
-//     Utf8StringErr { source: String },
-//     ValidationErr { field: String, msg: String },
-// }
+type UnderflowErr struct {
+	Minuend    string `json:"minuend,omitempty"`
+	Subtrahend string `json:"subtrahend,omitempty"`
+}
 
 // LogAttribute
 type LogAttribute struct {
