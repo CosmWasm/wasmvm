@@ -1,4 +1,4 @@
-use cosmwasm::traits::{ReadonlyStorage, Storage};
+use cosmwasm_std::{ReadonlyStorage, Storage};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;

@@ -1,7 +1,7 @@
 use errno::{set_errno, Errno};
 use std::fmt::{Debug, Display};
 
-use cosmwasm_vm::errors::Error as CosmWasmError;
+use cosmwasm_vm::VmError;
 use snafu::Snafu;
 
 use crate::memory::Buffer;
@@ -11,7 +11,7 @@ use crate::memory::Buffer;
 pub enum Error {
     #[snafu(display("Wasm Error: {}", source))]
     WasmErr {
-        source: CosmWasmError,
+        source: VmError,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },

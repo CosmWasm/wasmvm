@@ -13,7 +13,7 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm::traits::Extern;
+use cosmwasm_std::Extern;
 use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
 
 #[repr(C)]

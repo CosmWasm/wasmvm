@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.7.2"
+version = "0.8.0-dev"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -24,12 +24,13 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = "0.7.2"
-cosmwasm-vm = "0.7.2"
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "9bda91cb383cac95ac37559f56dbfc4a207386c8" }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "9bda91cb383cac95ac37559f56dbfc4a207386c8" }
 errno = "0.2"
-snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+snafu = "0.6.3"
 
 [build-dependencies]
+# TODO: update to 0.14.1!
 cbindgen = { version = "0.9.1" }
 
 [profile.release]
