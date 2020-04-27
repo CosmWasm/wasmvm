@@ -52,6 +52,7 @@ type CanonicalAddress = []byte
 type CosmosResponse struct {
 	Ok  *Result   `json:"Ok,omitempty"`
 	Err *ApiError `json:"Err,omitempty"`
+// 	Err *json.RawMessage `json:"Err,omitempty"`
 }
 
 // Result defines the return value on a successful
@@ -69,13 +70,42 @@ type Result struct {
 
 // TODO: get this proper
 type ApiError struct {
-	ParseErr     *ParseErr `json:"ParseErr,omitempty"`
-	Unauthorized *struct{} `json:"Unauthorized,omitempty"`
+	Base64Err      *SourceErr     `json:"base64_err,omitempty"`
+	ContractErr    *MsgErr        `json:"contract_err,omitempty"`
+	DynContractErr *MsgErr        `json:"dyn_contract_err,omitempty"`
+	NotFound       *NotFoundErr   `json:"not_found,omitempty"`
+	NullPointer    *struct{}      `json:"null_pointer,omitempty"`
+	ParseErr       *JSONErr       `json:"parse_err,omitempty"`
+	SerializeErr   *JSONErr       `json:"serialize_err,omitempty"`
+	Unauthorized   *struct{}      `json:"unauthorized,omitempty"`
+	Utf8Err        *SourceErr     `json:"utf8_err,omitempty"`
+	Utf8StringErr  *SourceErr     `json:"utf8_string_err,omitempty"`
+	ValidationErr  *ValidationErr `json:"validation_err,omitempty"`
+	// TODO: underflow
 }
 
-type ParseErr struct {
-	Kind   string `json:"kind"`
-	Source string `json:"source"`
+type NotFoundErr struct {
+	Kind string `json:"kind,omitempty"`
+}
+
+type JSONErr struct {
+	Kind   string `json:"kind,omitempty"`
+	Source string `json:"source,omitempty"`
+}
+
+type ValidationErr struct {
+	Field string `json:"field,omitempty"`
+	Msg   string `json:"msg,omitempty"`
+}
+
+// generic type for errors that only have Source field
+type SourceErr struct {
+	Source string `json:"source,omitempty"`
+}
+
+// generic type for errors that only have Msg field
+type MsgErr struct {
+	Msg string `json:"msg,omitempty"`
 }
 
 // pub enum ApiError {

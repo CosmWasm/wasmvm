@@ -25,8 +25,8 @@ cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
 # TODO: enable iterator feature (once everything compiles)
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "9bda91cb383cac95ac37559f56dbfc4a207386c8" }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "9bda91cb383cac95ac37559f56dbfc4a207386c8" }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "63779c8c3cc20e876c654b4d6e27fc9c3b1fc55a" }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "63779c8c3cc20e876c654b4d6e27fc9c3b1fc55a" }
 errno = "0.2"
 snafu = "0.6.3"
 

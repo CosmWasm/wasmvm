@@ -1,6 +1,6 @@
 use snafu::ResultExt;
 
-use cosmwasm_std::{contract_err, Api, Binary, CanonicalAddr, HumanAddr, StdResult, Utf8StringErr};
+use cosmwasm_std::{dyn_contract_err, Api, Binary, CanonicalAddr, HumanAddr, StdResult, Utf8StringErr};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -44,10 +44,8 @@ impl Api for GoApi {
             (self.vtable.canonicalize_address)(self.state, human, &mut output as *mut Buffer)
                 .into();
         let _human = unsafe { human.consume() };
-        match go_result {
-            GoResult::Ok => { /* continue */ }
-            // TODO check if the Go implementation panicked or ran out of gas
-            _ => return contract_err("human_address returned error"),
+        if !go_result.is_ok() {
+            return dyn_contract_err(go_result.to_string());
         }
 
         let canon = if output.ptr.is_null() {
@@ -64,14 +62,12 @@ impl Api for GoApi {
         let canonical = canonical.as_slice();
         let canonical = Buffer::from_vec(canonical.to_vec());
         let mut output = Buffer::default();
-        let go_result =
+        let go_result: GoResult =
             (self.vtable.humanize_address)(self.state, canonical, &mut output as *mut Buffer)
                 .into();
         let _canonical = unsafe { canonical.consume() };
-        match go_result {
-            GoResult::Ok => { /* continue */ }
-            // TODO check if the Go implementation panicked or ran out of gas
-            _ => return contract_err("canonical_address returned error"),
+        if !go_result.is_ok() {
+            return dyn_contract_err(go_result.to_string());
         }
         let result = if output.ptr.is_null() {
             Vec::new()
