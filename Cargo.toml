@@ -31,8 +31,7 @@ errno = "0.2"
 snafu = "0.6.3"
 
 [build-dependencies]
-# TODO: update to 0.14.1!
-cbindgen = { version = "0.9.1" }
+cbindgen = { version = "0.14" }
 
 [profile.release]
 opt-level = 3

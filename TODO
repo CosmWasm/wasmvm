@@ -1,6 +1,5 @@
 # TODOs for CosmWasm 0.8 upgrade
 
-* Update cbindgen to 0.14.1
 * Implement remove for DB
 * Add Querier callback to FFI
 * Add iterator feature to cosmwasm_std and implement Iterator

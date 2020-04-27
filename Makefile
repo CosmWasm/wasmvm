@@ -49,6 +49,7 @@ build-go:
 	go build ./...
 
 test:
+	cargo test
 	RUST_BACKTRACE=1 go test -v ./api .
 
 # we should build all the docker images locally ONCE and publish them
