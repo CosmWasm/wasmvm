@@ -53,6 +53,7 @@ typedef struct db_t {
 typedef struct DB_vtable {
   int32_t (*read_db)(db_t*, Buffer, Buffer*);
   int32_t (*write_db)(db_t*, Buffer, Buffer);
+  int32_t (*remove_db)(db_t*, Buffer);
 } DB_vtable;
 
 typedef struct DB {

@@ -1,6 +1,8 @@
 use snafu::ResultExt;
 
-use cosmwasm_std::{dyn_contract_err, Api, Binary, CanonicalAddr, HumanAddr, StdResult, Utf8StringErr};
+use cosmwasm_std::{
+    dyn_contract_err, Api, Binary, CanonicalAddr, HumanAddr, StdResult, Utf8StringErr,
+};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;

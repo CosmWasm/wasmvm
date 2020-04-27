@@ -16,6 +16,7 @@ pub struct db_t {
 pub struct DB_vtable {
     pub read_db: extern "C" fn(*mut db_t, Buffer, *mut Buffer) -> i32,
     pub write_db: extern "C" fn(*mut db_t, Buffer, Buffer) -> i32,
+    pub remove_db: extern "C" fn(*mut db_t, Buffer) -> i32,
 }
 
 #[repr(C)]
@@ -64,8 +65,17 @@ impl Storage for DB {
         }
     }
 
-    fn remove(&mut self, _key: &[u8]) -> StdResult<()> {
-        // TODO: implement
-        dyn_contract_err("Not implemented".to_string())
+    fn remove(&mut self, key: &[u8]) -> StdResult<()> {
+        let key = Buffer::from_vec(key.to_vec());
+        // caller will free input
+        let go_result: GoResult = (self.vtable.remove_db)(self.state, key).into();
+        let _key = unsafe { key.consume() };
+        if !go_result.is_ok() {
+            // TODO: add the key to the message?
+            // panic!("Go panicked while writing key {:?}", key);
+            dyn_contract_err(go_result.to_string())
+        } else {
+            Ok(())
+        }
     }
 }

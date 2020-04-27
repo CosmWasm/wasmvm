@@ -28,6 +28,10 @@ func (l *Lookup) Set(key, value []byte) {
 	l.data[string(key)] = string(value)
 }
 
+func (l *Lookup) Delete(key []byte) {
+	delete(l.data, string(key))
+}
+
 var _ KVStore = (*Lookup)(nil)
 
 /***** Mock GoAPI ****/
