@@ -32,7 +32,7 @@ var _ KVStore = (*Lookup)(nil)
 
 /***** Mock GoAPI ****/
 
-const CanonicalLength = 42
+const CanonicalLength = 32
 
 func MockCanonicalAddress(human string) ([]byte, error) {
 	if len(human) > CanonicalLength {
