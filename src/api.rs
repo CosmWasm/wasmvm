@@ -39,17 +39,16 @@ unsafe impl Send for GoApi {}
 
 impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> StdResult<CanonicalAddr> {
-        let human = human.as_str().as_bytes();
-        let human = Buffer::from_vec(human.to_vec());
+        let human_bytes = human.as_str().as_bytes();
+        let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.canonicalize_address)(self.state, human, &mut output as *mut Buffer)
+            (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer)
                 .into();
-        let _human = unsafe { human.consume() };
+        let _human = unsafe { human_bytes.consume() };
         if !go_result.is_ok() {
-            return dyn_contract_err(go_result.to_string());
+            return dyn_contract_err(format!("Go {}: canonical address for {}", go_result, human));
         }
-
         let canon = if output.ptr.is_null() {
             Vec::new()
         } else {
@@ -67,9 +66,12 @@ impl Api for GoApi {
         let go_result: GoResult =
             (self.vtable.humanize_address)(self.state, canonical, &mut output as *mut Buffer)
                 .into();
-        let _canonical = unsafe { canonical.consume() };
+        let canonical = unsafe { canonical.consume() };
         if !go_result.is_ok() {
-            return dyn_contract_err(go_result.to_string());
+            return dyn_contract_err(format!(
+                "Go {}: human address for {:?}",
+                go_result, canonical
+            ));
         }
         let result = if output.ptr.is_null() {
             Vec::new()

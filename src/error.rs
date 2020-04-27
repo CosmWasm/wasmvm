@@ -110,10 +110,10 @@ impl fmt::Display for GoResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             GoResult::Ok => write!(f, "Ok"),
-            GoResult::Panic => write!(f, "Panic in Go"),
-            GoResult::BadArgument => write!(f, "Invalid arguments passed to Go"),
-            GoResult::OutOfGas => write!(f, "Ran out of gas in Go code"),
-            GoResult::Other => write!(f, "Other (unknown) error in Go"),
+            GoResult::Panic => write!(f, "Panic"),
+            GoResult::BadArgument => write!(f, "BadArgument"),
+            GoResult::OutOfGas => write!(f, "OutOfGas"),
+            GoResult::Other => write!(f, "Other Error"),
         }
     }
 }
