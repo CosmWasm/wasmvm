@@ -111,7 +111,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
+	assert.Equal(t, uint64(52_058), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -137,8 +137,8 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
-	fmt.Printf("Time (64_095 gas): %s\n", diff)
+	assert.Equal(t, uint64(52_058), cost)
+	fmt.Printf("Time (52_058 gas): %s\n", diff)
 
 	// execute with the same store
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
@@ -166,7 +166,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
+	assert.Equal(t, uint64(52_058), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -176,16 +176,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(63_255), cost)
+	assert.Equal(t, uint64(51_218), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, 87_509)
+	resp := exec(t, cache, id, "mary", store1, api, 53_565)
 	require.Equal(t, resp.Err, &types.ApiError{
 		Unauthorized: &struct{}{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, 101_455)
+	resp = exec(t, cache, id, "fred", store1, api, 57_432)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
