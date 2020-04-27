@@ -137,7 +137,6 @@ func buildAPI(api *GoAPI) C.GoApi {
 //export cHumanAddress
 func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	fmt.Println("cHumanAddress called")
 	if human == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
@@ -145,13 +144,10 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
-	fmt.Printf("process: %X\n", c)
 	h, err := api.HumanAddress(c)
 	if err != nil {
-		fmt.Printf("error: %s\n", err)
 		return C.GoResult_Other
 	}
-	fmt.Printf("result: %s\n", h)
 	if len(h) == 0 {
 		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", c))
 	}

@@ -194,8 +194,8 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, 0xbacb)
-	require.Equal(t, "", resp.Err)
+	resp = exec(t, cache, id, "mary", store2, api, 0x10365)
+	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
 	require.Equal(t, 2, len(logs))
@@ -269,5 +269,5 @@ func TestQuery(t *testing.T) {
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
 	require.Nil(t, qres.Err, qres.Err.String())
-	require.Equal(t, string(qres.Ok), "fred")
+	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
 }
