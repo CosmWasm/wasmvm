@@ -3,3 +3,4 @@
 * Implement remove for DB
 * Add Querier callback to FFI
 * Add iterator feature to cosmwasm_std and implement Iterator
+* Proper ApiError type in Go

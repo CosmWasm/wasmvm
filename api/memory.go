@@ -16,16 +16,16 @@ func allocateRust(data []byte) C.Buffer {
 			len: usize(0),
 			cap: usize(0),
 		}
-	// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
-	// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
-	// below with `&data[0]`.
-	// https://play.golang.org/p/xvDY3g9OqUk
-	// Additionally, the pointer field in a Rust vector is a NonNull pointer. This means that when
-	// the vector is empty and no heap allocation is made, it needs to put _some_ value there instead.
-	// At the time of writing, it uses the alignment of the generic type T, which in this case equals 1.
-	// But because that is an internal detail that we can't rely on in future versions, we still call out
-	// to Rust and ask it to build an empty vector for us.
-	// https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=01ced0731171c8226e2c28634a7e41d7
+		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
+		// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
+		// below with `&data[0]`.
+		// https://play.golang.org/p/xvDY3g9OqUk
+		// Additionally, the pointer field in a Rust vector is a NonNull pointer. This means that when
+		// the vector is empty and no heap allocation is made, it needs to put _some_ value there instead.
+		// At the time of writing, it uses the alignment of the generic type T, which in this case equals 1.
+		// But because that is an internal detail that we can't rely on in future versions, we still call out
+		// to Rust and ask it to build an empty vector for us.
+		// https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=01ced0731171c8226e2c28634a7e41d7
 	} else if len(data) == 0 {
 		// This will create an empty vector
 		ret = C.allocate_rust(u8_ptr(nil), usize(0))
