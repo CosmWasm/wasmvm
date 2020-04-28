@@ -28,11 +28,15 @@ func (l *Lookup) Set(key, value []byte) {
 	l.data[string(key)] = string(value)
 }
 
+func (l *Lookup) Delete(key []byte) {
+	delete(l.data, string(key))
+}
+
 var _ KVStore = (*Lookup)(nil)
 
 /***** Mock GoAPI ****/
 
-const CanonicalLength = 42
+const CanonicalLength = 32
 
 func MockCanonicalAddress(human string) ([]byte, error) {
 	if len(human) > CanonicalLength {

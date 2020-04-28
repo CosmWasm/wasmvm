@@ -1,7 +1,7 @@
 use errno::{set_errno, Errno};
-use std::fmt::{Debug, Display};
+use std::fmt;
 
-use cosmwasm_vm::errors::Error as CosmWasmError;
+use cosmwasm_vm::VmError;
 use snafu::Snafu;
 
 use crate::memory::Buffer;
@@ -11,7 +11,7 @@ use crate::memory::Buffer;
 pub enum Error {
     #[snafu(display("Wasm Error: {}", source))]
     WasmErr {
-        source: CosmWasmError,
+        source: VmError,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
@@ -55,7 +55,7 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
 pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
 where
     T: Default,
-    E: Display,
+    E: fmt::Display,
 {
     match r {
         Ok(t) => {
@@ -102,6 +102,27 @@ impl std::convert::From<i32> for GoResult {
             2 => BadArgument,
             3 => OutOfGas,
             _ => Other,
+        }
+    }
+}
+
+impl fmt::Display for GoResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GoResult::Ok => write!(f, "Ok"),
+            GoResult::Panic => write!(f, "Panic"),
+            GoResult::BadArgument => write!(f, "BadArgument"),
+            GoResult::OutOfGas => write!(f, "OutOfGas"),
+            GoResult::Other => write!(f, "Other Error"),
+        }
+    }
+}
+
+impl GoResult {
+    pub fn is_ok(&self) -> bool {
+        match self {
+            GoResult::Ok => true,
+            _ => false,
         }
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.7.2"
+version = "0.8.0-dev"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -24,13 +24,14 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm = "0.7.2"
-cosmwasm-vm = "0.7.2"
+# TODO: enable iterator feature (once everything compiles)
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "c3fcea0b70c714ab86d0f401e901be79972f34d3" }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "c3fcea0b70c714ab86d0f401e901be79972f34d3" }
 errno = "0.2"
-snafu = { version = "0.5.0", default-features = false, features = ["rust_1_30"] }
+snafu = "0.6.3"
 
 [build-dependencies]
-cbindgen = { version = "0.9.1" }
+cbindgen = { version = "0.14" }
 
 [profile.release]
 opt-level = 3

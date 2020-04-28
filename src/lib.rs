@@ -2,10 +2,12 @@ mod api;
 mod db;
 mod error;
 mod memory;
+mod querier;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
+pub use querier::GoQuerier;
 
 use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -13,23 +15,27 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm::traits::Extern;
+use cosmwasm_std::Extern;
 use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
 
 #[repr(C)]
 pub struct cache_t {}
 
-fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi>> {
+fn to_cache(ptr: *mut cache_t) -> Option<&'static mut CosmCache<DB, GoApi, GoQuerier>> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi>) };
+        let c = unsafe { &mut *(ptr as *mut CosmCache<DB, GoApi, GoQuerier>) };
         Some(c)
     }
 }
 
-fn to_extern(storage: DB, api: GoApi) -> Extern<DB, GoApi> {
-    Extern { storage, api }
+fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, GoQuerier> {
+    Extern {
+        storage,
+        api,
+        querier,
+    }
 }
 
 #[no_mangle]
@@ -61,7 +67,10 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 
-fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<DB, GoApi>, Error> {
+fn do_init_cache(
+    data_dir: Buffer,
+    cache_size: usize,
+) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
     let cache = unsafe { CosmCache::new(dir_str, cache_size) }.context(WasmErr {})?;
@@ -79,7 +88,7 @@ fn do_init_cache(data_dir: Buffer, cache_size: usize) -> Result<*mut CosmCache<D
 pub extern "C" fn release_cache(cache: *mut cache_t) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(cache as *mut CosmCache<DB, GoApi>) };
+        let _ = unsafe { Box::from_raw(cache as *mut CosmCache<DB, GoApi, GoQuerier>) };
     }
 }
 
@@ -94,7 +103,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_create(cache: &mut CosmCache<DB, GoApi>, wasm: Buffer) -> Result<Vec<u8>, Error> {
+fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Vec<u8>, Error> {
     let wasm = unsafe { wasm.read() }.ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
@@ -110,7 +119,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
     Buffer::from_vec(v)
 }
 
-fn do_get_code(cache: &mut CosmCache<DB, GoApi>, id: Buffer) -> Result<Vec<u8>, Error> {
+fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Result<Vec<u8>, Error> {
     let id = unsafe { id.read() }.ok_or_else(|| empty_err(CACHE_ARG))?;
     cache.load_wasm(id).context(WasmErr {})
 }
@@ -139,7 +148,7 @@ pub extern "C" fn instantiate(
 }
 
 fn do_init(
-    cache: &mut CosmCache<DB, GoApi>,
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -153,7 +162,9 @@ fn do_init(
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let deps = to_extern(db, api);
+    // TODO: pass as argument
+    let querier = GoQuerier::default();
+    let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
         .context(WasmErr {})?;
@@ -187,7 +198,7 @@ pub extern "C" fn handle(
 }
 
 fn do_handle(
-    cache: &mut CosmCache<DB, GoApi>,
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
     params: Buffer,
     msg: Buffer,
@@ -201,7 +212,9 @@ fn do_handle(
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let deps = to_extern(db, api);
+    // TODO: pass as argument
+    let querier = GoQuerier::default();
+    let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
         .context(WasmErr {})?;
@@ -234,7 +247,7 @@ pub extern "C" fn query(
 }
 
 fn do_query(
-    cache: &mut CosmCache<DB, GoApi>,
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
     msg: Buffer,
     db: DB,
@@ -246,7 +259,9 @@ fn do_query(
     let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    let deps = to_extern(db, api);
+    // TODO: pass as argument
+    let querier = GoQuerier::default();
+    let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
         .context(WasmErr {})?;

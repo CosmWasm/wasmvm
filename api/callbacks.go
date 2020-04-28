@@ -6,6 +6,7 @@ package api
 // typedefs for _cgo functions (db)
 typedef GoResult (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef GoResult (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
+typedef GoResult (*remove_db_fn)(db_t *ptr, Buffer key);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
@@ -13,6 +14,7 @@ typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val);
+GoResult cDelete_cgo(db_t *ptr, Buffer key);
 // and api
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
@@ -60,11 +62,13 @@ func recoverPanic(ret *C.GoResult) {
 type KVStore interface {
 	Get(key []byte) []byte
 	Set(key, value []byte)
+	Delete(key []byte)
 }
 
 var db_vtable = C.DB_vtable{
-	read_db: (C.read_db_fn)(C.cGet_cgo),
-	write_db: (C.write_db_fn)(C.cSet_cgo),
+	read_db:   (C.read_db_fn)(C.cGet_cgo),
+	write_db:  (C.write_db_fn)(C.cSet_cgo),
+	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
@@ -107,6 +111,16 @@ func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) (ret C.GoResult) {
 	k := receiveSlice(key)
 	v := receiveSlice(val)
 	kv.Set(k, v)
+	return C.GoResult_Ok
+}
+
+//export cDelete
+func cDelete(ptr *C.db_t, key C.Buffer) (ret C.GoResult) {
+	defer recoverPanic(&ret)
+
+	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	k := receiveSlice(key)
+	kv.Delete(k)
 	return C.GoResult_Ok
 }
 

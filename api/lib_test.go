@@ -45,7 +45,7 @@ func TestCreateAndGet(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.7.wasm")
+	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
 	require.NoError(t, err)
 
 	id, err := Create(cache, wasm)
@@ -65,7 +65,7 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
-func mockEnv(signer []byte) types.Env {
+func mockEnv(sender []byte) types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
@@ -73,7 +73,7 @@ func mockEnv(signer []byte) types.Env {
 			ChainID: "foobar",
 		},
 		Message: types.MessageInfo{
-			Signer: signer,
+			Sender: sender,
 			SentFunds: []types.Coin{{
 				Denom:  "ATOM",
 				Amount: "100",
@@ -81,16 +81,12 @@ func mockEnv(signer []byte) types.Env {
 		},
 		Contract: types.ContractInfo{
 			Address: binaryAddr("contract"),
-			Balance: []types.Coin{{
-				Denom:  "ATOM",
-				Amount: "100",
-			}},
 		},
 	}
 }
 
 func binaryAddr(human string) []byte {
-	res := make([]byte, 42)
+	res := make([]byte, 32)
 	copy(res, []byte(human))
 	return res
 }
@@ -100,7 +96,7 @@ func TestInstantiate(t *testing.T) {
 	defer cleanup()
 
 	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.7.wasm")
+	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
 	require.NoError(t, err)
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -115,12 +111,12 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
+	assert.Equal(t, uint64(0xbb8d), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	require.Equal(t, "", resp.Err)
+	require.Nil(t, resp.Err)
 	require.Equal(t, 0, len(resp.Ok.Messages))
 }
 
@@ -141,8 +137,8 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
-	fmt.Printf("Time (64_095 gas): %s\n", diff)
+	assert.Equal(t, uint64(0xbb8d), cost)
+	fmt.Printf("Time (52_058 gas): %s\n", diff)
 
 	// execute with the same store
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
@@ -152,7 +148,7 @@ func TestHandle(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 1)
-	assert.Equal(t, uint64(101_455), cost)
+	assert.Equal(t, uint64(0x10459), cost)
 	fmt.Printf("Time (101_455 gas): %s\n", diff)
 }
 
@@ -170,7 +166,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(64_095), cost)
+	assert.Equal(t, uint64(0xbb8d), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -180,15 +176,17 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(63_255), cost)
+	assert.Equal(t, uint64(0xb845), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, 87_509)
-	require.Equal(t, "Unauthorized", resp.Err)
+	resp := exec(t, cache, id, "mary", store1, api, 0xbacb)
+	require.Equal(t, resp.Err, &types.ApiError{
+		Unauthorized: &struct{}{},
+	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, 101_455)
-	require.Equal(t, "", resp.Err)
+	resp = exec(t, cache, id, "fred", store1, api, 0x103df)
+	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
 	require.Equal(t, 2, len(logs))
@@ -196,8 +194,8 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, 101_455)
-	require.Equal(t, "", resp.Err)
+	resp = exec(t, cache, id, "mary", store2, api, 0x10365)
+	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
 	require.Equal(t, 2, len(logs))
@@ -209,12 +207,12 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 	var resp types.CosmosResponse
 	err := json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	require.Equal(t, "", resp.Err)
+	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, expectedMsgs, len(resp.Ok.Messages))
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.7.wasm")
+	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
 	require.NoError(t, err)
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -256,7 +254,12 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, badResp.Err, "Error parsing QueryMsg: unknown variant `Raw`, expected `verifier`")
+	require.Equal(t, badResp.Err, &types.ApiError{
+		ParseErr: &types.JSONErr{
+			Kind:   "hackatom::contract::QueryMsg",
+			Source: "unknown variant `Raw`, expected `verifier` or `other_balance`",
+		},
+	})
 
 	// make a valid query
 	query = []byte(`{"verifier":{}}`)
@@ -265,6 +268,6 @@ func TestQuery(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Equal(t, qres.Err, "")
-	require.Equal(t, string(qres.Ok), "fred")
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
 }

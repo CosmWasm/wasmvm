@@ -96,11 +96,11 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 	if err != nil {
 		return nil, err
 	}
-	if resp.Err != "" {
-		return nil, fmt.Errorf(resp.Err)
+	if resp.Err != nil {
+		return nil, fmt.Errorf("%v", resp.Err)
 	}
 	resp.Ok.GasUsed = gasUsed
-	return &resp.Ok, nil
+	return resp.Ok, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -126,11 +126,11 @@ func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KV
 	if err != nil {
 		return nil, err
 	}
-	if resp.Err != "" {
-		return nil, fmt.Errorf(resp.Err)
+	if resp.Err != nil {
+		return nil, fmt.Errorf("%v", resp.Err)
 	}
 	resp.Ok.GasUsed = gasUsed
-	return &resp.Ok, nil
+	return resp.Ok, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -147,8 +147,8 @@ func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI,
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf(resp.Err)
+	if resp.Err != nil {
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }
