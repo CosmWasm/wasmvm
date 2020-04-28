@@ -1,4 +1,4 @@
-use cosmwasm_std::{dyn_contract_err, ReadonlyStorage, StdResult, Storage};
+use cosmwasm_std::{generic_err, ReadonlyStorage, StdResult, Storage};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -33,7 +33,10 @@ impl ReadonlyStorage for DB {
             (self.vtable.read_db)(self.state, key, &mut result_buf as *mut Buffer).into();
         let key = unsafe { key.consume() };
         if !go_result.is_ok() {
-            return dyn_contract_err(format!("Go {}: reading key {:?}", go_result, key));
+            return Err(generic_err(format!(
+                "Go {}: reading key {:?}",
+                go_result, key
+            )));
         }
 
         if result_buf.ptr.is_null() {
@@ -53,7 +56,10 @@ impl Storage for DB {
         let key = unsafe { key.consume() };
         let _value = unsafe { value.consume() };
         if !go_result.is_ok() {
-            dyn_contract_err(format!("Go {}: writing key {:?}", go_result, key))
+            Err(generic_err(format!(
+                "Go {}: writing key {:?}",
+                go_result, key
+            )))
         } else {
             Ok(())
         }
@@ -64,7 +70,10 @@ impl Storage for DB {
         let go_result: GoResult = (self.vtable.remove_db)(self.state, key).into();
         let key = unsafe { key.consume() };
         if !go_result.is_ok() {
-            dyn_contract_err(format!("Go {}: removing key {:?}", go_result, key))
+            Err(generic_err(format!(
+                "Go {}: removing key {:?}",
+                go_result, key
+            )))
         } else {
             Ok(())
         }
