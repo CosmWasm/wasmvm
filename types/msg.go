@@ -49,7 +49,7 @@ type BankMsg struct {
 type SendMsg struct {
 	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
-	Amount      []Coin `json:"amount"`
+	Amount      Coins  `json:"amount"`
 }
 
 type StakingMsg struct {
@@ -101,7 +101,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send []Coin `json:"send"`
+	Send Coins `json:"send"`
 }
 
 type InstantiateMsg struct {
@@ -111,5 +111,5 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send []Coin `json:"send"`
+	Send Coins `json:"send"`
 }
