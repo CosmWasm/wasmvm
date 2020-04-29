@@ -17,7 +17,7 @@ pub struct DB_vtable {
     pub read_db: extern "C" fn(*mut db_t, Buffer, *mut Buffer) -> i32,
     pub write_db: extern "C" fn(*mut db_t, Buffer, Buffer) -> i32,
     pub remove_db: extern "C" fn(*mut db_t, Buffer) -> i32,
-    // TODO: how to pass back the iterator?
+    // order -> Ascending = 1, Descending = 2
     pub scan_db: extern "C" fn(*mut db_t, Buffer, Buffer, i32, *mut GoIter) -> i32,
 }
 

@@ -7,6 +7,9 @@ package api
 typedef GoResult (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
 typedef GoResult (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
 typedef GoResult (*remove_db_fn)(db_t *ptr, Buffer key);
+typedef GoResult (*scan_db_fn)(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
+// iterator
+typedef GoResult (*next_db_fn)(iterator_t *ptr, Buffer *key, Buffer *val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
@@ -15,6 +18,9 @@ typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
 GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val);
 GoResult cDelete_cgo(db_t *ptr, Buffer key);
+GoResult cScan_cgo(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
+// iterator
+GoResult cNext_cgo(iterator_t *ptr, Buffer *key, Buffer *val);
 // and api
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
@@ -86,6 +92,7 @@ var db_vtable = C.DB_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
 	write_db:  (C.write_db_fn)(C.cSet_cgo),
 	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
+	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
@@ -94,6 +101,19 @@ func buildDB(kv KVStore) C.DB {
 	return C.DB{
 		state:  (*C.db_t)(unsafe.Pointer(&kv)),
 		vtable: db_vtable,
+	}
+}
+
+var iterator_vtable = C.Iterator_vtable{
+	next_db: (C.next_db_fn)(C.cNext_cgo),
+}
+
+// contract: original pointer/struct referenced must live longer than C.DB struct
+// since this is only used internally, we can verify the code that this is the case
+func buildIterator(it dbm.Iterator) C.GoIter {
+	return C.GoIter{
+		state:  (*C.iterator_t)(unsafe.Pointer(&it)),
+		vtable: iterator_vtable,
 	}
 }
 
@@ -138,6 +158,64 @@ func cDelete(ptr *C.db_t, key C.Buffer) (ret C.GoResult) {
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	kv.Delete(k)
+	return C.GoResult_Ok
+}
+
+//export cScan
+func cScan(ptr *C.db_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter) (ret C.GoResult) {
+	defer recoverPanic(&ret)
+
+	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	// handle null as well as data
+	var s, e []byte
+	if start.ptr != nil {
+		s = receiveSlice(start)
+	}
+	if end.ptr != nil {
+		e = receiveSlice(end)
+	}
+
+	var iter dbm.Iterator
+	switch order {
+	case 1: // Ascending
+		iter = kv.Iterator(s, e)
+	case 2: // Descending
+		iter = kv.ReverseIterator(s, e)
+	default:
+		return C.GoResult_BadArgument
+	}
+
+	// Let's hope this works!
+	*out = buildIterator(iter)
+	return C.GoResult_Ok
+}
+
+//export cNext
+func cNext(ptr *C.iterator_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
+	// typical usage of iterator
+	// 	for ; itr.Valid(); itr.Next() {
+	// 		k, v := itr.Key(); itr.Value()
+	// 		...
+	// 	}
+
+	defer recoverPanic(&ret)
+
+	iter := *(*dbm.Iterator)(unsafe.Pointer(ptr))
+	if !iter.Valid() {
+		// end of iterator, return as no-op, nil key is considered end
+		return C.GoResult_Ok
+	}
+
+	// call Next at the end, upon creation we have first data loaded
+	k := iter.Key()
+	v := iter.Value()
+	// check iter.Error() ????
+	iter.Next()
+
+	if k != nil {
+		*key = allocateRust(k)
+		*val = allocateRust(v)
+	}
 	return C.GoResult_Ok
 }
 
