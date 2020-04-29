@@ -1,7 +1,6 @@
 mod api;
 mod db;
 mod error;
-#[cfg(feature = "iterator")]
 mod iterator;
 mod memory;
 mod querier;

@@ -1,4 +1,3 @@
-#[cfg(feature = "iterator")]
 use crate::iterator::GoIter;
 use cosmwasm_std::{generic_err, ReadonlyStorage, StdResult, Storage};
 
@@ -19,7 +18,6 @@ pub struct DB_vtable {
     pub write_db: extern "C" fn(*mut db_t, Buffer, Buffer) -> i32,
     pub remove_db: extern "C" fn(*mut db_t, Buffer) -> i32,
     // TODO: how to pass back the iterator?
-    #[cfg(feature = "iterator")]
     pub scan_db: extern "C" fn(*mut db_t, Buffer, Buffer, i32, *mut GoIter) -> i32,
 }
 
@@ -51,7 +49,6 @@ impl ReadonlyStorage for DB {
         Ok(unsafe { Some(result_buf.consume()) })
     }
 
-    #[cfg(feature = "iterator")]
     /// Allows iteration over a set of key/value pairs, either forwards or backwards.
     ///
     /// The bound `start` is inclusive and `end` is exclusive.

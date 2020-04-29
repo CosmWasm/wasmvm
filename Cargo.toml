@@ -18,15 +18,14 @@ circle-ci = { repository = "CosmWasm/go-cosmwasm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["singlepass", "backtraces", "iterator"]
+default = ["singlepass", "backtraces"]
 backtraces = ["snafu/backtraces"]
-iterator = ["cosmwasm-std/iterator", "cosmwasm-vm/iterator"]
 singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "3cbaf48da0db5b618c3d60b01df0fe4494a2be8a" }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "3cbaf48da0db5b618c3d60b01df0fe4494a2be8a" }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "3cbaf48da0db5b618c3d60b01df0fe4494a2be8a", features = ["iterator"]}
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "3cbaf48da0db5b618c3d60b01df0fe4494a2be8a", features = ["iterator"] }
 errno = "0.2"
 snafu = "0.6.3"
 
