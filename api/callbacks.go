@@ -24,38 +24,40 @@ import "C"
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"unsafe"
 
 	dbm "github.com/tendermint/tm-db"
 )
-
-import cosmosStoreTypes "github.com/cosmos/cosmos-sdk/store/types"
 
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
 
 func recoverPanic(ret *C.GoResult) {
 	rec := recover()
-	switch rec.(type) {
-	case nil:
-		// Do nothing, there was no panic
-	// These two cases are for types thrown in panics from this module:
-	// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/store/types/gas.go
-	// ErrorOutOfGas needs to be propagated through the rust code and back into go code, where it should
-	// probably be thrown in a panic again.
-	// TODO figure out how to pass the text in its `Descriptor` field through all the FFI
-	// TODO handle these cases on the Rust side in the first place
-	case cosmosStoreTypes.ErrorOutOfGas:
-		*ret = C.GoResult_OutOfGas
-	// Looks like this error is not treated specially upstream:
-	// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
-	// but this needs to be periodically verified, in case they do start checking for this type
-	case cosmosStoreTypes.ErrorGasOverflow:
-		log.Printf("Panic in Go callback: %#v\n", rec)
-		*ret = C.GoResult_Panic
-	default:
-		log.Printf("Panic in Go callback: %#v\n", rec)
-		*ret = C.GoResult_Panic
+	// we don't want to import cosmos-sdk
+	// we also cannot use interfaces to detect these error types (as they have no methods)
+	// so, let's just rely on the descriptive names
+	// this is used to detect "out of gas panics"
+	if rec != nil {
+		name := reflect.TypeOf(rec).Name()
+		switch name {
+		// These two cases are for types thrown in panics from this module:
+		// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/store/types/gas.go
+		// ErrorOutOfGas needs to be propagated through the rust code and back into go code, where it should
+		// probably be thrown in a panic again.
+		// TODO figure out how to pass the text in its `Descriptor` field through all the FFI
+		// TODO handle these cases on the Rust side in the first place
+		case "ErrorOutOfGas":
+			*ret = C.GoResult_OutOfGas
+		// Looks like this error is not treated specially upstream:
+		// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
+		// but this needs to be periodically verified, in case they do start checking for this type
+		// 	case "ErrorGasOverflow":
+		default:
+			log.Printf("Panic in Go callback: %#v\n", rec)
+			*ret = C.GoResult_Panic
+		}
 	}
 }
 

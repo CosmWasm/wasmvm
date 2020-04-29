@@ -15,8 +15,9 @@ import (
 type Lookup struct {
 	db *dbm.MemDB
 }
+
 func NewLookup() Lookup {
-	return Lookup {
+	return Lookup{
 		db: dbm.NewMemDB(),
 	}
 }
@@ -64,8 +65,6 @@ func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
 
 	return iter
 }
-
-
 
 // type Lookup struct {
 // 	data map[string]string
