@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"log"
 	"unsafe"
+
+	dbm "github.com/tendermint/tm-db"
 )
 
 import cosmosStoreTypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -59,10 +61,23 @@ func recoverPanic(ret *C.GoResult) {
 
 /****** DB ********/
 
+// KVStore copies a subset of types from cosmos-sdk
+// We may wish to make this more generic sometime in the future, but not now
 type KVStore interface {
 	Get(key []byte) []byte
 	Set(key, value []byte)
 	Delete(key []byte)
+
+	// Iterator over a domain of keys in ascending order. End is exclusive.
+	// Start must be less than end, or the Iterator is invalid.
+	// Iterator must be closed by caller.
+	// To iterate over entire domain, use store.Iterator(nil, nil)
+	Iterator(start, end []byte) dbm.Iterator
+
+	// Iterator over a domain of keys in descending order. End is exclusive.
+	// Start must be less than end, or the Iterator is invalid.
+	// Iterator must be closed by caller.
+	ReverseIterator(start, end []byte) dbm.Iterator
 }
 
 var db_vtable = C.DB_vtable{
