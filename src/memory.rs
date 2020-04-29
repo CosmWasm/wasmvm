@@ -52,7 +52,11 @@ impl Buffer {
     /// created by `from_vec`. You may not consume a slice twice.
     /// Otherwise you risk double free panics
     pub unsafe fn consume(self) -> Vec<u8> {
-        Vec::from_raw_parts(self.ptr, self.len, self.cap)
+        if self.ptr.is_null() {
+            vec![]
+        } else {
+            Vec::from_raw_parts(self.ptr, self.len, self.cap)
+        }
     }
 
     /// Creates a new zero length Buffer with the given capacity

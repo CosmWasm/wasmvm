@@ -1,6 +1,6 @@
-use cosmwasm_std::{generic_err, ReadonlyStorage, StdResult, Storage};
 #[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, KV};
+use crate::iterator::GoIter;
+use cosmwasm_std::{generic_err, ReadonlyStorage, StdResult, Storage};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -12,13 +12,15 @@ pub struct db_t {
 }
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
-// These functions should return GoResult but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoResult manually
 #[repr(C)]
 pub struct DB_vtable {
     pub read_db: extern "C" fn(*mut db_t, Buffer, *mut Buffer) -> i32,
     pub write_db: extern "C" fn(*mut db_t, Buffer, Buffer) -> i32,
     pub remove_db: extern "C" fn(*mut db_t, Buffer) -> i32,
+    // TODO: how to pass back the iterator?
+    #[cfg(feature = "iterator")]
+    pub scan_db: extern "C" fn(*mut db_t, Buffer, Buffer, i32, *mut GoIter) -> i32,
 }
 
 #[repr(C)]
@@ -59,9 +61,31 @@ impl ReadonlyStorage for DB {
         &'a self,
         start: Option<&[u8]>,
         end: Option<&[u8]>,
-        order: Order,
-    ) -> StdResult<Box<dyn Iterator<Item = StdResult<KV>> + 'a>> {
-        Err(generic_err("unimplemented"))
+        order: cosmwasm_std::Order,
+    ) -> StdResult<Box<dyn Iterator<Item = StdResult<cosmwasm_std::KV>> + 'a>> {
+        // returns nul pointer in Buffer in none, otherwise proper buffer
+        let start = start
+            .map(|s| Buffer::from_vec(s.to_vec()))
+            .unwrap_or_default();
+        let end = end
+            .map(|e| Buffer::from_vec(e.to_vec()))
+            .unwrap_or_default();
+        let mut iter = GoIter::default();
+        let go_result: GoResult = (self.vtable.scan_db)(
+            self.state,
+            start,
+            end,
+            order.into(),
+            &mut iter as *mut GoIter,
+        )
+        .into();
+        let _start = unsafe { start.consume() };
+        let _end = unsafe { end.consume() };
+
+        if !go_result.is_ok() {
+            return Err(generic_err(format!("Go {}: creating iterator", go_result)));
+        }
+        Ok(Box::new(iter))
     }
 }
 
