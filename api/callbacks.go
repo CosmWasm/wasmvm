@@ -184,7 +184,6 @@ func cScan(ptr *C.db_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter) 
 	default:
 		return C.GoResult_BadArgument
 	}
-
 	// Let's hope this works!
 	*out = buildIterator(iter)
 	return C.GoResult_Ok
