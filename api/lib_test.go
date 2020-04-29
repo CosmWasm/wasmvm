@@ -212,7 +212,19 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
+	return createContract(t, cache, "./testdata/contract_0.8.wasm")
+}
+
+func createQueueContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "./testdata/queue.wasm")
+}
+
+func createReflectContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "./testdata/reflect.wasm")
+}
+
+func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -270,4 +282,52 @@ func TestQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, qres.Err, "%v", qres.Err)
 	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+}
+
+func TestQueueIterator(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createQueueContract(t, cache)
+
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+	msg := []byte(`{}`)
+
+	res, _, err := Instantiate(cache, id, params, msg, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// push 17
+	push := []byte(`{"enqueue":{"value":17}}`)
+	res, _, err = Handle(cache, id, params, push, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+	// push 22
+	push = []byte(`{"enqueue":{"value":22}}`)
+	res, _, err = Handle(cache, id, params, push, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// query the sum
+	query := []byte(`{"sum":{}}`)
+	data, _, err := Query(cache, id, query, store, api, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, string(qres.Ok), `{"sum":39}`)
+
+	// query reduce (multiple iterators at once)
+	query = []byte(`{"reducer":{}}`)
+	data, _, err = Query(cache, id, query, store, api, 100000000)
+	require.NoError(t, err)
+	var reduced types.QueryResponse
+	err = json.Unmarshal(data, &reduced)
+	require.NoError(t, err)
+	require.Nil(t, reduced.Err, "%v", reduced.Err)
+	require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
 }
