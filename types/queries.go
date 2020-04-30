@@ -17,18 +17,15 @@ type Querier interface {
 	Query(request QueryRequest) ([]byte, error)
 }
 
-type RustQuerier func(binRequest []byte) QuerierResult
-
-func WrapQuerier(querier Querier) RustQuerier {
-	return func(binRequest []byte) QuerierResult {
-		var request QueryRequest
-		err := json.Unmarshal(binRequest, &request)
-		if err != nil {
-			return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
-		}
-		bz, err := querier.Query(request)
-		return ToQuerierResult(bz, err)
+// this is a thin wrapper around the desired Go API to give us types closer to Rust FFI
+func RustQuery(querier Querier, binRequest []byte) QuerierResult {
+	var request QueryRequest
+	err := json.Unmarshal(binRequest, &request)
+	if err != nil {
+		return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
 	}
+	bz, err := querier.Query(request)
+	return ToQuerierResult(bz, err)
 }
 
 // This is a 2-level result

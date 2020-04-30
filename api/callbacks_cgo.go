@@ -14,6 +14,8 @@ GoResult cNext(iterator_t *ptr, Buffer *key, Buffer *val);
 // imports (api)
 GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon);
+// imports (querier)
+GoResult cQueryExternal(querier_t *ptr, Buffer request, Buffer *result);
 
 // Gateway functions (db)
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val) {
@@ -40,6 +42,11 @@ GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon) {
 }
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human) {
     return cHumanAddress(ptr, canon, human);
+}
+
+// Gateway functions (querier)
+GoResult cQueryExternal_cgo(querier_t *ptr, Buffer request, Buffer *result) {
+    return cQueryExternal(ptr, request, result);
 }
 */
 import "C"
