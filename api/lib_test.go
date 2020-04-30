@@ -131,7 +131,8 @@ func TestHandle(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup()
 	api := NewMockAPI()
-	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -151,9 +152,22 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), store, api, querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	requireOkResponse(t, res, 1)
 	assert.Equal(t, uint64(0x127fe), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
+
+	// make sure it read the balance properly and we got 250 atoms
+	var resp types.CosmosResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	require.Nil(t, resp.Err)
+	require.Equal(t, 1, len(resp.Ok.Messages))
+	dispatch := resp.Ok.Messages[0]
+	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
+	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
+	send := dispatch.Bank.Send
+	assert.Equal(t, send.ToAddress, "bob")
+	assert.Equal(t, send.FromAddress, mockContractAddr)
+	assert.Equal(t, send.Amount, balance)
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -337,4 +351,55 @@ func TestQueueIterator(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, reduced.Err, "%v", reduced.Err)
 	require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
+}
+
+func TestHackatomQuerier(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	// set up contract
+	store := NewLookup()
+	api := NewMockAPI()
+	initBalance := types.Coins{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
+	querier := DefaultQuerier("foobar", initBalance)
+
+	// make a valid query to the other address
+	query := []byte(`{"other_balance":{"address":"foobar"}}`)
+	data, _, err := Query(cache, id, query, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	var balances types.AllBalancesResponse
+	err = json.Unmarshal(qres.Ok, &balances)
+	require.Equal(t, balances.Amount, initBalance)
+}
+
+func TestCustomReflectQuerier(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createReflectContract(t, cache)
+
+	// set up contract
+	store := NewLookup()
+	api := NewMockAPI()
+	initBalance := types.Coins{types.NewCoin(1234, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, initBalance)
+	// we need this to handle the custom requests from the reflect contract
+	querier.Custom = ReflectCustom{}
+
+	// make a valid query to the other address
+	query := []byte(`{"reflect_custom":{"text":"small Frys :)"}}`)
+	data, _, err := Query(cache, id, query, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+
+	var response CustomResponse
+	err = json.Unmarshal(qres.Ok, &response)
+	require.Equal(t, response.Msg, "SMALL FRYS :)")
 }
