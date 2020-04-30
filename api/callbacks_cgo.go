@@ -8,6 +8,9 @@ package api
 GoResult cSet(db_t *ptr, Buffer key, Buffer val);
 GoResult cGet(db_t *ptr, Buffer key, Buffer *val);
 GoResult cDelete(db_t *ptr, Buffer key);
+GoResult cScan(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
+// imports (iterator)
+GoResult cNext(iterator_t *ptr, Buffer *key, Buffer *val);
 // imports (api)
 GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon);
@@ -21,6 +24,14 @@ GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val) {
 }
 GoResult cDelete_cgo(db_t *ptr, Buffer key) {
 	return cDelete(ptr, key);
+}
+GoResult cScan_cgo(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out) {
+	return cScan(ptr, start, end, order, out);
+}
+
+// Gateway functions (iterator)
+GoResult cNext_cgo(iterator_t *ptr, Buffer *key, Buffer *val) {
+	return cNext(ptr, key, val);
 }
 
 // Gateway functions (api)

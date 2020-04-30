@@ -1,6 +1,7 @@
 mod api;
 mod db;
 mod error;
+mod iterator;
 mod memory;
 mod querier;
 

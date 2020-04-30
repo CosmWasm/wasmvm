@@ -111,7 +111,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xbb8d), cost)
+	assert.Equal(t, uint64(0xbb66), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -137,8 +137,8 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xbb8d), cost)
-	fmt.Printf("Time (52_058 gas): %s\n", diff)
+	assert.Equal(t, uint64(0xbb66), cost)
+	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
@@ -148,8 +148,8 @@ func TestHandle(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 1)
-	assert.Equal(t, uint64(0x10459), cost)
-	fmt.Printf("Time (101_455 gas): %s\n", diff)
+	assert.Equal(t, uint64(0x1049a), cost)
+	fmt.Printf("Time (%d gas): %s\n", 0x1049a, diff)
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -166,7 +166,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xbb8d), cost)
+	assert.Equal(t, uint64(0xbb66), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -176,16 +176,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xb845), cost)
+	assert.Equal(t, uint64(0xb81e), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, 0xbacb)
+	resp := exec(t, cache, id, "mary", store1, api, 0xbb63)
 	require.Equal(t, resp.Err, &types.ApiError{
 		Unauthorized: &struct{}{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, 0x103df)
+	resp = exec(t, cache, id, "fred", store1, api, 0x10420)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -194,7 +194,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, 0x10365)
+	resp = exec(t, cache, id, "mary", store2, api, 0x103a6)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
@@ -212,7 +212,19 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
+	return createContract(t, cache, "./testdata/contract_0.8.wasm")
+}
+
+func createQueueContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "./testdata/queue.wasm")
+}
+
+func createReflectContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "./testdata/reflect.wasm")
+}
+
+func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -255,9 +267,9 @@ func TestQuery(t *testing.T) {
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
 	require.Equal(t, badResp.Err, &types.ApiError{
-		ParseErr: &types.JSONErr{
-			Kind:   "hackatom::contract::QueryMsg",
-			Source: "unknown variant `Raw`, expected `verifier` or `other_balance`",
+		ParseErr: &types.ParseErr{
+			Target: "hackatom::contract::QueryMsg",
+			Msg:    "unknown variant `Raw`, expected `verifier` or `other_balance`",
 		},
 	})
 
@@ -270,4 +282,52 @@ func TestQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, qres.Err, "%v", qres.Err)
 	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+}
+
+func TestQueueIterator(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createQueueContract(t, cache)
+
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+	msg := []byte(`{}`)
+
+	res, _, err := Instantiate(cache, id, params, msg, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// push 17
+	push := []byte(`{"enqueue":{"value":17}}`)
+	res, _, err = Handle(cache, id, params, push, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+	// push 22
+	push = []byte(`{"enqueue":{"value":22}}`)
+	res, _, err = Handle(cache, id, params, push, store, api, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// query the sum
+	query := []byte(`{"sum":{}}`)
+	data, _, err := Query(cache, id, query, store, api, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, string(qres.Ok), `{"sum":39}`)
+
+	// query reduce (multiple iterators at once)
+	query = []byte(`{"reducer":{}}`)
+	data, _, err = Query(cache, id, query, store, api, 100000000)
+	require.NoError(t, err)
+	var reduced types.QueryResponse
+	err = json.Unmarshal(data, &reduced)
+	require.NoError(t, err)
+	require.Nil(t, reduced.Err, "%v", reduced.Err)
+	require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
 }

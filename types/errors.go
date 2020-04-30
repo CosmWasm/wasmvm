@@ -7,18 +7,15 @@ import (
 // ApiError captures all errors returned from the Rust code as StdError.SerializeErr
 // Exactly one of the fields should be set.
 type ApiError struct {
-	Base64Err      *SourceErr     `json:"base64_err,omitempty"`
-	ContractErr    *MsgErr        `json:"contract_err,omitempty"`
-	DynContractErr *MsgErr        `json:"dyn_contract_err,omitempty"`
-	NotFound       *NotFoundErr   `json:"not_found,omitempty"`
-	NullPointer    *struct{}      `json:"null_pointer,omitempty"`
-	ParseErr       *JSONErr       `json:"parse_err,omitempty"`
-	SerializeErr   *JSONErr       `json:"serialize_err,omitempty"`
-	Unauthorized   *struct{}      `json:"unauthorized,omitempty"`
-	UnderflowErr   *UnderflowErr  `json:"underflow_err,omitempty"`
-	Utf8Err        *SourceErr     `json:"utf8_err,omitempty"`
-	Utf8StringErr  *SourceErr     `json:"utf8_string_err,omitempty"`
-	ValidationErr  *ValidationErr `json:"validation_err,omitempty"`
+	GenericErr    *MsgErr       `json:"generic_err,omitempty"`
+	InvalidBase64 *MsgErr       `json:"invalid_base64,omitempty"`
+	InvalidUtf8   *MsgErr       `json:"invalid_utf8,omitempty"`
+	NotFound      *NotFoundErr  `json:"not_found,omitempty"`
+	NullPointer   *struct{}     `json:"null_pointer,omitempty"`
+	ParseErr      *ParseErr     `json:"parse_err,omitempty"`
+	SerializeErr  *SerializeErr `json:"serialize_err,omitempty"`
+	Unauthorized  *struct{}     `json:"unauthorized,omitempty"`
+	UnderflowErr  *UnderflowErr `json:"underflow_err,omitempty"`
 }
 
 var _ error = (*ApiError)(nil)
@@ -28,12 +25,12 @@ func (a *ApiError) Error() string {
 		return "(nil)"
 	}
 	switch {
-	case a.Base64Err != nil:
-		return fmt.Sprintf("base64: %#v", a.Base64Err)
-	case a.ContractErr != nil:
-		return fmt.Sprintf("contract: %#v", a.ContractErr)
-	case a.DynContractErr != nil:
-		return fmt.Sprintf("dyn_contract: %#v", a.DynContractErr)
+	case a.GenericErr != nil:
+		return fmt.Sprintf("generic: %#v", a.GenericErr)
+	case a.InvalidBase64 != nil:
+		return fmt.Sprintf("base64: %#v", a.InvalidBase64)
+	case a.InvalidUtf8 != nil:
+		return fmt.Sprintf("utf8: %#v", a.InvalidUtf8)
 	case a.NotFound != nil:
 		return fmt.Sprintf("not_found: %#v", a.NotFound)
 	case a.NullPointer != nil:
@@ -46,12 +43,6 @@ func (a *ApiError) Error() string {
 		return fmt.Sprintf("unauthorized")
 	case a.UnderflowErr != nil:
 		return fmt.Sprintf("underflow: %#v", a.UnderflowErr)
-	case a.Utf8Err != nil:
-		return fmt.Sprintf("utf8: %#v", a.Utf8Err)
-	case a.Utf8StringErr != nil:
-		return fmt.Sprintf("utf8: %#v", a.Utf8StringErr)
-	case a.ValidationErr != nil:
-		return fmt.Sprintf("validation: %#v", a.ValidationErr)
 	default:
 		return "unknown error variant"
 	}
@@ -61,20 +52,14 @@ type NotFoundErr struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-// JsonErr is used for ParseErr and SerializeErr
-type JSONErr struct {
-	Kind   string `json:"kind,omitempty"`
-	Source string `json:"source,omitempty"`
+type ParseErr struct {
+	Target string `json:"target,omitempty"`
+	Msg    string `json:"msg,omitempty"`
 }
 
-type ValidationErr struct {
-	Field string `json:"field,omitempty"`
-	Msg   string `json:"msg,omitempty"`
-}
-
-// SourceErr is a generic type for errors that only have Source field
-type SourceErr struct {
+type SerializeErr struct {
 	Source string `json:"source,omitempty"`
+	Msg    string `json:"msg,omitempty"`
 }
 
 // MsgErr is a generic type for errors that only have Msg field
