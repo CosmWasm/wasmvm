@@ -13,7 +13,9 @@ type QueryResponse struct {
 
 //-------- Querier -----------
 
-type Querier func(request QueryRequest) ([]byte, error)
+type Querier interface {
+	Query(request QueryRequest) ([]byte, error)
+}
 
 type RustQuerier func(binRequest []byte) QuerierResult
 
@@ -24,7 +26,7 @@ func WrapQuerier(querier Querier) RustQuerier {
 		if err != nil {
 			return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
 		}
-		bz, err := querier(request)
+		bz, err := querier.Query(request)
 		return ToQuerierResult(bz, err)
 	}
 }
