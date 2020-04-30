@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -170,18 +171,6 @@ func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
 	return nil, types.Unknown{}
 }
 
-type CustomQuerier interface {
-	Query(request json.RawMessage) ([]byte, error)
-}
-
-type NoCustom struct{}
-
-var _ CustomQuerier = NoCustom{}
-
-func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
-	return nil, types.UnsupportedRequest{"custom"}
-}
-
 type BankQuerier struct {
 	Balances map[string]types.Coins
 }
@@ -220,6 +209,54 @@ func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 		return json.Marshal(resp)
 	}
 	return nil, types.UnsupportedRequest{"Empty BankQuery"}
+}
+
+type CustomQuerier interface {
+	Query(request json.RawMessage) ([]byte, error)
+}
+
+type NoCustom struct{}
+
+var _ CustomQuerier = NoCustom{}
+
+func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
+	return nil, types.UnsupportedRequest{"custom"}
+}
+
+// ReflectCustom fulfills the requirements for testing `reflect` contract
+type ReflectCustom struct{}
+
+var _ CustomQuerier = ReflectCustom{}
+
+type CustomQuery struct {
+	Ping    *struct{}     `json:"ping,omitempty"`
+	Capital *CapitalQuery `json:"capital,omitempty"`
+}
+
+type CapitalQuery struct {
+	Text string `json:"text"`
+}
+
+type CustomResponse struct {
+	Msg string `json:"msg"`
+}
+
+func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
+	var query CustomQuery
+	err := json.Unmarshal(request, &query)
+	if err != nil {
+		return nil, types.ParseErr{
+			Target: "CustomQuery",
+			Msg:    err.Error(),
+		}
+	}
+	var resp CustomResponse
+	if query.Ping != nil {
+		resp.Msg = "PONG"
+	} else if query.Capital != nil {
+		resp.Msg = strings.ToUpper(query.Capital.Text)
+	}
+	return json.Marshal(resp)
 }
 
 //************ test code for mocks *************************//
@@ -312,4 +349,28 @@ func TestBankQuerierBalance(t *testing.T) {
 	err = json.Unmarshal(res, &resp3)
 	require.NoError(t, err)
 	assert.Equal(t, resp3.Amount, types.NewCoin(0, "ATOM"))
+}
+
+func TestReflectCustomQuerier(t *testing.T) {
+	q := ReflectCustom{}
+
+	// try ping
+	msg, err := json.Marshal(CustomQuery{Ping: &struct{}{}})
+	require.NoError(t, err)
+	bz, err := q.Query(msg)
+	require.NoError(t, err)
+	var resp CustomResponse
+	err = json.Unmarshal(bz, &resp)
+	require.NoError(t, err)
+	assert.Equal(t, resp.Msg, "PONG")
+
+	// try captial
+	msg2, err := json.Marshal(CustomQuery{Capital: &CapitalQuery{Text: "small."}})
+	require.NoError(t, err)
+	bz, err = q.Query(msg2)
+	require.NoError(t, err)
+	var resp2 CustomResponse
+	err = json.Unmarshal(bz, &resp2)
+	require.NoError(t, err)
+	assert.Equal(t, resp2.Msg, "SMALL.")
 }
