@@ -35,9 +35,9 @@ pub enum Error {
 }
 
 /// empty_err returns an error with stack trace.
-/// helper to construct Error::EmptyArg over and over.
+/// helper to construct Error::EmptyArg  over and over.
 pub(crate) fn empty_err(name: &'static str) -> Error {
-    EmptyArg { name }.fail::<()>().unwrap_err()
+    EmptyArg { name }.build()
 }
 
 pub fn clear_error() {
