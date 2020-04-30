@@ -133,13 +133,24 @@ pub extern "C" fn instantiate(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_init(c, contract_id, params, msg, db, api, gas_limit, gas_used)
+            do_init(
+                c,
+                contract_id,
+                params,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                gas_used,
+            )
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -155,6 +166,7 @@ fn do_init(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -163,8 +175,6 @@ fn do_init(
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    // TODO: pass as argument
-    let querier = GoQuerier::default();
     let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
@@ -183,13 +193,16 @@ pub extern "C" fn handle(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_handle(c, code_id, params, msg, db, api, gas_limit, gas_used)
+            do_handle(
+                c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
+            )
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -205,6 +218,7 @@ fn do_handle(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -213,8 +227,6 @@ fn do_handle(
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    // TODO: pass as argument
-    let querier = GoQuerier::default();
     let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
@@ -232,13 +244,14 @@ pub extern "C" fn query(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, msg, db, api, gas_limit, gas_used)
+            do_query(c, code_id, msg, db, api, querier, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
@@ -253,6 +266,7 @@ fn do_query(
     msg: Buffer,
     db: DB,
     api: GoApi,
+    querier: GoQuerier,
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -260,8 +274,6 @@ fn do_query(
     let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
-    // TODO: pass as argument
-    let querier = GoQuerier::default();
     let deps = to_extern(db, api, querier);
     let mut instance = cache
         .get_instance(code_id, deps, gas_limit)
