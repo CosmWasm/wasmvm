@@ -180,8 +180,8 @@ func TestMultipleInstances(t *testing.T) {
 
 	// fail to execute store1 with mary
 	resp := exec(t, cache, id, "mary", store1, api, 0xbb63)
-	require.Equal(t, resp.Err, &types.ApiError{
-		Unauthorized: &struct{}{},
+	require.Equal(t, resp.Err, &types.StdError{
+		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
@@ -266,7 +266,7 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, badResp.Err, &types.ApiError{
+	require.Equal(t, badResp.Err, &types.StdError{
 		ParseErr: &types.ParseErr{
 			Target: "hackatom::contract::QueryMsg",
 			Msg:    "unknown variant `Raw`, expected `verifier` or `other_balance`",

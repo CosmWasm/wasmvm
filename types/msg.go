@@ -9,7 +9,7 @@ import (
 // CosmosResponse is the raw response from the init / handle calls
 type CosmosResponse struct {
 	Ok  *Result   `json:"Ok,omitempty"`
-	Err *ApiError `json:"Err,omitempty"`
+	Err *StdError `json:"Err,omitempty"`
 }
 
 // Result defines the return value on a successful

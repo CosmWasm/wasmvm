@@ -4,5 +4,5 @@ package types
 
 type QueryResponse struct {
 	Ok  []byte    `json:"Ok,omitempty"`
-	Err *ApiError `json:"Err,omitempty"`
+	Err *StdError `json:"Err,omitempty"`
 }
