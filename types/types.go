@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"strconv"
 )
 
 // CanonicalAddress uses standard base64 encoding, just use it as a label for developers
@@ -11,6 +12,13 @@ type CanonicalAddress = []byte
 type Coin struct {
 	Denom  string `json:"denom"`  // type, eg. "ATOM"
 	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
+}
+
+func NewCoin(amount uint64, denom string) Coin {
+	return Coin{
+		Denom:  denom,
+		Amount: strconv.FormatUint(amount, 10),
+	}
 }
 
 // Coins handles properly serializing empty amounts

@@ -1,12 +1,16 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/confio/go-cosmwasm/types"
 )
 
 /*** Mock KVStore ****/
@@ -130,4 +134,243 @@ func TestMockApi(t *testing.T) {
 	recover, err := MockHumanAddress(canon)
 	require.NoError(t, err)
 	assert.Equal(t, recover, human)
+}
+
+/**** MockQuerier ****/
+
+type MockQuerier struct {
+	Bank   BankQuerier
+	Custom CustomQuerier
+}
+
+var _ types.Querier = MockQuerier{}
+
+func DefaultQuerier(contractAddr string, coins types.Coins) MockQuerier {
+	balances := map[string]types.Coins{
+		contractAddr: coins,
+	}
+	return MockQuerier{
+		Bank:   NewBankQuerier(balances),
+		Custom: NoCustom{},
+	}
+}
+
+func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
+	if request.Bank != nil {
+		return q.Bank.Query(request.Bank)
+	}
+	if request.Custom != nil {
+		return q.Custom.Query(request.Custom)
+	}
+	if request.Staking != nil {
+		return nil, types.UnsupportedRequest{"staking"}
+	}
+	if request.Wasm != nil {
+		return nil, types.UnsupportedRequest{"wasm"}
+	}
+	return nil, types.Unknown{}
+}
+
+type BankQuerier struct {
+	Balances map[string]types.Coins
+}
+
+func NewBankQuerier(balances map[string]types.Coins) BankQuerier {
+	bal := make(map[string]types.Coins, len(balances))
+	for k, v := range balances {
+		dst := make([]types.Coin, len(v))
+		copy(dst, v)
+		bal[k] = dst
+	}
+	return BankQuerier{
+		Balances: bal,
+	}
+}
+
+func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
+	if request.Balance != nil {
+		denom := request.Balance.Denom
+		var coin = types.NewCoin(0, denom)
+		for _, c := range q.Balances[request.Balance.Address] {
+			if c.Denom == denom {
+				coin = c
+			}
+		}
+		resp := types.BalanceResponse{
+			Amount: coin,
+		}
+		return json.Marshal(resp)
+	}
+	if request.AllBalances != nil {
+		coins := q.Balances[request.AllBalances.Address]
+		resp := types.AllBalancesResponse{
+			Amount: coins,
+		}
+		return json.Marshal(resp)
+	}
+	return nil, types.UnsupportedRequest{"Empty BankQuery"}
+}
+
+type CustomQuerier interface {
+	Query(request json.RawMessage) ([]byte, error)
+}
+
+type NoCustom struct{}
+
+var _ CustomQuerier = NoCustom{}
+
+func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
+	return nil, types.UnsupportedRequest{"custom"}
+}
+
+// ReflectCustom fulfills the requirements for testing `reflect` contract
+type ReflectCustom struct{}
+
+var _ CustomQuerier = ReflectCustom{}
+
+type CustomQuery struct {
+	Ping    *struct{}     `json:"ping,omitempty"`
+	Capital *CapitalQuery `json:"capital,omitempty"`
+}
+
+type CapitalQuery struct {
+	Text string `json:"text"`
+}
+
+type CustomResponse struct {
+	Msg string `json:"msg"`
+}
+
+func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
+	var query CustomQuery
+	err := json.Unmarshal(request, &query)
+	if err != nil {
+		return nil, types.ParseErr{
+			Target: "CustomQuery",
+			Msg:    err.Error(),
+		}
+	}
+	var resp CustomResponse
+	if query.Ping != nil {
+		resp.Msg = "PONG"
+	} else if query.Capital != nil {
+		resp.Msg = strings.ToUpper(query.Capital.Text)
+	}
+	return json.Marshal(resp)
+}
+
+//************ test code for mocks *************************//
+
+func TestBankQuerierAllBalances(t *testing.T) {
+	addr := "foobar"
+	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
+	q := DefaultQuerier(addr, balance)
+
+	// query existing account
+	req := types.QueryRequest{
+		Bank: &types.BankQuery{
+			AllBalances: &types.AllBalancesQuery{
+				Address: addr,
+			},
+		},
+	}
+	res, err := q.Query(req)
+	require.NoError(t, err)
+	var resp types.AllBalancesResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	assert.Equal(t, resp.Amount, balance)
+
+	// query missing account
+	req2 := types.QueryRequest{
+		Bank: &types.BankQuery{
+			AllBalances: &types.AllBalancesQuery{
+				Address: "someone-else",
+			},
+		},
+	}
+	res, err = q.Query(req2)
+	require.NoError(t, err)
+	var resp2 types.AllBalancesResponse
+	err = json.Unmarshal(res, &resp2)
+	require.NoError(t, err)
+	assert.Nil(t, resp2.Amount)
+}
+
+func TestBankQuerierBalance(t *testing.T) {
+	addr := "foobar"
+	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
+	q := DefaultQuerier(addr, balance)
+
+	// query existing account with matching denom
+	req := types.QueryRequest{
+		Bank: &types.BankQuery{
+			Balance: &types.BalanceQuery{
+				Address: addr,
+				Denom:   "ATOM",
+			},
+		},
+	}
+	res, err := q.Query(req)
+	require.NoError(t, err)
+	var resp types.BalanceResponse
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
+	assert.Equal(t, resp.Amount, types.NewCoin(12345678, "ATOM"))
+
+	// query existing account with missing denom
+	req2 := types.QueryRequest{
+		Bank: &types.BankQuery{
+			Balance: &types.BalanceQuery{
+				Address: addr,
+				Denom:   "BTC",
+			},
+		},
+	}
+	res, err = q.Query(req2)
+	require.NoError(t, err)
+	var resp2 types.BalanceResponse
+	err = json.Unmarshal(res, &resp2)
+	require.NoError(t, err)
+	assert.Equal(t, resp2.Amount, types.NewCoin(0, "BTC"))
+
+	// query missing account
+	req3 := types.QueryRequest{
+		Bank: &types.BankQuery{
+			Balance: &types.BalanceQuery{
+				Address: "someone-else",
+				Denom:   "ATOM",
+			},
+		},
+	}
+	res, err = q.Query(req3)
+	require.NoError(t, err)
+	var resp3 types.BalanceResponse
+	err = json.Unmarshal(res, &resp3)
+	require.NoError(t, err)
+	assert.Equal(t, resp3.Amount, types.NewCoin(0, "ATOM"))
+}
+
+func TestReflectCustomQuerier(t *testing.T) {
+	q := ReflectCustom{}
+
+	// try ping
+	msg, err := json.Marshal(CustomQuery{Ping: &struct{}{}})
+	require.NoError(t, err)
+	bz, err := q.Query(msg)
+	require.NoError(t, err)
+	var resp CustomResponse
+	err = json.Unmarshal(bz, &resp)
+	require.NoError(t, err)
+	assert.Equal(t, resp.Msg, "PONG")
+
+	// try captial
+	msg2, err := json.Marshal(CustomQuery{Capital: &CapitalQuery{Text: "small."}})
+	require.NoError(t, err)
+	bz, err = q.Query(msg2)
+	require.NoError(t, err)
+	var resp2 CustomResponse
+	err = json.Unmarshal(bz, &resp2)
+	require.NoError(t, err)
+	assert.Equal(t, resp2.Msg, "SMALL.")
 }

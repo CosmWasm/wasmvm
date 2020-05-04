@@ -5,7 +5,11 @@ package api
 // #include "bindings.h"
 import "C"
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/confio/go-cosmwasm/types"
+)
 
 // nice aliases to the rust names
 type i32 = C.int32_t
@@ -19,6 +23,8 @@ type cint = C.int
 type Cache struct {
 	ptr *C.cache_t
 }
+
+type Querier = types.Querier
 
 func InitCache(dataDir string, cacheSize uint64) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
@@ -58,7 +64,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -67,16 +73,17 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.instantiate(cache.ptr, id, p, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
@@ -85,25 +92,27 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.handle(cache.ptr, id, p, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, gasLimit uint64) ([]byte, uint64, error) {
+func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 	db := buildDB(store)
 	a := buildAPI(api)
+	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
-	res, err := C.query(cache.ptr, id, m, db, a, u64(gasLimit), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil {
 		return nil, 0, errorWithMessage(err, errmsg)
 	}

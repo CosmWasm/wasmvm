@@ -13,6 +13,7 @@ typedef GoResult (*next_db_fn)(iterator_t *ptr, Buffer *key, Buffer *val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
+typedef GoResult (*query_external_fn)(querier_t *ptr, Buffer request, Buffer *result);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
@@ -21,19 +22,24 @@ GoResult cDelete_cgo(db_t *ptr, Buffer key);
 GoResult cScan_cgo(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, Buffer *key, Buffer *val);
-// and api
+// api
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
+// and querier
+GoResult cQueryExternal_cgo(querier_t *ptr, Buffer request, Buffer *result);
 */
 import "C"
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
 	"unsafe"
 
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/confio/go-cosmwasm/types"
 )
 
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
@@ -283,5 +289,42 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoR
 	*canon = allocateRust(c)
 
 	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
+	return C.GoResult_Ok
+}
+
+/****** Go Querier ********/
+
+var querier_vtable = C.Querier_vtable{
+	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
+}
+
+// contract: original pointer/struct referenced must live longer than C.GoQuerier struct
+// since this is only used internally, we can verify the code that this is the case
+func buildQuerier(q Querier) C.GoQuerier {
+	return C.GoQuerier{
+		state:  (*C.querier_t)(unsafe.Pointer(&q)),
+		vtable: querier_vtable,
+	}
+}
+
+//export cQueryExternal
+func cQueryExternal(ptr *C.querier_t, request C.Buffer, result *C.Buffer) (ret C.GoResult) {
+	defer recoverPanic(&ret)
+	if result == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
+
+	// query the data
+	querier := *(*Querier)(unsafe.Pointer(ptr))
+	req := receiveSlice(request)
+	res := types.RustQuery(querier, req)
+
+	// serialize the response
+	bz, err := json.Marshal(res)
+	if err != nil {
+		return C.GoResult_Other
+	}
+	*result = allocateRust(bz)
 	return C.GoResult_Ok
 }

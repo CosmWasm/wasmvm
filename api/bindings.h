@@ -89,6 +89,19 @@ typedef struct GoApi {
   GoApi_vtable vtable;
 } GoApi;
 
+typedef struct querier_t {
+  uint8_t _private[0];
+} querier_t;
+
+typedef struct Querier_vtable {
+  int32_t (*query_external)(const querier_t*, Buffer, Buffer*);
+} Querier_vtable;
+
+typedef struct GoQuerier {
+  const querier_t *state;
+  Querier_vtable vtable;
+} GoQuerier;
+
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
@@ -103,6 +116,7 @@ Buffer handle(cache_t *cache,
               Buffer msg,
               DB db,
               GoApi api,
+              GoQuerier querier,
               uint64_t gas_limit,
               uint64_t *gas_used,
               Buffer *err);
@@ -115,6 +129,7 @@ Buffer instantiate(cache_t *cache,
                    Buffer msg,
                    DB db,
                    GoApi api,
+                   GoQuerier querier,
                    uint64_t gas_limit,
                    uint64_t *gas_used,
                    Buffer *err);
@@ -124,6 +139,7 @@ Buffer query(cache_t *cache,
              Buffer msg,
              DB db,
              GoApi api,
+             GoQuerier querier,
              uint64_t gas_limit,
              uint64_t *gas_used,
              Buffer *err);
