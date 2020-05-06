@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/confio/go-cosmwasm/types"
+	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
 /*** Mock KVStore ****/

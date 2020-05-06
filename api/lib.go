@@ -8,7 +8,7 @@ import "C"
 import (
 	"fmt"
 
-	"github.com/confio/go-cosmwasm/types"
+	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
 // nice aliases to the rust names

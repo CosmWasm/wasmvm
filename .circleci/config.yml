@@ -30,7 +30,7 @@ jobs:
             - libgo_cosmwasm.so
 
   test:
-    working_directory: /go/src/github.com/confio/go-cosmwasm
+    working_directory: /go/src/github.com/CosmWasm/go-cosmwasm
     docker:
       - image: circleci/golang:1.14
     environment:

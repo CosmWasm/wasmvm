@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/confio/go-cosmwasm/api"
-	"github.com/confio/go-cosmwasm/types"
+	"github.com/CosmWasm/go-cosmwasm/api"
+	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
 // CodeID represents an ID for a given wasm code blob, must be generated from this library
