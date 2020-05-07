@@ -15,9 +15,9 @@ type Env struct {
 
 type BlockInfo struct {
 	// block height this transaction is executed
-	Height int64 `json:"height"`
+	Height uint64 `json:"height"`
 	// time in seconds since unix epoch - since cosmwasm 0.3
-	Time    int64  `json:"time"`
+	Time    uint64 `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 
