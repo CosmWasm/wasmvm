@@ -121,7 +121,7 @@ Buffer handle(cache_t *cache,
               uint64_t *gas_used,
               Buffer *err);
 
-cache_t *init_cache(Buffer data_dir, uintptr_t cache_size, Buffer *err);
+cache_t *init_cache(Buffer data_dir, Buffer supported_features, uintptr_t cache_size, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

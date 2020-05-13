@@ -17,7 +17,10 @@ use std::str::from_utf8;
 use crate::error::{clear_error, handle_c_error, set_error};
 use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
 use cosmwasm_std::Extern;
-use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
+use cosmwasm_vm::{
+    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache,
+};
+use std::convert::TryInto;
 
 #[repr(C)]
 pub struct cache_t {}
@@ -42,11 +45,12 @@ fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, G
 #[no_mangle]
 pub extern "C" fn init_cache(
     data_dir: Buffer,
+    supported_features: Buffer,
     cache_size: usize,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
-    let r =
-        catch_unwind(|| do_init_cache(data_dir, cache_size)).unwrap_or_else(|_| Panic {}.fail());
+    let r = catch_unwind(|| do_init_cache(data_dir, supported_features, cache_size))
+        .unwrap_or_else(|_| Panic {}.fail());
     match r {
         Ok(t) => {
             clear_error();
@@ -61,6 +65,7 @@ pub extern "C" fn init_cache(
 
 // store some common string for argument names
 static DATA_DIR_ARG: &str = "data_dir";
+static FEATURES_ARG: &str = "supported_features";
 static CACHE_ARG: &str = "cache";
 static WASM_ARG: &str = "wasm";
 static CODE_ID_ARG: &str = "code_id";
@@ -70,11 +75,17 @@ static GAS_USED_ARG: &str = "gas_used";
 
 fn do_init_cache(
     data_dir: Buffer,
+    supported_features: Buffer,
     cache_size: usize,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| empty_err(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).context(Utf8Err {})?;
-    let cache = unsafe { CosmCache::new(dir_str, cache_size) }.context(WasmErr {})?;
+    // parse the supported features
+    let features_bin =
+        unsafe { supported_features.read() }.ok_or_else(|| empty_err(FEATURES_ARG))?;
+    let features_str = from_utf8(features_bin).context(Utf8Err {})?;
+    let features = features_from_csv(features_str);
+    let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }.context(WasmErr {})?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -100,11 +111,11 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
             .unwrap_or_else(|_| Panic {}.fail()),
         None => EmptyArg { name: CACHE_ARG }.fail(),
     };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    let check = handle_c_error(r, err);
+    Buffer::from_vec(check.to_vec())
 }
 
-fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Vec<u8>, Error> {
+fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Checksum, Error> {
     let wasm = unsafe { wasm.read() }.ok_or_else(|| empty_err(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
@@ -121,8 +132,10 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
 }
 
 fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Result<Vec<u8>, Error> {
-    let id = unsafe { id.read() }.ok_or_else(|| empty_err(CACHE_ARG))?;
-    cache.load_wasm(id).context(WasmErr {})
+    let id: Checksum = unsafe { id.read() }
+        .ok_or_else(|| empty_err(CACHE_ARG))?
+        .try_into()?;
+    cache.load_wasm(&id).context(WasmErr {})
 }
 
 #[no_mangle]
@@ -171,17 +184,19 @@ fn do_init(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache
-        .get_instance(code_id, deps, gas_limit)
+        .get_instance(&code_id, deps, gas_limit)
         .context(WasmErr {})?;
     let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(code_id, instance);
+    cache.store_instance(&code_id, instance);
     Ok(res)
 }
 
@@ -223,17 +238,19 @@ fn do_handle(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .try_into()?;
     let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache
-        .get_instance(code_id, deps, gas_limit)
+        .get_instance(&code_id, deps, gas_limit)
         .context(WasmErr {})?;
     let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(code_id, instance);
+    cache.store_instance(&code_id, instance);
     Ok(res)
 }
 
@@ -271,15 +288,17 @@ fn do_query(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
-    let code_id = unsafe { code_id.read() }.ok_or_else(|| empty_err(CODE_ID_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .try_into()?;
     let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache
-        .get_instance(code_id, deps, gas_limit)
+        .get_instance(&code_id, deps, gas_limit)
         .context(WasmErr {})?;
     let res = call_query_raw(&mut instance, msg).context(WasmErr {})?;
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(code_id, instance);
+    cache.store_instance(&code_id, instance);
     Ok(res)
 }

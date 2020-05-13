@@ -2,7 +2,7 @@ use errno::{set_errno, Errno};
 use std::fmt;
 
 use cosmwasm_vm::VmError;
-use snafu::Snafu;
+use snafu::{ResultExt, Snafu};
 
 use crate::memory::Buffer;
 
@@ -32,6 +32,14 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+}
+
+// FIXME: simplify this (and more) when refactoring the errors
+impl From<VmError> for Error {
+    fn from(source: VmError) -> Self {
+        let r: Result<(), VmError> = Err(source);
+        r.context(WasmErr {}).unwrap_err()
+    }
 }
 
 /// empty_err returns an error with stack trace.
