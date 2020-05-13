@@ -202,7 +202,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "cosmwasm-std"
 version = "0.8.0-alpha1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1#a283ff50ead313236e13f9687d2c827a5d9918f1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e#c6272dcccef98fa0ab93ac39233fd6cc282d2f0e"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -214,9 +214,9 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "0.8.0-alpha1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1#a283ff50ead313236e13f9687d2c827a5d9918f1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e#c6272dcccef98fa0ab93ac39233fd6cc282d2f0e"
 dependencies = [
- "cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1)",
+ "cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lru 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -440,8 +440,8 @@ name = "go-cosmwasm"
 version = "0.8.0-dev"
 dependencies = [
  "cbindgen 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1)",
- "cosmwasm-vm 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1)",
+ "cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e)",
+ "cosmwasm-vm 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e)",
  "errno 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.70 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1150,8 +1150,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum const-random 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "2f1af9ac737b2dd2d577701e59fd09ba34822f6f2ebdb30a7647405d9e55e16a"
 "checksum const-random-macro 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "25e4c606eb459dd29f7c57b2e0879f2b6f14ee130918c2b78ccb58a9624e6c7a"
 "checksum constant_time_eq 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
-"checksum cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1)" = "<none>"
-"checksum cosmwasm-vm 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=a283ff50ead313236e13f9687d2c827a5d9918f1)" = "<none>"
+"checksum cosmwasm-std 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e)" = "<none>"
+"checksum cosmwasm-vm 0.8.0-alpha1 (git+https://github.com/CosmWasm/cosmwasm?rev=c6272dcccef98fa0ab93ac39233fd6cc282d2f0e)" = "<none>"
 "checksum cranelift-bforest 0.59.0 (registry+https://github.com/rust-lang/crates.io-index)" = "45a9c21f8042b9857bda93f6c1910b9f9f24100187a3d3d52f214a34e3dc5818"
 "checksum cranelift-codegen 0.59.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7853f77a6e4a33c67a69c40f5e1bb982bd2dc5c4a22e17e67b65bbccf9b33b2e"
 "checksum cranelift-codegen-meta 0.59.0 (registry+https://github.com/rust-lang/crates.io-index)" = "084cd6d5fb0d1da28acd72c199471bfb09acc703ec8f3bf07b1699584272a3b9"
