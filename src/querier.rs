@@ -1,4 +1,5 @@
-use cosmwasm_std::{Querier, QuerierResult, SystemError};
+use cosmwasm_std::SystemError;
+use cosmwasm_vm::{FfiResult, Querier, QuerierResult};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -35,18 +36,13 @@ impl Querier for GoQuerier {
             (self.vtable.query_external)(self.state, request, &mut result_buf as *mut Buffer)
                 .into();
         let _request = unsafe { request.consume() };
-        if !go_result.is_ok() {
-            return Err(SystemError::InvalidRequest {
-                error: format!("Go {}: making query", go_result),
-            });
-        }
+        let go_result: FfiResult<()> = go_result.into();
+        go_result?;
 
         let bin_result = unsafe { result_buf.consume() };
         match serde_json::from_slice(&bin_result) {
-            Ok(v) => v,
-            Err(e) => Err(SystemError::InvalidRequest {
-                error: format!("Parsing Go response: {}", e),
-            }),
+            Ok(system_result) => Ok(system_result),
+            Err(_) => Ok(Err(SystemError::InvalidResponse { msg: bin_result })),
         }
     }
 }

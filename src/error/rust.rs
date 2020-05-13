@@ -32,6 +32,11 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    #[snafu(display("Ran out of gas"))]
+    OutOfGas {
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
 }
 
 /// empty_err returns an error with stack trace.

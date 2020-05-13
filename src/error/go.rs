@@ -1,4 +1,6 @@
-use std::{convert, fmt};
+use std::fmt;
+
+use cosmwasm_vm::FfiError;
 
 /// This enum gives names to the status codes returned from Go callbacks to Rust.
 ///
@@ -23,7 +25,19 @@ pub enum GoResult {
     Other = 4,
 }
 
-impl convert::From<i32> for GoResult {
+impl From<GoResult> for Result<(), FfiError> {
+    fn from(other: GoResult) -> Self {
+        match other {
+            GoResult::Ok => Ok(()),
+            GoResult::Panic => Err(FfiError::ForeignPanic),
+            GoResult::BadArgument => Err(FfiError::BadArgument),
+            GoResult::OutOfGas => Err(FfiError::OutOfGas),
+            GoResult::Other => Err(FfiError::Other),
+        }
+    }
+}
+
+impl From<i32> for GoResult {
     fn from(n: i32) -> Self {
         use GoResult::*;
         // This conversion treats any number that is not otherwise an expected value as `GoError::Other`
@@ -45,15 +59,6 @@ impl fmt::Display for GoResult {
             GoResult::BadArgument => write!(f, "BadArgument"),
             GoResult::OutOfGas => write!(f, "OutOfGas"),
             GoResult::Other => write!(f, "Other Error"),
-        }
-    }
-}
-
-impl GoResult {
-    pub fn is_ok(&self) -> bool {
-        match self {
-            GoResult::Ok => true,
-            _ => false,
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::iterator::GoIter;
-use cosmwasm_std::{generic_err, ReadonlyStorage, StdResult, Storage};
+use cosmwasm_vm::{FfiResult, ReadonlyStorage, Storage};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -28,18 +28,14 @@ pub struct DB {
 }
 
 impl ReadonlyStorage for DB {
-    fn get(&self, key: &[u8]) -> StdResult<Option<Vec<u8>>> {
+    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
         let key = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let go_result: GoResult =
             (self.vtable.read_db)(self.state, key, &mut result_buf as *mut Buffer).into();
-        let key = unsafe { key.consume() };
-        if !go_result.is_ok() {
-            return Err(generic_err(format!(
-                "Go {}: reading key {:?}",
-                go_result, key
-            )));
-        }
+        let _key = unsafe { key.consume() };
+        let go_result: FfiResult<()> = go_result.into();
+        go_result?;
 
         if result_buf.ptr.is_null() {
             return Ok(None);
@@ -59,7 +55,7 @@ impl ReadonlyStorage for DB {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: cosmwasm_std::Order,
-    ) -> StdResult<Box<dyn Iterator<Item = StdResult<cosmwasm_std::KV>> + 'a>> {
+    ) -> FfiResult<Box<dyn Iterator<Item = FfiResult<cosmwasm_std::KV>> + 'a>> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
         let start = start
             .map(|s| Buffer::from_vec(s.to_vec()))
@@ -79,41 +75,26 @@ impl ReadonlyStorage for DB {
         let _start = unsafe { start.consume() };
         let _end = unsafe { end.consume() };
 
-        if !go_result.is_ok() {
-            return Err(generic_err(format!("Go {}: creating iterator", go_result)));
-        }
+        let go_result: FfiResult<()> = go_result.into();
+        go_result?;
         Ok(Box::new(iter))
     }
 }
 
 impl Storage for DB {
-    fn set(&mut self, key: &[u8], value: &[u8]) -> StdResult<()> {
+    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<()> {
         let key = Buffer::from_vec(key.to_vec());
         let value = Buffer::from_vec(value.to_vec());
         let go_result: GoResult = (self.vtable.write_db)(self.state, key, value).into();
-        let key = unsafe { key.consume() };
+        let _key = unsafe { key.consume() };
         let _value = unsafe { value.consume() };
-        if !go_result.is_ok() {
-            Err(generic_err(format!(
-                "Go {}: writing key {:?}",
-                go_result, key
-            )))
-        } else {
-            Ok(())
-        }
+        go_result.into()
     }
 
-    fn remove(&mut self, key: &[u8]) -> StdResult<()> {
+    fn remove(&mut self, key: &[u8]) -> FfiResult<()> {
         let key = Buffer::from_vec(key.to_vec());
         let go_result: GoResult = (self.vtable.remove_db)(self.state, key).into();
-        let key = unsafe { key.consume() };
-        if !go_result.is_ok() {
-            Err(generic_err(format!(
-                "Go {}: removing key {:?}",
-                go_result, key
-            )))
-        } else {
-            Ok(())
-        }
+        let _key = unsafe { key.consume() };
+        go_result.into()
     }
 }
