@@ -12,12 +12,12 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN url="https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
     wget "$url"; \
     chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain nightly-2020-03-05; \
+    ./rustup-init -y --no-modify-path --default-toolchain nightly-2020-05-05; \
     rm rustup-init; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     rustup --version; \
     cargo --version; \
-    rustc --version; 
+    rustc --version;
 
 # PRE-FETCH MANY DEPS
 WORKDIR /scratch

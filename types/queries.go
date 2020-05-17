@@ -106,9 +106,12 @@ type Validators []Validator
 
 type Validator struct {
 	Address       string `json:"address"`
-	Commission    uint64 `json:"commission"`
-	MaxCommission uint64 `json:"max_commission"`
-	MaxChangeRate uint64 `json:"max_change_rate"`
+	// decimal string, eg "0.02"
+	Commission    string `json:"commission"`
+	// decimal string, eg "0.02"
+	MaxCommission string `json:"max_commission"`
+	// decimal string, eg "0.02"
+	MaxChangeRate string `json:"max_change_rate"`
 }
 
 type DelegationsQuery struct {
