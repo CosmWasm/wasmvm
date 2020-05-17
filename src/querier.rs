@@ -30,19 +30,28 @@ unsafe impl Send for GoQuerier {}
 
 impl Querier for GoQuerier {
     fn raw_query(&self, request: &[u8]) -> QuerierResult {
-        let request = Buffer::from_vec(request.to_vec());
+        let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.query_external)(self.state, request, &mut result_buf as *mut Buffer)
+            (self.vtable.query_external)(self.state, request_buf, &mut result_buf as *mut Buffer)
                 .into();
-        let _request = unsafe { request.consume() };
-        let go_result: FfiResult<()> = go_result.into();
+        let _request = unsafe { request_buf.consume() };
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message(format!(
+                "Failed to query another contract with this request: {}",
+                String::from_utf8_lossy(request),
+            ));
+        }
         go_result?;
 
         let bin_result = unsafe { result_buf.consume() };
         match serde_json::from_slice(&bin_result) {
             Ok(system_result) => Ok(system_result),
-            Err(_) => Ok(Err(SystemError::InvalidResponse { msg: bin_result })),
+            Err(e) => Ok(Err(SystemError::InvalidResponse {
+                error: format!("Parsing Go response: {}", e),
+                response: bin_result,
+            })),
         }
     }
 }

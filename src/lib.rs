@@ -14,10 +14,10 @@ use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error};
-use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_vm::Extern;
-use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache};
+use crate::error::{
+    clear_error, empty_err, handle_c_error, set_error, EmptyArg, Error, Panic, Utf8Err, WasmErr,
+};
+use cosmwasm_vm::{call_handle_raw, call_init_raw, call_query_raw, CosmCache, Extern};
 
 #[repr(C)]
 pub struct cache_t {}

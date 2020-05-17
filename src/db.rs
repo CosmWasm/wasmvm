@@ -29,12 +29,18 @@ pub struct DB {
 
 impl ReadonlyStorage for DB {
     fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
-        let key = Buffer::from_vec(key.to_vec());
+        let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.read_db)(self.state, key, &mut result_buf as *mut Buffer).into();
-        let _key = unsafe { key.consume() };
-        let go_result: FfiResult<()> = go_result.into();
+            (self.vtable.read_db)(self.state, key_buf, &mut result_buf as *mut Buffer).into();
+        let _key = unsafe { key_buf.consume() };
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message(format!(
+                "Failed to read a key in the db: {}",
+                String::from_utf8_lossy(key)
+            ));
+        }
         go_result?;
 
         if result_buf.ptr.is_null() {
@@ -57,25 +63,32 @@ impl ReadonlyStorage for DB {
         order: cosmwasm_std::Order,
     ) -> FfiResult<Box<dyn Iterator<Item = FfiResult<cosmwasm_std::KV>> + 'a>> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
-        let start = start
+        let start_buf = start
             .map(|s| Buffer::from_vec(s.to_vec()))
             .unwrap_or_default();
-        let end = end
+        let end_buf = end
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
         let mut iter = GoIter::default();
         let go_result: GoResult = (self.vtable.scan_db)(
             self.state,
-            start,
-            end,
+            start_buf,
+            end_buf,
             order.into(),
             &mut iter as *mut GoIter,
         )
         .into();
-        let _start = unsafe { start.consume() };
-        let _end = unsafe { end.consume() };
+        let _start = unsafe { start_buf.consume() };
+        let _end = unsafe { end_buf.consume() };
 
-        let go_result: FfiResult<()> = go_result.into();
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message(format!(
+                "Failed to read the next key between {:?} and {:?}",
+                start.map(String::from_utf8_lossy),
+                end.map(String::from_utf8_lossy),
+            ));
+        }
         go_result?;
         Ok(Box::new(iter))
     }
@@ -83,18 +96,32 @@ impl ReadonlyStorage for DB {
 
 impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<()> {
-        let key = Buffer::from_vec(key.to_vec());
-        let value = Buffer::from_vec(value.to_vec());
-        let go_result: GoResult = (self.vtable.write_db)(self.state, key, value).into();
-        let _key = unsafe { key.consume() };
-        let _value = unsafe { value.consume() };
-        go_result.into()
+        let key_buf = Buffer::from_vec(key.to_vec());
+        let value_buf = Buffer::from_vec(value.to_vec());
+        let go_result: GoResult = (self.vtable.write_db)(self.state, key_buf, value_buf).into();
+        let _key = unsafe { key_buf.consume() };
+        let _value = unsafe { value_buf.consume() };
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message(format!(
+                "Failed to set a key in the db: {}",
+                String::from_utf8_lossy(key),
+            ));
+        }
+        go_result
     }
 
     fn remove(&mut self, key: &[u8]) -> FfiResult<()> {
-        let key = Buffer::from_vec(key.to_vec());
-        let go_result: GoResult = (self.vtable.remove_db)(self.state, key).into();
-        let _key = unsafe { key.consume() };
-        go_result.into()
+        let key_buf = Buffer::from_vec(key.to_vec());
+        let go_result: GoResult = (self.vtable.remove_db)(self.state, key_buf).into();
+        let _key = unsafe { key_buf.consume() };
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message(format!(
+                "Failed to delete a key in the db: {}",
+                String::from_utf8_lossy(key),
+            ));
+        }
+        go_result
     }
 }
