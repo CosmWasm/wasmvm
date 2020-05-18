@@ -92,6 +92,7 @@ type AllBalancesResponse struct {
 type StakingQuery struct {
 	Validators  *ValidatorsQuery  `json:"validators,omitempty"`
 	Delegations *DelegationsQuery `json:"delegations,omitempty"`
+	BondedDenom *struct{}         `json:"bonded_denom,omitempty"`
 }
 
 type ValidatorsQuery struct{}
@@ -105,9 +106,9 @@ type ValidatorsResponse struct {
 type Validators []Validator
 
 type Validator struct {
-	Address       string `json:"address"`
+	Address string `json:"address"`
 	// decimal string, eg "0.02"
-	Commission    string `json:"commission"`
+	Commission string `json:"commission"`
 	// decimal string, eg "0.02"
 	MaxCommission string `json:"max_commission"`
 	// decimal string, eg "0.02"
@@ -133,6 +134,10 @@ type Delegation struct {
 	Amount             Coin   `json:"amount"`
 	AccumulatedRewards Coin   `json:"accumulated_rewards"`
 	CanRedelegate      bool   `json:"can_redelegate"`
+}
+
+type BondedDenomResponse struct {
+	Denom string `json:"denom"`
 }
 
 type WasmQuery struct {
