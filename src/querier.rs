@@ -1,4 +1,4 @@
-use cosmwasm_std::SystemError;
+use cosmwasm_std::{Binary, SystemError};
 use cosmwasm_vm::{FfiResult, Querier, QuerierResult};
 
 use crate::error::GoResult;
@@ -50,7 +50,7 @@ impl Querier for GoQuerier {
             Ok(system_result) => Ok(system_result),
             Err(e) => Ok(Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {}", e),
-                response: bin_result,
+                response: Binary(bin_result),
             })),
         }
     }
