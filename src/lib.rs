@@ -14,11 +14,11 @@ use snafu::ResultExt;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error};
-use crate::error::{empty_err, EmptyArg, Error, Panic, Utf8Err, WasmErr};
-use cosmwasm_std::Extern;
+use crate::error::{
+    clear_error, empty_err, handle_c_error, set_error, EmptyArg, Error, Panic, Utf8Err, WasmErr,
+};
 use cosmwasm_vm::{
-    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache,
+    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
 use std::convert::TryInto;
 

@@ -1,7 +1,8 @@
-use cosmwasm_std::{generic_err, StdResult, KV};
+use cosmwasm_std::KV;
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
+use cosmwasm_vm::{make_ffi_other, FfiResult};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -33,13 +34,12 @@ impl Default for GoIter {
 }
 
 impl Iterator for GoIter {
-    type Item = StdResult<KV>;
+    type Item = FfiResult<KV>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
-            // TODO: return None here???
-            None => return Some(Err(generic_err("iterator vtable not set"))),
+            None => return Some(Err(make_ffi_other("iterator vtable not set"))),
         };
 
         let mut key_buf = Buffer::default();
@@ -50,21 +50,26 @@ impl Iterator for GoIter {
             &mut value_buf as *mut Buffer,
         )
         .into();
-        if !go_result.is_ok() {
-            return Some(Err(generic_err(format!(
-                "Go {}: iterator.next()",
-                go_result
-            ))));
+        let mut go_result: FfiResult<()> = go_result.into();
+        if let Err(ref mut error) = go_result {
+            error.set_message("Failed to fetch next item from iterator");
+        }
+        if let Err(err) = go_result {
+            return Some(Err(err));
         }
 
-        // TODO: Check if key is null, return none, otherwise, make KV
         let okey = unsafe { key_buf.read() };
         match okey {
             Some(key) => {
-                // TODO: return error not unwrap??
-                let value = unsafe { value_buf.read().unwrap() };
-                let kv = (key.to_vec(), value.to_vec());
-                Some(Ok(kv))
+                let value = unsafe { value_buf.read() };
+                if let Some(value) = value {
+                    let kv = (key.to_vec(), value.to_vec());
+                    Some(Ok(kv))
+                } else {
+                    Some(Err(make_ffi_other(
+                        "Failed to read value while reading the next key in the db",
+                    )))
+                }
             }
             None => None,
         }
