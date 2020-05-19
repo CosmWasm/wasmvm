@@ -108,8 +108,8 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let check = handle_c_error(r, err);
-    Buffer::from_vec(check.into())
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
 }
 
 fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Checksum, Error> {
@@ -125,8 +125,8 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
 }
 
 fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Result<Vec<u8>, Error> {
@@ -167,8 +167,8 @@ pub extern "C" fn instantiate(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
 }
 
 fn do_init(
@@ -219,8 +219,8 @@ pub extern "C" fn handle(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
 }
 
 fn do_handle(
@@ -268,8 +268,8 @@ pub extern "C" fn query(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let v = handle_c_error(r, err);
-    Buffer::from_vec(v)
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
 }
 
 fn do_query(
