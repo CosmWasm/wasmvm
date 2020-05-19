@@ -68,6 +68,18 @@ impl From<VmError> for Error {
     }
 }
 
+impl From<std::str::Utf8Error> for Error {
+    fn from(source: std::str::Utf8Error) -> Self {
+        Error::make_invalid_utf8(source)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(source: std::string::FromUtf8Error) -> Self {
+        Error::make_invalid_utf8(source)
+    }
+}
+
 pub fn clear_error() {
     set_errno(Errno(0));
 }
@@ -101,6 +113,7 @@ where
 mod tests {
     use super::*;
     use cosmwasm_vm::make_ffi_out_of_gas;
+    use std::str;
 
     #[test]
     fn make_empty_arg_works() {
@@ -163,6 +176,34 @@ mod tests {
         match error {
             Error::VmErr { msg, .. } => {
                 assert_eq!(msg, "Ran out of gas during contract execution");
+            }
+            _ => panic!("expect different error"),
+        }
+    }
+
+    // Tests of `impl From<X> for Error` converters
+
+    #[test]
+    fn from_std_str_utf8error_works() {
+        let error: Error = str::from_utf8(b"Hello \xF0\x90\x80World")
+            .unwrap_err()
+            .into();
+        match error {
+            Error::InvalidUtf8 { msg, .. } => {
+                assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")
+            }
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn from_std_string_fromutf8error_works() {
+        let error: Error = String::from_utf8(b"Hello \xF0\x90\x80World".to_vec())
+            .unwrap_err()
+            .into();
+        match error {
+            Error::InvalidUtf8 { msg, .. } => {
+                assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")
             }
             _ => panic!("expect different error"),
         }

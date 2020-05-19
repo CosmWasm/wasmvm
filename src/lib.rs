@@ -76,11 +76,11 @@ fn do_init_cache(
     cache_size: usize,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::make_empty_arg(DATA_DIR_ARG))?;
-    let dir_str = from_utf8(dir).map_err(Error::make_invalid_utf8)?;
+    let dir_str = from_utf8(dir)?;
     // parse the supported features
     let features_bin =
         unsafe { supported_features.read() }.ok_or_else(|| Error::make_empty_arg(FEATURES_ARG))?;
-    let features_str = from_utf8(features_bin).map_err(Error::make_invalid_utf8)?;
+    let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
     let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }?;
     let out = Box::new(cache);
