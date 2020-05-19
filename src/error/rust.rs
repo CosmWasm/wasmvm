@@ -1,5 +1,4 @@
 use errno::{set_errno, Errno};
-use std::fmt::Display;
 
 use cosmwasm_vm::VmError;
 use snafu::Snafu;
@@ -43,7 +42,7 @@ impl Error {
         EmptyArg { name: name.into() }.build()
     }
 
-    pub fn invalid_utf8<S: Display>(msg: S) -> Self {
+    pub fn invalid_utf8<S: ToString>(msg: S) -> Self {
         InvalidUtf8 {
             msg: msg.to_string(),
         }
@@ -54,7 +53,7 @@ impl Error {
         Panic {}.build()
     }
 
-    pub fn vm_err<S: Display>(msg: S) -> Self {
+    pub fn vm_err<S: ToString>(msg: S) -> Self {
         VmErr {
             msg: msg.to_string(),
         }
@@ -95,7 +94,7 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
 pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
 where
     T: Default,
-    E: Display,
+    E: ToString,
 {
     match r {
         Ok(t) => {
