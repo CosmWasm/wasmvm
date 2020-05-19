@@ -90,9 +90,10 @@ type AllBalancesResponse struct {
 }
 
 type StakingQuery struct {
-	Validators  *ValidatorsQuery  `json:"validators,omitempty"`
-	Delegations *DelegationsQuery `json:"delegations,omitempty"`
-	BondedDenom *struct{}         `json:"bonded_denom,omitempty"`
+	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
+	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
+	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
+	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
 }
 
 type ValidatorsQuery struct{}
@@ -115,13 +116,17 @@ type Validator struct {
 	MaxChangeRate string `json:"max_change_rate"`
 }
 
-type DelegationsQuery struct {
+type AllDelegationsQuery struct {
 	Delegator string `json:"delegator"`
-	Validator string `json:"validator,omitempty"`
 }
 
-// DelegationsResponse is the expected response to DelegationsQuery
-type DelegationsResponse struct {
+type DelegationQuery struct {
+	Delegator string `json:"delegator"`
+	Validator string `json:"validator"`
+}
+
+// AllDelegationsResponse is the expected response to AllDelegationsQuery
+type AllDelegationsResponse struct {
 	Delegations Delegations `json:"delegations"`
 }
 
@@ -129,11 +134,22 @@ type DelegationsResponse struct {
 type Delegations []Delegation
 
 type Delegation struct {
+	Delegator string `json:"delegator"`
+	Validator string `json:"validator"`
+	Amount    Coin   `json:"amount"`
+}
+
+// DelegationResponse is the expected response to DelegationsQuery
+type DelegationResponse struct {
+	Delegation *FullDelegation `json:"delegation,omitempty"`
+}
+
+type FullDelegation struct {
 	Delegator          string `json:"delegator"`
 	Validator          string `json:"validator"`
 	Amount             Coin   `json:"amount"`
 	AccumulatedRewards Coin   `json:"accumulated_rewards"`
-	CanRedelegate      bool   `json:"can_redelegate"`
+	CanRedelegate      Coin   `json:"can_redelegate"`
 }
 
 type BondedDenomResponse struct {
