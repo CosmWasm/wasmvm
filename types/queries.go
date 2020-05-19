@@ -106,6 +106,29 @@ type ValidatorsResponse struct {
 // TODO: Validators must JSON encode empty array as []
 type Validators []Validator
 
+// MarshalJSON ensures that we get [] for empty arrays
+func (v Validators) MarshalJSON() ([]byte, error) {
+	if len(v) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Validator = v
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (v *Validators) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Validator
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*v = raw
+	return nil
+}
+
 type Validator struct {
 	Address string `json:"address"`
 	// decimal string, eg "0.02"
@@ -130,8 +153,30 @@ type AllDelegationsResponse struct {
 	Delegations Delegations `json:"delegations"`
 }
 
-// TODO: Delegations must JSON encode empty array as []
 type Delegations []Delegation
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (d Delegations) MarshalJSON() ([]byte, error) {
+	if len(d) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Delegation = d
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (d *Delegations) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Delegation
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*d = raw
+	return nil
+}
 
 type Delegation struct {
 	Delegator string `json:"delegator"`
