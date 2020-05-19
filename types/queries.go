@@ -90,9 +90,10 @@ type AllBalancesResponse struct {
 }
 
 type StakingQuery struct {
-	Validators  *ValidatorsQuery  `json:"validators,omitempty"`
-	Delegations *DelegationsQuery `json:"delegations,omitempty"`
-	BondedDenom *struct{}         `json:"bonded_denom,omitempty"`
+	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
+	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
+	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
+	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
 }
 
 type ValidatorsQuery struct{}
@@ -105,6 +106,29 @@ type ValidatorsResponse struct {
 // TODO: Validators must JSON encode empty array as []
 type Validators []Validator
 
+// MarshalJSON ensures that we get [] for empty arrays
+func (v Validators) MarshalJSON() ([]byte, error) {
+	if len(v) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Validator = v
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (v *Validators) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Validator
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*v = raw
+	return nil
+}
+
 type Validator struct {
 	Address string `json:"address"`
 	// decimal string, eg "0.02"
@@ -115,25 +139,62 @@ type Validator struct {
 	MaxChangeRate string `json:"max_change_rate"`
 }
 
-type DelegationsQuery struct {
+type AllDelegationsQuery struct {
 	Delegator string `json:"delegator"`
-	Validator string `json:"validator,omitempty"`
 }
 
-// DelegationsResponse is the expected response to DelegationsQuery
-type DelegationsResponse struct {
+type DelegationQuery struct {
+	Delegator string `json:"delegator"`
+	Validator string `json:"validator"`
+}
+
+// AllDelegationsResponse is the expected response to AllDelegationsQuery
+type AllDelegationsResponse struct {
 	Delegations Delegations `json:"delegations"`
 }
 
-// TODO: Delegations must JSON encode empty array as []
 type Delegations []Delegation
 
+// MarshalJSON ensures that we get [] for empty arrays
+func (d Delegations) MarshalJSON() ([]byte, error) {
+	if len(d) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []Delegation = d
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (d *Delegations) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []Delegation
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*d = raw
+	return nil
+}
+
 type Delegation struct {
+	Delegator string `json:"delegator"`
+	Validator string `json:"validator"`
+	Amount    Coin   `json:"amount"`
+}
+
+// DelegationResponse is the expected response to DelegationsQuery
+type DelegationResponse struct {
+	Delegation *FullDelegation `json:"delegation,omitempty"`
+}
+
+type FullDelegation struct {
 	Delegator          string `json:"delegator"`
 	Validator          string `json:"validator"`
 	Amount             Coin   `json:"amount"`
 	AccumulatedRewards Coin   `json:"accumulated_rewards"`
-	CanRedelegate      bool   `json:"can_redelegate"`
+	CanRedelegate      Coin   `json:"can_redelegate"`
 }
 
 type BondedDenomResponse struct {
