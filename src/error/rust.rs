@@ -91,19 +91,21 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
     set_errno(Errno(1));
 }
 
-pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
+/// If `result` is Ok, this returns the binary representation of the Ok value and clears the error in `errout`.
+/// Otherwise it returns an empty vector and writes the error to `errout`.
+pub fn handle_c_error<T, E>(result: Result<T, E>, errout: Option<&mut Buffer>) -> Vec<u8>
 where
-    T: Default,
+    T: Into<Vec<u8>>,
     E: ToString,
 {
-    match r {
-        Ok(t) => {
+    match result {
+        Ok(value) => {
             clear_error();
-            t
+            value.into()
         }
-        Err(e) => {
-            set_error(e.to_string(), errout);
-            T::default()
+        Err(error) => {
+            set_error(error.to_string(), errout);
+            Vec::new()
         }
     }
 }
