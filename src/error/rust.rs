@@ -1,5 +1,5 @@
 use errno::{set_errno, Errno};
-use std::fmt;
+use std::fmt::Display;
 
 use cosmwasm_vm::VmError;
 use snafu::{ResultExt, Snafu};
@@ -26,10 +26,10 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Invalid string format: {}", source))]
-    Utf8Err {
-        source: std::str::Utf8Error,
-        #[cfg(feature = "backtraces")]
+    /// Whenever UTF-8 bytes cannot be decoded into a unicode string, e.g. in String::from_utf8 or str::from_utf8.
+    #[snafu(display("Cannot decode UTF8 bytes into string: {}", msg))]
+    InvalidUtf8 {
+        msg: String,
         backtrace: snafu::Backtrace,
     },
     #[snafu(display("Ran out of gas"))]
@@ -37,6 +37,15 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+}
+
+impl Error {
+    pub fn make_invalid_utf8<S: Display>(msg: S) -> Error {
+        InvalidUtf8 {
+            msg: msg.to_string(),
+        }
+        .build()
+    }
 }
 
 // FIXME: simplify this (and more) when refactoring the errors
@@ -68,7 +77,7 @@ pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
 pub fn handle_c_error<T, E>(r: Result<T, E>, errout: Option<&mut Buffer>) -> T
 where
     T: Default,
-    E: fmt::Display,
+    E: Display,
 {
     match r {
         Ok(t) => {
@@ -78,6 +87,34 @@ where
         Err(e) => {
             set_error(e.to_string(), errout);
             T::default()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn make_invalid_utf8_works_for_strings() {
+        let error = Error::make_invalid_utf8("my text");
+        match error {
+            Error::InvalidUtf8 { msg, .. } => {
+                assert_eq!(msg, "my text");
+            }
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn make_invalid_utf8_works_for_errors() {
+        let original = String::from_utf8(vec![0x80]).unwrap_err();
+        let error = Error::make_invalid_utf8(original);
+        match error {
+            Error::InvalidUtf8 { msg, .. } => {
+                assert_eq!(msg, "invalid utf-8 sequence of 1 bytes from index 0");
+            }
+            _ => panic!("expect different error"),
         }
     }
 }
