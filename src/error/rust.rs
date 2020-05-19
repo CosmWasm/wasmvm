@@ -9,12 +9,6 @@ use crate::memory::Buffer;
 #[derive(Debug, Snafu)]
 #[snafu(visibility = "pub")]
 pub enum Error {
-    #[snafu(display("Wasm Error: {}", source))]
-    WasmErr {
-        source: VmError,
-        #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
-    },
     #[snafu(display("Null/Empty argument: {}", name))]
     EmptyArg {
         name: String,

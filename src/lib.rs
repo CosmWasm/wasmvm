@@ -10,12 +10,11 @@ pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 
-use snafu::ResultExt;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error, Error, WasmErr};
+use crate::error::{clear_error, handle_c_error, set_error, Error};
 use cosmwasm_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
@@ -83,7 +82,7 @@ fn do_init_cache(
         unsafe { supported_features.read() }.ok_or_else(|| Error::make_empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin).map_err(Error::make_invalid_utf8)?;
     let features = features_from_csv(features_str);
-    let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }.context(WasmErr {})?;
+    let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -115,7 +114,8 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
 
 fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Checksum, Error> {
     let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::make_empty_arg(WASM_ARG))?;
-    cache.save_wasm(wasm).context(WasmErr {})
+    let checksum = cache.save_wasm(wasm)?;
+    Ok(checksum)
 }
 
 #[no_mangle]
@@ -133,7 +133,8 @@ fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Resul
     let id: Checksum = unsafe { id.read() }
         .ok_or_else(|| Error::make_empty_arg(CACHE_ARG))?
         .try_into()?;
-    cache.load_wasm(&id).context(WasmErr {})
+    let wasm = cache.load_wasm(&id)?;
+    Ok(wasm)
 }
 
 #[no_mangle]
@@ -189,10 +190,8 @@ fn do_init(
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
-    let mut instance = cache
-        .get_instance(&code_id, deps, gas_limit)
-        .context(WasmErr {})?;
-    let res = call_init_raw(&mut instance, params, msg).context(WasmErr {})?;
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    let res = call_init_raw(&mut instance, params, msg)?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(&code_id, instance);
     Ok(res)
@@ -243,10 +242,8 @@ fn do_handle(
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
-    let mut instance = cache
-        .get_instance(&code_id, deps, gas_limit)
-        .context(WasmErr {})?;
-    let res = call_handle_raw(&mut instance, params, msg).context(WasmErr {})?;
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    let res = call_handle_raw(&mut instance, params, msg)?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(&code_id, instance);
     Ok(res)
@@ -292,10 +289,8 @@ fn do_query(
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
-    let mut instance = cache
-        .get_instance(&code_id, deps, gas_limit)
-        .context(WasmErr {})?;
-    let res = call_query_raw(&mut instance, msg).context(WasmErr {})?;
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    let res = call_query_raw(&mut instance, msg)?;
     *gas_used = gas_limit - instance.get_gas();
     cache.store_instance(&code_id, instance);
     Ok(res)
