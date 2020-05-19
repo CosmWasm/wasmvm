@@ -15,7 +15,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error, EmptyArg, Error, Panic, WasmErr};
+use crate::error::{clear_error, handle_c_error, set_error, Error, Panic, WasmErr};
 use cosmwasm_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
@@ -107,7 +107,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
             .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
+        None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let check = handle_c_error(r, err);
     Buffer::from_vec(check.to_vec())
@@ -123,7 +123,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
             .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
+        None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -164,7 +164,7 @@ pub extern "C" fn instantiate(
             )
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
+        None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -218,7 +218,7 @@ pub extern "C" fn handle(
             )
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
+        None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
@@ -269,7 +269,7 @@ pub extern "C" fn query(
             do_query(c, code_id, msg, db, api, querier, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Panic {}.fail()),
-        None => EmptyArg { name: CACHE_ARG }.fail(),
+        None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
     Buffer::from_vec(v)
