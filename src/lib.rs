@@ -15,9 +15,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{
-    clear_error, empty_err, handle_c_error, set_error, EmptyArg, Error, Panic, WasmErr,
-};
+use crate::error::{clear_error, handle_c_error, set_error, EmptyArg, Error, Panic, WasmErr};
 use cosmwasm_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
@@ -78,11 +76,11 @@ fn do_init_cache(
     supported_features: Buffer,
     cache_size: usize,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
-    let dir = unsafe { data_dir.read() }.ok_or_else(|| empty_err(DATA_DIR_ARG))?;
+    let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::make_empty_arg(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir).map_err(Error::make_invalid_utf8)?;
     // parse the supported features
     let features_bin =
-        unsafe { supported_features.read() }.ok_or_else(|| empty_err(FEATURES_ARG))?;
+        unsafe { supported_features.read() }.ok_or_else(|| Error::make_empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin).map_err(Error::make_invalid_utf8)?;
     let features = features_from_csv(features_str);
     let cache = unsafe { CosmCache::new(dir_str, features, cache_size) }.context(WasmErr {})?;
@@ -116,7 +114,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
 }
 
 fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Checksum, Error> {
-    let wasm = unsafe { wasm.read() }.ok_or_else(|| empty_err(WASM_ARG))?;
+    let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::make_empty_arg(WASM_ARG))?;
     cache.save_wasm(wasm).context(WasmErr {})
 }
 
@@ -133,7 +131,7 @@ pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buf
 
 fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Result<Vec<u8>, Error> {
     let id: Checksum = unsafe { id.read() }
-        .ok_or_else(|| empty_err(CACHE_ARG))?
+        .ok_or_else(|| Error::make_empty_arg(CACHE_ARG))?
         .try_into()?;
     cache.load_wasm(&id).context(WasmErr {})
 }
@@ -183,12 +181,12 @@ fn do_init(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
+    let gas_used = gas_used.ok_or_else(|| Error::make_empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .ok_or_else(|| Error::make_empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::make_empty_arg(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache
@@ -237,12 +235,12 @@ fn do_handle(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
+    let gas_used = gas_used.ok_or_else(|| Error::make_empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .ok_or_else(|| Error::make_empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| empty_err(PARAMS_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::make_empty_arg(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache
@@ -287,11 +285,11 @@ fn do_query(
     gas_limit: u64,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| empty_err(GAS_USED_ARG))?;
+    let gas_used = gas_used.ok_or_else(|| Error::make_empty_arg(GAS_USED_ARG))?;
     let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| empty_err(CODE_ID_ARG))?
+        .ok_or_else(|| Error::make_empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| empty_err(MSG_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::make_empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache

@@ -20,9 +20,9 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Null/Empty argument passed: {}", name))]
+    #[snafu(display("Null/Empty argument: {}", name))]
     EmptyArg {
-        name: &'static str,
+        name: String,
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
@@ -40,6 +40,10 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn make_empty_arg<T: Into<String>>(name: T) -> Error {
+        EmptyArg { name: name.into() }.build()
+    }
+
     pub fn make_invalid_utf8<S: Display>(msg: S) -> Error {
         InvalidUtf8 {
             msg: msg.to_string(),
@@ -54,12 +58,6 @@ impl From<VmError> for Error {
         let r: Result<(), VmError> = Err(source);
         r.context(WasmErr {}).unwrap_err()
     }
-}
-
-/// empty_err returns an error with stack trace.
-/// helper to construct Error::EmptyArg  over and over.
-pub(crate) fn empty_err(name: &'static str) -> Error {
-    EmptyArg { name }.build()
 }
 
 pub fn clear_error() {
@@ -94,6 +92,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn make_empty_arg_works() {
+        let error = Error::make_empty_arg("gas");
+        match error {
+            Error::EmptyArg { name, .. } => {
+                assert_eq!(name, "gas");
+            }
+            _ => panic!("expect different error"),
+        }
+    }
 
     #[test]
     fn make_invalid_utf8_works_for_strings() {
