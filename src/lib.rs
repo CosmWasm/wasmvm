@@ -109,7 +109,7 @@ pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buf
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
     let check = handle_c_error(r, err);
-    Buffer::from_vec(check.to_vec())
+    Buffer::from_vec(check.into())
 }
 
 fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Result<Checksum, Error> {
