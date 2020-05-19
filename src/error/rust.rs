@@ -7,7 +7,6 @@ use snafu::Snafu;
 use crate::memory::Buffer;
 
 #[derive(Debug, Snafu)]
-#[snafu(visibility = "pub")]
 pub enum Error {
     #[snafu(display("Null/Empty argument: {}", name))]
     EmptyArg {
