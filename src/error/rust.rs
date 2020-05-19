@@ -39,22 +39,22 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn empty_arg<T: Into<String>>(name: T) -> Error {
+    pub fn empty_arg<T: Into<String>>(name: T) -> Self {
         EmptyArg { name: name.into() }.build()
     }
 
-    pub fn invalid_utf8<S: Display>(msg: S) -> Error {
+    pub fn invalid_utf8<S: Display>(msg: S) -> Self {
         InvalidUtf8 {
             msg: msg.to_string(),
         }
         .build()
     }
 
-    pub fn panic() -> Error {
+    pub fn panic() -> Self {
         Panic {}.build()
     }
 
-    pub fn vm_err<S: Display>(msg: S) -> Error {
+    pub fn vm_err<S: Display>(msg: S) -> Self {
         VmErr {
             msg: msg.to_string(),
         }
