@@ -2,7 +2,7 @@ use errno::{set_errno, Errno};
 use std::fmt::Display;
 
 use cosmwasm_vm::VmError;
-use snafu::{ResultExt, Snafu};
+use snafu::Snafu;
 
 use crate::memory::Buffer;
 
@@ -37,6 +37,12 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    #[snafu(display("Error calling the VM: {}", msg))]
+    VmErr {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
 }
 
 impl Error {
@@ -54,13 +60,18 @@ impl Error {
     pub fn make_panic() -> Error {
         Panic {}.build()
     }
+
+    pub fn make_vm_err<S: Display>(msg: S) -> Error {
+        VmErr {
+            msg: msg.to_string(),
+        }
+        .build()
+    }
 }
 
-// FIXME: simplify this (and more) when refactoring the errors
 impl From<VmError> for Error {
     fn from(source: VmError) -> Self {
-        let r: Result<(), VmError> = Err(source);
-        r.context(WasmErr {}).unwrap_err()
+        Error::make_vm_err(source)
     }
 }
 
@@ -96,6 +107,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cosmwasm_vm::make_ffi_out_of_gas;
 
     #[test]
     fn make_empty_arg_works() {
@@ -136,6 +148,29 @@ mod tests {
         let error = Error::make_panic();
         match error {
             Error::Panic { .. } => {}
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn make_vm_err_works_for_strings() {
+        let error = Error::make_vm_err("my text");
+        match error {
+            Error::VmErr { msg, .. } => {
+                assert_eq!(msg, "my text");
+            }
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn make_vm_err_works_for_errors() {
+        let original: VmError = make_ffi_out_of_gas().into();
+        let error = Error::make_vm_err(original);
+        match error {
+            Error::VmErr { msg, .. } => {
+                assert_eq!(msg, "Ran out of gas during contract execution");
+            }
             _ => panic!("expect different error"),
         }
     }
