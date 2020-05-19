@@ -11,6 +11,7 @@ pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
 
 use snafu::ResultExt;
+use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
@@ -20,7 +21,6 @@ use crate::error::{
 use cosmwasm_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
-use std::convert::TryInto;
 
 #[repr(C)]
 pub struct cache_t {}
