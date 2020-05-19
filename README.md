@@ -32,7 +32,7 @@ metering.
 ## Design
 
 Please read the [Documentation](./spec/Index.md) to understand both the general
-[Architecture](./spec/Architecture.md), as well as the more detailed 
+[Architecture](./spec/Architecture.md), as well as the more detailed
 [Specification](./spec/Specification.md) of the parameters and entry points.
 
 ## Development
@@ -52,3 +52,12 @@ but we are not there yet.
 To build the rust side, try `make build-rust` and wait for it to compile. This depends on
 `cargo` being installed with `rustc` version 1.39+. Generally, you can just use `rustup` to
 install all this with no problems.
+
+## Toolchain
+
+The Rust toolchain is pinned in the file `rust-toolchain`. It must be in sync with `Dockerfile.cross`
+and `Dockerfile.centos7`.
+When choosing a version, please use version with clippy, rustfmt and rls available to make Simon happy.
+
+- Mac: https://rust-lang.github.io/rustup-components-history/x86_64-apple-darwin.html
+- Linux: https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu.html
