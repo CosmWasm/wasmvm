@@ -39,22 +39,22 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn make_empty_arg<T: Into<String>>(name: T) -> Error {
+    pub fn empty_arg<T: Into<String>>(name: T) -> Error {
         EmptyArg { name: name.into() }.build()
     }
 
-    pub fn make_invalid_utf8<S: Display>(msg: S) -> Error {
+    pub fn invalid_utf8<S: Display>(msg: S) -> Error {
         InvalidUtf8 {
             msg: msg.to_string(),
         }
         .build()
     }
 
-    pub fn make_panic() -> Error {
+    pub fn panic() -> Error {
         Panic {}.build()
     }
 
-    pub fn make_vm_err<S: Display>(msg: S) -> Error {
+    pub fn vm_err<S: Display>(msg: S) -> Error {
         VmErr {
             msg: msg.to_string(),
         }
@@ -64,19 +64,19 @@ impl Error {
 
 impl From<VmError> for Error {
     fn from(source: VmError) -> Self {
-        Error::make_vm_err(source)
+        Error::vm_err(source)
     }
 }
 
 impl From<std::str::Utf8Error> for Error {
     fn from(source: std::str::Utf8Error) -> Self {
-        Error::make_invalid_utf8(source)
+        Error::invalid_utf8(source)
     }
 }
 
 impl From<std::string::FromUtf8Error> for Error {
     fn from(source: std::string::FromUtf8Error) -> Self {
-        Error::make_invalid_utf8(source)
+        Error::invalid_utf8(source)
     }
 }
 
@@ -116,8 +116,8 @@ mod tests {
     use std::str;
 
     #[test]
-    fn make_empty_arg_works() {
-        let error = Error::make_empty_arg("gas");
+    fn empty_arg_works() {
+        let error = Error::empty_arg("gas");
         match error {
             Error::EmptyArg { name, .. } => {
                 assert_eq!(name, "gas");
@@ -127,8 +127,8 @@ mod tests {
     }
 
     #[test]
-    fn make_invalid_utf8_works_for_strings() {
-        let error = Error::make_invalid_utf8("my text");
+    fn invalid_utf8_works_for_strings() {
+        let error = Error::invalid_utf8("my text");
         match error {
             Error::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "my text");
@@ -138,9 +138,9 @@ mod tests {
     }
 
     #[test]
-    fn make_invalid_utf8_works_for_errors() {
+    fn invalid_utf8_works_for_errors() {
         let original = String::from_utf8(vec![0x80]).unwrap_err();
-        let error = Error::make_invalid_utf8(original);
+        let error = Error::invalid_utf8(original);
         match error {
             Error::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 1 bytes from index 0");
@@ -150,8 +150,8 @@ mod tests {
     }
 
     #[test]
-    fn make_panic_works() {
-        let error = Error::make_panic();
+    fn panic_works() {
+        let error = Error::panic();
         match error {
             Error::Panic { .. } => {}
             _ => panic!("expect different error"),
@@ -159,8 +159,8 @@ mod tests {
     }
 
     #[test]
-    fn make_vm_err_works_for_strings() {
-        let error = Error::make_vm_err("my text");
+    fn vm_err_works_for_strings() {
+        let error = Error::vm_err("my text");
         match error {
             Error::VmErr { msg, .. } => {
                 assert_eq!(msg, "my text");
@@ -170,9 +170,9 @@ mod tests {
     }
 
     #[test]
-    fn make_vm_err_works_for_errors() {
+    fn vm_err_works_for_errors() {
         let original: VmError = make_ffi_out_of_gas().into();
-        let error = Error::make_vm_err(original);
+        let error = Error::vm_err(original);
         match error {
             Error::VmErr { msg, .. } => {
                 assert_eq!(msg, "Ran out of gas during contract execution");
