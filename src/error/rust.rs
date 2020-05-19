@@ -15,11 +15,6 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
-    #[snafu(display("Caught Panic"))]
-    Panic {
-        #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
-    },
     #[snafu(display("Null/Empty argument: {}", name))]
     EmptyArg {
         name: String,
@@ -37,6 +32,11 @@ pub enum Error {
         #[cfg(feature = "backtraces")]
         backtrace: snafu::Backtrace,
     },
+    #[snafu(display("Caught Panic"))]
+    Panic {
+        #[cfg(feature = "backtraces")]
+        backtrace: snafu::Backtrace,
+    },
 }
 
 impl Error {
@@ -49,6 +49,10 @@ impl Error {
             msg: msg.to_string(),
         }
         .build()
+    }
+
+    pub fn make_panic() -> Error {
+        Panic {}.build()
     }
 }
 
@@ -123,6 +127,15 @@ mod tests {
             Error::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 1 bytes from index 0");
             }
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn make_panic_works() {
+        let error = Error::make_panic();
+        match error {
+            Error::Panic { .. } => {}
             _ => panic!("expect different error"),
         }
     }

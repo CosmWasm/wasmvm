@@ -15,7 +15,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use crate::error::{clear_error, handle_c_error, set_error, Error, Panic, WasmErr};
+use crate::error::{clear_error, handle_c_error, set_error, Error, WasmErr};
 use cosmwasm_vm::{
     call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
 };
@@ -48,7 +48,7 @@ pub extern "C" fn init_cache(
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| do_init_cache(data_dir, supported_features, cache_size))
-        .unwrap_or_else(|_| Panic {}.fail());
+        .unwrap_or_else(|_| Err(Error::make_panic()));
     match r {
         Ok(t) => {
             clear_error();
@@ -106,7 +106,7 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
-            .unwrap_or_else(|_| Panic {}.fail()),
+            .unwrap_or_else(|_| Err(Error::make_panic())),
         None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let check = handle_c_error(r, err);
@@ -122,7 +122,7 @@ fn do_create(cache: &mut CosmCache<DB, GoApi, GoQuerier>, wasm: Buffer) -> Resul
 pub extern "C" fn get_code(cache: *mut cache_t, id: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, id)))
-            .unwrap_or_else(|_| Panic {}.fail()),
+            .unwrap_or_else(|_| Err(Error::make_panic())),
         None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
@@ -163,7 +163,7 @@ pub extern "C" fn instantiate(
                 gas_used,
             )
         }))
-        .unwrap_or_else(|_| Panic {}.fail()),
+        .unwrap_or_else(|_| Err(Error::make_panic())),
         None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
@@ -217,7 +217,7 @@ pub extern "C" fn handle(
                 c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
             )
         }))
-        .unwrap_or_else(|_| Panic {}.fail()),
+        .unwrap_or_else(|_| Err(Error::make_panic())),
         None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
@@ -268,7 +268,7 @@ pub extern "C" fn query(
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_query(c, code_id, msg, db, api, querier, gas_limit, gas_used)
         }))
-        .unwrap_or_else(|_| Panic {}.fail()),
+        .unwrap_or_else(|_| Err(Error::make_panic())),
         None => Err(Error::make_empty_arg(CACHE_ARG)),
     };
     let v = handle_c_error(r, err);
