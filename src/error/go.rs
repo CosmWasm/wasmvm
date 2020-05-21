@@ -1,8 +1,6 @@
 use std::fmt;
 
-use cosmwasm_vm::{
-    make_ffi_bad_argument, make_ffi_foreign_panic, make_ffi_other, make_ffi_out_of_gas, FfiError,
-};
+use cosmwasm_vm::FfiError;
 
 /// This enum gives names to the status codes returned from Go callbacks to Rust.
 ///
@@ -31,10 +29,10 @@ impl From<GoResult> for Result<(), FfiError> {
     fn from(other: GoResult) -> Self {
         match other {
             GoResult::Ok => Ok(()),
-            GoResult::Panic => Err(make_ffi_foreign_panic()),
-            GoResult::BadArgument => Err(make_ffi_bad_argument()),
-            GoResult::OutOfGas => Err(make_ffi_out_of_gas()),
-            GoResult::Other => Err(make_ffi_other("Unspecified error in Go code")),
+            GoResult::Panic => Err(FfiError::foreign_panic()),
+            GoResult::BadArgument => Err(FfiError::bad_argument()),
+            GoResult::OutOfGas => Err(FfiError::out_of_gas()),
+            GoResult::Other => Err(FfiError::other("Unspecified error in Go code")),
         }
     }
 }

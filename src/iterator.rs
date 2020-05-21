@@ -2,7 +2,7 @@ use cosmwasm_std::KV;
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
-use cosmwasm_vm::{make_ffi_other, FfiResult};
+use cosmwasm_vm::{FfiError, FfiResult};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -39,7 +39,7 @@ impl Iterator for GoIter {
     fn next(&mut self) -> Option<Self::Item> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
-            None => return Some(Err(make_ffi_other("iterator vtable not set"))),
+            None => return Some(Err(FfiError::other("iterator vtable not set"))),
         };
 
         let mut key_buf = Buffer::default();
@@ -66,7 +66,7 @@ impl Iterator for GoIter {
                     let kv = (key.to_vec(), value.to_vec());
                     Some(Ok(kv))
                 } else {
-                    Some(Err(make_ffi_other(
+                    Some(Err(FfiError::other(
                         "Failed to read value while reading the next key in the db",
                     )))
                 }

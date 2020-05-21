@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
-use cosmwasm_vm::{make_ffi_other, Api, FfiResult};
+use cosmwasm_vm::{Api, FfiError, FfiResult};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -79,7 +79,7 @@ impl Api for GoApi {
             unsafe { output.consume() }
         };
         let human =
-            String::from_utf8(result).map_err(|_| make_ffi_other("Result was not valid utf-8"))?;
+            String::from_utf8(result).map_err(|_| FfiError::other("Result was not valid utf-8"))?;
         Ok(HumanAddr(human))
     }
 }

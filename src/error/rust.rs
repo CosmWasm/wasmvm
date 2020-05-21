@@ -113,7 +113,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_vm::make_ffi_out_of_gas;
+    use cosmwasm_vm::FfiError;
     use std::str;
 
     #[test]
@@ -172,7 +172,8 @@ mod tests {
 
     #[test]
     fn vm_err_works_for_errors() {
-        let original: VmError = make_ffi_out_of_gas().into();
+        // No public interface exists to generate a VmError directly
+        let original: VmError = FfiError::out_of_gas().into();
         let error = Error::vm_err(original);
         match error {
             Error::VmErr { msg, .. } => {
