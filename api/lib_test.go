@@ -47,7 +47,7 @@ func TestCreateAndGet(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
+	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
 	require.NoError(t, err)
 
 	id, err := Create(cache, wasm)
@@ -100,7 +100,7 @@ func TestInstantiate(t *testing.T) {
 	defer cleanup()
 
 	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/contract_0.8.wasm")
+	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
 	require.NoError(t, err)
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f8a), cost)
+	assert.Equal(t, uint64(0x11f8c), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -144,7 +144,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f8a), cost)
+	assert.Equal(t, uint64(0x11f8c), cost)
 	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
@@ -154,7 +154,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), store, api, querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64( 0x1bab9), cost)
+	assert.Equal(t, uint64(0x1bc5e), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -187,7 +187,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, store1, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f8a), cost)
+	assert.Equal(t, uint64(0x11f8c), cost)
 
 	// instance2 controlled by mary
 	store2 := NewLookup()
@@ -197,16 +197,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11c42), cost)
+	assert.Equal(t, uint64(0x11e68), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0x11c3c)
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0x11992)
 	require.Equal(t, resp.Err, &types.StdError{
 		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1ba3f)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1bbe2)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -215,7 +215,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier,  0x1b9c5)
+	resp = exec(t, cache, id, "mary", store2, api, querier,  0x1bb66)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
@@ -233,7 +233,7 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "./testdata/contract_0.8.wasm")
+	return createContract(t, cache, "./testdata/hackatom.wasm")
 }
 
 func createQueueContract(t *testing.T, cache Cache) []byte {
