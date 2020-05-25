@@ -25,6 +25,7 @@ var (
 	_ error = InvalidBase64{}
 	_ error = InvalidUtf8{}
 	_ error = NotFound{}
+	_ error = NullPointer{}
 	_ error = ParseErr{}
 	_ error = SerializeErr{}
 	_ error = Unauthorized{}
@@ -158,6 +159,10 @@ func ToStdError(err error) *StdError {
 		return &StdError{NotFound: &t}
 	case *NotFound:
 		return &StdError{NotFound: t}
+	case NullPointer:
+		return &StdError{NullPointer: &t}
+	case *NullPointer:
+		return &StdError{NullPointer: t}
 	case ParseErr:
 		return &StdError{ParseErr: &t}
 	case *ParseErr:
