@@ -8,6 +8,7 @@ import (
 // Exactly one of the fields should be set.
 type SystemError struct {
 	InvalidRequest     *InvalidRequest     `json:"invalid_request,omitempty"`
+	InvalidResponse    *InvalidResponse    `json:"invalid_response,omitempty"`
 	NoSuchContract     *NoSuchContract     `json:"no_such_contract,omitempty"`
 	Unknown            *Unknown            `json:"unknown,omitempty"`
 	UnsupportedRequest *UnsupportedRequest `json:"unsupported_request,omitempty"`
@@ -16,6 +17,7 @@ type SystemError struct {
 var (
 	_ error = SystemError{}
 	_ error = InvalidRequest{}
+	_ error = InvalidResponse{}
 	_ error = NoSuchContract{}
 	_ error = Unknown{}
 	_ error = UnsupportedRequest{}
@@ -25,6 +27,8 @@ func (a SystemError) Error() string {
 	switch {
 	case a.InvalidRequest != nil:
 		return a.InvalidRequest.Error()
+	case a.InvalidResponse != nil:
+		return a.InvalidResponse.Error()
 	case a.NoSuchContract != nil:
 		return a.NoSuchContract.Error()
 	case a.Unknown != nil:
@@ -37,11 +41,21 @@ func (a SystemError) Error() string {
 }
 
 type InvalidRequest struct {
-	Err string `json:"error,omitempty"`
+	Err     string `json:"error"`
+	Request []byte `json:"request"`
 }
 
 func (e InvalidRequest) Error() string {
-	return fmt.Sprintf("invalid request: %s", e.Err)
+	return fmt.Sprintf("invalid request: %s - original request: %s", e.Err, string(e.Request))
+}
+
+type InvalidResponse struct {
+	Err      string `json:"error"`
+	Response []byte `json:"response"`
+}
+
+func (e InvalidResponse) Error() string {
+	return fmt.Sprintf("invalid response: %s - original response: %s", e.Err, string(e.Response))
 }
 
 type NoSuchContract struct {
@@ -88,6 +102,10 @@ func ToSystemError(err error) *SystemError {
 		return &SystemError{InvalidRequest: &t}
 	case *InvalidRequest:
 		return &SystemError{InvalidRequest: t}
+	case InvalidResponse:
+		return &SystemError{InvalidResponse: &t}
+	case *InvalidResponse:
+		return &SystemError{InvalidResponse: t}
 	case NoSuchContract:
 		return &SystemError{NoSuchContract: &t}
 	case *NoSuchContract:
