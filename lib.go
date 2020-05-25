@@ -84,26 +84,26 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, &goapi, querier, gasLimit)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 	if resp.Err != nil {
-		return nil, fmt.Errorf("%v", resp.Err)
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
 	resp.Ok.GasUsed = gasUsed
-	return resp.Ok, nil
+	return resp.Ok, gasUsed, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -114,26 +114,26 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 // and setting the env with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, &goapi, querier, gasLimit)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 	if resp.Err != nil {
-		return nil, fmt.Errorf("%v", resp.Err)
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
 	resp.Ok.GasUsed = gasUsed
-	return resp.Ok, nil
+	return resp.Ok, gasUsed, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
