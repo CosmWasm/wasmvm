@@ -16,7 +16,7 @@ type StdError struct {
 	ParseErr      *ParseErr      `json:"parse_err,omitempty"`
 	SerializeErr  *SerializeErr  `json:"serialize_err,omitempty"`
 	Unauthorized  *Unauthorized  `json:"unauthorized,omitempty"`
-	UnderflowErr  *UnderflowErr  `json:"underflow_err,omitempty"`
+	Underflow     *Underflow     `json:"underflow,omitempty"`
 }
 
 var (
@@ -28,7 +28,7 @@ var (
 	_ error = ParseErr{}
 	_ error = SerializeErr{}
 	_ error = Unauthorized{}
-	_ error = UnderflowErr{}
+	_ error = Underflow{}
 )
 
 func (a StdError) Error() string {
@@ -49,8 +49,8 @@ func (a StdError) Error() string {
 		return a.SerializeErr.Error()
 	case a.Unauthorized != nil:
 		return a.Unauthorized.Error()
-	case a.UnderflowErr != nil:
-		return a.UnderflowErr.Error()
+	case a.Underflow != nil:
+		return a.Underflow.Error()
 	default:
 		panic("unknown error variant")
 	}
@@ -118,12 +118,12 @@ func (e Unauthorized) Error() string {
 	return "unauthorized"
 }
 
-type UnderflowErr struct {
+type Underflow struct {
 	Minuend    string `json:"minuend,omitempty"`
 	Subtrahend string `json:"subtrahend,omitempty"`
 }
 
-func (e UnderflowErr) Error() string {
+func (e Underflow) Error() string {
 	return fmt.Sprintf("underflow: %s - %s", e.Minuend, e.Subtrahend)
 }
 
@@ -170,10 +170,10 @@ func ToStdError(err error) *StdError {
 		return &StdError{Unauthorized: &t}
 	case *Unauthorized:
 		return &StdError{Unauthorized: t}
-	case UnderflowErr:
-		return &StdError{UnderflowErr: &t}
-	case *UnderflowErr:
-		return &StdError{UnderflowErr: t}
+	case Underflow:
+		return &StdError{Underflow: &t}
+	case *Underflow:
+		return &StdError{Underflow: t}
 	default:
 		g := GenericErr{Msg: err.Error()}
 		return &StdError{GenericErr: &g}
