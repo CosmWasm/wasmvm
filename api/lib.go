@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
@@ -76,11 +77,12 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed = u64(0)
 	errmsg := C.Buffer{}
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
@@ -95,11 +97,12 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed = u64(0)
 	errmsg := C.Buffer{}
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
@@ -112,11 +115,12 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, q
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed = u64(0)
 	errmsg := C.Buffer{}
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
