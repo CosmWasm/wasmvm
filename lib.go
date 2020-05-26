@@ -102,7 +102,6 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 	if resp.Err != nil {
 		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
-	resp.Ok.GasUsed = gasUsed
 	return resp.Ok, gasUsed, nil
 }
 
@@ -132,7 +131,6 @@ func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KV
 	if resp.Err != nil {
 		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
-	resp.Ok.GasUsed = gasUsed
 	return resp.Ok, gasUsed, nil
 }
 
