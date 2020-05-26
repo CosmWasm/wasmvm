@@ -77,7 +77,7 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed = u64(0)
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -97,7 +97,7 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed = u64(0)
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -115,7 +115,7 @@ func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, q
 	db := buildDB(store)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed = u64(0)
+	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
