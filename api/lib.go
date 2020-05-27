@@ -67,14 +67,24 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Instantiate(
+	cache Cache,
+	code_id []byte,
+    params []byte,
+    msg []byte,
+	gasMeter GasMeter,
+    store KVStore,
+    api *GoAPI,
+    querier Querier,
+    gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -87,14 +97,24 @@ func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store K
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Handle(
+	cache Cache,
+    code_id []byte,
+    params []byte,
+    msg []byte,
+	gasMeter GasMeter,
+    store KVStore,
+    api *GoAPI,
+    querier Querier,
+    gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -107,12 +127,21 @@ func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStor
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Query(
+	cache Cache,
+    code_id []byte,
+    msg []byte,
+	gasMeter GasMeter,
+    store KVStore,
+    api *GoAPI,
+    querier Querier,
+    gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64

@@ -73,10 +73,24 @@ func recoverPanic(ret *C.GoResult) {
 	}
 }
 
+type Gas = uint64
+
+// GasMeter is a copy of an interface declaration from cosmos-sdk
+// https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
+type GasMeter interface {
+	GasConsumed() Gas
+	GasConsumedToLimit() Gas
+	Limit() Gas
+	ConsumeGas(amount Gas, descriptor string)
+	IsPastLimit() bool
+	IsOutOfGas() bool
+}
+
 /****** DB ********/
 
 // KVStore copies a subset of types from cosmos-sdk
 // We may wish to make this more generic sometime in the future, but not now
+// https://github.com/cosmos/cosmos-sdk/blob/bef3689245bab591d7d169abd6bea52db97a70c7/store/types/store.go#L170
 type KVStore interface {
 	Get(key []byte) []byte
 	Set(key, value []byte)
@@ -103,8 +117,9 @@ var db_vtable = C.DB_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildDB(kv KVStore) C.DB {
+func buildDB(kv KVStore, gm GasMeter) C.DB {
 	return C.DB{
+		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(&gm)),
 		state:  (*C.db_t)(unsafe.Pointer(&kv)),
 		vtable: db_vtable,
 	}

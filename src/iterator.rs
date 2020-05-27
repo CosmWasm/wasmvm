@@ -34,7 +34,7 @@ impl Default for GoIter {
 }
 
 impl Iterator for GoIter {
-    type Item = FfiResult<KV>;
+    type Item = FfiResult<(KV, u64)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_db = match self.vtable.next_db {
@@ -64,7 +64,7 @@ impl Iterator for GoIter {
                 let value = unsafe { value_buf.read() };
                 if let Some(value) = value {
                     let kv = (key.to_vec(), value.to_vec());
-                    Some(Ok(kv))
+                    Some(Ok((kv, 0)))
                 } else {
                     Some(Err(FfiError::other(
                         "Failed to read value while reading the next key in the db",
