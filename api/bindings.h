@@ -69,19 +69,20 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(iterator_t*, Buffer*, Buffer*);
+  int32_t (*next_db)(iterator_t*, gas_meter_t*, uint64_t*, Buffer*, Buffer*);
 } Iterator_vtable;
 
 typedef struct GoIter {
+  gas_meter_t *gas_meter;
   iterator_t *state;
   Iterator_vtable vtable;
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, Buffer, Buffer*);
-  int32_t (*write_db)(db_t*, Buffer, Buffer);
-  int32_t (*remove_db)(db_t*, Buffer);
-  int32_t (*scan_db)(db_t*, Buffer, Buffer, int32_t, GoIter*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
+  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer);
+  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer);
+  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*);
 } DB_vtable;
 
 typedef struct DB {

@@ -4,24 +4,24 @@ package api
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoResult (*read_db_fn)(db_t *ptr, Buffer key, Buffer *val);
-typedef GoResult (*write_db_fn)(db_t *ptr, Buffer key, Buffer val);
-typedef GoResult (*remove_db_fn)(db_t *ptr, Buffer key);
-typedef GoResult (*scan_db_fn)(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
+typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
+typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val);
+typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
+typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
 // iterator
-typedef GoResult (*next_db_fn)(iterator_t *ptr, Buffer *key, Buffer *val);
+typedef GoResult (*next_db_fn)(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*query_external_fn)(querier_t *ptr, Buffer request, Buffer *result);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, Buffer key, Buffer *val);
-GoResult cSet_cgo(db_t *ptr, Buffer key, Buffer val);
-GoResult cDelete_cgo(db_t *ptr, Buffer key);
-GoResult cScan_cgo(db_t *ptr, Buffer start, Buffer end, int32_t order, GoIter *out);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
+GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val);
+GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
+GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
 // iterator
-GoResult cNext_cgo(iterator_t *ptr, Buffer *key, Buffer *val);
+GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // api
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
@@ -131,24 +131,31 @@ var iterator_vtable = C.Iterator_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(it dbm.Iterator) C.GoIter {
+func buildIterator(it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
 	return C.GoIter{
+		gas_meter: gasMeter,
 		state:  (*C.iterator_t)(unsafe.Pointer(&it)),
 		vtable: iterator_vtable,
 	}
 }
 
 //export cGet
-func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if val == nil {
+	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
 
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
+
+	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
+	gasAfter := gm.GasConsumed()
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
 	if v != nil {
@@ -162,29 +169,53 @@ func cGet(ptr *C.db_t, key C.Buffer, val *C.Buffer) (ret C.GoResult) {
 }
 
 //export cSet
-func cSet(ptr *C.db_t, key C.Buffer, val C.Buffer) (ret C.GoResult) {
+func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
+	if ptr == nil || gasMeter == nil || usedGas == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
 
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
 	v := receiveSlice(val)
+
+	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
+	gasAfter := gm.GasConsumed()
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+
 	return C.GoResult_Ok
 }
 
 //export cDelete
-func cDelete(ptr *C.db_t, key C.Buffer) (ret C.GoResult) {
+func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
+	if ptr == nil || gasMeter == nil || usedGas == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
 
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	k := receiveSlice(key)
+
+	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
+	gasAfter := gm.GasConsumed()
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+
 	return C.GoResult_Ok
 }
 
 //export cScan
-func cScan(ptr *C.db_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter) (ret C.GoResult) {
+func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter) (ret C.GoResult) {
 	defer recoverPanic(&ret)
+	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
 
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	// handle null as well as data
@@ -206,12 +237,12 @@ func cScan(ptr *C.db_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter) 
 		return C.GoResult_BadArgument
 	}
 	// Let's hope this works!
-	*out = buildIterator(iter)
+	*out = buildIterator(iter, gasMeter)
 	return C.GoResult_Ok
 }
 
 //export cNext
-func cNext(ptr *C.iterator_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
+func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -219,18 +250,26 @@ func cNext(ptr *C.iterator_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	// 	}
 
 	defer recoverPanic(&ret)
+	if ptr == nil || gasMeter == nil || usedGas == nil {
+		// we received an invalid pointer
+		return C.GoResult_BadArgument
+	}
 
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	iter := *(*dbm.Iterator)(unsafe.Pointer(ptr))
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoResult_Ok
 	}
 
+	gasBefore := gm.GasConsumed()
 	// call Next at the end, upon creation we have first data loaded
 	k := iter.Key()
 	v := iter.Value()
 	// check iter.Error() ????
 	iter.Next()
+	gasAfter := gm.GasConsumed()
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	if k != nil {
 		*key = allocateRust(k)
