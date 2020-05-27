@@ -1,5 +1,5 @@
 use crate::iterator::GoIter;
-use cosmwasm_vm::{FfiResult, ReadonlyStorage, Storage};
+use cosmwasm_vm::{FfiResult, ReadonlyStorage, Storage, StorageIteratorItem};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
@@ -63,7 +63,7 @@ impl ReadonlyStorage for DB {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: cosmwasm_std::Order,
-    ) -> FfiResult<Box<dyn Iterator<Item = FfiResult<(cosmwasm_std::KV, u64)>> + 'a>> {
+    ) -> FfiResult<Box<dyn Iterator<Item = StorageIteratorItem> + 'a>> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
         let start_buf = start
             .map(|s| Buffer::from_vec(s.to_vec()))

@@ -1,8 +1,6 @@
-use cosmwasm_std::KV;
-
 use crate::error::GoResult;
 use crate::memory::Buffer;
-use cosmwasm_vm::{FfiError, FfiResult};
+use cosmwasm_vm::{FfiError, FfiResult, StorageIteratorItem};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -34,7 +32,7 @@ impl Default for GoIter {
 }
 
 impl Iterator for GoIter {
-    type Item = FfiResult<(KV, u64)>;
+    type Item = StorageIteratorItem;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_db = match self.vtable.next_db {

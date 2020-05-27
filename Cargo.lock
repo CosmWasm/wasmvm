@@ -228,7 +228,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 [[package]]
 name = "cosmwasm-std"
 version = "0.8.0-rc1"
-source = "git+https://github.com/cosmwasm/cosmwasm?rev=7f1f8e557850303fcd5f105f4b4ab18406bab5fd#7f1f8e557850303fcd5f105f4b4ab18406bab5fd"
+source = "git+https://github.com/cosmwasm/cosmwasm?rev=14d93ea7b8b4c92652ffff197541bc7cbac5f3cc#14d93ea7b8b4c92652ffff197541bc7cbac5f3cc"
 dependencies = [
  "base64",
  "schemars",
@@ -240,7 +240,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "0.8.0-rc1"
-source = "git+https://github.com/cosmwasm/cosmwasm?rev=7f1f8e557850303fcd5f105f4b4ab18406bab5fd#7f1f8e557850303fcd5f105f4b4ab18406bab5fd"
+source = "git+https://github.com/cosmwasm/cosmwasm?rev=14d93ea7b8b4c92652ffff197541bc7cbac5f3cc#14d93ea7b8b4c92652ffff197541bc7cbac5f3cc"
 dependencies = [
  "cosmwasm-std",
  "hex",
