@@ -73,6 +73,12 @@ func recoverPanic(ret *C.GoResult) {
 	}
 }
 
+// GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
+// SDK reference costs can be found here: https://github.com/cosmos/cosmos-sdk/blob/02c6c9fafd58da88550ab4d7d494724a477c8a68/store/types/gas.go#L153-L164
+// A write at ~3000 gas and ~200us = 10 gas per us (microsecond) cpu/io
+// Rough timing have 88k gas at 90us, which is equal to 1k sdk gas... (one read)
+const GasMultiplier = 100
+
 type Gas = uint64
 
 // GasMeter is a copy of an interface declaration from cosmos-sdk
@@ -154,7 +160,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -184,7 +190,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	return C.GoResult_Ok
 }
@@ -204,7 +210,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	return C.GoResult_Ok
 }
@@ -269,7 +275,7 @@ func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key 
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	if k != nil {
 		*key = allocateRust(k)
