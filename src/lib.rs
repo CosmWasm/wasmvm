@@ -194,7 +194,9 @@ fn do_init(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_init_raw(&mut instance, params, msg);
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
     Ok(res?)
 }
 
@@ -247,7 +249,9 @@ fn do_handle(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_handle_raw(&mut instance, params, msg);
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
     Ok(res?)
 }
 
@@ -295,6 +299,8 @@ fn do_query(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_query_raw(&mut instance, msg);
     *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
     Ok(res?)
 }
