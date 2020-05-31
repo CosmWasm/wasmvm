@@ -223,6 +223,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 		return C.GoResult_BadArgument
 	}
 
+	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
 	// handle null as well as data
 	var s, e []byte
@@ -234,6 +235,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	}
 
 	var iter dbm.Iterator
+	gasBefore := gm.GasConsumed()
 	switch order {
 	case 1: // Ascending
 		iter = kv.Iterator(s, e)
@@ -242,6 +244,9 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	default:
 		return C.GoResult_BadArgument
 	}
+	gasAfter := gm.GasConsumed()
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+
 	// Let's hope this works!
 	*out = buildIterator(iter, gasMeter)
 	return C.GoResult_Ok

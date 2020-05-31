@@ -78,7 +78,7 @@ impl ReadonlyStorage for DB {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: cosmwasm_std::Order,
-    ) -> FfiResult<Box<dyn Iterator<Item = StorageIteratorItem> + 'a>> {
+    ) -> FfiResult<(Box<dyn Iterator<Item = StorageIteratorItem> + 'a>, u64)> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
         let start_buf = start
             .map(|s| Buffer::from_vec(s.to_vec()))
@@ -87,12 +87,11 @@ impl ReadonlyStorage for DB {
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
         let mut iter = GoIter::default();
-        // TODO does this consume gas?
-        let mut _used_gas = 0_u64;
+        let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.scan_db)(
             self.state,
             self.gas_meter,
-            &mut _used_gas as *mut u64,
+            &mut used_gas as *mut u64,
             start_buf,
             end_buf,
             order.into(),
@@ -111,7 +110,7 @@ impl ReadonlyStorage for DB {
             ));
         }
         go_result?;
-        Ok(Box::new(iter))
+        Ok((Box::new(iter), used_gas))
     }
 }
 
