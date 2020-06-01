@@ -2,7 +2,6 @@ use crate::iterator::GoIter;
 use cosmwasm_vm::{FfiResult, ReadonlyStorage, Storage, StorageIteratorItem};
 
 use crate::error::GoResult;
-use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
@@ -15,24 +14,15 @@ pub struct db_t {
 // and then check it when converting to GoResult manually
 #[repr(C)]
 pub struct DB_vtable {
-    pub read_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, *mut Buffer) -> i32,
-    pub write_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, Buffer) -> i32,
-    pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer) -> i32,
+    pub read_db: extern "C" fn(*mut db_t, *mut u64, Buffer, *mut Buffer) -> i32,
+    pub write_db: extern "C" fn(*mut db_t, *mut u64, Buffer, Buffer) -> i32,
+    pub remove_db: extern "C" fn(*mut db_t, *mut u64, Buffer) -> i32,
     // order -> Ascending = 1, Descending = 2
-    pub scan_db: extern "C" fn(
-        *mut db_t,
-        *mut gas_meter_t,
-        *mut u64,
-        Buffer,
-        Buffer,
-        i32,
-        *mut GoIter,
-    ) -> i32,
+    pub scan_db: extern "C" fn(*mut db_t, *mut u64, Buffer, Buffer, i32, *mut GoIter) -> i32,
 }
 
 #[repr(C)]
 pub struct DB {
-    pub gas_meter: *mut gas_meter_t,
     pub state: *mut db_t,
     pub vtable: DB_vtable,
 }
@@ -44,7 +34,6 @@ impl ReadonlyStorage for DB {
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.read_db)(
             self.state,
-            self.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
             &mut result_buf as *mut Buffer,
@@ -90,7 +79,6 @@ impl ReadonlyStorage for DB {
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.scan_db)(
             self.state,
-            self.gas_meter,
             &mut used_gas as *mut u64,
             start_buf,
             end_buf,
@@ -119,14 +107,9 @@ impl Storage for DB {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.write_db)(
-            self.state,
-            self.gas_meter,
-            &mut used_gas as *mut u64,
-            key_buf,
-            value_buf,
-        )
-        .into();
+        let go_result: GoResult =
+            (self.vtable.write_db)(self.state, &mut used_gas as *mut u64, key_buf, value_buf)
+                .into();
         let _key = unsafe { key_buf.consume() };
         let _value = unsafe { value_buf.consume() };
         let mut go_result: FfiResult<()> = go_result.into();
@@ -142,13 +125,8 @@ impl Storage for DB {
     fn remove(&mut self, key: &[u8]) -> FfiResult<u64> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.remove_db)(
-            self.state,
-            self.gas_meter,
-            &mut used_gas as *mut u64,
-            key_buf,
-        )
-        .into();
+        let go_result: GoResult =
+            (self.vtable.remove_db)(self.state, &mut used_gas as *mut u64, key_buf).into();
         let _key = unsafe { key_buf.consume() };
         let mut go_result: FfiResult<()> = go_result.into();
         if let Err(ref mut error) = go_result {

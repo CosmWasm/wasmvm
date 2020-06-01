@@ -1,5 +1,4 @@
 use crate::error::GoResult;
-use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 use cosmwasm_vm::{FfiError, FfiResult, StorageIteratorItem};
 
@@ -14,14 +13,11 @@ pub struct iterator_t {
 #[repr(C)]
 #[derive(Default)]
 pub struct Iterator_vtable {
-    pub next_db: Option<
-        extern "C" fn(*mut iterator_t, *mut gas_meter_t, *mut u64, *mut Buffer, *mut Buffer) -> i32,
-    >,
+    pub next_db: Option<extern "C" fn(*mut iterator_t, *mut u64, *mut Buffer, *mut Buffer) -> i32>,
 }
 
 #[repr(C)]
 pub struct GoIter {
-    pub gas_meter: *mut gas_meter_t,
     pub state: *mut iterator_t,
     pub vtable: Iterator_vtable,
 }
@@ -29,7 +25,6 @@ pub struct GoIter {
 impl Default for GoIter {
     fn default() -> Self {
         GoIter {
-            gas_meter: std::ptr::null_mut(),
             state: std::ptr::null_mut(),
             vtable: Iterator_vtable::default(),
         }
@@ -50,7 +45,6 @@ impl Iterator for GoIter {
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
-            self.gas_meter,
             &mut used_gas as *mut u64,
             &mut key_buf as *mut Buffer,
             &mut value_buf as *mut Buffer,
