@@ -85,7 +85,7 @@ func Instantiate(
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 	dbState := buildDBState(store, gasMeter)
-	db := buildDB(&dbState)
+	db := buildDB(dbState)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -116,7 +116,7 @@ func Handle(
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 	dbState := buildDBState(store, gasMeter)
-	db := buildDB(&dbState)
+	db := buildDB(dbState)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -144,7 +144,7 @@ func Query(
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 	dbState := buildDBState(store, gasMeter)
-	db := buildDB(&dbState)
+	db := buildDB(dbState)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64

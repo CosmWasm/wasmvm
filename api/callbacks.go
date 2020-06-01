@@ -126,8 +126,9 @@ type dbState struct {
 	gm GasMeter
 }
 
-func buildDBState(kv KVStore, gm GasMeter) dbState {
-	return dbState{kv, gm}
+func buildDBState(kv KVStore, gm GasMeter) *dbState {
+	// Hopefully this `&` moves the object to the heap, where it _won't_ be GC'ed
+	return &dbState{kv, gm}
 }
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
@@ -148,8 +149,9 @@ type iteratorState struct {
 	gm GasMeter
 }
 
-func buildIteratorState(iter dbm.Iterator, gm GasMeter) iteratorState {
-	return iteratorState{iter, gm}
+func buildIteratorState(iter dbm.Iterator, gm GasMeter) *iteratorState {
+	// Hopefully this `&` moves the object to the heap, where it _won't_ be GC'ed
+	return &iteratorState{iter, gm}
 }
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
@@ -269,7 +271,7 @@ func cScan(ptr *C.db_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order
 
 	// Let's hope this works!
 	iteratorState := buildIteratorState(iter, gm)
-	*out = buildIterator(&iteratorState)
+	*out = buildIterator(iteratorState)
 	return C.GoResult_Ok
 }
 
