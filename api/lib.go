@@ -70,13 +70,13 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 func Instantiate(
 	cache Cache,
 	code_id []byte,
-    params []byte,
-    msg []byte,
+	params []byte,
+	msg []byte,
 	gasMeter GasMeter,
-    store KVStore,
-    api *GoAPI,
-    querier Querier,
-    gasLimit uint64,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -99,14 +99,14 @@ func Instantiate(
 
 func Handle(
 	cache Cache,
-    code_id []byte,
-    params []byte,
-    msg []byte,
+	code_id []byte,
+	params []byte,
+	msg []byte,
 	gasMeter GasMeter,
-    store KVStore,
-    api *GoAPI,
-    querier Querier,
-    gasLimit uint64,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
@@ -129,13 +129,13 @@ func Handle(
 
 func Query(
 	cache Cache,
-    code_id []byte,
-    msg []byte,
+	code_id []byte,
+	msg []byte,
 	gasMeter GasMeter,
-    store KVStore,
-    api *GoAPI,
-    querier Querier,
-    gasLimit uint64,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)

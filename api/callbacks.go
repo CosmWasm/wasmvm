@@ -126,8 +126,8 @@ var db_vtable = C.DB_vtable{
 func buildDB(kv KVStore, gm GasMeter) C.DB {
 	return C.DB{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(&gm)),
-		state:  (*C.db_t)(unsafe.Pointer(&kv)),
-		vtable: db_vtable,
+		state:     (*C.db_t)(unsafe.Pointer(&kv)),
+		vtable:    db_vtable,
 	}
 }
 
@@ -140,8 +140,8 @@ var iterator_vtable = C.Iterator_vtable{
 func buildIterator(it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
 	return C.GoIter{
 		gas_meter: gasMeter,
-		state:  (*C.iterator_t)(unsafe.Pointer(&it)),
-		vtable: iterator_vtable,
+		state:     (*C.iterator_t)(unsafe.Pointer(&it)),
+		vtable:    iterator_vtable,
 	}
 }
 
