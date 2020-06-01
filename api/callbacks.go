@@ -261,7 +261,7 @@ func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key 
 	// 	}
 
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil {
+	if ptr == nil || gasMeter == nil || usedGas == nil || key == nil || val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
