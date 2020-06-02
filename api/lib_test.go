@@ -157,7 +157,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), gasMeter2, store, api, querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x1c10a), cost)
+	assert.Equal(t, uint64(0x1c22e), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -202,16 +202,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, gasMeter2, store2, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11e21), cost)
+	assert.Equal(t, uint64(0x11f45), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0x118be)
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0x119e2)
 	require.Equal(t, resp.Err, &types.StdError{
 		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c10a)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c22e)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -220,7 +220,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c08e)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c22e)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
