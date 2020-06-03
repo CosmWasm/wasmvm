@@ -110,11 +110,10 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t*, Buffer, Buffer*);
 } Querier_vtable;
 
 typedef struct GoQuerier {
-  gas_meter_t *gas_meter;
   const querier_t *state;
   Querier_vtable vtable;
 } GoQuerier;

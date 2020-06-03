@@ -2,7 +2,6 @@ use cosmwasm_std::{Binary, SystemError};
 use cosmwasm_vm::{FfiResult, Querier, QuerierResult};
 
 use crate::error::GoResult;
-use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
@@ -16,14 +15,12 @@ pub struct querier_t {
 #[derive(Clone)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external:
-        extern "C" fn(*const querier_t, *mut gas_meter_t, *mut u64, Buffer, *mut Buffer) -> i32,
+    pub query_external: extern "C" fn(*const querier_t, *mut u64, Buffer, *mut Buffer) -> i32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct GoQuerier {
-    pub gas_meter: *mut gas_meter_t,
     pub state: *const querier_t,
     pub vtable: Querier_vtable,
 }
@@ -38,7 +35,6 @@ impl Querier for GoQuerier {
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
             self.state,
-            self.gas_meter,
             &mut used_gas as *mut u64,
             request_buf,
             &mut result_buf as *mut Buffer,

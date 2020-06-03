@@ -13,7 +13,7 @@ typedef GoResult (*next_db_fn)(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
-typedef GoResult (*query_external_fn)(querier_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer request, Buffer *result);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
@@ -26,7 +26,7 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer request, Buffer *result);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 */
 import "C"
 
@@ -365,30 +365,28 @@ var querier_vtable = C.Querier_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
 // since this is only used internally, we can verify the code that this is the case
-func buildQuerier(q Querier, gm GasMeter) C.GoQuerier {
+func buildQuerier(q Querier) C.GoQuerier {
 	return C.GoQuerier{
-		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(&gm)),
 		state:  (*C.querier_t)(unsafe.Pointer(&q)),
 		vtable: querier_vtable,
 	}
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil || result == nil {
+	if ptr == nil || usedGas == nil || result == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
 
 	// query the data
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	querier := *(*Querier)(unsafe.Pointer(ptr))
 	req := receiveSlice(request)
 
-	gasBefore := gm.GasConsumed()
+	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req)
-	gasAfter := gm.GasConsumed()
+	gasAfter := querier.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	// serialize the response

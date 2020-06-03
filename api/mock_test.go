@@ -216,6 +216,7 @@ func TestMockApi(t *testing.T) {
 type MockQuerier struct {
 	Bank   BankQuerier
 	Custom CustomQuerier
+	usedGas uint64
 }
 
 var _ types.Querier = MockQuerier{}
@@ -227,10 +228,16 @@ func DefaultQuerier(contractAddr string, coins types.Coins) MockQuerier {
 	return MockQuerier{
 		Bank:   NewBankQuerier(balances),
 		Custom: NoCustom{},
+		usedGas: 0,
 	}
 }
 
 func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
+	marshaled, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+	q.usedGas += uint64(len(marshaled))
 	if request.Bank != nil {
 		return q.Bank.Query(request.Bank)
 	}
@@ -244,6 +251,10 @@ func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
 		return nil, types.UnsupportedRequest{"wasm"}
 	}
 	return nil, types.Unknown{}
+}
+
+func (q MockQuerier) GasConsumed() uint64 {
+	return q.usedGas
 }
 
 type BankQuerier struct {
