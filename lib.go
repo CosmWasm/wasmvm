@@ -1,7 +1,6 @@
 package cosmwasm
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -158,19 +157,18 @@ func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI,
 	return resp.Ok, gasUsed, nil
 }
 
-const ExpError = "ExpectError"
-const ExpPanic = "ExpectPanic"
-
 // Migrate is a stub implementation right now for testing wasmd calls. todo: proper implementation
-func (w *Wasmer) Migrate(code CodeID, env types.Env, parameterMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
-	if bytes.Equal(parameterMsg, []byte(ExpError)) {
+func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
+	switch n := len(migrateMsg); {
+	case n < 6:
+		return &types.Result{
+			Data:    "my-migration-response-data",
+			GasUsed: 10000,
+			Log:     []types.LogAttribute{{"msg", "test stub"}},
+		}, nil
+	case n < 100:
 		return nil, errors.New("test error")
-	}
-	if bytes.Equal(parameterMsg, []byte(ExpPanic)) {
+	default:
 		panic("test panic")
 	}
-	return &types.Result{
-		GasUsed: 10000,
-		Log:     []types.LogAttribute{{"msg", "test stub"}},
-	}, nil
 }
