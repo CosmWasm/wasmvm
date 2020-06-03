@@ -86,7 +86,7 @@ func Instantiate(
 	defer freeAfterSend(m)
 	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
-	q := buildQuerier(querier)
+	q := buildQuerier(querier, gasMeter)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
@@ -116,7 +116,7 @@ func Handle(
 	defer freeAfterSend(m)
 	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
-	q := buildQuerier(querier)
+	q := buildQuerier(querier, gasMeter)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
@@ -143,7 +143,7 @@ func Query(
 	defer freeAfterSend(m)
 	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
-	q := buildQuerier(querier)
+	q := buildQuerier(querier, gasMeter)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)

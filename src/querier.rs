@@ -2,6 +2,7 @@ use cosmwasm_std::{Binary, SystemError};
 use cosmwasm_vm::{FfiResult, Querier, QuerierResult};
 
 use crate::error::GoResult;
+use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
 
 // this represents something passed in from the caller side of FFI
@@ -15,12 +16,14 @@ pub struct querier_t {
 #[derive(Clone)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external: extern "C" fn(*const querier_t, Buffer, *mut Buffer) -> i32,
+    pub query_external:
+        extern "C" fn(*const querier_t, *mut gas_meter_t, *mut u64, Buffer, *mut Buffer) -> i32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct GoQuerier {
+    pub gas_meter: *mut gas_meter_t,
     pub state: *const querier_t,
     pub vtable: Querier_vtable,
 }
@@ -32,9 +35,15 @@ impl Querier for GoQuerier {
     fn raw_query(&self, request: &[u8]) -> QuerierResult {
         let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
-        let go_result: GoResult =
-            (self.vtable.query_external)(self.state, request_buf, &mut result_buf as *mut Buffer)
-                .into();
+        let mut used_gas = 0_u64;
+        let go_result: GoResult = (self.vtable.query_external)(
+            self.state,
+            self.gas_meter,
+            &mut used_gas as *mut u64,
+            request_buf,
+            &mut result_buf as *mut Buffer,
+        )
+        .into();
         let _request = unsafe { request_buf.consume() };
         let mut go_result: FfiResult<()> = go_result.into();
         if let Err(ref mut error) = go_result {
@@ -47,11 +56,14 @@ impl Querier for GoQuerier {
 
         let bin_result = unsafe { result_buf.consume() };
         match serde_json::from_slice(&bin_result) {
-            Ok(system_result) => Ok(system_result),
-            Err(e) => Ok(Err(SystemError::InvalidResponse {
-                error: format!("Parsing Go response: {}", e),
-                response: Binary(bin_result),
-            })),
+            Ok(system_result) => Ok((system_result, used_gas)),
+            Err(e) => Ok((
+                Err(SystemError::InvalidResponse {
+                    error: format!("Parsing Go response: {}", e),
+                    response: Binary(bin_result),
+                }),
+                used_gas,
+            )),
         }
     }
 }
