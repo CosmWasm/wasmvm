@@ -59,11 +59,18 @@ impl Error {
         }
         .build()
     }
+
+    pub fn out_of_gas() -> Self {
+        OutOfGas {}.build()
+    }
 }
 
 impl From<VmError> for Error {
     fn from(source: VmError) -> Self {
-        Error::vm_err(source)
+        match source {
+            VmError::GasDepletion => Error::out_of_gas(),
+            _ => Error::vm_err(source),
+        }
     }
 }
 
@@ -79,24 +86,35 @@ impl From<std::string::FromUtf8Error> for Error {
     }
 }
 
-pub fn clear_error() {
-    set_errno(Errno(0));
+/// cbindgen:prefix-with-name
+#[repr(i32)]
+enum ErrnoValue {
+    Success = 0,
+    Other = 1,
+    OutOfGas = 2,
 }
 
-pub fn set_error(msg: String, errout: Option<&mut Buffer>) {
+pub fn clear_error() {
+    set_errno(Errno(ErrnoValue::Success as i32));
+}
+
+pub fn set_error(err: Error, errout: Option<&mut Buffer>) {
+    let msg = err.to_string();
     if let Some(mb) = errout {
         *mb = Buffer::from_vec(msg.into_bytes());
     }
-    // Question: should we set errno to something besides generic 1 always?
-    set_errno(Errno(1));
+    let errno = match err {
+        Error::OutOfGas { .. } => ErrnoValue::OutOfGas,
+        _ => ErrnoValue::Other,
+    } as i32;
+    set_errno(Errno(errno));
 }
 
 /// If `result` is Ok, this returns the binary representation of the Ok value and clears the error in `errout`.
 /// Otherwise it returns an empty vector and writes the error to `errout`.
-pub fn handle_c_error<T, E>(result: Result<T, E>, errout: Option<&mut Buffer>) -> Vec<u8>
+pub fn handle_c_error<T>(result: Result<T, Error>, errout: Option<&mut Buffer>) -> Vec<u8>
 where
     T: Into<Vec<u8>>,
-    E: ToString,
 {
     match result {
         Ok(value) => {
@@ -104,7 +122,7 @@ where
             value.into()
         }
         Err(error) => {
-            set_error(error.to_string(), errout);
+            set_error(error, errout);
             Vec::new()
         }
     }

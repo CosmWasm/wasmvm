@@ -1,6 +1,7 @@
 mod api;
 mod db;
 mod error;
+mod gas_meter;
 mod iterator;
 mod memory;
 mod querier;
@@ -54,7 +55,7 @@ pub extern "C" fn init_cache(
             t as *mut cache_t
         }
         Err(e) => {
-            set_error(e.to_string(), err);
+            set_error(e, err);
             std::ptr::null_mut()
         }
     }
@@ -191,10 +192,13 @@ fn do_init(
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
-    let res = call_init_raw(&mut instance, params, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
-    Ok(res)
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_init_raw(&mut instance, params, msg);
+    *gas_used = gas_limit - instance.get_gas_left();
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
+    Ok(res?)
 }
 
 #[no_mangle]
@@ -243,10 +247,13 @@ fn do_handle(
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
-    let res = call_handle_raw(&mut instance, params, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
-    Ok(res)
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_handle_raw(&mut instance, params, msg);
+    *gas_used = gas_limit - instance.get_gas_left();
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
+    Ok(res?)
 }
 
 #[no_mangle]
@@ -290,8 +297,11 @@ fn do_query(
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
-    let res = call_query_raw(&mut instance, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
-    cache.store_instance(&code_id, instance);
-    Ok(res)
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_query_raw(&mut instance, msg);
+    *gas_used = gas_limit - instance.get_gas_left();
+    if res.is_ok() {
+        cache.store_instance(&code_id, instance);
+    }
+    Ok(res?)
 }

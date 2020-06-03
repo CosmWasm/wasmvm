@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
@@ -66,57 +67,89 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
-func Instantiate(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Instantiate(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Handle(cache Cache, code_id []byte, params []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Handle(
+	cache Cache,
+	code_id []byte,
+	params []byte,
+	msg []byte,
+	gasMeter GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	p := sendSlice(params)
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
 
-func Query(cache Cache, code_id []byte, msg []byte, store KVStore, api *GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
+func Query(
+	cache Cache,
+	code_id []byte,
+	msg []byte,
+	gasMeter GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier Querier,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store)
+	db := buildDB(store, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
-	if err != nil {
-		return nil, 0, errorWithMessage(err, errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
 	return receiveVector(res), uint64(gasUsed), nil
 }
