@@ -123,9 +123,9 @@ var db_vtable = C.DB_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildDB(kv KVStore, gm GasMeter) C.DB {
+func buildDB(kv KVStore, gm *GasMeter) C.DB {
 	return C.DB{
-		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(&gm)),
+		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
 		state:     (*C.db_t)(unsafe.Pointer(&kv)),
 		vtable:    db_vtable,
 	}
