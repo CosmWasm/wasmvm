@@ -73,9 +73,9 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -103,9 +103,9 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -162,9 +162,9 @@ func Query(
 	code_id []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store KVStore,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)

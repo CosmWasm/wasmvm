@@ -95,7 +95,7 @@ type Lookup struct {
 	db *dbm.MemDB
 }
 
-func NewLookup() Lookup {
+func NewLookup() KVStore {
 	return Lookup{
 		db: dbm.NewMemDB(),
 	}
@@ -221,7 +221,7 @@ type MockQuerier struct {
 
 var _ types.Querier = MockQuerier{}
 
-func DefaultQuerier(contractAddr string, coins types.Coins) MockQuerier {
+func DefaultQuerier(contractAddr string, coins types.Coins) Querier {
 	balances := map[string]types.Coins{
 		contractAddr: coins,
 	}
