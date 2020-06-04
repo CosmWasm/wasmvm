@@ -15,6 +15,7 @@ type QueryResponse struct {
 
 type Querier interface {
 	Query(request QueryRequest) ([]byte, error)
+	GasConsumed() uint64
 }
 
 // this is a thin wrapper around the desired Go API to give us types closer to Rust FFI

@@ -110,7 +110,7 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, Buffer, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t*, Buffer, Buffer*);
 } Querier_vtable;
 
 typedef struct GoQuerier {

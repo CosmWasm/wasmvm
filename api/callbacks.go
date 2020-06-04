@@ -13,7 +13,7 @@ typedef GoResult (*next_db_fn)(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
-typedef GoResult (*query_external_fn)(querier_t *ptr, Buffer request, Buffer *result);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val);
@@ -26,7 +26,7 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, Buffer request, Buffer *result);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 */
 import "C"
 
@@ -373,9 +373,9 @@ func buildQuerier(q Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, request C.Buffer, result *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if result == nil {
+	if ptr == nil || usedGas == nil || result == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
@@ -383,7 +383,11 @@ func cQueryExternal(ptr *C.querier_t, request C.Buffer, result *C.Buffer) (ret C
 	// query the data
 	querier := *(*Querier)(unsafe.Pointer(ptr))
 	req := receiveSlice(request)
+
+	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req)
+	gasAfter := querier.GasConsumed()
+	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
 	// serialize the response
 	bz, err := json.Marshal(res)
