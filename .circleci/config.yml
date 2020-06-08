@@ -78,4 +78,3 @@ workflows:
             branches:
               only:
                 - master
-                - "0.9"
