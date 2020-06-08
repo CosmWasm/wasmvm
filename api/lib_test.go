@@ -139,6 +139,7 @@ func TestHandle(t *testing.T) {
 	querier := DefaultQuerier(mockContractAddr, balance)
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
+
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
