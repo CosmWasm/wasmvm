@@ -498,7 +498,6 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-vm",
  "errno",
- "libc",
  "serde_json",
  "snafu",
 ]
