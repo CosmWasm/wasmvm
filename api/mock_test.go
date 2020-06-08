@@ -214,8 +214,8 @@ func TestMockApi(t *testing.T) {
 /**** MockQuerier ****/
 
 type MockQuerier struct {
-	Bank   BankQuerier
-	Custom CustomQuerier
+	Bank    BankQuerier
+	Custom  CustomQuerier
 	usedGas uint64
 }
 
@@ -226,8 +226,8 @@ func DefaultQuerier(contractAddr string, coins types.Coins) MockQuerier {
 		contractAddr: coins,
 	}
 	return MockQuerier{
-		Bank:   NewBankQuerier(balances),
-		Custom: NoCustom{},
+		Bank:    NewBankQuerier(balances),
+		Custom:  NoCustom{},
 		usedGas: 0,
 	}
 }

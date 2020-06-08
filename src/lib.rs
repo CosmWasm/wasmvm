@@ -17,7 +17,8 @@ use std::str::from_utf8;
 
 use crate::error::{clear_error, handle_c_error, set_error, Error};
 use cosmwasm_vm::{
-    call_handle_raw, call_init_raw, call_query_raw, features_from_csv, Checksum, CosmCache, Extern,
+    call_handle_raw, call_init_raw, call_migrate_raw, call_query_raw, features_from_csv, Checksum,
+    CosmCache, Extern,
 };
 
 #[repr(C)]
@@ -195,9 +196,7 @@ fn do_init(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_init_raw(&mut instance, params, msg);
     *gas_used = gas_limit - instance.get_gas_left();
-    if res.is_ok() {
-        cache.store_instance(&code_id, instance);
-    }
+    instance.recycle();
     Ok(res?)
 }
 
@@ -250,9 +249,68 @@ fn do_handle(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_handle_raw(&mut instance, params, msg);
     *gas_used = gas_limit - instance.get_gas_left();
-    if res.is_ok() {
-        cache.store_instance(&code_id, instance);
-    }
+    instance.recycle();
+    Ok(res?)
+}
+
+#[no_mangle]
+pub extern "C" fn migrate(
+    cache: *mut cache_t,
+    contract_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_migrate(
+                c,
+                contract_id,
+                params,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                gas_used,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_migrate(
+    cache: &mut CosmCache<DB, GoApi, GoQuerier>,
+    code_id: Buffer,
+    params: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    gas_used: Option<&mut u64>,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+
+    let deps = to_extern(db, api, querier);
+    let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_migrate_raw(&mut instance, params, msg);
+    *gas_used = gas_limit - instance.get_gas_left();
+    instance.recycle();
     Ok(res?)
 }
 
@@ -300,8 +358,6 @@ fn do_query(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_query_raw(&mut instance, msg);
     *gas_used = gas_limit - instance.get_gas_left();
-    if res.is_ok() {
-        cache.store_instance(&code_id, instance);
-    }
+    instance.recycle();
     Ok(res?)
 }

@@ -117,7 +117,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, gasMeter, store, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f45), cost)
+	assert.Equal(t, uint64(0x11f57), cost)
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(res, &resp)
@@ -147,7 +147,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f45), cost)
+	assert.Equal(t, uint64(0x11f57), cost)
 	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
@@ -158,7 +158,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), gasMeter2, store, api, querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x1c22e), cost)
+	assert.Equal(t, uint64(0x1c135), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -174,6 +174,52 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, send.ToAddress, "bob")
 	assert.Equal(t, send.FromAddress, mockContractAddr)
 	assert.Equal(t, send.Amount, balance)
+}
+
+func TestMigrate(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	gasMeter := NewMockGasMeter(100000000)
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	res, _, err := Instantiate(cache, id, params, msg, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// verifier is fred
+	query := []byte(`{"verifier":{}}`)
+	data, _, err := Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+
+	// migrate to a new verifier - alice
+	// we use the same code blob as we are testing hackatom self-migration
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
+	require.NoError(t, err)
+	res, _, err = Migrate(cache, id, params, []byte(`{"verifier":"alice"}`), gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+
+	// should update verifier to alice
+	data, _, err = Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres2 types.QueryResponse
+	err = json.Unmarshal(data, &qres2)
+	require.NoError(t, err)
+	require.Nil(t, qres2.Err, "%v", qres2.Err)
+	require.Equal(t, string(qres2.Ok), `{"verifier":"alice"}`)
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -192,7 +238,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, gasMeter1, store1, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f45), cost)
+	assert.Equal(t, uint64(0x11f57), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -203,16 +249,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, gasMeter2, store2, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11f45), cost)
+	assert.Equal(t, uint64(0x11f57), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0x119e2)
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0x119df)
 	require.Equal(t, resp.Err, &types.StdError{
 		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c22e)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c135)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -221,7 +267,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c22e)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c135)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
