@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
@@ -12,6 +13,80 @@ import (
 
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
+
+/*** Mock GasMeter ****/
+// This code is borrowed from Cosmos-SDK store/types/gas.go
+
+// ErrorOutOfGas defines an error thrown when an action results in out of gas.
+type ErrorOutOfGas struct {
+	Descriptor string
+}
+
+// ErrorGasOverflow defines an error thrown when an action results gas consumption
+// unsigned integer overflow.
+type ErrorGasOverflow struct {
+	Descriptor string
+}
+
+type MockGasMeter struct {
+	limit    Gas
+	consumed Gas
+}
+
+// NewMockGasMeter returns a reference to a new MockGasMeter.
+func NewMockGasMeter(limit Gas) GasMeter {
+	return &MockGasMeter{
+		limit:    limit,
+		consumed: 0,
+	}
+}
+
+func (g *MockGasMeter) GasConsumed() Gas {
+	return g.consumed
+}
+
+func (g *MockGasMeter) Limit() Gas {
+	return g.limit
+}
+
+func (g *MockGasMeter) GasConsumedToLimit() Gas {
+	if g.IsPastLimit() {
+		return g.limit
+	}
+	return g.consumed
+}
+
+// addUint64Overflow performs the addition operation on two uint64 integers and
+// returns a boolean on whether or not the result overflows.
+func addUint64Overflow(a, b uint64) (uint64, bool) {
+	if math.MaxUint64-a < b {
+		return 0, true
+	}
+
+	return a + b, false
+}
+
+func (g *MockGasMeter) ConsumeGas(amount Gas, descriptor string) {
+	var overflow bool
+	// TODO: Should we set the consumed field after overflow checking?
+	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
+	if overflow {
+		panic(ErrorGasOverflow{descriptor})
+	}
+
+	if g.consumed > g.limit {
+		panic(ErrorOutOfGas{descriptor})
+	}
+
+}
+
+func (g *MockGasMeter) IsPastLimit() bool {
+	return g.consumed > g.limit
+}
+
+func (g *MockGasMeter) IsOutOfGas() bool {
+	return g.consumed >= g.limit
+}
 
 /*** Mock KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
@@ -141,6 +216,7 @@ func TestMockApi(t *testing.T) {
 type MockQuerier struct {
 	Bank   BankQuerier
 	Custom CustomQuerier
+	usedGas uint64
 }
 
 var _ types.Querier = MockQuerier{}
@@ -152,10 +228,16 @@ func DefaultQuerier(contractAddr string, coins types.Coins) MockQuerier {
 	return MockQuerier{
 		Bank:   NewBankQuerier(balances),
 		Custom: NoCustom{},
+		usedGas: 0,
 	}
 }
 
 func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
+	marshaled, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+	q.usedGas += uint64(len(marshaled))
 	if request.Bank != nil {
 		return q.Bank.Query(request.Bank)
 	}
@@ -169,6 +251,10 @@ func (q MockQuerier) Query(request types.QueryRequest) ([]byte, error) {
 		return nil, types.UnsupportedRequest{"wasm"}
 	}
 	return nil, types.Unknown{}
+}
+
+func (q MockQuerier) GasConsumed() uint64 {
+	return q.usedGas
 }
 
 type BankQuerier struct {

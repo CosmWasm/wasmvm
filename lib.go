@@ -2,6 +2,7 @@ package cosmwasm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/CosmWasm/go-cosmwasm/api"
@@ -84,26 +85,34 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // TODO: clarify which errors are returned? vm failure. out of gas. code unauthorized.
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Instantiate(
+	code CodeID,
+	env types.Env,
+	initMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter api.GasMeter,
+	gasLimit uint64,
+) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, store, &goapi, querier, gasLimit)
+	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, gasMeter, store, &goapi, querier, gasLimit)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 	if resp.Err != nil {
-		return nil, fmt.Errorf("%v", resp.Err)
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
-	resp.Ok.GasUsed = gasUsed
-	return resp.Ok, nil
+	return resp.Ok, gasUsed, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
@@ -114,33 +123,49 @@ func (w *Wasmer) Instantiate(code CodeID, env types.Env, initMsg []byte, store K
 // and setting the env with relevent info on this instance (address, balance, etc)
 //
 // TODO: add callback for querying into other modules
-func (w *Wasmer) Execute(code CodeID, env types.Env, executeMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) (*types.Result, error) {
+func (w *Wasmer) Execute(
+	code CodeID,
+	env types.Env,
+	executeMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter api.GasMeter,
+	gasLimit uint64,
+) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, store, &goapi, querier, gasLimit)
+	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, gasMeter, store, &goapi, querier, gasLimit)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 
 	var resp types.CosmosResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, err
+		return nil, gasUsed, err
 	}
 	if resp.Err != nil {
-		return nil, fmt.Errorf("%v", resp.Err)
+		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
-	resp.Ok.GasUsed = gasUsed
-	return resp.Ok, nil
+	return resp.Ok, gasUsed, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
-func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasLimit uint64) ([]byte, uint64, error) {
-	data, gasUsed, err := api.Query(w.cache, code, queryMsg, store, &goapi, querier, gasLimit)
+func (w *Wasmer) Query(
+	code CodeID,
+	queryMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter api.GasMeter,
+	gasLimit uint64,
+) ([]byte, uint64, error) {
+	data, gasUsed, err := api.Query(w.cache, code, queryMsg, gasMeter, store, &goapi, querier, gasLimit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -154,4 +179,20 @@ func (w *Wasmer) Query(code CodeID, queryMsg []byte, store KVStore, goapi GoAPI,
 		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
+}
+
+// Migrate is a stub implementation right now for testing wasmd calls. todo: proper implementation
+func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter api.GasMeter, gasLimit uint64) (*types.Result, uint64, error) {
+	var gasUsed uint64 = 10000
+	switch n := len(migrateMsg); {
+	case n < 6:
+		return &types.Result{
+			Data: "my-migration-response-data",
+			Log:  []types.LogAttribute{{"msg", "test stub"}},
+		}, gasUsed, nil
+	case n < 100:
+		return nil, gasUsed, errors.New("test error")
+	default:
+		panic("test panic")
+	}
 }
