@@ -176,6 +176,52 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, send.Amount, balance)
 }
 
+func TestMigrate(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	gasMeter := NewMockGasMeter(100000000)
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	res, _, err := Instantiate(cache, id, params, msg, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// verifier is fred
+	query := []byte(`{"verifier":{}}`)
+	data, _, err := Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+
+	// migrate to a new verifier - alice
+	// we use the same code blob as we are testing hackatom self-migration
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
+	require.NoError(t, err)
+	res, _, err = Migrate(cache, id, params, []byte(`{"verifier":"alice"}`), gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+
+	// should update verifier to alice
+	data, _, err = Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	require.NoError(t, err)
+	var qres2 types.QueryResponse
+	err = json.Unmarshal(data, &qres2)
+	require.NoError(t, err)
+	require.Nil(t, qres2.Err, "%v", qres2.Err)
+	require.Equal(t, string(qres2.Ok), `{"verifier":"alice"}`)
+}
+
 func TestMultipleInstances(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
