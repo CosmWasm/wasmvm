@@ -137,6 +137,7 @@ func TestHandle(t *testing.T) {
 	querier := DefaultQuerier(mockContractAddr, balance)
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
 	require.NoError(t, err)
+
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
@@ -154,7 +155,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), store, api, querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x1bc5e), cost)
+	assert.Equal(t, uint64(0x1bd82), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -197,16 +198,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, store2, api, querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x11e68), cost)
+	assert.Equal(t, uint64(0x11f8c), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0x11992)
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0x11ab6)
 	require.Equal(t, resp.Err, &types.StdError{
 		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1bbe2)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1bd82)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -215,7 +216,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier,  0x1bb66)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1bd82)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log

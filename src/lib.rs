@@ -192,7 +192,7 @@ fn do_init(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     let res = call_init_raw(&mut instance, params, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
+    *gas_used = gas_limit - instance.get_gas_left();
     cache.store_instance(&code_id, instance);
     Ok(res)
 }
@@ -244,7 +244,7 @@ fn do_handle(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     let res = call_handle_raw(&mut instance, params, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
+    *gas_used = gas_limit - instance.get_gas_left();
     cache.store_instance(&code_id, instance);
     Ok(res)
 }
@@ -291,7 +291,7 @@ fn do_query(
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     let res = call_query_raw(&mut instance, msg)?;
-    *gas_used = gas_limit - instance.get_gas();
+    *gas_used = gas_limit - instance.get_gas_left();
     cache.store_instance(&code_id, instance);
     Ok(res)
 }
