@@ -191,13 +191,13 @@ func TestMigrate(t *testing.T) {
 	require.NoError(t, err)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, _, err := Instantiate(cache, id, params, msg, gasMeter, store, api, querier, 100000000)
+	res, _, err := Instantiate(cache, id, params, msg, &gasMeter, &store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
 	// verifier is fred
 	query := []byte(`{"verifier":{}}`)
-	data, _, err := Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	data, _, err := Query(cache, id, query, &gasMeter, &store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
@@ -209,11 +209,11 @@ func TestMigrate(t *testing.T) {
 	// we use the same code blob as we are testing hackatom self-migration
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
-	res, _, err = Migrate(cache, id, params, []byte(`{"verifier":"alice"}`), gasMeter, store, api, querier, 100000000)
+	res, _, err = Migrate(cache, id, params, []byte(`{"verifier":"alice"}`), &gasMeter, &store, api, &querier, 100000000)
 	require.NoError(t, err)
 
 	// should update verifier to alice
-	data, _, err = Query(cache, id, query, gasMeter, store, api, querier, 100000000)
+	data, _, err = Query(cache, id, query, &gasMeter, &store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var qres2 types.QueryResponse
 	err = json.Unmarshal(data, &qres2)
