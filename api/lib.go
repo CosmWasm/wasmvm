@@ -72,10 +72,10 @@ func Instantiate(
 	code_id []byte,
 	params []byte,
 	msg []byte,
-	gasMeter GasMeter,
-	store KVStore,
+	gasMeter *GasMeter,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -102,10 +102,10 @@ func Handle(
 	code_id []byte,
 	params []byte,
 	msg []byte,
-	gasMeter GasMeter,
-	store KVStore,
+	gasMeter *GasMeter,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -132,10 +132,10 @@ func Migrate(
 	code_id []byte,
 	params []byte,
 	msg []byte,
-	gasMeter GasMeter,
-	store KVStore,
+	gasMeter *GasMeter,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -161,10 +161,10 @@ func Query(
 	cache Cache,
 	code_id []byte,
 	msg []byte,
-	gasMeter GasMeter,
-	store KVStore,
+	gasMeter *GasMeter,
+	store *KVStore,
 	api *GoAPI,
-	querier Querier,
+	querier *Querier,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
