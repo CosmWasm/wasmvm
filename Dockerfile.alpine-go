@@ -1,0 +1,6 @@
+FROM golang:1.14-alpine3.12
+
+RUN set -eux; \
+    apk add --no-cache \
+    gcc \
+    build-base;

@@ -60,6 +60,7 @@ docker-image-cross:
 
 docker-image-alpine:
 	docker build . -t demo-alpine -f ./Dockerfile.alpine
+	docker build . -t demo-alpine-go -f ./Dockerfile.alpine-go
 
 docker-images: docker-image-centos7 docker-image-cross
 
