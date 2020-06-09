@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE=demo-alpine:latest
+IMAGE=demo-alpine-rust:latest
 
 # FOR DEBUGGING
 #docker run -it -v $(pwd)/..:/code -w /code \
@@ -17,7 +17,6 @@ IMAGE=demo-alpine:latest
 
 # BUILD ALPINE DLL
 docker run --rm -v $(pwd)/..:/code -w /code \
-  -u $(id -u):$(id -g) \
   --mount type=volume,source="gocosmwasm_alpine_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   ${IMAGE} cargo build --release --features backtraces

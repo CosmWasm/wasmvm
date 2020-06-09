@@ -59,7 +59,7 @@ docker-image-cross:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
 
 docker-image-alpine:
-	docker build . -t demo-alpine -f ./Dockerfile.alpine
+	docker build . -t demo-alpine-rust -f ./Dockerfile.alpine-rust
 	docker build . -t demo-alpine-go -f ./Dockerfile.alpine-go
 
 docker-images: docker-image-centos7 docker-image-cross

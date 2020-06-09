@@ -4,3 +4,6 @@ RUN set -eux; \
     apk add --no-cache \
     gcc \
     build-base;
+
+RUN mkdir -p /.cache/go-build
+RUN chmod -R 777 /.cache
