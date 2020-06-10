@@ -2,3 +2,6 @@
 **/*.rs.bk
 *.iml
 .idea
+
+# no static binaries (35MB+)
+libgo*.a

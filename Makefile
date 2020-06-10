@@ -59,10 +59,10 @@ docker-image-cross:
 	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
 
 docker-image-alpine:
-	docker build . -t demo-alpine-rust -f ./Dockerfile.alpine-rust
-	docker build . -t demo-alpine-go -f ./Dockerfile.alpine-go
+	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine -f ./Dockerfile.alpine-rust
+	docker build . -t cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine -f ./Dockerfile.alpine-go
 
-docker-images: docker-image-centos7 docker-image-cross
+docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
 
 docker-publish: docker-images
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
@@ -70,6 +70,15 @@ docker-publish: docker-images
 
 # and use them to compile release builds
 release:
+	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+
+test-alpine:
+	# build the muslc *.a file
+	rm -rf target/release/examples
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+	# try running go tests using this lib with muslc
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine go test -tags muslc ./api ./types
