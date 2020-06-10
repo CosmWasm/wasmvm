@@ -181,12 +181,12 @@ func (w *Wasmer) Query(
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store *KVStore, goapi GoAPI, querier *Querier, gasMeter *api.GasMeter, gasLimit uint64) (*types.Result, uint64, error) {
+func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter api.GasMeter, gasLimit uint64) (*types.Result, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, gasMeter, store, &goapi, querier, gasLimit)
+	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, &gasMeter, &store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
