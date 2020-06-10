@@ -11,9 +11,9 @@ IMAGE=demo-alpine-go:latest
 # build go code
 docker run --rm -v $(pwd)/..:/code -w /code \
   -u $(id -u):$(id -g) \
-  ${IMAGE} go build .
+  ${IMAGE} go build -tags muslc .
 
 # run go tests
 docker run --rm -v $(pwd)/..:/code -w /code \
   -u $(id -u):$(id -g) \
-  ${IMAGE} go test ./api ./types
+  ${IMAGE} go test -tags muslc ./api ./types

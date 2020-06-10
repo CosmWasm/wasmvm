@@ -31,4 +31,4 @@ docker run --rm -v $(pwd)/..:/code -w /code \
 docker run --rm -v $(pwd)/..:/code -w /code \
   -u $(id -u):$(id -g) \
   --mount type=volume,source="gocosmwasm_alpine_cache",target=/code/target \
-  ${IMAGE} cp /code/target/release//libgo_cosmwasm.a /code/api
+  ${IMAGE} cp /code/target/release/libgo_cosmwasm.a /code/api/libgo_cosmwasm_muslc.a
