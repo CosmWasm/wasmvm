@@ -1,0 +1,7 @@
+FROM golang:1.14-alpine3.12
+
+RUN set -eux; \
+    apk add --no-cache build-base;
+
+RUN mkdir -p /.cache/go-build
+RUN chmod -R 777 /.cache
