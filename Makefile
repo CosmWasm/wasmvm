@@ -67,6 +67,8 @@ docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
 docker-publish: docker-images
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
 	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+	docker push cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine
 
 # and use them to compile release builds
 release:
@@ -82,3 +84,9 @@ test-alpine:
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine go build -tags muslc .
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine go test -tags muslc ./api ./types
+	# build a go binary
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-tester:$(DOCKER_TAG)-alpine go build -tags muslc -o muslc.exe ./cmd
+	# run this binary in a simple alpine image
+	docker run --rm -it -v $(shell pwd):/code -w /code alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
+	# run static binary locally (not dlls)
+	./muslc.exe ./api/testdata/hackatom.wasm
