@@ -1,5 +1,4 @@
 // +build linux,muslc
-// +build 386
 
 package api
 

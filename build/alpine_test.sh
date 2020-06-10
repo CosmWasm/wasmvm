@@ -19,16 +19,16 @@ IMAGE=demo-alpine-rust:latest
 docker run --rm -v $(pwd)/..:/code -w /code \
   --mount type=volume,source="gocosmwasm_alpine_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  ${IMAGE} cargo build --release --features backtraces
+  ${IMAGE} cargo build --release --features backtraces --example muslc
 
 # VIEW THE DATA
 docker run --rm -v $(pwd)/..:/code -w /code \
   -u $(id -u):$(id -g) \
   --mount type=volume,source="gocosmwasm_alpine_cache",target=/code/target \
-  ${IMAGE} ls target/release
+  ${IMAGE} ls -l target/release target/release/examples
 
-# COPY IT OUT
+# COPY IT OUT (examples)
 docker run --rm -v $(pwd)/..:/code -w /code \
   -u $(id -u):$(id -g) \
   --mount type=volume,source="gocosmwasm_alpine_cache",target=/code/target \
-  ${IMAGE} cp /code/target/release/libgo_cosmwasm.a /code/api/libgo_cosmwasm_muslc.a
+  ${IMAGE} cp /code/target/release/examples/libmuslc.a /code/api/libgo_cosmwasm_muslc.a

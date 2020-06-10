@@ -10,7 +10,13 @@ readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+#crate-type = ["staticlib"]
+crate-type = ["cdylib"]
+
+[[example]]
+name = "muslc"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [badges]

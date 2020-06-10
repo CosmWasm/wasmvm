@@ -1,5 +1,4 @@
 // +build linux,!muslc darwin
-// +build 386
 
 package api
 
