@@ -1,5 +1,6 @@
 use cosmwasm_std::{Binary, SystemError};
-use cosmwasm_vm::{FfiResult, Querier, QuerierResult};
+use cosmwasm_vm::{FfiError, FfiResult, Querier, QuerierResult};
+use std::convert::TryInto;
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -41,13 +42,12 @@ impl Querier for GoQuerier {
         )
         .into();
         let _request = unsafe { request_buf.consume() };
-        let mut go_result: FfiResult<()> = go_result.into();
-        if let Err(ref mut error) = go_result {
-            error.set_message(format!(
+        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
+            Err(FfiError::other(format!(
                 "Failed to query another contract with this request: {}",
                 String::from_utf8_lossy(request),
-            ));
-        }
+            )))
+        });
         go_result?;
 
         let bin_result = unsafe { result_buf.consume() };
