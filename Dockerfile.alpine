@@ -1,12 +1,13 @@
-# this comes from standard alpine nightly file
-#  https://github.com/rust-lang/docker-rust-nightly/blob/master/alpine3.12/Dockerfile
-# with some changes to support our toolchain, etc
-FROM alpine:3.12
+# we build with go and rust
+FROM golang:1.14-alpine3.12
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
+# this comes from standard alpine nightly file
+#  https://github.com/rust-lang/docker-rust-nightly/blob/master/alpine3.12/Dockerfile
+# with some changes to support our toolchain, etc
 RUN set -eux; \
     apk add --no-cache \
     ca-certificates \
@@ -20,6 +21,11 @@ RUN chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 # needed for
 # /usr/lib/gcc/x86_64-alpine-linux-musl/9.3.0/../../../../x86_64-alpine-linux-musl/bin/ld: cannot find crti.o: No such file or directory
 ENV LIBRARY_PATH=/usr/local/rustup/toolchains/nightly-2020-06-08-x86_64-unknown-linux-musl/lib/rustlib/x86_64-unknown-linux-musl/lib:$LIBRARY_PATH
+
+# prepare go cache dirs
+RUN mkdir -p /.cache/go-build
+RUN chmod -R 777 /.cache
+
 
 # PRE-FETCH MANY DEPS
 WORKDIR /scratch
