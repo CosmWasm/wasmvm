@@ -1,7 +1,9 @@
+use cosmwasm_vm::{FfiError, FfiResult, StorageIteratorItem};
+use std::convert::TryInto;
+
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
 use crate::memory::Buffer;
-use cosmwasm_vm::{FfiError, FfiResult, StorageIteratorItem};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -56,10 +58,10 @@ impl Iterator for GoIter {
             &mut value_buf as *mut Buffer,
         )
         .into();
-        let mut go_result: FfiResult<()> = go_result.into();
-        if let Err(ref mut error) = go_result {
-            error.set_message("Failed to fetch next item from iterator");
-        }
+        let go_result: FfiResult<()> = go_result
+            .try_into()
+            .unwrap_or_else(|_| Err(FfiError::other("Failed to fetch next item from iterator")));
+
         if let Err(err) = go_result {
             return Some(Err(err));
         }

@@ -1,5 +1,6 @@
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use cosmwasm_vm::{Api, FfiError, FfiResult};
+use std::convert::TryInto;
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -43,10 +44,12 @@ impl Api for GoApi {
             (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer)
                 .into();
         let _human = unsafe { human_bytes.consume() };
-        let mut go_result: FfiResult<()> = go_result.into();
-        if let Err(ref mut error) = go_result {
-            error.set_message(format!("Failed to canonicalize the address: {}", human));
-        }
+        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
+            Err(FfiError::other(format!(
+                "Failed to canonicalize the address: {}",
+                human
+            )))
+        });
         go_result?;
         let canon = if output.ptr.is_null() {
             Vec::new()
@@ -66,10 +69,12 @@ impl Api for GoApi {
             (self.vtable.humanize_address)(self.state, canonical_buf, &mut output as *mut Buffer)
                 .into();
         let _canonical = unsafe { canonical_buf.consume() };
-        let mut go_result: FfiResult<()> = go_result.into();
-        if let Err(ref mut error) = go_result {
-            error.set_message(format!("Failed to humanize the address: {}", canonical));
-        }
+        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
+            Err(FfiError::other(format!(
+                "Failed to humanize the address: {}",
+                canonical
+            )))
+        });
         go_result?;
         let result = if output.ptr.is_null() {
             Vec::new()

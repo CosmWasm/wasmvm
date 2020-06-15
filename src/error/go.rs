@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fmt;
 
 use cosmwasm_vm::FfiError;
@@ -25,14 +26,16 @@ pub enum GoResult {
     Other = 4,
 }
 
-impl From<GoResult> for Result<(), FfiError> {
-    fn from(other: GoResult) -> Self {
+impl TryFrom<GoResult> for Result<(), FfiError> {
+    type Error = &'static str;
+
+    fn try_from(other: GoResult) -> Result<Self, Self::Error> {
         match other {
-            GoResult::Ok => Ok(()),
-            GoResult::Panic => Err(FfiError::foreign_panic()),
-            GoResult::BadArgument => Err(FfiError::bad_argument()),
-            GoResult::OutOfGas => Err(FfiError::out_of_gas()),
-            GoResult::Other => Err(FfiError::other("Unspecified error in Go code")),
+            GoResult::Ok => Ok(Ok(())),
+            GoResult::Panic => Ok(Err(FfiError::foreign_panic())),
+            GoResult::BadArgument => Ok(Err(FfiError::bad_argument())),
+            GoResult::OutOfGas => Ok(Err(FfiError::out_of_gas())),
+            GoResult::Other => Err("Unspecified error in Go code"), // no conversion possible due to missing error message
         }
     }
 }
