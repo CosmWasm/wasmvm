@@ -64,17 +64,15 @@ typedef struct db_t {
   uint8_t _private[0];
 } db_t;
 
-typedef struct iterator_t {
-  uint8_t _private[0];
-} iterator_t;
+typedef uint64_t iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(iterator_t*, gas_meter_t*, uint64_t*, Buffer*, Buffer*);
+  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, Buffer*, Buffer*);
 } Iterator_vtable;
 
 typedef struct GoIter {
   gas_meter_t *gas_meter;
-  iterator_t *state;
+  iterator_t state;
   Iterator_vtable vtable;
 } GoIter;
 
