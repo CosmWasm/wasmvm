@@ -1,4 +1,4 @@
-use cosmwasm_vm::{FfiError, FfiResult, ReadonlyStorage, Storage, StorageIteratorItem};
+use cosmwasm_vm::{FfiError, FfiResult, ReadonlyStorage, Storage, StorageIterator};
 use std::convert::TryInto;
 
 use crate::error::GoResult;
@@ -78,7 +78,7 @@ impl ReadonlyStorage for DB {
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: cosmwasm_std::Order,
-    ) -> FfiResult<(Box<dyn Iterator<Item = StorageIteratorItem> + 'a>, u64)> {
+    ) -> FfiResult<(Box<dyn StorageIterator + 'a>, u64)> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
         let start_buf = start
             .map(|s| Buffer::from_vec(s.to_vec()))
