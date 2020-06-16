@@ -7,7 +7,7 @@ use crate::memory::Buffer;
 
 // iterator is now a simple number (index to pointer on Go side)
 #[allow(non_camel_case_types)]
-pub type iterator_t = u64;
+pub type iterator_t = i64;
 
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoResult manually
@@ -30,7 +30,7 @@ impl Default for GoIter {
     fn default() -> Self {
         GoIter {
             gas_meter: std::ptr::null_mut(),
-            state: 0_u64,
+            state: 0,
             vtable: Iterator_vtable::default(),
         }
     }

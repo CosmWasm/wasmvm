@@ -9,7 +9,7 @@ typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *use
 typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key);
 typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out);
 // iterator
-typedef GoResult (*next_db_fn)(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
+typedef GoResult (*next_db_fn)(uint64_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // and api
 typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
 typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
@@ -138,9 +138,10 @@ var iterator_vtable = C.Iterator_vtable{
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
 func buildIterator(it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
+	idx := storeIterator(it)
 	return C.GoIter{
 		gas_meter: gasMeter,
-		state:     (*C.iterator_t)(unsafe.Pointer(&it)),
+		state:     (C.int64_t)(idx),
 		vtable:    iterator_vtable,
 	}
 }
@@ -247,13 +248,12 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
-	// Let's hope this works!
 	*out = buildIterator(iter, gasMeter)
 	return C.GoResult_Ok
 }
 
 //export cNext
-func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
+func cNext(idx C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer) (ret C.GoResult) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -261,13 +261,13 @@ func cNext(ptr *C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key 
 	// 	}
 
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil || key == nil || val == nil {
+	if idx == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	iter := *(*dbm.Iterator)(unsafe.Pointer(ptr))
+	iter := retrieveIterator(int(idx))
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoResult_Ok
