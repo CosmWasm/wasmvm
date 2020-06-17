@@ -90,7 +90,7 @@ func (w *Wasmer) Instantiate(
 	querier Querier,
 	gasMeter api.GasMeter,
 	gasLimit uint64,
-) (*types.Result, uint64, error) {
+) (*types.InitResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -100,7 +100,7 @@ func (w *Wasmer) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	var resp types.CosmosResponse
+	var resp types.InitResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
@@ -126,7 +126,7 @@ func (w *Wasmer) Execute(
 	querier Querier,
 	gasMeter api.GasMeter,
 	gasLimit uint64,
-) (*types.Result, uint64, error) {
+) (*types.HandleResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -136,7 +136,7 @@ func (w *Wasmer) Execute(
 		return nil, gasUsed, err
 	}
 
-	var resp types.CosmosResponse
+	var resp types.HandleResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
@@ -181,7 +181,16 @@ func (w *Wasmer) Query(
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter api.GasMeter, gasLimit uint64) (*types.Result, uint64, error) {
+func (w *Wasmer) Migrate(
+	code CodeID,
+	env types.Env,
+	migrateMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter api.GasMeter,
+	gasLimit uint64,
+) (*types.MigrateResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -191,7 +200,7 @@ func (w *Wasmer) Migrate(code CodeID, env types.Env, migrateMsg []byte, store KV
 		return nil, gasUsed, err
 	}
 
-	var resp types.CosmosResponse
+	var resp types.MigrateResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err
