@@ -72,7 +72,7 @@ func Instantiate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -83,7 +83,8 @@ func Instantiate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+	dbState := buildDBState(store)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -106,7 +107,7 @@ func Handle(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -117,7 +118,8 @@ func Handle(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+	dbState := buildDBState(store)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -140,7 +142,7 @@ func Migrate(
 	params []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -151,7 +153,8 @@ func Migrate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+	dbState := buildDBState(store)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
@@ -173,7 +176,7 @@ func Query(
 	code_id []byte,
 	msg []byte,
 	gasMeter *GasMeter,
-	store *KVStore,
+	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
@@ -182,7 +185,8 @@ func Query(
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	db := buildDB(store, gasMeter)
+	dbState := buildDBState(store)
+	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64

@@ -35,7 +35,7 @@ func endContract() {
 // storeIterator will add this to the end of the latest stack and return a reference to it.
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
-func storeIterator(it dbm.Iterator) int {
+func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 	l := len(IteratorStack)
 	if l == 0 {
 		panic("cannot storeIterator with empty iterator stack")
@@ -49,7 +49,7 @@ func storeIterator(it dbm.Iterator) int {
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
 // We start counting with 1, in storeIterator so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
-func retrieveIterator(idx int) dbm.Iterator {
+func retrieveIterator(dbCounter uint64, index uint64) dbm.Iterator {
 	l := len(IteratorStack)
 	if l == 0 {
 		panic("cannot retrieveIterator with empty iterator stack")
