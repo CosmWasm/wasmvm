@@ -119,7 +119,7 @@ func TestInstantiate(t *testing.T) {
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x11f57), cost)
 
-	var resp types.CosmosResponse
+	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	require.Nil(t, resp.Err)
@@ -162,7 +162,7 @@ func TestHandle(t *testing.T) {
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
-	var resp types.CosmosResponse
+	var resp types.HandleResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	require.Nil(t, resp.Err)
@@ -277,7 +277,7 @@ func TestMultipleInstances(t *testing.T) {
 }
 
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
-	var resp types.CosmosResponse
+	var resp types.HandleResult
 	err := json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	require.Nil(t, resp.Err, "%v", resp.Err)
@@ -305,7 +305,7 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, querier Querier, gas uint64) types.CosmosResponse {
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, querier Querier, gas uint64) types.HandleResult {
 	gasMeter := NewMockGasMeter(100000000)
 	params, err := json.Marshal(mockEnv(binaryAddr(signer)))
 	require.NoError(t, err)
@@ -313,7 +313,7 @@ func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, ap
 	require.NoError(t, err)
 	assert.Equal(t, gas, cost)
 
-	var resp types.CosmosResponse
+	var resp types.HandleResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 	return resp
