@@ -5,56 +5,65 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-// This stores all Iterators for one contract
-type Iterators []dbm.Iterator
+// frame stores all Iterators for one contract
+type frame []dbm.Iterator
 
-// IteratorStack contains one entry for each contract, LIFO style
-var IteratorStack []Iterators
+// iteratorStack contains one frame for each contract, indexed by a counter
+// TODO: protect access (in buildDBState) via mutex
+var iteratorStack = make(map[uint64]frame, 60)
 
-// startContract is called at the beginning of a contract runtime to create a new item on the IteratorStack
-func startContract() {
-	IteratorStack = append(IteratorStack, nil)
+// this is a global counter when we create DBs
+// TODO: protect access (in buildDBState) via mutex
+var dbCounter uint64
+
+func nextCounter() uint64 {
+	// TODO: add mutex
+	dbCounter += 1
+	return dbCounter
+}
+
+// startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
+// updates dbCounter for an index
+func startContract() uint64 {
+	counter := nextCounter()
 	// TODO: remove debug
-	fmt.Printf("startContract: Stack height: %d\n", len(IteratorStack))
+	fmt.Printf("startContract: new frame: %d\n", counter)
+	return counter
 }
 
 // endContract is called at the end of a contract runtime to remove one item from the IteratorStack
-func endContract() {
-	l := len(IteratorStack)
-	var remove Iterators
-	IteratorStack, remove = IteratorStack[:l-1], IteratorStack[l-1]
-	// free all iterators we pop off the stack
+func endContract(counter uint64) {
+	// TODO: remove debug
+	fmt.Printf("endContract: remove frame: %d\n", counter)
+
+	// get the item from the stack
+	remove := iteratorStack[counter]
+	delete(iteratorStack, counter)
+
+	// free all iterators in the frame when we release it
 	for _, iter := range remove {
 		fmt.Printf("endContract: close iterator\n")
 		iter.Close()
 	}
-	// TODO: remove debug
-	fmt.Printf("endContract: Stack height: %d\n", len(IteratorStack))
 }
 
 // storeIterator will add this to the end of the latest stack and return a reference to it.
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
 func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
-	l := len(IteratorStack)
-	if l == 0 {
-		panic("cannot storeIterator with empty iterator stack")
-	}
-	IteratorStack[l-1] = append(IteratorStack[l-1], it)
+	frame := append(iteratorStack[dbCounter], it)
+	iteratorStack[dbCounter] = frame
+	index := len(frame)
 	// TODO: remove debug
-	fmt.Printf("store iterator: height (idx): %d (%d)\n", len(IteratorStack), len(IteratorStack[l-1]))
-	return len(IteratorStack[l-1])
+	fmt.Printf("store iterator: counter (idx): %d (%d)\n", dbCounter, index)
+	return uint64(index)
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
 // We start counting with 1, in storeIterator so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
 func retrieveIterator(dbCounter uint64, index uint64) dbm.Iterator {
-	l := len(IteratorStack)
-	if l == 0 {
-		panic("cannot retrieveIterator with empty iterator stack")
-	}
 	// TODO: remove debug
-	fmt.Printf("retrieveIterator: height (idx/size): %d (%d/%d)\n", len(IteratorStack), idx, len(IteratorStack[l-1]))
-	return IteratorStack[l-1][idx-1]
+	fmt.Printf("retrieveIterator: height (idx/size): %d (%d/%d)\n", dbCounter, index, len(iteratorStack[dbCounter]))
+	return iteratorStack[dbCounter][index-1]
 }

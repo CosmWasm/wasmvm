@@ -83,16 +83,18 @@ func Instantiate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	dbState := buildDBState(store)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// set up a new stack frame to handle iterators
-	startContract()
-	defer endContract()
 	res, err := C.instantiate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -118,16 +120,18 @@ func Handle(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	dbState := buildDBState(store)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// set up a new stack frame to handle iterators
-	startContract()
-	defer endContract()
 	res, err := C.handle(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -153,16 +157,18 @@ func Migrate(
 	defer freeAfterSend(p)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	dbState := buildDBState(store)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// set up a new stack frame to handle iterators
-	startContract()
-	defer endContract()
 	res, err := C.migrate(cache.ptr, id, p, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
@@ -185,16 +191,18 @@ func Query(
 	defer freeAfterSend(id)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
-	dbState := buildDBState(store)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
-	// set up a new stack frame to handle iterators
-	startContract()
-	defer endContract()
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.

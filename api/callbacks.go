@@ -121,20 +121,15 @@ var db_vtable = C.DB_vtable{
 	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
 }
 
-// this is a global counter when we create DBs
-// TODO: protect access (in buildDBState) via mutex
-var dbCounter uint64
-
 type DBState struct {
 	Store   KVStore
 	Counter uint64
 }
 
-func buildDBState(kv KVStore) DBState {
-	dbCounter += 1
+func buildDBState(kv KVStore, counter uint64) DBState {
 	return DBState{
 		Store:   kv,
-		Counter: dbCounter,
+		Counter: counter,
 	}
 }
 
