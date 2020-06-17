@@ -41,7 +41,10 @@ jobs:
       - attach_workspace:
           at: /tmp/builds
       - run: cp /tmp/builds/libgo_cosmwasm.so ./api
-      - run: make test
+      - run:
+          name: Go integration tests
+          env: GODEBUG=cgocheck=2
+          command: make test
       - run: make build-go
 
   test_alpine_build:

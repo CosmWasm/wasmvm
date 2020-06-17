@@ -151,16 +151,11 @@ var iterator_vtable = C.Iterator_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.DB struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(dbCounter uint64, it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
+func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 	idx := storeIterator(dbCounter, it)
-	fmt.Println("buildIterator")
-	return C.GoIter{
-		gas_meter: gasMeter,
-		state: C.iterator_t{
-			db_counter:     u64(dbCounter),
-			iterator_index: u64(idx),
-		},
-		vtable: iterator_vtable,
+	return C.iterator_t{
+		db_counter:     u64(dbCounter),
+		iterator_index: u64(idx),
 	}
 }
 
@@ -267,12 +262,8 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
-	res := buildIterator(state.Counter, iter, gasMeter)
-	out.state = res.state
-	fmt.Println("state written")
-	out.vtable = res.vtable
-	fmt.Println("vtable written")
-	fmt.Println("done!")
+	out.state = buildIterator(state.Counter, iter)
+	out.vtable = iterator_vtable
 	return C.GoResult_Ok
 }
 
