@@ -203,6 +203,8 @@ func Query(
 	var gasUsed u64
 	errmsg := C.Buffer{}
 
+
+
 	res, err := C.query(cache.ptr, id, m, db, a, q, u64(gasLimit), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.

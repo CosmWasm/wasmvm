@@ -30,10 +30,10 @@ pub struct GoIter {
     pub vtable: Iterator_vtable,
 }
 
-impl Default for GoIter {
-    fn default() -> Self {
+impl GoIter {
+    pub fn new(gas_meter: *mut gas_meter_t) -> Self {
         GoIter {
-            gas_meter: std::ptr::null_mut(),
+            gas_meter: gas_meter,
             state: iterator_t::default(),
             vtable: Iterator_vtable::default(),
         }

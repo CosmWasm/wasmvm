@@ -27,6 +27,8 @@ GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
 GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
 // and querier
 GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
+
+
 */
 import "C"
 
@@ -151,6 +153,7 @@ var iterator_vtable = C.Iterator_vtable{
 // since this is only used internally, we can verify the code that this is the case
 func buildIterator(dbCounter uint64, it dbm.Iterator, gasMeter *C.gas_meter_t) C.GoIter {
 	idx := storeIterator(dbCounter, it)
+	fmt.Println("buildIterator")
 	return C.GoIter{
 		gas_meter: gasMeter,
 		state: C.iterator_t{
@@ -264,7 +267,12 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
-	*out = buildIterator(state.Counter, iter, gasMeter)
+	res := buildIterator(state.Counter, iter, gasMeter)
+	out.state = res.state
+	fmt.Println("state written")
+	out.vtable = res.vtable
+	fmt.Println("vtable written")
+	fmt.Println("done!")
 	return C.GoResult_Ok
 }
 
