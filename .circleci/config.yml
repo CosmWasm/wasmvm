@@ -43,8 +43,10 @@ jobs:
       - run: cp /tmp/builds/libgo_cosmwasm.so ./api
       - run:
           name: Go integration tests
-          env: GODEBUG=cgocheck=2
           command: make test
+      - run:
+          name: Go tests with cgo and race condition safety checks
+          command: make test-safety
       - run: make build-go
 
   test_alpine_build:
