@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	dbm "github.com/tendermint/tm-db"
 	"sync"
 )
@@ -17,20 +16,13 @@ var iteratorStackMutex sync.Mutex
 var dbCounter uint64
 var dbCounterMutex sync.Mutex
 
-func nextCounter() uint64 {
+// startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
+// updates dbCounter for an index
+func startContract() uint64 {
 	dbCounterMutex.Lock()
 	defer dbCounterMutex.Unlock()
 	dbCounter += 1
 	return dbCounter
-}
-
-// startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
-// updates dbCounter for an index
-func startContract() uint64 {
-	counter := nextCounter()
-	// TODO: remove debug
-	fmt.Printf("startContract: new frame: %d\n", counter)
-	return counter
 }
 
 func popFrame(counter uint64) frame {
@@ -45,13 +37,10 @@ func popFrame(counter uint64) frame {
 
 // endContract is called at the end of a contract runtime to remove one item from the IteratorStack
 func endContract(counter uint64) {
-	// TODO: remove debug
-	fmt.Printf("endContract: remove frame: %d\n", counter)
-
+	// we pull popFrame in another function so we don't hold the mutex while cleaning up the popped frame
 	remove := popFrame(counter)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
-		fmt.Printf("endContract: close iterator\n")
 		iter.Close()
 	}
 }
@@ -65,10 +54,7 @@ func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 
 	frame := append(iteratorStack[dbCounter], it)
 	iteratorStack[dbCounter] = frame
-	index := len(frame)
-	// TODO: remove debug
-	fmt.Printf("store iterator: counter (idx): %d (%d)\n", dbCounter, index)
-	return uint64(index)
+	return uint64(len(frame))
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
@@ -77,8 +63,5 @@ func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
 func retrieveIterator(dbCounter uint64, index uint64) dbm.Iterator {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
-
-	// TODO: remove debug
-	fmt.Printf("retrieveIterator: height (idx/size): %d (%d/%d)\n", dbCounter, index, len(iteratorStack[dbCounter]))
 	return iteratorStack[dbCounter][index-1]
 }
