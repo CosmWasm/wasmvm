@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 
@@ -88,6 +89,8 @@ func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
+	assert.Equal(t, len(iteratorStack), 0)
+
 	setup := setupQueueContract(t, cache)
 
 	reduceQuery := func(t *testing.T, setup queueData) {
@@ -117,4 +120,6 @@ func TestQueueIteratorRaces(t *testing.T) {
 	}
 	wg.Wait()
 
+	// when they finish, we should have popped everything off the stack
+	assert.Equal(t, len(iteratorStack), 0)
 }
