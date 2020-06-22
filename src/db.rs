@@ -21,7 +21,7 @@ pub struct DB_vtable {
     pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer) -> i32,
     // order -> Ascending = 1, Descending = 2
     // Note: we cannot set gas_meter on the returned GoIter due to cgo memory safety.
-    // Since we have the pointer in rust already, we must set than manually
+    // Since we have the pointer in rust already, we must set that manually
     pub scan_db: extern "C" fn(
         *mut db_t,
         *mut gas_meter_t,

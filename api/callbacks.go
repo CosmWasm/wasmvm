@@ -124,8 +124,9 @@ var db_vtable = C.DB_vtable{
 }
 
 type DBState struct {
-	Store   KVStore
-	Counter uint64
+	Store KVStore
+	// IteratorStackID is used to lookup the proper stack frame for iterators associated with this DB (iterator.go)
+	IteratorStackID uint64
 }
 
 // use this to create C.DB in two steps, so the pointer lives as long as the calling stack
@@ -134,8 +135,8 @@ type DBState struct {
 //   // then pass db into some FFI function
 func buildDBState(kv KVStore, counter uint64) DBState {
 	return DBState{
-		Store:   kv,
-		Counter: counter,
+		Store:           kv,
+		IteratorStackID: counter,
 	}
 }
 
@@ -266,7 +267,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
 
-	out.state = buildIterator(state.Counter, iter)
+	out.state = buildIterator(state.IteratorStackID, iter)
 	out.vtable = iterator_vtable
 	return C.GoResult_Ok
 }

@@ -9,7 +9,8 @@ import (
 type frame []dbm.Iterator
 
 // iteratorStack contains one frame for each contract, indexed by a counter
-var iteratorStack = make(map[uint64]frame, 60)
+// 10 is a rather arbitrary guess on how many frames might be needed simultaneously
+var iteratorStack = make(map[uint64]frame, 10)
 var iteratorStackMutex sync.Mutex
 
 // this is a global counter when we create DBs
