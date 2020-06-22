@@ -20,6 +20,8 @@ pub struct DB_vtable {
     pub write_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, Buffer) -> i32,
     pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer) -> i32,
     // order -> Ascending = 1, Descending = 2
+    // Note: we cannot set gas_meter on the returned GoIter due to cgo memory safety.
+    // Since we have the pointer in rust already, we must set that manually
     pub scan_db: extern "C" fn(
         *mut db_t,
         *mut gas_meter_t,
@@ -86,7 +88,7 @@ impl ReadonlyStorage for DB {
         let end_buf = end
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
-        let mut iter = GoIter::default();
+        let mut iter = GoIter::new(self.gas_meter);
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.scan_db)(
             self.state,

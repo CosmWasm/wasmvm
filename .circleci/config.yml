@@ -41,7 +41,12 @@ jobs:
       - attach_workspace:
           at: /tmp/builds
       - run: cp /tmp/builds/libgo_cosmwasm.so ./api
-      - run: make test
+      - run:
+          name: Go integration tests
+          command: make test
+      - run:
+          name: Go tests with cgo and race condition safety checks
+          command: make test-safety
       - run: make build-go
 
   test_alpine_build:
