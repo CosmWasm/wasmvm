@@ -193,7 +193,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 [[package]]
 name = "cosmwasm-std"
 version = "0.9.0-alpha1"
-source = "git+https://github.com/cosmwasm/cosmwasm?rev=v0.9.0-alpha1#489ff32b3e3d275b68391a0024b261c033220eb6"
+source = "git+https://github.com/cosmwasm/cosmwasm?rev=65df0f0c602f851790a3e7014ec20523f83a3dbf#65df0f0c602f851790a3e7014ec20523f83a3dbf"
 dependencies = [
  "base64",
  "schemars",
@@ -205,7 +205,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "0.9.0-alpha1"
-source = "git+https://github.com/cosmwasm/cosmwasm?rev=v0.9.0-alpha1#489ff32b3e3d275b68391a0024b261c033220eb6"
+source = "git+https://github.com/cosmwasm/cosmwasm?rev=65df0f0c602f851790a3e7014ec20523f83a3dbf#65df0f0c602f851790a3e7014ec20523f83a3dbf"
 dependencies = [
  "cosmwasm-std",
  "hex",
@@ -456,7 +456,7 @@ checksum = "bcc8e0c9bce37868955864dbecd2b1ab2bdf967e6f28066d65aaac620444b65c"
 
 [[package]]
 name = "go-cosmwasm"
-version = "0.8.0"
+version = "0.9.0-alpha"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
