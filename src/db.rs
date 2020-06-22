@@ -1,4 +1,4 @@
-use cosmwasm_vm::{FfiError, FfiResult, ReadonlyStorage, Storage, StorageIterator};
+use cosmwasm_vm::{FfiError, FfiResult, Storage, StorageIterator};
 use std::convert::TryInto;
 
 use crate::error::GoResult;
@@ -40,7 +40,7 @@ pub struct DB {
     pub vtable: DB_vtable,
 }
 
-impl ReadonlyStorage for DB {
+impl Storage for DB {
     fn get(&self, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, u64)> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
@@ -112,9 +112,7 @@ impl ReadonlyStorage for DB {
         go_result?;
         Ok((Box::new(iter), used_gas))
     }
-}
 
-impl Storage for DB {
     fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<u64> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());
