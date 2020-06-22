@@ -110,8 +110,8 @@ func TestQueueIteratorRaces(t *testing.T) {
 		require.Equal(t, string(reduced.Ok), fmt.Sprintf(`{"counters":%s}`, expected))
 	}
 
-	// 100 concurrent batches (in go routines) to trigger any race condition
-	numBatches := 100
+	// 30 concurrent batches (in go routines) to trigger any race condition
+	numBatches := 30
 
 	var wg sync.WaitGroup
 	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
