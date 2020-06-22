@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
@@ -18,7 +19,7 @@ type queueData struct {
 	querier types.Querier
 }
 
-func setupQueueContract(t *testing.T, cache Cache) queueData {
+func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
 	id := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(100000000)
@@ -34,18 +35,14 @@ func setupQueueContract(t *testing.T, cache Cache) queueData {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
-	// push 17
-	gasMeter2 := NewMockGasMeter(100000000)
-	push := []byte(`{"enqueue":{"value":17}}`)
-	res, _, err = Handle(cache, id, params, push, &gasMeter2, store, api, &querier, 100000000)
-	require.NoError(t, err)
-	requireOkResponse(t, res, 0)
-	// push 22
-	gasMeter3 := NewMockGasMeter(100000000)
-	push = []byte(`{"enqueue":{"value":22}}`)
-	res, _, err = Handle(cache, id, params, push, &gasMeter3, store, api, &querier, 100000000)
-	require.NoError(t, err)
-	requireOkResponse(t, res, 0)
+	for _, value := range values {
+		// push 17
+		gasMeter2 := NewMockGasMeter(100000000)
+		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
+		res, _, err = Handle(cache, id, params, push, &gasMeter2, store, api, &querier, 100000000)
+		require.NoError(t, err)
+		requireOkResponse(t, res, 0)
+	}
 
 	return queueData{
 		id:      id,
@@ -53,7 +50,10 @@ func setupQueueContract(t *testing.T, cache Cache) queueData {
 		api:     api,
 		querier: querier,
 	}
+}
 
+func setupQueueContract(t *testing.T, cache Cache) queueData {
+	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
 func TestQueueIterator(t *testing.T) {
@@ -91,9 +91,11 @@ func TestQueueIteratorRaces(t *testing.T) {
 
 	assert.Equal(t, len(iteratorStack), 0)
 
-	setup := setupQueueContract(t, cache)
+	contract1 := setupQueueContractWithData(t, cache, 17, 22)
+	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
+	contract3 := setupQueueContractWithData(t, cache, 11, 6, 2)
 
-	reduceQuery := func(t *testing.T, setup queueData) {
+	reduceQuery := func(t *testing.T, setup queueData, expected string) {
 		id, store, querier, api := setup.id, setup.store, setup.querier, setup.api
 
 		// query reduce (multiple iterators at once)
@@ -105,16 +107,26 @@ func TestQueueIteratorRaces(t *testing.T) {
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
 		require.Nil(t, reduced.Err, "%v", reduced.Err)
-		require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
+		require.Equal(t, string(reduced.Ok), fmt.Sprintf(`{"counters":%s}`, expected))
 	}
 
-	numRoutines := 10
+	// 100 concurrent batches (in go routines) to trigger any race condition
+	numBatches := 100
 
 	var wg sync.WaitGroup
-	wg.Add(numRoutines)
-	for i := 0; i < numRoutines; i++ {
+	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
+	wg.Add(numBatches * 3)
+	for i := 0; i < numBatches; i++ {
 		go func() {
-			reduceQuery(t, setup)
+			reduceQuery(t, contract1, "[[17,22],[22,0]]")
+			wg.Done()
+		}()
+		go func() {
+			reduceQuery(t, contract2, "[[1,68],[19,35],[6,62],[35,0],[8,54]]")
+			wg.Done()
+		}()
+		go func() {
+			reduceQuery(t, contract3, "[[11,0],[6,11],[2,17]]")
 			wg.Done()
 		}()
 	}
