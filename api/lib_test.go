@@ -179,6 +179,43 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, expectedData, resp.Ok.Data)
 }
 
+func TestHandleCpuLoop(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	gasMeter1 := NewMockGasMeter(100000000)
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	start := time.Now()
+	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter1, store, api, &querier, 100000000)
+	diff := time.Now().Sub(start)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+	assert.Equal(t, uint64(0x1348a), cost)
+	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
+
+	// execute a cpu loop
+	maxGas := uint64(40_000_000)
+	gasMeter2 := NewMockGasMeter(maxGas)
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
+	require.NoError(t, err)
+	start = time.Now()
+	res, cost, err = Handle(cache, id, params, []byte(`{"cpu_loop":{}}`), &gasMeter2, store, api, &querier, maxGas)
+	diff = time.Now().Sub(start)
+	require.Error(t, err)
+	assert.Equal(t, cost, maxGas)
+	fmt.Printf("CPULoop Time (%d gas): %s\n", cost, diff)
+}
+
 func TestMigrate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()

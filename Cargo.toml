@@ -31,11 +31,15 @@ singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm-std = { version = "0.9.1", features = ["iterator"]}
-cosmwasm-vm = { version = "0.9.1", features = ["iterator"] }
+cosmwasm-std = { version = "0.9.0-alpha3", features = ["iterator"]}
+cosmwasm-vm = { version = "0.9.0-alpha3", features = ["iterator"] }
 errno = "0.2"
 snafu = "0.6.3"
 serde_json = "1.0"
+
+[dev-dependencies]
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+tempfile = "3.1.0"
 
 [build-dependencies]
 cbindgen = { version = "0.14" }
