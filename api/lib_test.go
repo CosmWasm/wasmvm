@@ -174,6 +174,9 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, send.ToAddress, "bob")
 	assert.Equal(t, send.FromAddress, mockContractAddr)
 	assert.Equal(t, send.Amount, balance)
+	// check the data is properly formatted
+	expectedData := []byte{0xF0, 0x0B, 0xAA}
+	assert.Equal(t, expectedData, resp.Ok.Data)
 }
 
 func TestMigrate(t *testing.T) {
