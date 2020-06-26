@@ -464,8 +464,10 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-vm",
  "errno",
+ "serde",
  "serde_json",
  "snafu",
+ "tempfile",
 ]
 
 [[package]]
