@@ -17,7 +17,7 @@ type HandleResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
-	Data string `json:"data"`
+	Data []byte `json:"data"`
 	// log message to return over abci interface
 	Log []LogAttribute `json:"log"`
 }
@@ -47,7 +47,7 @@ type MigrateResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
-	Data string `json:"data"`
+	Data []byte `json:"data"`
 	// log message to return over abci interface
 	Log []LogAttribute `json:"log"`
 }

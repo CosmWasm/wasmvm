@@ -117,7 +117,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1346e), cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -147,7 +147,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1346e), cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
@@ -158,7 +158,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &gasMeter2, store, api, &querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x1c718), cost)
+	assert.Equal(t, uint64(0x1c738), cost)
 	fmt.Printf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -174,6 +174,9 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, send.ToAddress, "bob")
 	assert.Equal(t, send.FromAddress, mockContractAddr)
 	assert.Equal(t, send.Amount, balance)
+	// check the data is properly formatted
+	expectedData := []byte{0xF0, 0x0B, 0xAA}
+	assert.Equal(t, expectedData, resp.Ok.Data)
 }
 
 func TestMigrate(t *testing.T) {
@@ -238,7 +241,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter1, store1, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1346e), cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -249,7 +252,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, &gasMeter2, store2, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1346e), cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	// fail to execute store1 with mary
 	resp := exec(t, cache, id, "mary", store1, api, querier, 0x119df)
@@ -258,7 +261,7 @@ func TestMultipleInstances(t *testing.T) {
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c718)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1c738)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -267,7 +270,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c718)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1c738)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
@@ -305,13 +308,13 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, querier Querier, gas uint64) types.HandleResult {
+func exec(t *testing.T, cache Cache, id []byte, signer string, store KVStore, api *GoAPI, querier Querier, gasExpected uint64) types.HandleResult {
 	gasMeter := NewMockGasMeter(100000000)
 	params, err := json.Marshal(mockEnv(binaryAddr(signer)))
 	require.NoError(t, err)
 	res, cost, err := Handle(cache, id, params, []byte(`{"release":{}}`), &gasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
-	assert.Equal(t, gas, cost)
+	assert.Equal(t, gasExpected, cost)
 
 	var resp types.HandleResult
 	err = json.Unmarshal(res, &resp)
