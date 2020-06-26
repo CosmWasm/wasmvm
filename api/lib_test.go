@@ -204,12 +204,12 @@ func TestHandleCpuLoop(t *testing.T) {
 	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute a cpu loop
-	maxGas := uint64(40_000)
+	maxGas := uint64(40_000_000)
 	gasMeter2 := NewMockGasMeter(maxGas)
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
-	res, cost, err = Handle(cache, id, params, []byte(`{"cpu_loop":{}}`), &gasMeter2, store, api, &querier, 40_000)
+	res, cost, err = Handle(cache, id, params, []byte(`{"cpu_loop":{}}`), &gasMeter2, store, api, &querier, maxGas)
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)

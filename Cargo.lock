@@ -192,9 +192,9 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.9.1"
+version = "0.9.0-alpha3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a794646cd6fc511662a958954a1c32a2a6b5b6a6db075f347130ae7d3cbfa567"
+checksum = "3f965fb27c94e5e60720f953f84e4814627c67410b732b66a09c64e436c8e0a0"
 dependencies = [
  "base64",
  "schemars",
@@ -205,9 +205,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.9.1"
+version = "0.9.0-alpha3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa6a9d8b668046dbab204cd4c5996f1f38f94b3a5a3042d35d264cc4efdb60c4"
+checksum = "24795a6e3c6577d10d7ffbc3c4ecb305588ce88253ef8d19cf7301f0b3f30079"
 dependencies = [
  "cosmwasm-std",
  "hex",
@@ -1070,9 +1070,9 @@ checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasmer-clif-backend"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a2fae69b1c7429316cad6743f3d2ca83cf8957924c477c5a4eff036ec0097a9"
+checksum = "691ea323652d540a10722066dbf049936f4367bb22a96f8992a262a942a8b11b"
 dependencies = [
  "byteorder",
  "cranelift-codegen",
@@ -1122,18 +1122,18 @@ dependencies = [
 
 [[package]]
 name = "wasmer-middleware-common"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56e70825a14d100994af1d9a347591c80dea1000f2b8e455a5712c2cc23ef08d"
+checksum = "fd94068186b25fbe5213442648ffe0fa65ee77389bed020404486fd22056cc87"
 dependencies = [
  "wasmer-runtime-core",
 ]
 
 [[package]]
 name = "wasmer-runtime-core"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "740161245998752cf1a567e860fd6355df0336fedca6be1940ec7aaa59643220"
+checksum = "45d4253f097502423d8b19d54cb18745f61b984b9dbce32424cba7945cfef367"
 dependencies = [
  "bincode",
  "blake3",
@@ -1160,9 +1160,9 @@ dependencies = [
 
 [[package]]
 name = "wasmer-singlepass-backend"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41a434ebf512ae1c76de46d41935a9ae10775fd937071334bdf5878cc41d9140"
+checksum = "37cf84179dd5e92b784f7bc190b237f1184916a6d6d3f87d4dd94ca371a2cc25"
 dependencies = [
  "bincode",
  "byteorder",
@@ -1179,9 +1179,9 @@ dependencies = [
 
 [[package]]
 name = "wasmer-win-exception-handler"
-version = "0.17.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cd39f3b2bd7964b28ea6f944a7eaa445cfbc91c4f2695d188103f2689bb37d9"
+checksum = "cf22ce6dc66d893099aac853d451bf9443fa8f5443f5bf4fc63f3aebd7b592b1"
 dependencies = [
  "cc",
  "libc",

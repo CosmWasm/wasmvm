@@ -28,7 +28,6 @@ fn make_init_msg() -> (InitMsg, HumanAddr) {
     )
 }
 
-#[ignore]
 #[test]
 fn handle_cpu_loop_with_cache() {
     let deps = mock_dependencies(20, &[]);
