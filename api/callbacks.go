@@ -345,6 +345,8 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 	c := receiveSlice(canon)
 	h, err := api.HumanAddress(c)
 	if err != nil {
+		// store the actual error message in the return buffer
+		*human = allocateRust([]byte(err.Error()))
 		return C.GoResult_Other
 	}
 	if len(h) == 0 {
@@ -366,6 +368,8 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoR
 	h := string(receiveSlice(human))
 	c, err := api.CanonicalAddress(h)
 	if err != nil {
+		// store the actual error message in the return buffer
+		*canon = allocateRust([]byte(err.Error()))
 		return C.GoResult_Other
 	}
 	if len(c) == 0 {
