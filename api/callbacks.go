@@ -104,8 +104,6 @@ type KVStore interface {
 	Set(key, value []byte)
 	Delete(key []byte)
 
-
-
 	// Iterator over a domain of keys in ascending order. End is exclusive.
 	// Start must be less than end, or the Iterator is invalid.
 	// Iterator must be closed by caller.
