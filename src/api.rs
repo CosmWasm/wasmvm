@@ -47,7 +47,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            go_result.to_ffi_result(output, default)?;
+            go_result.into_ffi_result(output, default)?;
         }
 
         let canon = if output.ptr.is_null() {
@@ -72,7 +72,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to humanize the address: {}", canonical);
         unsafe {
-            go_result.to_ffi_result(output, default)?;
+            go_result.into_ffi_result(output, default)?;
         }
 
         let result = if output.ptr.is_null() {

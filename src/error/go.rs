@@ -74,7 +74,7 @@ impl GoResult {
     ///
     /// Safety: this reads data from an externally provided buffer and assumes valid utf-8 encoding
     /// Only call if you trust the code that provides output to be correct
-    pub unsafe fn to_ffi_result<F>(self, output: Buffer, default: F) -> Result<(), FfiError>
+    pub unsafe fn into_ffi_result<F>(self, output: Buffer, default: F) -> Result<(), FfiError>
     where
         F: Fn() -> String,
     {
