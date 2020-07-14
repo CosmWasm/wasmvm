@@ -340,7 +340,6 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
 	h, err := api.HumanAddress(c)
@@ -359,6 +358,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 //export cCanonicalAddress
 func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
+
 	if canon == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
