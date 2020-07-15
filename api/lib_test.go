@@ -216,6 +216,41 @@ func TestHandleCpuLoop(t *testing.T) {
 	fmt.Printf("CPULoop Time (%d gas): %s\n", cost, diff)
 }
 
+func TestHandleStorageLoop(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	maxGas := uint64(40_000_000)
+	gasMeter1 := NewMockGasMeter(maxGas)
+	// instantiate it with this store
+	store := NewLookup()
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter1, store, api, &querier, maxGas)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// execute a storage loop
+	gasMeter2 := NewMockGasMeter(maxGas)
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
+	require.NoError(t, err)
+	start := time.Now()
+	res, cost, err = Handle(cache, id, params, []byte(`{"storage_loop":{}}`), &gasMeter2, store, api, &querier, maxGas)
+	diff := time.Now().Sub(start)
+	require.Error(t, err)
+	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
+
+	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
+	t.Logf("Wasm gas: %d\n", cost)
+}
+
 func TestMigrate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
