@@ -249,9 +249,12 @@ func TestHandleStorageLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
-
 	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
 	t.Logf("Wasm gas: %d\n", cost)
+
+	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
+	totalCost := cost + gasMeter2.GasConsumed() * GasMultiplier
+	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
 func TestMigrate(t *testing.T) {
