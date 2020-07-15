@@ -192,7 +192,6 @@ func Query(
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 
-
 	// set up a new stack frame to handle iterators
 	counter := startContract()
 	defer endContract(counter)

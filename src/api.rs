@@ -1,6 +1,5 @@
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use cosmwasm_vm::{Api, FfiError, FfiResult};
-use std::convert::TryInto;
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -17,8 +16,8 @@ pub struct api_t {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
-    pub humanize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer) -> i32,
-    pub canonicalize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer) -> i32,
+    pub humanize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
+    pub canonicalize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
 }
 
 #[repr(C)]
@@ -40,17 +39,22 @@ impl Api for GoApi {
         let human_bytes = human.as_str().as_bytes();
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
-        let go_result: GoResult =
-            (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer)
-                .into();
+        let mut err = Buffer::default();
+        let go_result: GoResult = (self.vtable.canonicalize_address)(
+            self.state,
+            human_bytes,
+            &mut output as *mut Buffer,
+            &mut err as *mut Buffer,
+        )
+        .into();
         let _human = unsafe { human_bytes.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
-                "Failed to canonicalize the address: {}",
-                human
-            )))
-        });
-        go_result?;
+
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || format!("Failed to canonicalize the address: {}", human);
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
+
         let canon = if output.ptr.is_null() {
             Vec::new()
         } else {
@@ -65,17 +69,22 @@ impl Api for GoApi {
         let canonical_bytes = canonical.as_slice();
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
-        let go_result: GoResult =
-            (self.vtable.humanize_address)(self.state, canonical_buf, &mut output as *mut Buffer)
-                .into();
+        let mut err = Buffer::default();
+        let go_result: GoResult = (self.vtable.humanize_address)(
+            self.state,
+            canonical_buf,
+            &mut output as *mut Buffer,
+            &mut err as *mut Buffer,
+        )
+        .into();
         let _canonical = unsafe { canonical_buf.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
-                "Failed to humanize the address: {}",
-                canonical
-            )))
-        });
-        go_result?;
+
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || format!("Failed to humanize the address: {}", canonical);
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
+
         let result = if output.ptr.is_null() {
             Vec::new()
         } else {

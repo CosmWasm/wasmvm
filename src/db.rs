@@ -1,5 +1,4 @@
-use cosmwasm_vm::{FfiError, FfiResult, Storage, StorageIterator};
-use std::convert::TryInto;
+use cosmwasm_vm::{FfiResult, Storage, StorageIterator};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
@@ -16,9 +15,17 @@ pub struct db_t {
 // and then check it when converting to GoResult manually
 #[repr(C)]
 pub struct DB_vtable {
-    pub read_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, *mut Buffer) -> i32,
-    pub write_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, Buffer) -> i32,
-    pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer) -> i32,
+    pub read_db: extern "C" fn(
+        *mut db_t,
+        *mut gas_meter_t,
+        *mut u64,
+        Buffer,
+        *mut Buffer,
+        *mut Buffer,
+    ) -> i32,
+    pub write_db:
+        extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, Buffer, *mut Buffer) -> i32,
+    pub remove_db: extern "C" fn(*mut db_t, *mut gas_meter_t, *mut u64, Buffer, *mut Buffer) -> i32,
     // order -> Ascending = 1, Descending = 2
     // Note: we cannot set gas_meter on the returned GoIter due to cgo memory safety.
     // Since we have the pointer in rust already, we must set that manually
@@ -30,6 +37,7 @@ pub struct DB_vtable {
         Buffer,
         i32,
         *mut GoIter,
+        *mut Buffer,
     ) -> i32,
 }
 
@@ -44,6 +52,7 @@ impl Storage for DB {
     fn get(&self, key: &[u8]) -> FfiResult<(Option<Vec<u8>>, u64)> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
+        let mut err = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.read_db)(
             self.state,
@@ -51,16 +60,21 @@ impl Storage for DB {
             &mut used_gas as *mut u64,
             key_buf,
             &mut result_buf as *mut Buffer,
+            &mut err as *mut Buffer,
         )
         .into();
         let _key = unsafe { key_buf.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
+
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || {
+            format!(
                 "Failed to read a key in the db: {}",
                 String::from_utf8_lossy(key)
-            )))
-        });
-        go_result?;
+            )
+        };
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
 
         if result_buf.ptr.is_null() {
             return Ok((None, used_gas));
@@ -88,6 +102,7 @@ impl Storage for DB {
         let end_buf = end
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
+        let mut err = Buffer::default();
         let mut iter = GoIter::new(self.gas_meter);
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.scan_db)(
@@ -98,24 +113,30 @@ impl Storage for DB {
             end_buf,
             order.into(),
             &mut iter as *mut GoIter,
+            &mut err as *mut Buffer,
         )
         .into();
         let _start = unsafe { start_buf.consume() };
         let _end = unsafe { end_buf.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
+
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || {
+            format!(
                 "Failed to read the next key between {:?} and {:?}",
                 start.map(String::from_utf8_lossy),
                 end.map(String::from_utf8_lossy),
-            )))
-        });
-        go_result?;
+            )
+        };
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
         Ok((Box::new(iter), used_gas))
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<u64> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());
+        let mut err = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.write_db)(
             self.state,
@@ -123,36 +144,46 @@ impl Storage for DB {
             &mut used_gas as *mut u64,
             key_buf,
             value_buf,
+            &mut err as *mut Buffer,
         )
         .into();
         let _key = unsafe { key_buf.consume() };
         let _value = unsafe { value_buf.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
+        // return complete error message (reading from buffer for GoResult::Other)
+        let default = || {
+            format!(
                 "Failed to set a key in the db: {}",
                 String::from_utf8_lossy(key),
-            )))
-        });
-        go_result.and(Ok(used_gas))
+            )
+        };
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
+        Ok(used_gas)
     }
 
     fn remove(&mut self, key: &[u8]) -> FfiResult<u64> {
         let key_buf = Buffer::from_vec(key.to_vec());
+        let mut err = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.remove_db)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
+            &mut err as *mut Buffer,
         )
         .into();
         let _key = unsafe { key_buf.consume() };
-        let go_result: FfiResult<()> = go_result.try_into().unwrap_or_else(|_| {
-            Err(FfiError::other(format!(
+        let default = || {
+            format!(
                 "Failed to delete a key in the db: {}",
                 String::from_utf8_lossy(key),
-            )))
-        });
-        go_result.and(Ok(used_gas))
+            )
+        };
+        unsafe {
+            go_result.into_ffi_result(err, default)?;
+        }
+        Ok(used_gas)
     }
 }
