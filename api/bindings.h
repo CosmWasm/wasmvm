@@ -70,7 +70,7 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, Buffer*, Buffer*);
+  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, Buffer*, Buffer*, Buffer*);
 } Iterator_vtable;
 
 typedef struct GoIter {
@@ -80,10 +80,10 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
-  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer);
-  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer);
-  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
+  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
+  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
+  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*, Buffer*);
 } DB_vtable;
 
 typedef struct DB {
@@ -111,7 +111,7 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, uint64_t*, Buffer, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t*, Buffer, Buffer*, Buffer*);
 } Querier_vtable;
 
 typedef struct GoQuerier {
