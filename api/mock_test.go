@@ -91,18 +91,38 @@ func (g *MockGasMeter) IsOutOfGas() bool {
 /*** Mock KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
+// Note: these gas prices are all in *sdk gas* and multiplied by 100 for the wasm gas prices
+// (see callbacks.go line 82)
+// This may need to change
+//
+// We making simple values and non-clear multiples so it is easy to see their impact in test output
+// Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
+const (
+	GetPrice    uint64 = 990
+	SetPrice           = 1870
+	RemovePrice        = 1420
+	RangePrice         = 2610
+)
+
 type Lookup struct {
-	db *dbm.MemDB
+	db    *dbm.MemDB
+	meter GasMeter
 }
 
-func NewLookup() KVStore {
-	return Lookup{
-		db: dbm.NewMemDB(),
+func NewLookup(meter GasMeter) *Lookup {
+	return &Lookup{
+		db:    dbm.NewMemDB(),
+		meter: meter,
 	}
+}
+
+func (l *Lookup) SetGasMeter(meter GasMeter) {
+	l.meter = meter
 }
 
 // Get wraps the underlying DB's Get method panicing on error.
 func (l Lookup) Get(key []byte) []byte {
+	l.meter.ConsumeGas(GetPrice, "get")
 	v, err := l.db.Get(key)
 	if err != nil {
 		panic(err)
@@ -113,6 +133,7 @@ func (l Lookup) Get(key []byte) []byte {
 
 // Set wraps the underlying DB's Set method panicing on error.
 func (l Lookup) Set(key, value []byte) {
+	l.meter.ConsumeGas(SetPrice, "set")
 	if err := l.db.Set(key, value); err != nil {
 		panic(err)
 	}
@@ -120,6 +141,7 @@ func (l Lookup) Set(key, value []byte) {
 
 // Delete wraps the underlying DB's Delete method panicing on error.
 func (l Lookup) Delete(key []byte) {
+	l.meter.ConsumeGas(RemovePrice, "remove")
 	if err := l.db.Delete(key); err != nil {
 		panic(err)
 	}
@@ -127,6 +149,7 @@ func (l Lookup) Delete(key []byte) {
 
 // Iterator wraps the underlying DB's Iterator method panicing on error.
 func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
+	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.Iterator(start, end)
 	if err != nil {
 		panic(err)
@@ -137,6 +160,7 @@ func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
 
 // ReverseIterator wraps the underlying DB's ReverseIterator method panicing on error.
 func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
+	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.ReverseIterator(start, end)
 	if err != nil {
 		panic(err)
@@ -144,24 +168,6 @@ func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
 
 	return iter
 }
-
-// type Lookup struct {
-// 	data map[string]string
-// }
-//
-//
-// func (l *Lookup) Get(key []byte) []byte {
-// 	val := l.data[string(key)]
-// 	return []byte(val)
-// }
-//
-// func (l *Lookup) Set(key, value []byte) {
-// 	l.data[string(key)] = string(value)
-// }
-//
-// func (l *Lookup) Delete(key []byte) {
-// 	delete(l.data, string(key))
-// }
 
 var _ KVStore = (*Lookup)(nil)
 

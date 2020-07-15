@@ -24,7 +24,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 
 	gasMeter1 := NewMockGasMeter(100000000)
 	// instantiate it with this store
-	store := NewLookup()
+	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
