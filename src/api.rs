@@ -40,9 +40,13 @@ impl Api for GoApi {
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
         let mut err = Buffer::default();
-        let go_result: GoResult =
-            (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer, &mut err as *mut Buffer)
-                .into();
+        let go_result: GoResult = (self.vtable.canonicalize_address)(
+            self.state,
+            human_bytes,
+            &mut output as *mut Buffer,
+            &mut err as *mut Buffer,
+        )
+        .into();
         let _human = unsafe { human_bytes.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -66,9 +70,13 @@ impl Api for GoApi {
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
         let mut err = Buffer::default();
-        let go_result: GoResult =
-            (self.vtable.humanize_address)(self.state, canonical_buf, &mut output as *mut Buffer, &mut err as *mut Buffer)
-                .into();
+        let go_result: GoResult = (self.vtable.humanize_address)(
+            self.state,
+            canonical_buf,
+            &mut output as *mut Buffer,
+            &mut err as *mut Buffer,
+        )
+        .into();
         let _canonical = unsafe { canonical_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
