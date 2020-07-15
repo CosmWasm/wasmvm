@@ -16,8 +16,8 @@ pub struct api_t {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
-    pub humanize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer) -> i32,
-    pub canonicalize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer) -> i32,
+    pub humanize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
+    pub canonicalize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
 }
 
 #[repr(C)]
@@ -39,15 +39,16 @@ impl Api for GoApi {
         let human_bytes = human.as_str().as_bytes();
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
+        let mut err = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer)
+            (self.vtable.canonicalize_address)(self.state, human_bytes, &mut output as *mut Buffer, &mut err as *mut Buffer)
                 .into();
         let _human = unsafe { human_bytes.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            go_result.into_ffi_result(output, default)?;
+            go_result.into_ffi_result(err, default)?;
         }
 
         let canon = if output.ptr.is_null() {
@@ -64,15 +65,16 @@ impl Api for GoApi {
         let canonical_bytes = canonical.as_slice();
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
+        let mut err = Buffer::default();
         let go_result: GoResult =
-            (self.vtable.humanize_address)(self.state, canonical_buf, &mut output as *mut Buffer)
+            (self.vtable.humanize_address)(self.state, canonical_buf, &mut output as *mut Buffer, &mut err as *mut Buffer)
                 .into();
         let _canonical = unsafe { canonical_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to humanize the address: {}", canonical);
         unsafe {
-            go_result.into_ffi_result(output, default)?;
+            go_result.into_ffi_result(err, default)?;
         }
 
         let result = if output.ptr.is_null() {

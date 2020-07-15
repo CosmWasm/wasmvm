@@ -11,8 +11,8 @@ typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used
 // iterator
 typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // and api
-typedef GoResult (*humanize_address_fn)(api_t*, Buffer, Buffer*);
-typedef GoResult (*canonicalize_address_fn)(api_t*, Buffer, Buffer*);
+typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut);
+typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut);
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 
 // forward declarations (db)
@@ -23,8 +23,8 @@ GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val);
 // api
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human);
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon);
+GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut);
+GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut);
 // and querier
 GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result);
 
@@ -334,7 +334,7 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if human == nil {
 		// we received an invalid pointer
@@ -345,7 +345,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 	h, err := api.HumanAddress(c)
 	if err != nil {
 		// store the actual error message in the return buffer
-		*human = allocateRust([]byte(err.Error()))
+		*errOut = allocateRust([]byte(err.Error()))
 		return C.GoResult_Other
 	}
 	if len(h) == 0 {
@@ -356,7 +356,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer) (ret C.GoResul
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
 	if canon == nil {
@@ -369,7 +369,7 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer) (ret C.GoR
 	c, err := api.CanonicalAddress(h)
 	if err != nil {
 		// store the actual error message in the return buffer
-		*canon = allocateRust([]byte(err.Error()))
+		*errOut = allocateRust([]byte(err.Error()))
 		return C.GoResult_Other
 	}
 	if len(c) == 0 {
