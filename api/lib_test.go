@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -117,7 +116,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1348a)+SetPrice*GasMultiplier, cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -147,8 +146,8 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1348a)+SetPrice*GasMultiplier, cost)
-	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
+	assert.Equal(t, uint64(0x1348a), cost)
+	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -160,7 +159,7 @@ func TestHandle(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x1c738), cost)
-	fmt.Printf("Time (%d gas): %s\n", cost, diff)
+	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
 	var resp types.HandleResult
@@ -201,8 +200,8 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1348a)+SetPrice*GasMultiplier, cost)
-	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
+	assert.Equal(t, uint64(0x1348a), cost)
+	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute a cpu loop
 	maxGas := uint64(40_000_000)
@@ -215,7 +214,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
-	fmt.Printf("CPULoop Time (%d gas): %s\n", cost, diff)
+	t.Logf("CPULoop Time (%d gas): %s\n", cost, diff)
 }
 
 func TestHandleStorageLoop(t *testing.T) {
@@ -253,7 +252,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	t.Logf("Wasm gas: %d\n", cost)
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
-	totalCost := cost + gasMeter2.GasConsumed() * GasMultiplier
+	totalCost := cost + gasMeter2.GasConsumed()*GasMultiplier
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
@@ -320,7 +319,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x1348a)+SetPrice*GasMultiplier, cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -331,7 +330,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, &gasMeter2, store2, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1348a)+SetPrice*GasMultiplier, cost)
+	assert.Equal(t, uint64(0x1348a), cost)
 
 	// fail to execute store1 with mary
 	resp := exec(t, cache, id, "mary", store1, api, querier, 0x119df)
