@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -107,7 +106,7 @@ func TestInstantiate(t *testing.T) {
 
 	gasMeter := NewMockGasMeter(100000000)
 	// instantiate it with this store
-	store := NewLookup()
+	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
@@ -133,7 +132,7 @@ func TestHandle(t *testing.T) {
 
 	gasMeter1 := NewMockGasMeter(100000000)
 	// instantiate it with this store
-	store := NewLookup()
+	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Coins{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(mockContractAddr, balance)
@@ -148,10 +147,11 @@ func TestHandle(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1348a), cost)
-	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
+	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(100000000)
+	store.SetGasMeter(gasMeter2)
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
@@ -159,7 +159,7 @@ func TestHandle(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x1c738), cost)
-	fmt.Printf("Time (%d gas): %s\n", cost, diff)
+	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
 	var resp types.HandleResult
@@ -186,7 +186,7 @@ func TestHandleCpuLoop(t *testing.T) {
 
 	gasMeter1 := NewMockGasMeter(100000000)
 	// instantiate it with this store
-	store := NewLookup()
+	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Coins{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(mockContractAddr, balance)
@@ -201,11 +201,12 @@ func TestHandleCpuLoop(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1348a), cost)
-	fmt.Printf("Time (%d gas): %s\n", 0xbb66, diff)
+	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute a cpu loop
 	maxGas := uint64(40_000_000)
 	gasMeter2 := NewMockGasMeter(maxGas)
+	store.SetGasMeter(gasMeter2)
 	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
 	require.NoError(t, err)
 	start = time.Now()
@@ -213,7 +214,46 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
-	fmt.Printf("CPULoop Time (%d gas): %s\n", cost, diff)
+	t.Logf("CPULoop Time (%d gas): %s\n", cost, diff)
+}
+
+func TestHandleStorageLoop(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	maxGas := uint64(40_000_000)
+	gasMeter1 := NewMockGasMeter(maxGas)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	require.NoError(t, err)
+
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+
+	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter1, store, api, &querier, maxGas)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// execute a storage loop
+	gasMeter2 := NewMockGasMeter(maxGas)
+	store.SetGasMeter(gasMeter2)
+	params, err = json.Marshal(mockEnv(binaryAddr("fred")))
+	require.NoError(t, err)
+	start := time.Now()
+	res, cost, err = Handle(cache, id, params, []byte(`{"storage_loop":{}}`), &gasMeter2, store, api, &querier, maxGas)
+	diff := time.Now().Sub(start)
+	require.Error(t, err)
+	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
+	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
+	t.Logf("Wasm gas: %d\n", cost)
+
+	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
+	totalCost := cost + gasMeter2.GasConsumed()*GasMultiplier
+	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
 func TestMigrate(t *testing.T) {
@@ -223,7 +263,7 @@ func TestMigrate(t *testing.T) {
 
 	gasMeter := NewMockGasMeter(100000000)
 	// instantiate it with this store
-	store := NewLookup()
+	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	balance := types.Coins{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(mockContractAddr, balance)
@@ -269,7 +309,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// instance1 controlled by fred
 	gasMeter1 := NewMockGasMeter(100000000)
-	store1 := NewLookup()
+	store1 := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
 	params, err := json.Marshal(mockEnv(binaryAddr("regen")))
@@ -278,11 +318,12 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &gasMeter1, store1, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
+	// we now count wasm gas charges and db writes
 	assert.Equal(t, uint64(0x1348a), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
-	store2 := NewLookup()
+	store2 := NewLookup(gasMeter2)
 	params, err = json.Marshal(mockEnv(binaryAddr("chorus")))
 	require.NoError(t, err)
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
@@ -366,7 +407,7 @@ func TestQuery(t *testing.T) {
 
 	// set up contract
 	gasMeter1 := NewMockGasMeter(100000000)
-	store := NewLookup()
+	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
 	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
@@ -377,6 +418,7 @@ func TestQuery(t *testing.T) {
 
 	// invalid query
 	gasMeter2 := NewMockGasMeter(100000000)
+	store.SetGasMeter(gasMeter2)
 	query := []byte(`{"Raw":{"val":"config"}}`)
 	data, _, err := Query(cache, id, query, &gasMeter2, store, api, &querier, 100000000)
 	require.NoError(t, err)
@@ -392,6 +434,7 @@ func TestQuery(t *testing.T) {
 
 	// make a valid query
 	gasMeter3 := NewMockGasMeter(100000000)
+	store.SetGasMeter(gasMeter3)
 	query = []byte(`{"verifier":{}}`)
 	data, _, err = Query(cache, id, query, &gasMeter3, store, api, &querier, 100000000)
 	require.NoError(t, err)
@@ -409,7 +452,7 @@ func TestHackatomQuerier(t *testing.T) {
 
 	// set up contract
 	gasMeter := NewMockGasMeter(100000000)
-	store := NewLookup()
+	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Coins{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
 	querier := DefaultQuerier("foobar", initBalance)
@@ -435,7 +478,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 
 	// set up contract
 	gasMeter := NewMockGasMeter(100000000)
-	store := NewLookup()
+	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Coins{types.NewCoin(1234, "ATOM")}
 	querier := DefaultQuerier(mockContractAddr, initBalance)
