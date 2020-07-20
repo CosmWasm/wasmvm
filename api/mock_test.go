@@ -120,6 +120,13 @@ func (l *Lookup) SetGasMeter(meter GasMeter) {
 	l.meter = meter
 }
 
+func (l *Lookup) WithGasMeter(meter GasMeter) *Lookup {
+	return &Lookup{
+		db:    l.db,
+		meter: meter,
+	}
+}
+
 // Get wraps the underlying DB's Get method panicing on error.
 func (l Lookup) Get(key []byte) []byte {
 	l.meter.ConsumeGas(GetPrice, "get")
