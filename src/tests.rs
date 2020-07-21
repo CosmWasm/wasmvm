@@ -35,7 +35,7 @@ fn handle_cpu_loop_with_cache() {
 
     let tmp_dir = TempDir::new().unwrap();
     let features = features_from_csv("staking");
-    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features, 0) }.unwrap();
+    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features) }.unwrap();
 
     // store code
     let code_id = cache.save_wasm(CONTRACT).unwrap();

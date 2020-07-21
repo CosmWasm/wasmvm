@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, SystemError};
-use cosmwasm_vm::{Querier, QuerierResult};
+use cosmwasm_vm::{GasInfo, Querier, QuerierResult};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -43,6 +43,7 @@ impl Querier for GoQuerier {
             &mut err as *mut Buffer,
         )
         .into();
+        let gas_info = GasInfo::with_externally_used(used_gas);
         let _request = unsafe { request_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -53,19 +54,19 @@ impl Querier for GoQuerier {
             )
         };
         unsafe {
-            go_result.into_ffi_result(err, default)?;
+            if let Err(err) = go_result.into_ffi_result(err, default) {
+                return (Err(err), gas_info);
+            }
         }
 
         let bin_result = unsafe { result_buf.consume() };
-        match serde_json::from_slice(&bin_result) {
-            Ok(system_result) => Ok((system_result, used_gas)),
-            Err(e) => Ok((
-                Err(SystemError::InvalidResponse {
-                    error: format!("Parsing Go response: {}", e),
-                    response: Binary(bin_result),
-                }),
-                used_gas,
-            )),
-        }
+        let result = match serde_json::from_slice(&bin_result) {
+            Ok(system_result) => Ok(system_result),
+            Err(e) => Ok(Err(SystemError::InvalidResponse {
+                error: format!("Parsing Go response: {}", e),
+                response: Binary(bin_result),
+            })),
+        };
+        (result, gas_info)
     }
 }
