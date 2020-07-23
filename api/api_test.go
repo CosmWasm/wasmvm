@@ -26,7 +26,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv("creator"))
 	require.NoError(t, err)
 
 	// if the human address is larger than 32 bytes, this will lead to an error in the go side
@@ -38,7 +38,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 
 	// message from MockCanonicalAddress (go callback)
 	expected := "human encoding too long"
-	require.True(t, strings.HasSuffix(err.Error(), expected), err.Error())
+	require.True(t, strings.Contains(err.Error(), expected), err.Error())
 }
 
 func TestHumanAddressFailure(t *testing.T) {
@@ -56,7 +56,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv("creator"))
 	require.NoError(t, err)
 
 	// instantiate it normally
@@ -73,5 +73,5 @@ func TestHumanAddressFailure(t *testing.T) {
 
 	// message from MockFailureHumanAddresss (go callback)
 	expected := "mock failure - human_address"
-	require.True(t, strings.HasSuffix(err.Error(), expected), err.Error())
+	require.True(t, strings.Contains(err.Error(), expected), err.Error())
 }

@@ -52,11 +52,8 @@ impl StorageIterator for GoIter {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
             None => {
-                return (
-                    Err(FfiError::unknown("iterator vtable not set")),
-                    // TODO: should this remain free?
-                    GasInfo::with_externally_used(0),
-                );
+                let result = Err(FfiError::unknown("iterator vtable not set"));
+                return (result, GasInfo::free());
             }
         };
 

@@ -311,12 +311,12 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 
 /***** GoAPI *******/
 
-type HumanAddress func([]byte) (string, error)
-type CanonicalAddress func(string) ([]byte, error)
+type HumanizeAddress func([]byte) (string, error)
+type CanonicalizeAddress func(string) ([]byte, error)
 
 type GoAPI struct {
-	HumanAddress     HumanAddress
-	CanonicalAddress CanonicalAddress
+	HumanAddress     HumanizeAddress
+	CanonicalAddress CanonicalizeAddress
 }
 
 var api_vtable = C.GoApi_vtable{

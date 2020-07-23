@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+// HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
+type HumanAddress = string
+
 // CanonicalAddress uses standard base64 encoding, just use it as a label for developers
 type CanonicalAddress = []byte
 

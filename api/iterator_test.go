@@ -31,7 +31,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv(binaryAddr("creator")))
+	params, err := json.Marshal(mockEnv("creator"))
 	require.NoError(t, err)
 	msg := []byte(`{}`)
 
