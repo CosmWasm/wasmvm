@@ -170,18 +170,23 @@ var _ KVStore = (*Lookup)(nil)
 
 const CanonicalLength = 32
 
-func MockCanonicalAddress(human string) ([]byte, error) {
+const (
+	CostCanonical uint64 = 440
+	CostHuman            = 550
+)
+
+func MockCanonicalAddress(human string) ([]byte, uint64, error) {
 	if len(human) > CanonicalLength {
-		return nil, fmt.Errorf("human encoding too long")
+		return nil, 0, fmt.Errorf("human encoding too long")
 	}
 	res := make([]byte, CanonicalLength)
 	copy(res, []byte(human))
-	return res, nil
+	return res, CostCanonical, nil
 }
 
-func MockHumanAddress(canon []byte) (string, error) {
+func MockHumanAddress(canon []byte) (string, uint64, error) {
 	if len(canon) != CanonicalLength {
-		return "", fmt.Errorf("wrong canonical length")
+		return "", 0, fmt.Errorf("wrong canonical length")
 	}
 	cut := CanonicalLength
 	for i, v := range canon {
@@ -191,7 +196,7 @@ func MockHumanAddress(canon []byte) (string, error) {
 		}
 	}
 	human := string(canon[:cut])
-	return human, nil
+	return human, CostHuman, nil
 }
 
 func NewMockAPI() *GoAPI {
@@ -203,13 +208,15 @@ func NewMockAPI() *GoAPI {
 
 func TestMockApi(t *testing.T) {
 	human := "foobar"
-	canon, err := MockCanonicalAddress(human)
+	canon, cost, err := MockCanonicalAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
+	assert.Equal(t, CostCanonical, cost)
 
-	recover, err := MockHumanAddress(canon)
+	recover, cost, err := MockHumanAddress(canon)
 	require.NoError(t, err)
 	assert.Equal(t, recover, human)
+	assert.Equal(t, CostHuman, cost)
 }
 
 /**** MockQuerier ****/

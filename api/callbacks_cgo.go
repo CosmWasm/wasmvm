@@ -12,8 +12,8 @@ GoResult cScan(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer sta
 // imports (iterator)
 GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // imports (api)
-GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut);
-GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut);
+GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // imports (querier)
 GoResult cQueryExternal(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
 
@@ -37,11 +37,11 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 }
 
 // Gateway functions (api)
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut) {
-    return cCanonicalAddress(ptr, human, canon, errOut);
+GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas) {
+    return cCanonicalAddress(ptr, human, canon, errOut, used_gas);
 }
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut) {
-    return cHumanAddress(ptr, canon, human, errOut);
+GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas) {
+    return cHumanAddress(ptr, canon, human, errOut, used_gas);
 }
 
 // Gateway functions (querier)
