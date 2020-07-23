@@ -246,7 +246,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	t.Logf("Wasm gas: %d\n", cost)
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
-	totalCost := cost + gasMeter2.GasConsumed()*GasMultiplier
+	totalCost := cost + gasMeter2.GasConsumed()
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 

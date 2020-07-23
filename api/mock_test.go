@@ -91,17 +91,15 @@ func (g *MockGasMeter) IsOutOfGas() bool {
 /*** Mock KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
-// Note: these gas prices are all in *sdk gas* and multiplied by 100 for the wasm gas prices
-// (see callbacks.go line 82)
-// This may need to change
+// Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
 // Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
 const (
-	GetPrice    uint64 = 990
-	SetPrice           = 1870
-	RemovePrice        = 1420
-	RangePrice         = 2610
+	GetPrice    uint64 = 99000
+	SetPrice           = 187000
+	RemovePrice        = 142000
+	RangePrice         = 261000
 )
 
 type Lookup struct {
