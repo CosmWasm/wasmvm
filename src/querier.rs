@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, SystemError};
+use cosmwasm_std::SystemError;
 use cosmwasm_vm::{GasInfo, Querier, QuerierResult};
 
 use crate::error::GoResult;
@@ -60,13 +60,12 @@ impl Querier for GoQuerier {
         }
 
         let bin_result = unsafe { result_buf.consume() };
-        let result = match serde_json::from_slice(&bin_result) {
-            Ok(system_result) => Ok(system_result),
-            Err(e) => Ok(Err(SystemError::InvalidResponse {
+        let result = serde_json::from_slice(&bin_result).or_else(|e| {
+            Ok(Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {}", e),
-                response: Binary(bin_result),
-            })),
-        };
+                response: bin_result.into(),
+            }))
+        });
         (result, gas_info)
     }
 }
