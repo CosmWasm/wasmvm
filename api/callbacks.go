@@ -11,8 +11,8 @@ typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used
 // iterator
 typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // and api
-typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut);
-typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut);
+typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
@@ -23,8 +23,8 @@ GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // api
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut);
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut);
+GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // and querier
 GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
 
@@ -75,23 +75,12 @@ func recoverPanic(ret *C.GoResult) {
 	}
 }
 
-// GasMultiplier is how many cosmwasm gas points = 1 sdk gas point
-// SDK reference costs can be found here: https://github.com/cosmos/cosmos-sdk/blob/02c6c9fafd58da88550ab4d7d494724a477c8a68/store/types/gas.go#L153-L164
-// A write at ~3000 gas and ~200us = 10 gas per us (microsecond) cpu/io
-// Rough timing have 88k gas at 90us, which is equal to 1k sdk gas... (one read)
-const GasMultiplier = 100
-
 type Gas = uint64
 
 // GasMeter is a copy of an interface declaration from cosmos-sdk
 // https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
 type GasMeter interface {
 	GasConsumed() Gas
-	GasConsumedToLimit() Gas
-	Limit() Gas
-	ConsumeGas(amount Gas, descriptor string)
-	IsPastLimit() bool
-	IsOutOfGas() bool
 }
 
 /****** DB ********/
@@ -179,7 +168,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (u64)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (u64)(gasAfter - gasBefore)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -209,7 +198,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	return C.GoResult_Ok
 }
@@ -229,7 +218,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	return C.GoResult_Ok
 }
@@ -265,7 +254,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 		return C.GoResult_BadArgument
 	}
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	out.state = buildIterator(state.IteratorStackID, iter)
 	out.vtable = iterator_vtable
@@ -300,7 +289,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	if k != nil {
 		*key = allocateRust(k)
@@ -311,8 +300,8 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 
 /***** GoAPI *******/
 
-type HumanizeAddress func([]byte) (string, error)
-type CanonicalizeAddress func(string) ([]byte, error)
+type HumanizeAddress func([]byte) (string, uint64, error)
+type CanonicalizeAddress func(string) ([]byte, uint64, error)
 
 type GoAPI struct {
 	HumanAddress     HumanizeAddress
@@ -334,7 +323,7 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer, used_gas *u64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if human == nil {
 		// we received an invalid pointer
@@ -342,7 +331,8 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 	}
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
-	h, err := api.HumanAddress(c)
+	h, cost, err := api.HumanAddress(c)
+	*used_gas = u64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
@@ -356,7 +346,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer, used_gas *u64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
 	if canon == nil {
@@ -366,7 +356,8 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	h := string(receiveSlice(human))
-	c, err := api.CanonicalAddress(h)
+	c, cost, err := api.CanonicalAddress(h)
+	*used_gas = u64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
@@ -411,7 +402,7 @@ func cQueryExternal(ptr *C.querier_t, usedGas *C.uint64_t, request C.Buffer, res
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req)
 	gasAfter := querier.GasConsumed()
-	*usedGas = (C.uint64_t)((gasAfter - gasBefore) * GasMultiplier)
+	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
 	// serialize the response
 	bz, err := json.Marshal(res)

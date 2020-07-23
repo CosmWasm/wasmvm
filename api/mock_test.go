@@ -28,32 +28,30 @@ type ErrorGasOverflow struct {
 	Descriptor string
 }
 
-type MockGasMeter struct {
+type MockGasMeter interface {
+	GasMeter
+	ConsumeGas(amount Gas, descriptor string)
+}
+
+type mockGasMeter struct {
 	limit    Gas
 	consumed Gas
 }
 
-// NewMockGasMeter returns a reference to a new MockGasMeter.
-func NewMockGasMeter(limit Gas) GasMeter {
-	return &MockGasMeter{
+// NewMockGasMeter returns a reference to a new mockGasMeter.
+func NewMockGasMeter(limit Gas) MockGasMeter {
+	return &mockGasMeter{
 		limit:    limit,
 		consumed: 0,
 	}
 }
 
-func (g *MockGasMeter) GasConsumed() Gas {
+func (g *mockGasMeter) GasConsumed() Gas {
 	return g.consumed
 }
 
-func (g *MockGasMeter) Limit() Gas {
+func (g *mockGasMeter) Limit() Gas {
 	return g.limit
-}
-
-func (g *MockGasMeter) GasConsumedToLimit() Gas {
-	if g.IsPastLimit() {
-		return g.limit
-	}
-	return g.consumed
 }
 
 // addUint64Overflow performs the addition operation on two uint64 integers and
@@ -66,7 +64,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 	return a + b, false
 }
 
-func (g *MockGasMeter) ConsumeGas(amount Gas, descriptor string) {
+func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
@@ -80,47 +78,37 @@ func (g *MockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 
 }
 
-func (g *MockGasMeter) IsPastLimit() bool {
-	return g.consumed > g.limit
-}
-
-func (g *MockGasMeter) IsOutOfGas() bool {
-	return g.consumed >= g.limit
-}
-
 /*** Mock KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
-// Note: these gas prices are all in *sdk gas* and multiplied by 100 for the wasm gas prices
-// (see callbacks.go line 82)
-// This may need to change
+// Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
 // Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
 const (
-	GetPrice    uint64 = 990
-	SetPrice           = 1870
-	RemovePrice        = 1420
-	RangePrice         = 2610
+	GetPrice    uint64 = 99000
+	SetPrice           = 187000
+	RemovePrice        = 142000
+	RangePrice         = 261000
 )
 
 type Lookup struct {
 	db    *dbm.MemDB
-	meter GasMeter
+	meter MockGasMeter
 }
 
-func NewLookup(meter GasMeter) *Lookup {
+func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    dbm.NewMemDB(),
 		meter: meter,
 	}
 }
 
-func (l *Lookup) SetGasMeter(meter GasMeter) {
+func (l *Lookup) SetGasMeter(meter MockGasMeter) {
 	l.meter = meter
 }
 
-func (l *Lookup) WithGasMeter(meter GasMeter) *Lookup {
+func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    l.db,
 		meter: meter,
@@ -182,18 +170,23 @@ var _ KVStore = (*Lookup)(nil)
 
 const CanonicalLength = 32
 
-func MockCanonicalAddress(human string) ([]byte, error) {
+const (
+	CostCanonical uint64 = 440
+	CostHuman     uint64 = 550
+)
+
+func MockCanonicalAddress(human string) ([]byte, uint64, error) {
 	if len(human) > CanonicalLength {
-		return nil, fmt.Errorf("human encoding too long")
+		return nil, 0, fmt.Errorf("human encoding too long")
 	}
 	res := make([]byte, CanonicalLength)
 	copy(res, []byte(human))
-	return res, nil
+	return res, CostCanonical, nil
 }
 
-func MockHumanAddress(canon []byte) (string, error) {
+func MockHumanAddress(canon []byte) (string, uint64, error) {
 	if len(canon) != CanonicalLength {
-		return "", fmt.Errorf("wrong canonical length")
+		return "", 0, fmt.Errorf("wrong canonical length")
 	}
 	cut := CanonicalLength
 	for i, v := range canon {
@@ -203,7 +196,7 @@ func MockHumanAddress(canon []byte) (string, error) {
 		}
 	}
 	human := string(canon[:cut])
-	return human, nil
+	return human, CostHuman, nil
 }
 
 func NewMockAPI() *GoAPI {
@@ -215,13 +208,15 @@ func NewMockAPI() *GoAPI {
 
 func TestMockApi(t *testing.T) {
 	human := "foobar"
-	canon, err := MockCanonicalAddress(human)
+	canon, cost, err := MockCanonicalAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
+	assert.Equal(t, CostCanonical, cost)
 
-	recover, err := MockHumanAddress(canon)
+	recover, cost, err := MockHumanAddress(canon)
 	require.NoError(t, err)
 	assert.Equal(t, recover, human)
+	assert.Equal(t, CostHuman, cost)
 }
 
 /**** MockQuerier ****/

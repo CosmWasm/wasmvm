@@ -33,7 +33,8 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	longName := "long123456789012345678901234567890long"
 	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "bob"}`)
 
-	_, _, err = Instantiate(cache, id, params, msg, &gasMeter, store, api, &querier, 100000000)
+	igasMeter := GasMeter(gasMeter)
+	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
 	require.Error(t, err)
 
 	// message from MockCanonicalAddress (go callback)
@@ -61,14 +62,16 @@ func TestHumanAddressFailure(t *testing.T) {
 
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
-	_, _, err = Instantiate(cache, id, params, msg, &gasMeter, store, api, &querier, 100000000)
+	igasMeter := GasMeter(gasMeter)
+	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 
 	// call query which will call canonicalize address
 	badApi := NewMockFailureAPI()
 	gasMeter3 := NewMockGasMeter(100000000)
 	query := []byte(`{"verifier":{}}`)
-	_, _, err = Query(cache, id, query, &gasMeter3, store, badApi, &querier, 100000000)
+	igasMeter3 := GasMeter(gasMeter3)
+	_, _, err = Query(cache, id, query, &igasMeter3, store, badApi, &querier, 100000000)
 	require.Error(t, err)
 
 	// message from MockFailureHumanAddresss (go callback)

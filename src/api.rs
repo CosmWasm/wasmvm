@@ -16,8 +16,10 @@ pub struct api_t {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
-    pub humanize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
-    pub canonicalize_address: extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer) -> i32,
+    pub humanize_address:
+        extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer, *mut u64) -> i32,
+    pub canonicalize_address:
+        extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer, *mut u64) -> i32,
 }
 
 #[repr(C)]
@@ -34,24 +36,22 @@ pub struct GoApi {
 // see: https://stackoverflow.com/questions/50258359/can-a-struct-containing-a-raw-pointer-implement-send-and-be-ffi-safe
 unsafe impl Send for GoApi {}
 
-// TODO: choose proper values
-const GAS_COST_HUMANIZE: u64 = 44;
-const GAS_COST_CANONICALIZE: u64 = 55;
-
 impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> FfiResult<CanonicalAddr> {
         let human_bytes = human.as_str().as_bytes();
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
         let mut err = Buffer::default();
+        let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.canonicalize_address)(
             self.state,
             human_bytes,
             &mut output as *mut Buffer,
             &mut err as *mut Buffer,
+            &mut used_gas as *mut u64,
         )
         .into();
-        let gas_info = GasInfo::with_cost(GAS_COST_CANONICALIZE);
+        let gas_info = GasInfo::with_cost(used_gas);
         let _human = unsafe { human_bytes.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -77,14 +77,16 @@ impl Api for GoApi {
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
         let mut err = Buffer::default();
+        let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.humanize_address)(
             self.state,
             canonical_buf,
             &mut output as *mut Buffer,
             &mut err as *mut Buffer,
+            &mut used_gas as *mut u64,
         )
         .into();
-        let gas_info = GasInfo::with_cost(GAS_COST_HUMANIZE);
+        let gas_info = GasInfo::with_cost(used_gas);
         let _canonical = unsafe { canonical_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
