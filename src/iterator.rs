@@ -1,4 +1,5 @@
-use cosmwasm_vm::{FfiError, FfiResult, NextItem, StorageIterator};
+use cosmwasm_std::KV;
+use cosmwasm_vm::{FfiError, FfiResult, GasInfo, StorageIterator};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
@@ -47,10 +48,13 @@ impl GoIter {
 }
 
 impl StorageIterator for GoIter {
-    fn next(&mut self) -> FfiResult<NextItem> {
+    fn next(&mut self) -> FfiResult<Option<KV>> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
-            None => return Err(FfiError::other("iterator vtable not set")),
+            None => {
+                let result = Err(FfiError::unknown("iterator vtable not set"));
+                return (result, GasInfo::free());
+            }
         };
 
         let mut key_buf = Buffer::default();
@@ -66,27 +70,30 @@ impl StorageIterator for GoIter {
             &mut err as *mut Buffer,
         )
         .into();
+        let gas_info = GasInfo::with_externally_used(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || "Failed to fetch next item from iterator".to_string();
         unsafe {
-            go_result.into_ffi_result(err, default)?;
+            if let Err(err) = go_result.into_ffi_result(err, default) {
+                return (Err(err), gas_info);
+            }
         }
 
         let okey = unsafe { key_buf.read() };
-        match okey {
+        let result = match okey {
             Some(key) => {
                 let value = unsafe { value_buf.read() };
                 if let Some(value) = value {
-                    let kv = (key.to_vec(), value.to_vec());
-                    Ok((Some(kv), used_gas))
+                    Ok(Some((key.into(), value.into())))
                 } else {
-                    Err(FfiError::other(
+                    Err(FfiError::unknown(
                         "Failed to read value while reading the next key in the db",
                     ))
                 }
             }
-            None => Ok((None, used_gas)),
-        }
+            None => Ok(None),
+        };
+        (result, gas_info)
     }
 }

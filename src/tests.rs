@@ -35,14 +35,14 @@ fn handle_cpu_loop_with_cache() {
 
     let tmp_dir = TempDir::new().unwrap();
     let features = features_from_csv("staking");
-    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features, 0) }.unwrap();
+    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features) }.unwrap();
 
     // store code
     let code_id = cache.save_wasm(CONTRACT).unwrap();
 
     // init
     let (init_msg, creator) = make_init_msg();
-    let env = mock_env(&deps.api, creator.as_str(), &coins(1000, "cosm"));
+    let env = mock_env(creator, &coins(1000, "cosm"));
     let mut instance = cache.get_instance(&code_id, deps, gas_limit).unwrap();
     let raw_msg = to_vec(&init_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
@@ -70,7 +70,7 @@ fn handle_cpu_loop_no_cache() {
 
     // init
     let (init_msg, creator) = make_init_msg();
-    let env = mock_env(&instance.api, creator.as_str(), &coins(1000, "cosm"));
+    let env = mock_env(creator, &coins(1000, "cosm"));
     let raw_msg = to_vec(&init_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
     let res = call_init_raw(&mut instance, &raw_env, &raw_msg);
