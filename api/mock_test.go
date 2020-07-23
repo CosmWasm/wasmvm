@@ -172,7 +172,7 @@ const CanonicalLength = 32
 
 const (
 	CostCanonical uint64 = 440
-	CostHuman            = 550
+	CostHuman     uint64 = 550
 )
 
 func MockCanonicalAddress(human string) ([]byte, uint64, error) {

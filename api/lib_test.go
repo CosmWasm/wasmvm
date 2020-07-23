@@ -111,7 +111,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1051d), cost)
+	assert.Equal(t, uint64(0x109a0), cost)
 
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -142,7 +142,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1051d), cost)
+	assert.Equal(t, uint64(0x109a0), cost)
 	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
@@ -155,7 +155,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x198fd), cost)
+	assert.Equal(t, uint64(0x19c78), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -198,7 +198,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1051d), cost)
+	assert.Equal(t, uint64(0x109a0), cost)
 	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute a cpu loop
@@ -322,7 +322,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x10457), cost)
+	assert.Equal(t, uint64(0x108da), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -334,16 +334,16 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, &igasMeter2, store2, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x104ba), cost)
+	assert.Equal(t, uint64(0x1093d), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0xeed8)
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0xf059)
 	require.Equal(t, resp.Err, &types.StdError{
 		Unauthorized: &types.Unauthorized{},
 	})
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x198fd)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x19c78)
 	require.Nil(t, resp.Err, "%v", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs := resp.Ok.Log
@@ -352,7 +352,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", logs[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x198fd)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x19c78)
 	require.Nil(t, resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	logs = resp.Ok.Log
