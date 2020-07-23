@@ -23,6 +23,9 @@ type GoAPI = api.GoAPI
 // Querier lets us make read-only queries on other modules
 type Querier = types.Querier
 
+// GasMeter is a read-only version of the sdk gas meter
+type GasMeter = api.GasMeter
+
 // Wasmer is the main entry point to this library.
 // You should create an instance with it's own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
@@ -88,7 +91,7 @@ func (w *Wasmer) Instantiate(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.InitResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
@@ -124,7 +127,7 @@ func (w *Wasmer) Execute(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.HandleResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)
@@ -156,7 +159,7 @@ func (w *Wasmer) Query(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
 	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
@@ -188,7 +191,7 @@ func (w *Wasmer) Migrate(
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
-	gasMeter api.GasMeter,
+	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.MigrateResponse, uint64, error) {
 	paramBin, err := json.Marshal(env)

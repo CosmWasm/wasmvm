@@ -28,32 +28,30 @@ type ErrorGasOverflow struct {
 	Descriptor string
 }
 
-type MockGasMeter struct {
+type MockGasMeter interface {
+	GasMeter
+	ConsumeGas(amount Gas, descriptor string)
+}
+
+type mockGasMeter struct {
 	limit    Gas
 	consumed Gas
 }
 
-// NewMockGasMeter returns a reference to a new MockGasMeter.
-func NewMockGasMeter(limit Gas) GasMeter {
-	return &MockGasMeter{
+// NewMockGasMeter returns a reference to a new mockGasMeter.
+func NewMockGasMeter(limit Gas) MockGasMeter {
+	return &mockGasMeter{
 		limit:    limit,
 		consumed: 0,
 	}
 }
 
-func (g *MockGasMeter) GasConsumed() Gas {
+func (g *mockGasMeter) GasConsumed() Gas {
 	return g.consumed
 }
 
-func (g *MockGasMeter) Limit() Gas {
+func (g *mockGasMeter) Limit() Gas {
 	return g.limit
-}
-
-func (g *MockGasMeter) GasConsumedToLimit() Gas {
-	if g.IsPastLimit() {
-		return g.limit
-	}
-	return g.consumed
 }
 
 // addUint64Overflow performs the addition operation on two uint64 integers and
@@ -66,7 +64,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 	return a + b, false
 }
 
-func (g *MockGasMeter) ConsumeGas(amount Gas, descriptor string) {
+func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
@@ -78,14 +76,6 @@ func (g *MockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 		panic(ErrorOutOfGas{descriptor})
 	}
 
-}
-
-func (g *MockGasMeter) IsPastLimit() bool {
-	return g.consumed > g.limit
-}
-
-func (g *MockGasMeter) IsOutOfGas() bool {
-	return g.consumed >= g.limit
 }
 
 /*** Mock KVStore ****/
@@ -104,21 +94,21 @@ const (
 
 type Lookup struct {
 	db    *dbm.MemDB
-	meter GasMeter
+	meter MockGasMeter
 }
 
-func NewLookup(meter GasMeter) *Lookup {
+func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    dbm.NewMemDB(),
 		meter: meter,
 	}
 }
 
-func (l *Lookup) SetGasMeter(meter GasMeter) {
+func (l *Lookup) SetGasMeter(meter MockGasMeter) {
 	l.meter = meter
 }
 
-func (l *Lookup) WithGasMeter(meter GasMeter) *Lookup {
+func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    l.db,
 		meter: meter,
