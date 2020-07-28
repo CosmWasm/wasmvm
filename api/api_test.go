@@ -33,13 +33,21 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	longName := "long123456789012345678901234567890long"
 	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "bob"}`)
 
+	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
 	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
-	require.Error(t, err)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	require.NoError(t, err)
+	var resp types.InitResult
+	err = json.Unmarshal(res, &resp)
+	require.NoError(t, err)
 
-	// message from MockCanonicalAddress (go callback)
-	expected := "human encoding too long"
-	require.True(t, strings.Contains(err.Error(), expected), err.Error())
+	// ensure the error message is what we expect
+	require.NotNil(t, resp.Err)
+	require.Nil(t, resp.Ok)
+	// expect a generic message
+	require.NotNil(t, resp.Err.GenericErr)
+	// with this message
+	require.Equal(t, resp.Err.Error(), "generic: canonicalize_address errored: human encoding too long")
 }
 
 func TestHumanAddressFailure(t *testing.T) {
