@@ -57,7 +57,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            if let Err(err) = go_result.into_ffi_user_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(err, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -92,7 +92,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to humanize the address: {}", canonical);
         unsafe {
-            if let Err(err) = go_result.into_ffi_user_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(err, default) {
                 return (Err(err), gas_info);
             }
         }
