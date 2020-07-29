@@ -336,7 +336,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
-		return C.GoResult_Other
+		return C.GoResult_User
 	}
 	if len(h) == 0 {
 		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", c))
@@ -361,7 +361,7 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
-		return C.GoResult_Other
+		return C.GoResult_User
 	}
 	if len(c) == 0 {
 		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", h))

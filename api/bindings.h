@@ -37,9 +37,13 @@ enum GoResult {
    */
   GoResult_OutOfGas = 3,
   /**
-   * An error happened during normal operation of a Go callback
+   * An error happened during normal operation of a Go callback, which should abort the contract
    */
   GoResult_Other = 4,
+  /**
+   * An error happened during normal operation of a Go callback, which should be fed back to the contract
+   */
+  GoResult_User = 5,
 };
 typedef int32_t GoResult;
 
