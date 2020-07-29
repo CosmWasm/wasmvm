@@ -1,5 +1,5 @@
-use cosmwasm_std::SystemError;
-use cosmwasm_vm::{GasInfo, Querier, QuerierResult};
+use cosmwasm_std::{Binary, StdResult, SystemError, SystemResult};
+use cosmwasm_vm::{FfiResult, GasInfo, Querier};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -16,7 +16,7 @@ pub struct querier_t {
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
     pub query_external:
-        extern "C" fn(*const querier_t, *mut u64, Buffer, *mut Buffer, *mut Buffer) -> i32,
+        extern "C" fn(*const querier_t, u64, *mut u64, Buffer, *mut Buffer, *mut Buffer) -> i32,
 }
 
 #[repr(C)]
@@ -30,13 +30,18 @@ pub struct GoQuerier {
 unsafe impl Send for GoQuerier {}
 
 impl Querier for GoQuerier {
-    fn raw_query(&self, request: &[u8]) -> QuerierResult {
+    fn query_raw(
+        &self,
+        request: &[u8],
+        gas_limit: u64,
+    ) -> FfiResult<SystemResult<StdResult<Binary>>> {
         let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
         let mut err = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
             self.state,
+            gas_limit,
             &mut used_gas as *mut u64,
             request_buf,
             &mut result_buf as *mut Buffer,
