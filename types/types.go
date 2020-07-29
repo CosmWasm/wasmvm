@@ -49,3 +49,11 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 	*c = d
 	return nil
 }
+
+type OutOfGasError struct{}
+
+var _ error = OutOfGasError{}
+
+func (o OutOfGasError) Error() string {
+	return "Out of gas"
+}

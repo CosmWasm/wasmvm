@@ -214,6 +214,10 @@ func Query(
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.Buffer) error {
+	// this checks for out of gas as a special case
+	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+		return types.OutOfGasError{}
+	}
 	msg := receiveVector(b)
 	if msg == nil {
 		return err
