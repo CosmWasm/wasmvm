@@ -80,13 +80,13 @@ func TestHumanAddressFailure(t *testing.T) {
 	igasMeter3 := GasMeter(gasMeter3)
 	res, _, err := Query(cache, id, query, &igasMeter3, store, badApi, &querier, 100000000)
 	require.NoError(t, err)
-	var resp types.QuerierResult
+	var resp types.QueryResponse
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
 
-	// ensure the error message is what we expect
-	require.NotNil(t, resp.Err)
+	// ensure the error message is what we expect (system -ok, stderr -generic)
 	require.Nil(t, resp.Ok)
+	require.NotNil(t, resp.Err)
 	// expect a generic message
 	require.NotNil(t, resp.Err.GenericErr)
 	// with this message

@@ -32,7 +32,7 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 // This is a 2-level result
 type QuerierResult struct {
 	Ok  *QueryResponse `json:"Ok,omitempty"`
-	Err *StdError      `json:"Err,omitempty"`
+	Err *SystemError   `json:"Err,omitempty"`
 }
 
 func ToQuerierResult(response []byte, err error) QuerierResult {
@@ -43,9 +43,17 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 			},
 		}
 	}
+	syserr := ToSystemError(err)
+	if syserr != nil {
+		return QuerierResult{
+			Err: syserr,
+		}
+	}
 	stderr := ToStdError(err)
 	return QuerierResult{
-		Err: stderr,
+		Ok: &QueryResponse{
+			Err: stderr,
+		},
 	}
 }
 
