@@ -257,6 +257,38 @@ func TestHandleStorageLoop(t *testing.T) {
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
+func TestHandleUserErrorsInApiCalls(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	id := createTestContract(t, cache)
+
+	maxGas := uint64(40_000_000)
+	gasMeter1 := NewMockGasMeter(maxGas)
+	igasMeter1 := GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(mockContractAddr, balance)
+	params, err := json.Marshal(mockEnv("creator"))
+	require.NoError(t, err)
+
+	defaultApi := NewMockAPI()
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, defaultApi, &querier, maxGas)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	gasMeter2 := NewMockGasMeter(maxGas)
+	igasMeter2 := GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	params, err = json.Marshal(mockEnv("fred"))
+	require.NoError(t, err)
+	failingApi := NewMockFailureAPI()
+	res, _, err = Handle(cache, id, params, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+}
+
 func TestMigrate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
