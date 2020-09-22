@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/CosmWasm/go-cosmwasm/types"
+	"github.com/cosmwasm/go-cosmwasm/types"
 )
 
 /*** Mock GasMeter ****/

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/CosmWasm/go-cosmwasm/types"
+	"github.com/cosmwasm/go-cosmwasm/types"
 )
 
 // nice aliases to the rust names

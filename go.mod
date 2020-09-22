@@ -1,4 +1,4 @@
-module github.com/CosmWasm/go-cosmwasm
+module github.com/cosmwasm/go-cosmwasm
 
 go 1.14
 

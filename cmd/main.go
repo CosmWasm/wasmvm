@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	wasm "github.com/CosmWasm/go-cosmwasm"
+	wasm "github.com/cosmwasm/go-cosmwasm"
 	"io/ioutil"
 	"os"
 )

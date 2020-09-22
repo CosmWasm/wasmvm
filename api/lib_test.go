@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/go-cosmwasm/types"
+	"github.com/cosmwasm/go-cosmwasm/types"
 )
 
 const DEFAULT_FEATURES = "staking"
