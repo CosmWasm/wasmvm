@@ -71,9 +71,10 @@ const mockContractAddr = "contract"
 func mockEnv(sender types.HumanAddress) types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
-			Height:  123,
-			Time:    1578939743,
-			ChainID: "foobar",
+			Height:    123,
+			Time:      1578939743,
+			TimeNanos: 987654321,
+			ChainID:   "foobar",
 		},
 		Message: types.MessageInfo{
 			Sender: sender,
@@ -111,12 +112,12 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x109a0), cost)
+	assert.Equal(t, uint64(0x11754), cost)
 
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	require.Nil(t, resp.Err)
+	require.Equal(t, "", resp.Err)
 	require.Equal(t, 0, len(resp.Ok.Messages))
 }
 
@@ -142,7 +143,7 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x109a0), cost)
+	assert.Equal(t, uint64(0x11754), cost)
 	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
@@ -155,14 +156,14 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x19c40), cost)
+	assert.Equal(t, uint64(0x1a92f), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
 	var resp types.HandleResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	require.Nil(t, resp.Err)
+	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	dispatch := resp.Ok.Messages[0]
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
@@ -198,7 +199,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x109a0), cost)
+	assert.Equal(t, uint64(0x11754), cost)
 	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute a cpu loop
@@ -316,7 +317,7 @@ func TestMigrate(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, "", qres.Err)
 	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
 
 	// migrate to a new verifier - alice
@@ -332,8 +333,8 @@ func TestMigrate(t *testing.T) {
 	var qres2 types.QueryResponse
 	err = json.Unmarshal(data, &qres2)
 	require.NoError(t, err)
-	require.Nil(t, qres2.Err, "%v", qres2.Err)
-	require.Equal(t, string(qres2.Ok), `{"verifier":"alice"}`)
+	require.Equal(t, "", qres2.Err)
+	require.Equal(t, `{"verifier":"alice"}`, string(qres2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -354,7 +355,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x108da), cost)
+	assert.Equal(t, uint64(0x1168e), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(100000000)
@@ -366,38 +367,36 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, id, params, msg, &igasMeter2, store2, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1093d), cost)
+	assert.Equal(t, uint64(0x116f1), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, id, "mary", store1, api, querier, 0xeffe)
-	require.Equal(t, resp.Err, &types.StdError{
-		Unauthorized: &types.Unauthorized{},
-	})
+	resp := exec(t, cache, id, "mary", store1, api, querier, 0x10064)
+	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x19c40)
-	require.Nil(t, resp.Err, "%v", resp.Err)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1a92f)
+	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
-	logs := resp.Ok.Log
-	require.Equal(t, 2, len(logs))
-	require.Equal(t, "destination", logs[1].Key)
-	require.Equal(t, "bob", logs[1].Value)
+	attributes := resp.Ok.Attributes
+	require.Equal(t, 2, len(attributes))
+	require.Equal(t, "destination", attributes[1].Key)
+	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x19c40)
-	require.Nil(t, resp.Err)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1a92f)
+	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
-	logs = resp.Ok.Log
-	require.Equal(t, 2, len(logs))
-	require.Equal(t, "destination", logs[1].Key)
-	require.Equal(t, "sue", logs[1].Value)
+	attributes = resp.Ok.Attributes
+	require.Equal(t, 2, len(attributes))
+	require.Equal(t, "destination", attributes[1].Key)
+	require.Equal(t, "sue", attributes[1].Value)
 }
 
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 	var resp types.HandleResult
 	err := json.Unmarshal(res, &resp)
 	require.NoError(t, err)
-	require.Nil(t, resp.Err, "%v", resp.Err)
+	require.Equal(t, "", resp.Err)
 	require.Equal(t, expectedMsgs, len(resp.Ok.Messages))
 }
 
@@ -464,12 +463,7 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, badResp.Err, &types.StdError{
-		ParseErr: &types.ParseErr{
-			Target: "hackatom::contract::QueryMsg",
-			Msg:    "unknown variant `Raw`, expected one of `verifier`, `other_balance`, `recurse`",
-		},
-	})
+	require.Equal(t, "Error parsing into type hackatom::contract::QueryMsg: unknown variant `Raw`, expected one of `verifier`, `other_balance`, `recurse`", badResp.Err)
 
 	// make a valid query
 	gasMeter3 := NewMockGasMeter(100000000)
@@ -481,7 +475,7 @@ func TestQuery(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, "", qres.Err)
 	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
 }
 
@@ -506,7 +500,7 @@ func TestHackatomQuerier(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, "", qres.Err)
 	var balances types.AllBalancesResponse
 	err = json.Unmarshal(qres.Ok, &balances)
 	require.Equal(t, balances.Amount, initBalance)
@@ -536,7 +530,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, "%v", qres.Err)
+	require.Equal(t, "", qres.Err)
 
 	var response CustomResponse
 	err = json.Unmarshal(qres.Ok, &response)

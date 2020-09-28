@@ -41,12 +41,9 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the error message is what we expect
-	require.NotNil(t, resp.Err)
 	require.Nil(t, resp.Ok)
-	// expect a generic message
-	require.NotNil(t, resp.Err.GenericErr)
-	// with this message
-	require.Equal(t, resp.Err.Error(), "generic: canonicalize_address errored: human encoding too long")
+	// with this error
+	require.Equal(t, "Generic error: canonicalize_address errored: human encoding too long", resp.Err)
 }
 
 func TestHumanAddressFailure(t *testing.T) {
@@ -86,9 +83,6 @@ func TestHumanAddressFailure(t *testing.T) {
 
 	// ensure the error message is what we expect (system -ok, stderr -generic)
 	require.Nil(t, resp.Ok)
-	require.NotNil(t, resp.Err)
-	// expect a generic message
-	require.NotNil(t, resp.Err.GenericErr)
-	// with this message
-	require.Equal(t, resp.Err.Error(), "generic: humanize_address errored: mock failure - human_address")
+	// with this error
+	require.Equal(t, "Generic error: humanize_address errored: mock failure - human_address", resp.Err)
 }

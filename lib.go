@@ -108,8 +108,8 @@ func (w *Wasmer) Instantiate(
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }
@@ -144,8 +144,8 @@ func (w *Wasmer) Execute(
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }
@@ -172,8 +172,8 @@ func (w *Wasmer) Query(
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }
@@ -208,8 +208,8 @@ func (w *Wasmer) Migrate(
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != nil {
-		return nil, gasUsed, fmt.Errorf("%v", resp.Err)
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
 	}
 	return resp.Ok, gasUsed, nil
 }
