@@ -20,7 +20,7 @@ type HandleResponse struct {
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
-	Attributes []LogAttribute `json:"attributes"`
+	Attributes []EventAttribute `json:"attributes"`
 }
 
 // InitResult is the raw response from the handle call.
@@ -35,7 +35,7 @@ type InitResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
-	Attributes []LogAttribute `json:"attributes"`
+	Attributes []EventAttribute `json:"attributes"`
 }
 
 // MigrateResult is the raw response from the migrate call.
@@ -52,11 +52,11 @@ type MigrateResponse struct {
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
-	Attributes []LogAttribute `json:"attributes"`
+	Attributes []EventAttribute `json:"attributes"`
 }
 
-// LogAttribute
-type LogAttribute struct {
+// EventAttribute
+type EventAttribute struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }

@@ -121,7 +121,7 @@ type Result struct {
 	// base64-encoded bytes to return as ABCI.Data field
 	Data string
 	// attributes for a log event to return over abci interface
-	Attributes []LogAttribute `json:"attributes"`
+	Attributes []EventAttribute `json:"attributes"`
 }
 ```
 
