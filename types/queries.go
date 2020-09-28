@@ -25,9 +25,9 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 	if err != nil {
 		return QuerierResult{
 			Err: &SystemError{
-				UnsupportedRequest: &UnsupportedRequest{
-					// FIXME: this puts arbitrary error messages into the "Kind" field
-					Kind: err.Error(),
+				InvalidRequest: &InvalidRequest{
+					Err:     err.Error(),
+					Request: binRequest,
 				},
 			},
 		}
