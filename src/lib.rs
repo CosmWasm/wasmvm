@@ -74,6 +74,8 @@ static MSG_ARG: &str = "msg";
 static PARAMS_ARG: &str = "params";
 static GAS_USED_ARG: &str = "gas_used";
 
+const PRINT_DEBUG: bool = false;
+
 fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
@@ -85,7 +87,7 @@ fn do_init_cache(
         unsafe { supported_features.read() }.ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
-    let cache = unsafe { CosmCache::new(dir_str, features) }?;
+    let cache = unsafe { CosmCache::new(dir_str, features, PRINT_DEBUG) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }

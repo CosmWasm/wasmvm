@@ -8,6 +8,7 @@ use cosmwasm_vm::testing::{mock_dependencies, mock_env, mock_instance_with_gas_l
 use cosmwasm_vm::{call_handle_raw, call_init_raw, features_from_csv, to_vec, CosmCache};
 
 static CONTRACT: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
+const PRINT_DEBUG: bool = false;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
@@ -35,7 +36,7 @@ fn handle_cpu_loop_with_cache() {
 
     let tmp_dir = TempDir::new().unwrap();
     let features = features_from_csv("staking");
-    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features) }.unwrap();
+    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features, PRINT_DEBUG) }.unwrap();
 
     // store code
     let code_id = cache.save_wasm(CONTRACT).unwrap();

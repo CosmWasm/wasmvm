@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, StdResult, SystemError, SystemResult};
+use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{FfiResult, GasInfo, Querier};
 
 use crate::error::GoResult;
@@ -34,7 +34,7 @@ impl Querier for GoQuerier {
         &self,
         request: &[u8],
         gas_limit: u64,
-    ) -> FfiResult<SystemResult<StdResult<Binary>>> {
+    ) -> FfiResult<SystemResult<ContractResult<Binary>>> {
         let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
         let mut err = Buffer::default();
@@ -66,7 +66,7 @@ impl Querier for GoQuerier {
 
         let bin_result = unsafe { result_buf.consume() };
         let result = serde_json::from_slice(&bin_result).or_else(|e| {
-            Ok(Err(SystemError::InvalidResponse {
+            Ok(SystemResult::Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {}", e),
                 response: bin_result.into(),
             }))
