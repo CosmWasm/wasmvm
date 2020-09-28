@@ -23,7 +23,14 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
 	if err != nil {
-		return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
+		return QuerierResult{
+			Err: &SystemError{
+				UnsupportedRequest: &UnsupportedRequest{
+					// FIXME: this puts arbitrary error messages into the "Kind" field
+					Kind: err.Error(),
+				},
+			},
+		}
 	}
 	bz, err := querier.Query(request, gasLimit)
 	return ToQuerierResult(bz, err)
