@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -325,14 +326,15 @@ type ReflectCustom struct{}
 var _ CustomQuerier = ReflectCustom{}
 
 type CustomQuery struct {
-	Ping    *struct{}     `json:"ping,omitempty"`
-	Capital *CapitalQuery `json:"capital,omitempty"`
+	Ping        *struct{}         `json:"ping,omitempty"`
+	Capitalized *CapitalizedQuery `json:"capitalized,omitempty"`
 }
 
-type CapitalQuery struct {
+type CapitalizedQuery struct {
 	Text string `json:"text"`
 }
 
+// CustomResponse is the response for all `CustomQuery`s
 type CustomResponse struct {
 	Msg string `json:"msg"`
 }
@@ -349,8 +351,10 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	var resp CustomResponse
 	if query.Ping != nil {
 		resp.Msg = "PONG"
-	} else if query.Capital != nil {
-		resp.Msg = strings.ToUpper(query.Capital.Text)
+	} else if query.Capitalized != nil {
+		resp.Msg = strings.ToUpper(query.Capitalized.Text)
+	} else {
+		return nil, errors.New("Unsupported query")
 	}
 	return json.Marshal(resp)
 }
@@ -461,7 +465,7 @@ func TestReflectCustomQuerier(t *testing.T) {
 	assert.Equal(t, resp.Msg, "PONG")
 
 	// try captial
-	msg2, err := json.Marshal(CustomQuery{Capital: &CapitalQuery{Text: "small."}})
+	msg2, err := json.Marshal(CustomQuery{Capitalized: &CapitalizedQuery{Text: "small."}})
 	require.NoError(t, err)
 	bz, err = q.Query(msg2)
 	require.NoError(t, err)

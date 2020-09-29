@@ -156,7 +156,7 @@ func TestHandle(t *testing.T) {
 	res, cost, err = Handle(cache, id, params, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x1a92f), cost)
+	assert.Equal(t, uint64(0x1a931), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -374,7 +374,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1a92f)
+	resp = exec(t, cache, id, "fred", store1, api, querier, 0x1a931)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -383,7 +383,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1a92f)
+	resp = exec(t, cache, id, "mary", store2, api, querier, 0x1a931)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes
@@ -507,6 +507,20 @@ func TestHackatomQuerier(t *testing.T) {
 }
 
 func TestCustomReflectQuerier(t *testing.T) {
+	type CapitalizedQuery struct {
+		Text string `json:"text"`
+	}
+
+	type QueryMsg struct {
+		Capitalized *CapitalizedQuery `json:"capitalized,omitempty"`
+		// There are more queries but we don't use them yet
+		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
+	}
+
+	type CapitalizedResponse struct {
+		Text string `json:"text"`
+	}
+
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	id := createReflectContract(t, cache)
@@ -524,7 +538,13 @@ func TestCustomReflectQuerier(t *testing.T) {
 	querier = Querier(innerQuerier)
 
 	// make a valid query to the other address
-	query := []byte(`{"reflect_custom":{"text":"small Frys :)"}}`)
+	var queryMsg = QueryMsg{
+		Capitalized: &CapitalizedQuery{
+			Text: "small Frys :)",
+		},
+	}
+	query, err := json.Marshal(queryMsg)
+	require.NoError(t, err)
 	data, _, err := Query(cache, id, query, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var qres types.QueryResponse
@@ -532,7 +552,8 @@ func TestCustomReflectQuerier(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", qres.Err)
 
-	var response CustomResponse
+	var response CapitalizedResponse
 	err = json.Unmarshal(qres.Ok, &response)
-	require.Equal(t, response.Msg, "SMALL FRYS :)")
+	require.NoError(t, err)
+	require.Equal(t, "SMALL FRYS :)", response.Text)
 }
