@@ -343,10 +343,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	var query CustomQuery
 	err := json.Unmarshal(request, &query)
 	if err != nil {
-		return nil, types.ParseErr{
-			Target: "CustomQuery",
-			Msg:    err.Error(),
-		}
+		return nil, err
 	}
 	var resp CustomResponse
 	if query.Ping != nil {
