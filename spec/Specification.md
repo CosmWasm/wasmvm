@@ -1,7 +1,7 @@
 # Specification
 
-This section attempts to codify the [architecture](./Architecture) with a number of concrete 
-implementation details, function signatures, naming choices, etc. 
+This section attempts to codify the [architecture](./Architecture) with a number of concrete
+implementation details, function signatures, naming choices, etc.
 
 ## Definitions
 
@@ -36,7 +36,7 @@ In short, go/cgo doesn't handle c-types very transparently, and these also don't
 
 ## State Access
 
-**Instance State** is accessible only by one instance of the contract, with full read-write access. This can contain either a singleton (one key - simple contract or config) or a kvstore (subspace with many keys that can be accessed - like erc20 instance holding balances for many accounts). Sometimes the contract may want one or the other or even both (config + much data) access modes. 
+**Instance State** is accessible only by one instance of the contract, with full read-write access. This can contain either a singleton (one key - simple contract or config) or a kvstore (subspace with many keys that can be accessed - like erc20 instance holding balances for many accounts). Sometimes the contract may want one or the other or even both (config + much data) access modes.
 
 We can set the instance state upon *instantiation*. We can read and modify it upon *invocation*. This is a unique "prefixed db"  subspace that can only be accessed by this instance. The read-only contract state should suffice for shared data between all instances. (Discuss this design in light of all use cases)
 
@@ -79,17 +79,19 @@ type Params struct {
 }
 
 type BlockInfo struct {
-    // block height this transaction is executed
-    Height  int64  `json:"height"`
-    // timestamp of current block (in seconds since unix epoch)
-    Time    int64  `json:"time"`
-	ChainID string `json:"chain_id"`
+	// block height this transaction is executed
+	Height uint64 `json:"height"`
+	// time in seconds since unix epoch (since CosmWasm 0.3)
+	Time uint64 `json:"time"`
+	// Nanoseconds of the block time (since CosmWasm 0.11)
+	TimeNanos uint64 `json:"time_nanos"`
+	ChainID   string `json:"chain_id"`
 }
 
 type MessageInfo struct {
     // bech32 encoding of sdk.AccAddress executing the contract
     Signer    string       `json:"signer"`
-    // amount of funds send to the contract along with this message 
+    // amount of funds send to the contract along with this message
     SentFunds []Coin `json:"sent_funds"`
 }
 
@@ -118,8 +120,8 @@ type Result struct {
 	Messages []CosmosMsg `json:"msgs"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data string
-	// log message to return over abci interface
-	Log string
+	// attributes for a log event to return over abci interface
+	Attributes []EventAttribute `json:"attributes"`
 }
 ```
 
@@ -127,7 +129,7 @@ type Result struct {
 
 Note: I intentionally redefine a number of core types, rather than importing them from sdk/types. This is to guarantee immutibility. These types will be passed to and from the contract, and the contract adapter code (in go) can convert them to the go types used in the rest of the app. But these are decoupled, so they can remain constant while other parts of the sdk evolve.
 
-I also consider adding Events to the return Result, but will delay that until there is a clear spec for how to use them 
+I also consider adding Events to the return Result, but will delay that until there is a clear spec for how to use them
 
 
 ## Dispatched Messages
@@ -162,7 +164,7 @@ type SendMsg struct {
 // If it was properly coded and worked once, it will continue to work throughout upgrades.
 type ContractMsg struct {
     // ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
-    // the contract ID and instance ID. The sdk module should maintain a reverse lookup table. 
+    // the contract ID and instance ID. The sdk module should maintain a reverse lookup table.
     ContractAddr string `json:"contract_addr"`
     // Msg is assumed to be a json-encoded message, which will be passed directly
     // as `userMsg` when calling `Execute` on the above-defined contract
@@ -201,11 +203,11 @@ type KVStore interface {
 }
 ```
 
-If desired, we can add an Iterate method, but that adds yet another level of complexity, a method that returns yet another object with custom callbacks. And then ensuring proper cleanup. 
+If desired, we can add an Iterate method, but that adds yet another level of complexity, a method that returns yet another object with custom callbacks. And then ensuring proper cleanup.
 
 ### Querying Other Modules
 
-We also pass in a callback to the smart contracts to make some well-defined queries 
+We also pass in a callback to the smart contracts to make some well-defined queries
 
 ```go
 Query(query QueryRequest) (QueryModels, error)

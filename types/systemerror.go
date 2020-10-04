@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"reflect"
 )
 
 // SystemError captures all errors returned from the Rust code as SystemError.
@@ -121,4 +122,17 @@ func ToSystemError(err error) *SystemError {
 	default:
 		return nil
 	}
+}
+
+// check if an interface is nil (even if it has type info)
+func isNil(i interface{}) bool {
+	if i == nil {
+		return true
+	}
+	if reflect.TypeOf(i).Kind() == reflect.Ptr {
+		// IsNil panics if you try it on a struct (not a pointer)
+		return reflect.ValueOf(i).IsNil()
+	}
+	// if we aren't a pointer, can't be nil, can we?
+	return false
 }

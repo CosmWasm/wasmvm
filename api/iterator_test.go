@@ -78,8 +78,8 @@ func TestQueueIterator(t *testing.T) {
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
 	require.NoError(t, err)
-	require.Nil(t, qres.Err, "%v", qres.Err)
-	require.Equal(t, string(qres.Ok), `{"sum":39}`)
+	require.Equal(t, "", qres.Err)
+	require.Equal(t, `{"sum":39}`, string(qres.Ok))
 
 	// query reduce (multiple iterators at once)
 	query = []byte(`{"reducer":{}}`)
@@ -88,8 +88,8 @@ func TestQueueIterator(t *testing.T) {
 	var reduced types.QueryResponse
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
-	require.Nil(t, reduced.Err, "%v", reduced.Err)
-	require.Equal(t, string(reduced.Ok), `{"counters":[[17,22],[22,0]]}`)
+	require.Equal(t, "", reduced.Err)
+	require.Equal(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
 func TestQueueIteratorRaces(t *testing.T) {
@@ -115,8 +115,8 @@ func TestQueueIteratorRaces(t *testing.T) {
 		var reduced types.QueryResponse
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
-		require.Nil(t, reduced.Err, "%v", reduced.Err)
-		require.Equal(t, string(reduced.Ok), fmt.Sprintf(`{"counters":%s}`, expected))
+		require.Equal(t, "", reduced.Err)
+		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
 	// 30 concurrent batches (in go routines) to trigger any race condition

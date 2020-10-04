@@ -7,8 +7,8 @@ import (
 //-------- Queries --------
 
 type QueryResponse struct {
-	Ok  []byte    `json:"Ok,omitempty"`
-	Err *StdError `json:"Err,omitempty"`
+	Ok  []byte `json:"ok,omitempty"`
+	Err string `json:"error,omitempty"`
 }
 
 //-------- Querier -----------
@@ -23,7 +23,14 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
 	if err != nil {
-		return ToQuerierResult(nil, UnsupportedRequest{err.Error()})
+		return QuerierResult{
+			Err: &SystemError{
+				InvalidRequest: &InvalidRequest{
+					Err:     err.Error(),
+					Request: binRequest,
+				},
+			},
+		}
 	}
 	bz, err := querier.Query(request, gasLimit)
 	return ToQuerierResult(bz, err)
@@ -31,8 +38,8 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 
 // This is a 2-level result
 type QuerierResult struct {
-	Ok  *QueryResponse `json:"Ok,omitempty"`
-	Err *SystemError   `json:"Err,omitempty"`
+	Ok  *QueryResponse `json:"ok,omitempty"`
+	Err *SystemError   `json:"error,omitempty"`
 }
 
 func ToQuerierResult(response []byte, err error) QuerierResult {
@@ -49,10 +56,9 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 			Err: syserr,
 		}
 	}
-	stderr := ToStdError(err)
 	return QuerierResult{
 		Ok: &QueryResponse{
-			Err: stderr,
+			Err: err.Error(),
 		},
 	}
 }
@@ -194,7 +200,7 @@ type FullDelegation struct {
 	Delegator          string `json:"delegator"`
 	Validator          string `json:"validator"`
 	Amount             Coin   `json:"amount"`
-	AccumulatedRewards Coin   `json:"accumulated_rewards"`
+	AccumulatedRewards Coins  `json:"accumulated_rewards"`
 	CanRedelegate      Coin   `json:"can_redelegate"`
 }
 
