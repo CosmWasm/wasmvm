@@ -46,8 +46,6 @@ fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, G
 pub extern "C" fn init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
-    // TODO: remove unused cache size
-    _cache_size: usize,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| do_init_cache(data_dir, supported_features))
