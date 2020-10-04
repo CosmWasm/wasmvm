@@ -17,14 +17,14 @@ const DEFAULT_FEATURES = "staking"
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir, DEFAULT_FEATURES, 3)
+	_, err := InitCache(dataDir, DEFAULT_FEATURES)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES, 3)
+	cache, err := InitCache(tmpdir, DEFAULT_FEATURES)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -32,7 +32,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES, 3)
+	cache, err := InitCache(tmpdir, DEFAULT_FEATURES)
 	require.NoError(t, err)
 
 	cleanup := func() {
