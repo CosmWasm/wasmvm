@@ -31,12 +31,12 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv("creator"))
-	require.NoError(t, err)
+	env := mockEnvBin(t)
+	info := mockInfoBin(t, "creator")
 	msg := []byte(`{}`)
 
 	igasMeter1 := GasMeter(gasMeter1)
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -44,7 +44,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 		// push 17
 		var gasMeter2 GasMeter = NewMockGasMeter(100000000)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
-		res, _, err = Handle(cache, id, params, push, &gasMeter2, store, api, &querier, 100000000)
+		res, _, err = Handle(cache, id, env, info, push, &gasMeter2, store, api, &querier, 100000000)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
 	}
@@ -73,7 +73,8 @@ func TestQueueIterator(t *testing.T) {
 	igasMeter := GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"sum":{}}`)
-	data, _, err := Query(cache, id, query, &igasMeter, store, api, &querier, 100000000)
+	env := mockEnvBin(t)
+	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
@@ -83,7 +84,7 @@ func TestQueueIterator(t *testing.T) {
 
 	// query reduce (multiple iterators at once)
 	query = []byte(`{"reducer":{}}`)
-	data, _, err = Query(cache, id, query, &igasMeter, store, api, &querier, 100000000)
+	data, _, err = Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var reduced types.QueryResponse
 	err = json.Unmarshal(data, &reduced)
@@ -101,6 +102,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
 	contract3 := setupQueueContractWithData(t, cache, 11, 6, 2)
+	env := mockEnvBin(t)
 
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
 		id, querier, api := setup.id, setup.querier, setup.api
@@ -110,7 +112,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 
 		// query reduce (multiple iterators at once)
 		query := []byte(`{"reducer":{}}`)
-		data, _, err := Query(cache, id, query, &igasMeter, store, api, &querier, 100000000)
+		data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
 		require.NoError(t, err)
 		var reduced types.QueryResponse
 		err = json.Unmarshal(data, &reduced)
