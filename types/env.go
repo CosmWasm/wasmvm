@@ -9,7 +9,6 @@ package types
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {
 	Block    BlockInfo    `json:"block"`
-	Message  MessageInfo  `json:"message"`
 	Contract ContractInfo `json:"contract"`
 }
 

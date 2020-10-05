@@ -69,7 +69,8 @@ static CACHE_ARG: &str = "cache";
 static WASM_ARG: &str = "wasm";
 static CODE_ID_ARG: &str = "code_id";
 static MSG_ARG: &str = "msg";
-static PARAMS_ARG: &str = "params";
+static ENV_ARG: &str = "env";
+static INFO_ARG: &str = "message_info";
 static GAS_USED_ARG: &str = "gas_used";
 
 const PRINT_DEBUG: bool = false;
@@ -144,7 +145,8 @@ fn do_get_code(cache: &mut CosmCache<DB, GoApi, GoQuerier>, id: Buffer) -> Resul
 pub extern "C" fn instantiate(
     cache: *mut cache_t,
     contract_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -158,7 +160,8 @@ pub extern "C" fn instantiate(
             do_init(
                 c,
                 contract_id,
-                params,
+                env,
+                info,
                 msg,
                 db,
                 api,
@@ -177,7 +180,8 @@ pub extern "C" fn instantiate(
 fn do_init(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -189,13 +193,14 @@ fn do_init(
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
+    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_init_raw(&mut instance, params, msg);
+    let res = call_init_raw(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
@@ -205,7 +210,8 @@ fn do_init(
 pub extern "C" fn handle(
     cache: *mut cache_t,
     code_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -217,7 +223,7 @@ pub extern "C" fn handle(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, params, msg, db, api, querier, gas_limit, gas_used,
+                c, code_id, env, info, msg, db, api, querier, gas_limit, gas_used,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -230,7 +236,8 @@ pub extern "C" fn handle(
 fn do_handle(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -242,13 +249,14 @@ fn do_handle(
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
+    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, params, msg);
+    let res = call_handle_raw(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
@@ -258,7 +266,8 @@ fn do_handle(
 pub extern "C" fn migrate(
     cache: *mut cache_t,
     contract_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -272,7 +281,8 @@ pub extern "C" fn migrate(
             do_migrate(
                 c,
                 contract_id,
-                params,
+                env,
+                info,
                 msg,
                 db,
                 api,
@@ -291,7 +301,8 @@ pub extern "C" fn migrate(
 fn do_migrate(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
-    params: Buffer,
+    env: Buffer,
+    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -303,13 +314,14 @@ fn do_migrate(
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let params = unsafe { params.read() }.ok_or_else(|| Error::empty_arg(PARAMS_ARG))?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
+    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_migrate_raw(&mut instance, params, msg);
+    let res = call_migrate_raw(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
@@ -319,6 +331,7 @@ fn do_migrate(
 pub extern "C" fn query(
     cache: *mut cache_t,
     code_id: Buffer,
+    env: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -329,7 +342,7 @@ pub extern "C" fn query(
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, msg, db, api, querier, gas_limit, gas_used)
+            do_query(c, code_id, env, msg, db, api, querier, gas_limit, gas_used)
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
@@ -341,6 +354,7 @@ pub extern "C" fn query(
 fn do_query(
     cache: &mut CosmCache<DB, GoApi, GoQuerier>,
     code_id: Buffer,
+    env: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -352,12 +366,13 @@ fn do_query(
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
     let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
 
     let deps = to_extern(db, api, querier);
     let mut instance = cache.get_instance(&code_id, deps, gas_limit)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_query_raw(&mut instance, msg);
+    let res = call_query_raw(&mut instance, env, msg);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)

@@ -25,8 +25,8 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv("creator"))
-	require.NoError(t, err)
+	env := mockEnvBin(t)
+	info := mockInfoBin(t, "creator")
 
 	// if the human address is larger than 32 bytes, this will lead to an error in the go side
 	longName := "long123456789012345678901234567890long"
@@ -34,7 +34,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
 	igasMeter := GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -61,13 +61,13 @@ func TestHumanAddressFailure(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	params, err := json.Marshal(mockEnv("creator"))
-	require.NoError(t, err)
+	env := mockEnvBin(t)
+	info := mockInfoBin(t, "creator")
 
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
 	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, id, params, msg, &igasMeter, store, api, &querier, 100000000)
+	_, _, err = Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 
 	// call query which will call canonicalize address
@@ -75,7 +75,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	gasMeter3 := NewMockGasMeter(100000000)
 	query := []byte(`{"verifier":{}}`)
 	igasMeter3 := GasMeter(gasMeter3)
-	res, _, err := Query(cache, id, query, &igasMeter3, store, badApi, &querier, 100000000)
+	res, _, err := Query(cache, id, env, query, &igasMeter3, store, badApi, &querier, 100000000)
 	require.NoError(t, err)
 	var resp types.QueryResponse
 	err = json.Unmarshal(res, &resp)

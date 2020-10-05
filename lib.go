@@ -87,6 +87,7 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 func (w *Wasmer) Instantiate(
 	code CodeID,
 	env types.Env,
+	info types.MessageInfo,
 	initMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -94,11 +95,15 @@ func (w *Wasmer) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.InitResponse, uint64, error) {
-	paramBin, err := json.Marshal(env)
+	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, paramBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	infoBin, err := json.Marshal(info)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Instantiate(w.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -123,6 +128,7 @@ func (w *Wasmer) Instantiate(
 func (w *Wasmer) Execute(
 	code CodeID,
 	env types.Env,
+	info types.MessageInfo,
 	executeMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -130,11 +136,15 @@ func (w *Wasmer) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.HandleResponse, uint64, error) {
-	paramBin, err := json.Marshal(env)
+	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(w.cache, code, paramBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	infoBin, err := json.Marshal(info)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Handle(w.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -155,6 +165,7 @@ func (w *Wasmer) Execute(
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 func (w *Wasmer) Query(
 	code CodeID,
+	env types.Env,
 	queryMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -162,7 +173,11 @@ func (w *Wasmer) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) ([]byte, uint64, error) {
-	data, gasUsed, err := api.Query(w.cache, code, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Query(w.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -187,6 +202,7 @@ func (w *Wasmer) Query(
 func (w *Wasmer) Migrate(
 	code CodeID,
 	env types.Env,
+	info types.MessageInfo,
 	migrateMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -194,11 +210,15 @@ func (w *Wasmer) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 ) (*types.MigrateResponse, uint64, error) {
-	paramBin, err := json.Marshal(env)
+	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(w.cache, code, paramBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	infoBin, err := json.Marshal(info)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Migrate(w.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
 	}
