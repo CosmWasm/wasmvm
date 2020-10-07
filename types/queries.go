@@ -6,9 +6,20 @@ import (
 
 //-------- Queries --------
 
-type QueryResponse struct {
+type RawQueryResponse struct {
 	Ok  []byte `json:"ok,omitempty"`
 	Err string `json:"error,omitempty"`
+}
+
+
+type QueryResponse RawQueryResponse
+
+func (q QueryResponse) MarshalJSON() ([]byte, error) {
+	if len(q.Ok) == 0 && len(q.Err) == 0 {
+		return []byte(`{"ok":""}`), nil
+	}
+	raw := RawQueryResponse(q)
+	return json.Marshal(raw)
 }
 
 //-------- Querier -----------
