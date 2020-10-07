@@ -63,30 +63,36 @@ func TestValidatorWithData(t *testing.T) {
 }
 
 func TestQueryResponseWithEmptyData(t *testing.T) {
-	cases := map[string]struct{
-		req QueryResponse
-		resp string
+	cases := map[string]struct {
+		req       QueryResponse
+		resp      string
 		unmarshal bool
 	}{
 		"ok with data": {
-			req: QueryResponse{Ok:  []byte("foo")},
+			req: QueryResponse{Ok: []byte("foo")},
 			// base64-encoded "foo"
-			resp: `{"ok":"Zm9v"}`,
+			resp:      `{"ok":"Zm9v"}`,
 			unmarshal: true,
 		},
 		"error": {
-			req: QueryResponse{Err: "try again later"},
-			resp: `{"error":"try again later"}`,
+			req:       QueryResponse{Err: "try again later"},
+			resp:      `{"error":"try again later"}`,
 			unmarshal: true,
 		},
 		"ok with empty slice": {
-			req: QueryResponse{Ok: []byte{}},
-			resp: `{"ok":""}`,
+			req:       QueryResponse{Ok: []byte{}},
+			resp:      `{"ok":""}`,
 			unmarshal: true,
 		},
 		"nil data": {
-			req: QueryResponse{},
+			req:  QueryResponse{},
 			resp: `{"ok":""}`,
+			// Once converted to the Rust enum `ContractResult<Binary>` or
+			// its JSON serialization, we cannot differentiate between
+			// nil and an empty slice anymore. As a consequence,
+			// only this or the above deserialization test can be executed.
+			// We prefer empty slice over nil for no reason.
+			unmarshal: false,
 		},
 	}
 
@@ -105,7 +111,5 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 			}
 		})
 	}
-
-
 
 }
