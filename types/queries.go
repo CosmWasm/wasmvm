@@ -7,8 +7,10 @@ import (
 //-------- Queries --------
 
 // QueryResponse is the Go counterpart of `ContractResult<Binary>`.
-// The JSON annotations here are used for deserializing only. There is a custom serializer below.
-type QueryResponse struct {
+// The JSON annotations are used for deserializing directly. There is a custom serializer below.
+type QueryResponse queryResponseImpl
+
+type queryResponseImpl struct {
 	Ok  []byte `json:"ok,omitempty"`
 	Err string `json:"error,omitempty"`
 }
@@ -21,14 +23,7 @@ func (q QueryResponse) MarshalJSON() ([]byte, error) {
 	if len(q.Ok) == 0 && len(q.Err) == 0 {
 		return []byte(`{"ok":""}`), nil
 	}
-
-	return json.Marshal(&struct {
-		Ok  []byte `json:"ok,omitempty"`
-		Err string `json:"error,omitempty"`
-	}{
-		Ok:  q.Ok,
-		Err: q.Err,
-	})
+	return json.Marshal(queryResponseImpl(q))
 }
 
 //-------- Querier -----------
