@@ -61,3 +61,51 @@ func TestValidatorWithData(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, reval, val)
 }
+
+func TestQueryResponseWithEmptyData(t *testing.T) {
+	cases := map[string]struct{
+		req QueryResponse
+		resp string
+		unmarshal bool
+	}{
+		"ok with data": {
+			req: QueryResponse{Ok:  []byte("foo")},
+			// base64-encoded "foo"
+			resp: `{"ok":"Zm9v"}`,
+			unmarshal: true,
+		},
+		"error": {
+			req: QueryResponse{Err: "try again later"},
+			resp: `{"error":"try again later"}`,
+			unmarshal: true,
+		},
+		"ok with empty slice": {
+			req: QueryResponse{Ok: []byte{}},
+			resp: `{"ok":""}`,
+			unmarshal: true,
+		},
+		"nil data": {
+			req: QueryResponse{},
+			resp: `{"ok":""}`,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			data, err := json.Marshal(tc.req)
+			require.NoError(t, err)
+			require.Equal(t, tc.resp, string(data))
+
+			// if unmarshall, make sure this comes back to the proper state
+			if tc.unmarshal {
+				var parsed QueryResponse
+				err = json.Unmarshal(data, &parsed)
+				require.NoError(t, err)
+				require.Equal(t, tc.req, parsed)
+			}
+		})
+	}
+
+
+
+}
