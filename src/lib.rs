@@ -46,9 +46,10 @@ fn to_extern(storage: DB, api: GoApi, querier: GoQuerier) -> Extern<DB, GoApi, G
 pub extern "C" fn init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
+    print_debug: bool,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir, supported_features))
+    let r = catch_unwind(|| do_init_cache(data_dir, supported_features, print_debug))
         .unwrap_or_else(|_| Err(Error::panic()));
     match r {
         Ok(t) => {
@@ -73,11 +74,10 @@ static ENV_ARG: &str = "env";
 static INFO_ARG: &str = "message_info";
 static GAS_USED_ARG: &str = "gas_used";
 
-const PRINT_DEBUG: bool = false;
-
 fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
+    print_debug: bool,
 ) -> Result<*mut CosmCache<DB, GoApi, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = from_utf8(dir)?;
@@ -86,7 +86,7 @@ fn do_init_cache(
         unsafe { supported_features.read() }.ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
-    let cache = unsafe { CosmCache::new(dir_str, features, PRINT_DEBUG) }?;
+    let cache = unsafe { CosmCache::new(dir_str, features, print_debug) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
