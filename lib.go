@@ -38,8 +38,8 @@ type Wasmer struct {
 // cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string) (*Wasmer, error) {
-	cache, err := api.InitCache(dataDir, supportedFeatures)
+func NewWasmer(dataDir string, supportedFeatures string, printDebug bool) (*Wasmer, error) {
+	cache, err := api.InitCache(dataDir, supportedFeatures, printDebug)
 	if err != nil {
 		return nil, err
 	}
