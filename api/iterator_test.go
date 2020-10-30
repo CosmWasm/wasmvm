@@ -30,9 +30,9 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	env := mockEnvBin(t)
-	info := mockInfoBin(t, "creator")
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
 	msg := []byte(`{}`)
 
 	igasMeter1 := GasMeter(gasMeter1)
@@ -73,7 +73,7 @@ func TestQueueIterator(t *testing.T) {
 	igasMeter := GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"sum":{}}`)
-	env := mockEnvBin(t)
+	env := MockEnvBin(t)
 	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
 	require.NoError(t, err)
 	var qres types.QueryResponse
@@ -102,7 +102,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
 	contract3 := setupQueueContractWithData(t, cache, 11, 6, 2)
-	env := mockEnvBin(t)
+	env := MockEnvBin(t)
 
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
 		id, querier, api := setup.id, setup.querier, setup.api
