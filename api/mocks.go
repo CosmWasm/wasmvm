@@ -15,6 +15,46 @@ import (
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
+/** helper constructors **/
+
+const MOCK_CONTRACT_ADDR = "contract"
+
+func MockEnv() types.Env {
+	return types.Env{
+		Block: types.BlockInfo{
+			Height:    123,
+			Time:      1578939743,
+			TimeNanos: 987654321,
+			ChainID:   "foobar",
+		},
+		Contract: types.ContractInfo{
+			Address: MOCK_CONTRACT_ADDR,
+		},
+	}
+}
+
+func MockEnvBin(t *testing.T) []byte {
+	bin, err := json.Marshal(MockEnv())
+	require.NoError(t, err)
+	return bin
+}
+
+func MockInfo(sender types.HumanAddress) types.MessageInfo {
+	return types.MessageInfo{
+		Sender: sender,
+		SentFunds: []types.Coin{{
+			Denom:  "ATOM",
+			Amount: "100",
+		}},
+	}
+}
+
+func MockInfoBin(t *testing.T, sender types.HumanAddress) []byte {
+	bin, err := json.Marshal(MockInfo(sender))
+	require.NoError(t, err)
+	return bin
+}
+
 /*** Mock GasMeter ****/
 // This code is borrowed from Cosmos-SDK store/types/gas.go
 

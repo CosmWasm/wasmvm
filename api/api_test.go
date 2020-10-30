@@ -24,9 +24,9 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	env := mockEnvBin(t)
-	info := mockInfoBin(t, "creator")
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
 
 	// if the human address is larger than 32 bytes, this will lead to an error in the go side
 	longName := "long123456789012345678901234567890long"
@@ -60,9 +60,9 @@ func TestHumanAddressFailure(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(mockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
-	env := mockEnvBin(t)
-	info := mockInfoBin(t, "creator")
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
 
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
