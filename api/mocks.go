@@ -39,18 +39,22 @@ func MockEnvBin(t *testing.T) []byte {
 	return bin
 }
 
-func MockInfo(sender types.HumanAddress) types.MessageInfo {
+func MockInfo(sender types.HumanAddress, funds []types.Coin) types.MessageInfo {
 	return types.MessageInfo{
 		Sender: sender,
-		SentFunds: []types.Coin{{
-			Denom:  "ATOM",
-			Amount: "100",
-		}},
+		SentFunds: funds,
 	}
 }
 
+func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
+	return MockInfo(sender, []types.Coin{{
+			Denom:  "ATOM",
+			Amount: "100",
+		}})
+}
+
 func MockInfoBin(t *testing.T, sender types.HumanAddress) []byte {
-	bin, err := json.Marshal(MockInfo(sender))
+	bin, err := json.Marshal(MockInfoWithFunds(sender))
 	require.NoError(t, err)
 	return bin
 }
