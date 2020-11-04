@@ -3,7 +3,8 @@ version: 2
 jobs:
   build_libgo_cosmwasm:
     docker:
-      - image: circleci/rust:1.41-stretch
+      # We don't use this Rust version but need an image with a Rust environment
+      - image: circleci/rust:1.47.0-buster
     steps:
       - checkout
       - run:
@@ -13,8 +14,11 @@ jobs:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
       - run:
-          name: Add clippy component
-          command: rustup component add clippy
+          name: Add Rust components
+          command: rustup component add clippy rustfmt
+      - run:
+          name: Check formatting
+          command: cargo fmt -- --check
       - run:
           name: Run linter
           command: cargo clippy -- -D warnings

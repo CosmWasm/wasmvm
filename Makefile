@@ -1,6 +1,7 @@
 .PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
 
-DOCKER_TAG := 0.8.2
+# Versioned by a simple counter that is not bound to a specific CosmWasm version
+TAG_PREFIX := 0001
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -56,36 +57,40 @@ test-safety:
 
 # we should build all the docker images locally ONCE and publish them
 docker-image-centos7:
-	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7 -f ./Dockerfile.centos7
+	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7 -f ./Dockerfile.centos7
 
 docker-image-cross:
-	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross -f ./Dockerfile.cross
+	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross -f ./Dockerfile.cross
 
 docker-image-alpine:
-	docker build . -t cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine -f ./Dockerfile.alpine
+	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine -f ./Dockerfile.alpine
 
 docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
 
 docker-publish: docker-images
-	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
-	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
-	docker push cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross
+	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7
+	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine
 
 # and use them to compile release builds
 release:
 	rm -rf target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-cross
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross
 	rm -rf target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-centos7
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7
 
 test-alpine:
 	# build the muslc *.a file
 	rm -rf target/release/examples
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine
 	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go build -tags muslc .
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go test -tags muslc ./api ./types
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine go test -tags muslc ./api ./types
 	# build a go binary
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(DOCKER_TAG)-alpine go build -tags muslc -o muslc.exe ./cmd
-	# run static binary locally (not dlls)
-	./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
+	# run static binary in an alpine machines (not dlls)
+	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.11 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.10 ./muslc.exe ./api/testdata/hackatom.wasm
+	# run static binary locally if you are on Linux
+	# ./muslc.exe ./api/testdata/hackatom.wasm
