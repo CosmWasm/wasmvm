@@ -3,7 +3,8 @@ version: 2
 jobs:
   build_libgo_cosmwasm:
     docker:
-      - image: circleci/rust:1.41-stretch
+      # We don't use this Rust version but need an image with a Rust environment
+      - image: circleci/rust:1.47.0-buster
     steps:
       - checkout
       - run:
