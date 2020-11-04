@@ -18,7 +18,7 @@ ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 WORKDIR /opt
 
 # Pin to proper nightly and add macOS Rust target
-RUN rustup default nightly-2020-06-08
+RUN rustup default nightly-2020-10-24
 RUN rustup target add x86_64-apple-darwin
 
 # Build osxcross
