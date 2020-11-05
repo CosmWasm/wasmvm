@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 
 use cosmwasm_std::{Order, KV};
-use cosmwasm_vm::{BackendResult, GasInfo, Storage};
+use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
 use crate::db::DB;
 use crate::error::GoResult;
@@ -118,8 +118,17 @@ impl Storage for GoStorage {
         (Ok(next_id), gas_info)
     }
 
-    fn next(&mut self, _iterator_id: u32) -> BackendResult<Option<KV>> {
-        unreachable!();
+    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<KV>> {
+        let iterator = match self.iterators.get_mut(&iterator_id) {
+            Some(i) => i,
+            None => {
+                return (
+                    Err(BackendError::iterator_does_not_exist(iterator_id)),
+                    GasInfo::free(),
+                )
+            }
+        };
+        iterator.next()
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
