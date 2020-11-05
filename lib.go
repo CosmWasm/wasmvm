@@ -30,7 +30,8 @@ type GasMeter = api.GasMeter
 // You should create an instance with it's own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
 type Wasmer struct {
-	cache api.Cache
+	cache      api.Cache
+	printDebug bool
 }
 
 // NewWasmer creates an new binding, with the given dataDir where
@@ -39,11 +40,11 @@ type Wasmer struct {
 // They allow popular contracts to be executed very rapidly (no loading overhead),
 // but require ~32-64MB each in memory usage.
 func NewWasmer(dataDir string, supportedFeatures string, printDebug bool) (*Wasmer, error) {
-	cache, err := api.InitCache(dataDir, supportedFeatures, printDebug)
+	cache, err := api.InitCache(dataDir, supportedFeatures)
 	if err != nil {
 		return nil, err
 	}
-	return &Wasmer{cache: cache}, nil
+	return &Wasmer{cache: cache, printDebug: printDebug}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
@@ -103,6 +104,7 @@ func (w *Wasmer) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
+	// TODO: pass w.printDebug here
 	data, gasUsed, err := api.Instantiate(w.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
@@ -144,6 +146,7 @@ func (w *Wasmer) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
+	// TODO: pass w.printDebug here
 	data, gasUsed, err := api.Handle(w.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
@@ -177,6 +180,7 @@ func (w *Wasmer) Query(
 	if err != nil {
 		return nil, 0, err
 	}
+	// TODO: pass w.printDebug here
 	data, gasUsed, err := api.Query(w.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err
@@ -218,6 +222,7 @@ func (w *Wasmer) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
+	// TODO: pass w.printDebug here
 	data, gasUsed, err := api.Migrate(w.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
 	if err != nil {
 		return nil, gasUsed, err

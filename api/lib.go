@@ -26,14 +26,14 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string, printDebug bool) (Cache, error) {
+func InitCache(dataDir string, supportedFeatures string) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	defer freeAfterSend(dir)
 	features := sendSlice([]byte(supportedFeatures))
 	defer freeAfterSend(features)
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, features, (C._Bool)(printDebug), &errmsg)
+	ptr, err := C.init_cache(dir, features, &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
