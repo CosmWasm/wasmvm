@@ -5,10 +5,10 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Size};
 
 use crate::api::GoApi;
 use crate::args::{DATA_DIR_ARG, FEATURES_ARG};
-use crate::db::GoStorage;
 use crate::error::{clear_error, set_error, Error};
 use crate::memory::Buffer;
 use crate::querier::GoQuerier;
+use crate::storage::GoStorage;
 
 const MEMORY_CACHE_SIZE: Size = Size::mebi(500); // TODO: Make configurable
 

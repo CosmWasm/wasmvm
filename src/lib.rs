@@ -7,12 +7,14 @@ mod gas_meter;
 mod iterator;
 mod memory;
 mod querier;
+mod storage;
 mod tests;
 
 pub use api::GoApi;
-pub use db::{db_t, GoStorage, DB};
+pub use db::{db_t, DB};
 pub use memory::{free_rust, Buffer};
 pub use querier::GoQuerier;
+pub use storage::GoStorage;
 
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
