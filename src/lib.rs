@@ -103,6 +103,7 @@ pub extern "C" fn instantiate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
@@ -118,6 +119,7 @@ pub extern "C" fn instantiate(
                 api,
                 querier,
                 gas_limit,
+                print_debug,
                 gas_used,
             )
         }))
@@ -138,6 +140,7 @@ fn do_init(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
@@ -151,7 +154,7 @@ fn do_init(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        print_debug: false,
+        print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
@@ -172,13 +175,24 @@ pub extern "C" fn handle(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
-                c, code_id, env, info, msg, db, api, querier, gas_limit, gas_used,
+                c,
+                code_id,
+                env,
+                info,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                print_debug,
+                gas_used,
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
@@ -198,6 +212,7 @@ fn do_handle(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
@@ -211,7 +226,7 @@ fn do_handle(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        print_debug: false,
+        print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
@@ -232,6 +247,7 @@ pub extern "C" fn migrate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
@@ -247,6 +263,7 @@ pub extern "C" fn migrate(
                 api,
                 querier,
                 gas_limit,
+                print_debug,
                 gas_used,
             )
         }))
@@ -267,6 +284,7 @@ fn do_migrate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
@@ -280,7 +298,7 @@ fn do_migrate(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        print_debug: false,
+        print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
@@ -300,12 +318,24 @@ pub extern "C" fn query(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(c, code_id, env, msg, db, api, querier, gas_limit, gas_used)
+            do_query(
+                c,
+                code_id,
+                env,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                print_debug,
+                gas_used,
+            )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
@@ -323,6 +353,7 @@ fn do_query(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
@@ -335,7 +366,7 @@ fn do_query(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        print_debug: false,
+        print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.

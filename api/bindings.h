@@ -140,6 +140,7 @@ Buffer handle(cache_t *cache,
               GoApi api,
               GoQuerier querier,
               uint64_t gas_limit,
+              bool print_debug,
               uint64_t *gas_used,
               Buffer *err);
 
@@ -154,6 +155,7 @@ Buffer instantiate(cache_t *cache,
                    GoApi api,
                    GoQuerier querier,
                    uint64_t gas_limit,
+                   bool print_debug,
                    uint64_t *gas_used,
                    Buffer *err);
 
@@ -166,6 +168,7 @@ Buffer migrate(cache_t *cache,
                GoApi api,
                GoQuerier querier,
                uint64_t gas_limit,
+               bool print_debug,
                uint64_t *gas_used,
                Buffer *err);
 
@@ -177,6 +180,7 @@ Buffer query(cache_t *cache,
              GoApi api,
              GoQuerier querier,
              uint64_t gas_limit,
+             bool print_debug,
              uint64_t *gas_used,
              Buffer *err);
 

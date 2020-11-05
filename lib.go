@@ -104,8 +104,7 @@ func (w *Wasmer) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	// TODO: pass w.printDebug here
-	data, gasUsed, err := api.Instantiate(w.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Instantiate(w.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, w.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -146,8 +145,7 @@ func (w *Wasmer) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	// TODO: pass w.printDebug here
-	data, gasUsed, err := api.Handle(w.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Handle(w.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, w.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -180,8 +178,7 @@ func (w *Wasmer) Query(
 	if err != nil {
 		return nil, 0, err
 	}
-	// TODO: pass w.printDebug here
-	data, gasUsed, err := api.Query(w.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Query(w.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, w.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -222,8 +219,7 @@ func (w *Wasmer) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
-	// TODO: pass w.printDebug here
-	data, gasUsed, err := api.Migrate(w.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Migrate(w.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, w.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
