@@ -1,4 +1,8 @@
-use cosmwasm_vm::{FfiResult, GasInfo, Storage, StorageIterator};
+use std::collections::HashMap;
+use std::convert::TryInto;
+
+use cosmwasm_std::{Order, KV};
+use cosmwasm_vm::{BackendResult, GasInfo, Storage};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
@@ -48,15 +52,29 @@ pub struct DB {
     pub vtable: DB_vtable,
 }
 
-impl Storage for DB {
-    fn get(&self, key: &[u8]) -> FfiResult<Option<Vec<u8>>> {
+pub struct GoStorage {
+    db: DB,
+    iterators: HashMap<u32, GoIter>,
+}
+
+impl GoStorage {
+    pub fn new(db: DB) -> Self {
+        GoStorage {
+            db,
+            iterators: HashMap::new(),
+        }
+    }
+}
+
+impl Storage for GoStorage {
+    fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let mut err = Buffer::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.read_db)(
-            self.state,
-            self.gas_meter,
+        let go_result: GoResult = (self.db.vtable.read_db)(
+            self.db.state,
+            self.db.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
             &mut result_buf as *mut Buffer,
@@ -89,17 +107,12 @@ impl Storage for DB {
         (Ok(value), gas_info)
     }
 
-    /// Allows iteration over a set of key/value pairs, either forwards or backwards.
-    ///
-    /// The bound `start` is inclusive and `end` is exclusive.
-    ///
-    /// If `start` is lexicographically greater than or equal to `end`, an empty range is described, mo matter of the order.
-    fn range<'a>(
-        &'a self,
+    fn scan(
+        &mut self,
         start: Option<&[u8]>,
         end: Option<&[u8]>,
-        order: cosmwasm_std::Order,
-    ) -> FfiResult<Box<dyn StorageIterator + 'a>> {
+        order: Order,
+    ) -> BackendResult<u32> {
         // returns nul pointer in Buffer in none, otherwise proper buffer
         let start_buf = start
             .map(|s| Buffer::from_vec(s.to_vec()))
@@ -108,11 +121,11 @@ impl Storage for DB {
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
         let mut err = Buffer::default();
-        let mut iter = GoIter::new(self.gas_meter);
+        let mut iter = GoIter::new(self.db.gas_meter);
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.scan_db)(
-            self.state,
-            self.gas_meter,
+        let go_result: GoResult = (self.db.vtable.scan_db)(
+            self.db.state,
+            self.db.gas_meter,
             &mut used_gas as *mut u64,
             start_buf,
             end_buf,
@@ -138,17 +151,28 @@ impl Storage for DB {
                 return (Err(err), gas_info);
             }
         }
-        (Ok(Box::new(iter)), gas_info)
+
+        let next_id: u32 = self
+            .iterators
+            .len()
+            .try_into()
+            .expect("Iterator count exceeded uint32 range. This is a bug.");
+        self.iterators.insert(next_id, iter); // This moves iter. Is this okay?
+        (Ok(next_id), gas_info)
     }
 
-    fn set(&mut self, key: &[u8], value: &[u8]) -> FfiResult<()> {
+    fn next(&mut self, _iterator_id: u32) -> BackendResult<Option<KV>> {
+        unreachable!();
+    }
+
+    fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());
         let mut err = Buffer::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.write_db)(
-            self.state,
-            self.gas_meter,
+        let go_result: GoResult = (self.db.vtable.write_db)(
+            self.db.state,
+            self.db.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
             value_buf,
@@ -173,13 +197,13 @@ impl Storage for DB {
         (Ok(()), gas_info)
     }
 
-    fn remove(&mut self, key: &[u8]) -> FfiResult<()> {
+    fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut err = Buffer::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.remove_db)(
-            self.state,
-            self.gas_meter,
+        let go_result: GoResult = (self.db.vtable.remove_db)(
+            self.db.state,
+            self.db.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
             &mut err as *mut Buffer,

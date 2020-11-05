@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
-use cosmwasm_vm::{Api, FfiError, FfiResult, GasInfo};
+use cosmwasm_vm::{Api, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -37,7 +37,7 @@ pub struct GoApi {
 unsafe impl Send for GoApi {}
 
 impl Api for GoApi {
-    fn canonical_address(&self, human: &HumanAddr) -> FfiResult<CanonicalAddr> {
+    fn canonical_address(&self, human: &HumanAddr) -> BackendResult<CanonicalAddr> {
         let human_bytes = human.as_str().as_bytes();
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
@@ -72,7 +72,7 @@ impl Api for GoApi {
         (Ok(CanonicalAddr(Binary(canon))), gas_info)
     }
 
-    fn human_address(&self, canonical: &CanonicalAddr) -> FfiResult<HumanAddr> {
+    fn human_address(&self, canonical: &CanonicalAddr) -> BackendResult<HumanAddr> {
         let canonical_bytes = canonical.as_slice();
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
@@ -105,7 +105,7 @@ impl Api for GoApi {
             unsafe { output.consume() }
         };
         let human_result = String::from_utf8(result)
-            .map_err(FfiError::from)
+            .map_err(BackendError::from)
             .map(HumanAddr);
         (human_result, gas_info)
     }

@@ -1,4 +1,4 @@
-use cosmwasm_vm::FfiError;
+use cosmwasm_vm::BackendError;
 use std::fmt;
 
 use crate::Buffer;
@@ -58,13 +58,17 @@ impl fmt::Display for GoResult {
 }
 
 impl GoResult {
-    /// This converts a GoResult to a `Result<(), FfiError>`, using a fallback error message for some cases.
+    /// This converts a GoResult to a `Result<(), BackendError>`, using a fallback error message for some cases.
     /// If it is GoResult::User the error message will be returned to the contract.
     /// Otherwise, the returned error will trigger a trap in the VM and abort contract execution immediately.
     ///
     /// Safety: this reads data from an externally provided buffer and assumes valid utf-8 encoding
     /// Only call if you trust the code that provides `error_msg` to be correct.
-    pub unsafe fn into_ffi_result<F>(self, error_msg: Buffer, default: F) -> Result<(), FfiError>
+    pub unsafe fn into_ffi_result<F>(
+        self,
+        error_msg: Buffer,
+        default: F,
+    ) -> Result<(), BackendError>
     where
         F: Fn() -> String,
     {
@@ -80,11 +84,11 @@ impl GoResult {
 
         match self {
             GoResult::Ok => Ok(()),
-            GoResult::Panic => Err(FfiError::foreign_panic()),
-            GoResult::BadArgument => Err(FfiError::bad_argument()),
-            GoResult::OutOfGas => Err(FfiError::out_of_gas()),
-            GoResult::Other => Err(FfiError::unknown(read_error_msg())),
-            GoResult::User => Err(FfiError::user_err(read_error_msg())),
+            GoResult::Panic => Err(BackendError::foreign_panic()),
+            GoResult::BadArgument => Err(BackendError::bad_argument()),
+            GoResult::OutOfGas => Err(BackendError::out_of_gas()),
+            GoResult::Other => Err(BackendError::unknown(read_error_msg())),
+            GoResult::User => Err(BackendError::user_err(read_error_msg())),
         }
     }
 }

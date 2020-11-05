@@ -143,7 +143,7 @@ Buffer handle(cache_t *cache,
               uint64_t *gas_used,
               Buffer *err);
 
-cache_t *init_cache(Buffer data_dir, Buffer supported_features, bool print_debug, Buffer *err);
+cache_t *init_cache(Buffer data_dir, Buffer supported_features, Buffer *err);
 
 Buffer instantiate(cache_t *cache,
                    Buffer contract_id,

@@ -1,5 +1,5 @@
 use cosmwasm_std::KV;
-use cosmwasm_vm::{FfiError, FfiResult, GasInfo, StorageIterator};
+use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
@@ -45,14 +45,12 @@ impl GoIter {
             vtable: Iterator_vtable::default(),
         }
     }
-}
 
-impl StorageIterator for GoIter {
-    fn next(&mut self) -> FfiResult<Option<KV>> {
+    pub fn next(&mut self) -> BackendResult<Option<KV>> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
             None => {
-                let result = Err(FfiError::unknown("iterator vtable not set"));
+                let result = Err(BackendError::unknown("iterator vtable not set"));
                 return (result, GasInfo::free());
             }
         };
@@ -87,7 +85,7 @@ impl StorageIterator for GoIter {
                 if let Some(value) = value {
                     Ok(Some((key.into(), value.into())))
                 } else {
-                    Err(FfiError::unknown(
+                    Err(BackendError::unknown(
                         "Failed to read value while reading the next key in the db",
                     ))
                 }

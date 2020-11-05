@@ -167,6 +167,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "clru"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44e10ee132778350b0390b347b47e4bbb098e23f0ee34ded4a03b078cae19024"
+
+[[package]]
 name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -174,23 +180,24 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.11.0"
+version = "0.12.0-alpha2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d1c145d2af46c99fedea2b6bedcd2cefcec7daeca5300230117e8f8f371604f"
+checksum = "c2ada988d5d555d9f4392b2a1d2df6fcfde1785b3baac8353ba63feff6884d8f"
 dependencies = [
  "base64",
  "schemars",
  "serde",
  "serde-json-wasm",
- "snafu",
+ "thiserror",
 ]
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.11.0"
+version = "0.12.0-alpha2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e411ee53a4297b223df112eca3870bc8e7f292460970efa7e853a988f7548012"
+checksum = "aec30c24cb57f417b5c7d884a09505ae9f4c57ef06971bfff369d017fb0e6259"
 dependencies = [
+ "clru",
  "cosmwasm-std",
  "hex",
  "memmap",
@@ -199,7 +206,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "snafu",
+ "thiserror",
  "wasmer-clif-backend",
  "wasmer-middleware-common",
  "wasmer-runtime-core",
@@ -459,7 +466,7 @@ checksum = "bcc8e0c9bce37868955864dbecd2b1ab2bdf967e6f28066d65aaac620444b65c"
 
 [[package]]
 name = "go-cosmwasm"
-version = "0.11.0"
+version = "0.12.0-alpha1"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",

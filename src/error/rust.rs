@@ -131,7 +131,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_vm::FfiError;
+    use cosmwasm_vm::BackendError;
     use std::str;
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn vm_err_works_for_errors() {
         // No public interface exists to generate a VmError directly
-        let original: VmError = FfiError::out_of_gas().into();
+        let original: VmError = BackendError::out_of_gas().into();
         let error = Error::vm_err(original);
         match error {
             Error::VmErr { msg, .. } => {
