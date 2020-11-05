@@ -13,20 +13,20 @@ import (
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
-const DEFAULT_FEATURES = "staking"
+const TESTING_FEATURES = "staking"
 const TESTING_PRINT_DEBUG = false
 const TESTING_GAS_LIMIT = 100_000_000
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir, DEFAULT_FEATURES)
+	_, err := InitCache(dataDir, TESTING_FEATURES)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -34,7 +34,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES)
 	require.NoError(t, err)
 
 	cleanup := func() {
