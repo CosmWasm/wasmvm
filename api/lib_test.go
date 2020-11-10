@@ -16,17 +16,18 @@ import (
 const TESTING_FEATURES = "staking"
 const TESTING_PRINT_DEBUG = false
 const TESTING_GAS_LIMIT = 100_000_000
+const TESTING_CACHE_SIZE = 100 // MiB
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir, TESTING_FEATURES)
+	_, err := InitCache(dataDir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, TESTING_FEATURES)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -34,7 +35,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, TESTING_FEATURES)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	cleanup := func() {

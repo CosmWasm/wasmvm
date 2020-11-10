@@ -20,6 +20,7 @@ type u8_ptr = *C.uint8_t
 type usize = C.uintptr_t
 type cint = C.int
 type cbool = C.bool
+type cu32 = C.uint32_t
 
 type Cache struct {
 	ptr *C.cache_t
@@ -27,14 +28,14 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string) (Cache, error) {
+func InitCache(dataDir string, supportedFeatures string, cacheSize uint32) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	defer freeAfterSend(dir)
 	features := sendSlice([]byte(supportedFeatures))
 	defer freeAfterSend(features)
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, features, &errmsg)
+	ptr, err := C.init_cache(dir, features, cu32(cacheSize), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}

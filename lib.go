@@ -41,8 +41,7 @@ type VM struct {
 // `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
 func NewVM(dataDir string, supportedFeatures string, printDebug bool, cacheSize uint32) (*VM, error) {
-	// TODO: use cacheSize
-	cache, err := api.InitCache(dataDir, supportedFeatures)
+	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}

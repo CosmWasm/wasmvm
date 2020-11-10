@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+const SUPPORTED_FEATURES = "staking"
+const PRINT_DEBUG = true
+const CACHE_SIZE = 100 // MiB
+
 // This is just a demo to ensure we can compile a static go binary
 func main() {
 	file := os.Args[1]
@@ -18,7 +22,7 @@ func main() {
 	fmt.Println("Loaded!")
 
 	os.MkdirAll("tmp", 0755)
-	vm, err := wasm.NewVM("tmp", "staking", true)
+	vm, err := wasm.NewVM("tmp", SUPPORTED_FEATURES, PRINT_DEBUG, CACHE_SIZE)
 	if err != nil {
 		panic(err)
 	}
