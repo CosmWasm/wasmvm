@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	wasm "github.com/CosmWasm/go-cosmwasm"
+	wasmvm "github.com/CosmWasm/wasmvm"
 	"io/ioutil"
 	"os"
 )
@@ -22,7 +22,7 @@ func main() {
 	fmt.Println("Loaded!")
 
 	os.MkdirAll("tmp", 0755)
-	vm, err := wasm.NewVM("tmp", SUPPORTED_FEATURES, PRINT_DEBUG, CACHE_SIZE)
+	vm, err := wasmvm.NewVM("tmp", SUPPORTED_FEATURES, PRINT_DEBUG, CACHE_SIZE)
 	if err != nil {
 		panic(err)
 	}

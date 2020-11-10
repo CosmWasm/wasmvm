@@ -29,18 +29,18 @@ build-rust: build-rust-release
 # use debug build for quick testing
 build-rust-debug:
 	cargo build --features backtraces
-	cp target/debug/libgo_cosmwasm.$(DLL_EXT) api
+	cp target/debug/libwasmvm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
 	cargo build --release --features backtraces
-	cp target/release/libgo_cosmwasm.$(DLL_EXT) api
+	cp target/release/libwasmvm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 # implement stripping based on os
 ifeq ($(DLL_EXT),so)
 strip:
-	strip api/libgo_cosmwasm.so
+	strip api/libwasmvm.so
 else
 # TODO: add for windows and osx
 strip:
