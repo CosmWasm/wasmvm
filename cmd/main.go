@@ -18,17 +18,17 @@ func main() {
 	fmt.Println("Loaded!")
 
 	os.MkdirAll("tmp", 0755)
-	wasmer, err := wasm.NewWasmer("tmp", "staking", true)
+	vm, err := wasm.NewVM("tmp", "staking", true)
 	if err != nil {
 		panic(err)
 	}
 
-	id, err := wasmer.Create(bz)
+	id, err := vm.Create(bz)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("Got code id: %X\n", id)
 
-	wasmer.Cleanup()
+	vm.Cleanup()
 	fmt.Println("finished")
 }
