@@ -4,11 +4,15 @@ use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 
 use cosmwasm_std::{coins, HumanAddr};
-use cosmwasm_vm::testing::{mock_dependencies, mock_env, mock_info, mock_instance_with_gas_limit};
-use cosmwasm_vm::{call_handle_raw, call_init_raw, features_from_csv, to_vec, CosmCache};
+use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
+use cosmwasm_vm::{
+    call_handle_raw, call_init_raw, features_from_csv, to_vec, Cache, CacheOptions,
+    InstanceOptions, Size,
+};
 
 static CONTRACT: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
 const PRINT_DEBUG: bool = false;
+const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
@@ -31,12 +35,18 @@ fn make_init_msg() -> (InitMsg, HumanAddr) {
 
 #[test]
 fn handle_cpu_loop_with_cache() {
-    let deps = mock_dependencies(&[]);
-    let gas_limit = 2_000_000u64;
+    let backend = mock_backend(&[]);
+    let options = CacheOptions {
+        base_dir: TempDir::new().unwrap().path().to_path_buf(),
+        supported_features: features_from_csv("staking"),
+        memory_cache_size: MEMORY_CACHE_SIZE,
+    };
+    let mut cache = unsafe { Cache::new(options) }.unwrap();
 
-    let tmp_dir = TempDir::new().unwrap();
-    let features = features_from_csv("staking");
-    let mut cache = unsafe { CosmCache::new(tmp_dir.path(), features, PRINT_DEBUG) }.unwrap();
+    let options = InstanceOptions {
+        gas_limit: 2_000_000,
+        print_debug: PRINT_DEBUG,
+    };
 
     // store code
     let code_id = cache.save_wasm(CONTRACT).unwrap();
@@ -45,21 +55,21 @@ fn handle_cpu_loop_with_cache() {
     let (init_msg, creator) = make_init_msg();
     let env = mock_env();
     let info = mock_info(creator, &coins(1000, "cosm"));
-    let mut instance = cache.get_instance(&code_id, deps, gas_limit).unwrap();
+    let mut instance = cache.get_instance(&code_id, backend, options).unwrap();
     let raw_msg = to_vec(&init_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
     let raw_info = to_vec(&info).unwrap();
     let res = call_init_raw(&mut instance, &raw_env, &raw_info, &raw_msg);
-    let gas_used = gas_limit - instance.get_gas_left();
+    let gas_used = options.gas_limit - instance.get_gas_left();
     println!("Init used gas: {}", gas_used);
     res.unwrap();
-    let deps = instance.recycle().unwrap();
+    let backend = instance.recycle().unwrap();
 
     // handle
-    let mut instance = cache.get_instance(&code_id, deps, gas_limit).unwrap();
+    let mut instance = cache.get_instance(&code_id, backend, options).unwrap();
     let raw_msg = r#"{"cpu_loop":{}}"#;
     let res = call_handle_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
-    let gas_used = gas_limit - instance.get_gas_left();
+    let gas_used = options.gas_limit - instance.get_gas_left();
     println!("Handle used gas: {}", gas_used);
     assert!(res.is_err());
     assert_eq!(instance.get_gas_left(), 0);

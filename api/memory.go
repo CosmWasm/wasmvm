@@ -12,9 +12,9 @@ func allocateRust(data []byte) C.Buffer {
 	if data == nil {
 		// Just return a null buffer
 		ret = C.Buffer{
-			ptr: u8_ptr(nil),
-			len: usize(0),
-			cap: usize(0),
+			ptr: cu8_ptr(nil),
+			len: cusize(0),
+			cap: cusize(0),
 		}
 		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
 		// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
@@ -28,22 +28,22 @@ func allocateRust(data []byte) C.Buffer {
 		// https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=01ced0731171c8226e2c28634a7e41d7
 	} else if len(data) == 0 {
 		// This will create an empty vector
-		ret = C.allocate_rust(u8_ptr(nil), usize(0))
+		ret = C.allocate_rust(cu8_ptr(nil), cusize(0))
 	} else {
 		// This will allocate a proper vector with content and return a description of it
-		ret = C.allocate_rust(u8_ptr(unsafe.Pointer(&data[0])), usize(len(data)))
+		ret = C.allocate_rust(cu8_ptr(unsafe.Pointer(&data[0])), cusize(len(data)))
 	}
 	return ret
 }
 
 func sendSlice(s []byte) C.Buffer {
 	if s == nil {
-		return C.Buffer{ptr: u8_ptr(nil), len: usize(0), cap: usize(0)}
+		return C.Buffer{ptr: cu8_ptr(nil), len: cusize(0), cap: cusize(0)}
 	}
 	return C.Buffer{
-		ptr: u8_ptr(C.CBytes(s)),
-		len: usize(len(s)),
-		cap: usize(len(s)),
+		ptr: cu8_ptr(C.CBytes(s)),
+		len: cusize(len(s)),
+		cap: cusize(len(s)),
 	}
 }
 
@@ -77,5 +77,5 @@ func freeAfterSend(b C.Buffer) {
 }
 
 func bufIsNil(b C.Buffer) bool {
-	return b.ptr == u8_ptr(nil)
+	return b.ptr == cu8_ptr(nil)
 }

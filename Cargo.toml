@@ -1,6 +1,6 @@
 [package]
 name = "go-cosmwasm"
-version = "0.11.0"
+version = "0.12.0-alpha1"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -26,16 +26,17 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = ["singlepass", "backtraces"]
-backtraces = ["snafu/backtraces"]
+# This feature requires Rust nightly because it depends on the unstable backtrace feature.
+backtraces = []
 singlepass = ["cosmwasm-vm/default-singlepass"]
 cranelift = ["cosmwasm-vm/default-cranelift"]
 
 [dependencies]
-cosmwasm-std = { version = "0.11.0", features = ["iterator"]}
-cosmwasm-vm = { version = "0.11.0", features = ["iterator"] }
+cosmwasm-std = { version = "0.12.0-alpha3", features = ["iterator"]}
+cosmwasm-vm = { version = "0.12.0-alpha3", features = ["iterator"] }
 errno = "0.2"
-snafu = "0.6.3"
 serde_json = "1.0"
+thiserror = "1.0"
 
 [dev-dependencies]
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

@@ -26,29 +26,31 @@ type Querier = types.Querier
 // GasMeter is a read-only version of the sdk gas meter
 type GasMeter = api.GasMeter
 
-// Wasmer is the main entry point to this library.
-// You should create an instance with it's own subdirectory to manage state inside,
+// VM is the main entry point to this library.
+// You should create an instance with its own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
-type Wasmer struct {
-	cache api.Cache
+type VM struct {
+	cache      api.Cache
+	printDebug bool
 }
 
-// NewWasmer creates an new binding, with the given dataDir where
-// it can store raw wasm and the pre-compile cache.
-// cacheSize sets the size of an optional in-memory LRU cache for prepared VMs.
-// They allow popular contracts to be executed very rapidly (no loading overhead),
-// but require ~32-64MB each in memory usage.
-func NewWasmer(dataDir string, supportedFeatures string, printDebug bool) (*Wasmer, error) {
-	cache, err := api.InitCache(dataDir, supportedFeatures, printDebug)
+// NewVM creates a new VM.
+//
+// `dataDir` is a base directory for Wasm blobs and various caches.
+// `supportedFeatures` is a comma separated list of features suppored by the chain.
+// `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
+// `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
+func NewVM(dataDir string, supportedFeatures string, printDebug bool, cacheSize uint32) (*VM, error) {
+	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}
-	return &Wasmer{cache: cache}, nil
+	return &VM{cache: cache, printDebug: printDebug}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (w *Wasmer) Cleanup() {
-	api.ReleaseCache(w.cache)
+func (vm *VM) Cleanup() {
+	api.ReleaseCache(vm.cache)
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile
@@ -61,8 +63,8 @@ func (w *Wasmer) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
-	return api.Create(w.cache, code)
+func (vm *VM) Create(code WasmCode) (CodeID, error) {
+	return api.Create(vm.cache, code)
 }
 
 // GetCode will load the original wasm code for the given code id.
@@ -72,8 +74,8 @@ func (w *Wasmer) Create(code WasmCode) (CodeID, error) {
 // This can be used so that the (short) code id (hash) is stored in the iavl tree
 // and the larger binary blobs (wasm and pre-compiles) are all managed by the
 // rust library
-func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
-	return api.GetCode(w.cache, code)
+func (vm *VM) GetCode(code CodeID) (WasmCode, error) {
+	return api.GetCode(vm.cache, code)
 }
 
 // Instantiate will create a new contract based on the given codeID.
@@ -84,7 +86,7 @@ func (w *Wasmer) GetCode(code CodeID) (WasmCode, error) {
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
-func (w *Wasmer) Instantiate(
+func (vm *VM) Instantiate(
 	code CodeID,
 	env types.Env,
 	info types.MessageInfo,
@@ -103,7 +105,7 @@ func (w *Wasmer) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(w.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Instantiate(vm.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -125,7 +127,7 @@ func (w *Wasmer) Instantiate(
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the env with relevent info on this instance (address, balance, etc)
-func (w *Wasmer) Execute(
+func (vm *VM) Execute(
 	code CodeID,
 	env types.Env,
 	info types.MessageInfo,
@@ -144,7 +146,7 @@ func (w *Wasmer) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(w.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Handle(vm.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -163,7 +165,7 @@ func (w *Wasmer) Execute(
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
-func (w *Wasmer) Query(
+func (vm *VM) Query(
 	code CodeID,
 	env types.Env,
 	queryMsg []byte,
@@ -177,7 +179,7 @@ func (w *Wasmer) Query(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Query(w.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Query(vm.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -199,7 +201,7 @@ func (w *Wasmer) Query(
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
-func (w *Wasmer) Migrate(
+func (vm *VM) Migrate(
 	code CodeID,
 	env types.Env,
 	info types.MessageInfo,
@@ -218,7 +220,7 @@ func (w *Wasmer) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(w.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit)
+	data, gasUsed, err := api.Migrate(vm.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}

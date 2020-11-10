@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
-use cosmwasm_vm::{FfiResult, GasInfo, Querier};
+use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoResult;
 use crate::memory::Buffer;
@@ -34,7 +34,7 @@ impl Querier for GoQuerier {
         &self,
         request: &[u8],
         gas_limit: u64,
-    ) -> FfiResult<SystemResult<ContractResult<Binary>>> {
+    ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
         let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
         let mut err = Buffer::default();

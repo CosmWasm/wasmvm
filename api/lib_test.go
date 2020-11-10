@@ -13,18 +13,21 @@ import (
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
-const DEFAULT_FEATURES = "staking"
+const TESTING_FEATURES = "staking"
+const TESTING_PRINT_DEBUG = false
+const TESTING_GAS_LIMIT = 100_000_000
+const TESTING_CACHE_SIZE = 100 // MiB
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
-	_, err := InitCache(dataDir, DEFAULT_FEATURES, true)
+	_, err := InitCache(dataDir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.Error(t, err)
 
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES, true)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -32,7 +35,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, DEFAULT_FEATURES, true)
+	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	cleanup := func() {
@@ -76,7 +79,7 @@ func TestInstantiate(t *testing.T) {
 	id, err := Create(cache, wasm)
 	require.NoError(t, err)
 
-	gasMeter := NewMockGasMeter(100000000)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
@@ -86,7 +89,7 @@ func TestInstantiate(t *testing.T) {
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x113ae), cost)
@@ -103,7 +106,7 @@ func TestHandle(t *testing.T) {
 	defer cleanup()
 	id := createTestContract(t, cache)
 
-	gasMeter1 := NewMockGasMeter(100000000)
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
@@ -116,7 +119,7 @@ func TestHandle(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -124,13 +127,13 @@ func TestHandle(t *testing.T) {
 	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
 
 	// execute with the same store
-	gasMeter2 := NewMockGasMeter(100000000)
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	res, cost, err = Handle(cache, id, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, 100000000)
+	res, cost, err = Handle(cache, id, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x1a021), cost)
@@ -159,7 +162,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	defer cleanup()
 	id := createTestContract(t, cache)
 
-	gasMeter1 := NewMockGasMeter(100000000)
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
@@ -172,7 +175,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
 	start := time.Now()
-	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -186,7 +189,7 @@ func TestHandleCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	res, cost, err = Handle(cache, id, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas)
+	res, cost, err = Handle(cache, id, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
@@ -211,7 +214,7 @@ func TestHandleStorageLoop(t *testing.T) {
 
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, maxGas)
+	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -221,7 +224,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	res, cost, err = Handle(cache, id, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas)
+	res, cost, err = Handle(cache, id, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff := time.Now().Sub(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
@@ -250,7 +253,7 @@ func TestHandleUserErrorsInApiCalls(t *testing.T) {
 
 	defaultApi := NewMockAPI()
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, defaultApi, &querier, maxGas)
+	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, defaultApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -259,7 +262,7 @@ func TestHandleUserErrorsInApiCalls(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	failingApi := NewMockFailureAPI()
-	res, _, err = Handle(cache, id, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas)
+	res, _, err = Handle(cache, id, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 }
@@ -269,7 +272,7 @@ func TestMigrate(t *testing.T) {
 	defer cleanup()
 	id := createTestContract(t, cache)
 
-	gasMeter := NewMockGasMeter(100000000)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
@@ -280,13 +283,13 @@ func TestMigrate(t *testing.T) {
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, 100000000)
+	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
 	// verifier is fred
 	query := []byte(`{"verifier":{}}`)
-	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
+	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
@@ -297,11 +300,11 @@ func TestMigrate(t *testing.T) {
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
 	info = MockInfoBin(t, "fred")
-	res, _, err = Migrate(cache, id, env, info, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, 100000000)
+	res, _, err = Migrate(cache, id, env, info, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
-	data, _, err = Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
+	data, _, err = Query(cache, id, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var qres2 types.QueryResponse
 	err = json.Unmarshal(data, &qres2)
@@ -316,7 +319,7 @@ func TestMultipleInstances(t *testing.T) {
 	id := createTestContract(t, cache)
 
 	// instance1 controlled by fred
-	gasMeter1 := NewMockGasMeter(100000000)
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := GasMeter(gasMeter1)
 	store1 := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -324,19 +327,19 @@ func TestMultipleInstances(t *testing.T) {
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "regen")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store1, api, &querier, 100000000)
+	res, cost, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store1, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
 	assert.Equal(t, uint64(0x112e8), cost)
 
 	// instance2 controlled by mary
-	gasMeter2 := NewMockGasMeter(100000000)
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := GasMeter(gasMeter2)
 	store2 := NewLookup(gasMeter2)
 	info = MockInfoBin(t, "chrous")
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
-	res, cost, err = Instantiate(cache, id, env, info, msg, &igasMeter2, store2, api, &querier, 100000000)
+	res, cost, err = Instantiate(cache, id, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1134b), cost)
@@ -394,11 +397,11 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, id []byte, signer types.HumanAddress, store KVStore, api *GoAPI, querier Querier, gasExpected uint64) types.HandleResult {
-	gasMeter := NewMockGasMeter(100000000)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, signer)
-	res, cost, err := Handle(cache, id, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, 100000000)
+	res, cost, err := Handle(cache, id, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	assert.Equal(t, gasExpected, cost)
 
@@ -414,7 +417,7 @@ func TestQuery(t *testing.T) {
 	id := createTestContract(t, cache)
 
 	// set up contract
-	gasMeter1 := NewMockGasMeter(100000000)
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := GasMeter(gasMeter1)
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -422,15 +425,15 @@ func TestQuery(t *testing.T) {
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	_, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, 100000000)
+	_, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// invalid query
-	gasMeter2 := NewMockGasMeter(100000000)
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	query := []byte(`{"Raw":{"val":"config"}}`)
-	data, _, err := Query(cache, id, env, query, &igasMeter2, store, api, &querier, 100000000)
+	data, _, err := Query(cache, id, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
@@ -438,11 +441,11 @@ func TestQuery(t *testing.T) {
 	require.Equal(t, "Error parsing into type hackatom::contract::QueryMsg: unknown variant `Raw`, expected one of `verifier`, `other_balance`, `recurse`", badResp.Err)
 
 	// make a valid query
-	gasMeter3 := NewMockGasMeter(100000000)
+	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter3 := GasMeter(gasMeter3)
 	store.SetGasMeter(gasMeter3)
 	query = []byte(`{"verifier":{}}`)
-	data, _, err = Query(cache, id, env, query, &igasMeter3, store, api, &querier, 100000000)
+	data, _, err = Query(cache, id, env, query, &igasMeter3, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
@@ -457,7 +460,7 @@ func TestHackatomQuerier(t *testing.T) {
 	id := createTestContract(t, cache)
 
 	// set up contract
-	gasMeter := NewMockGasMeter(100000000)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
@@ -468,7 +471,7 @@ func TestHackatomQuerier(t *testing.T) {
 	query := []byte(`{"other_balance":{"address":"foobar"}}`)
 	// TODO The query happens before the contract is initialized. How is this legal?
 	env := MockEnvBin(t)
-	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
+	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
@@ -499,7 +502,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	id := createReflectContract(t, cache)
 
 	// set up contract
-	gasMeter := NewMockGasMeter(100000000)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
@@ -519,7 +522,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	query, err := json.Marshal(queryMsg)
 	require.NoError(t, err)
 	env := MockEnvBin(t)
-	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, 100000000)
+	data, _, err := Query(cache, id, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var qres types.QueryResponse
 	err = json.Unmarshal(data, &qres)
