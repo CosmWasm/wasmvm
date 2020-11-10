@@ -11,16 +11,18 @@ import (
 	"github.com/CosmWasm/go-cosmwasm/types"
 )
 
-// nice aliases to the rust names
-type i32 = C.int32_t
-type i64 = C.int64_t
-type u64 = C.uint64_t
-type u8 = C.uint8_t
-type u8_ptr = *C.uint8_t
-type usize = C.uintptr_t
+// Value types
 type cint = C.int
 type cbool = C.bool
+type cusize = C.size_t
+type cu8 = C.uint8_t
 type cu32 = C.uint32_t
+type cu64 = C.uint64_t
+type ci8 = C.int8_t
+type ci32 = C.int32_t
+type ci64 = C.int64_t
+// Pointers
+type cu8_ptr = *C.uint8_t
 
 type Cache struct {
 	ptr *C.cache_t
@@ -98,10 +100,10 @@ func Instantiate(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, u64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -139,10 +141,10 @@ func Handle(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, u64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -180,10 +182,10 @@ func Migrate(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, u64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -218,10 +220,10 @@ func Query(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed u64
+	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.query(cache.ptr, id, e, m, db, a, q, u64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

@@ -148,13 +148,13 @@ var iterator_vtable = C.Iterator_vtable{
 func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 	idx := storeIterator(dbCounter, it)
 	return C.iterator_t{
-		db_counter:     u64(dbCounter),
-		iterator_index: u64(idx),
+		db_counter:     cu64(dbCounter),
+		iterator_index: cu64(idx),
 	}
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -168,7 +168,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *u64, key C.Buffer, val 
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (u64)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -224,7 +224,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 }
 
 //export cScan
-func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order i32, out *C.GoIter, errOut *C.Buffer) (ret C.GoResult) {
+func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order ci32, out *C.GoIter, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil {
 		// we received an invalid pointer
@@ -323,7 +323,7 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer, used_gas *u64) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if human == nil {
 		// we received an invalid pointer
@@ -332,7 +332,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	c := receiveSlice(canon)
 	h, cost, err := api.HumanAddress(c)
-	*used_gas = u64(cost)
+	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
@@ -346,7 +346,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer, used_gas *u64) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
 	if canon == nil {
@@ -357,7 +357,7 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.
 	api := (*GoAPI)(unsafe.Pointer(ptr))
 	h := string(receiveSlice(human))
 	c, cost, err := api.CanonicalAddress(h)
-	*used_gas = u64(cost)
+	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = allocateRust([]byte(err.Error()))
