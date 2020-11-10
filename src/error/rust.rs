@@ -1,88 +1,102 @@
-use errno::{set_errno, Errno};
-
 use cosmwasm_vm::VmError;
-use snafu::Snafu;
+use errno::{set_errno, Errno};
+#[cfg(feature = "backtraces")]
+use std::backtrace::Backtrace;
+use thiserror::Error;
 
 use crate::memory::Buffer;
 
-#[derive(Debug, Snafu)]
-pub enum Error {
-    #[snafu(display("Null/Empty argument: {}", name))]
+#[derive(Error, Debug)]
+pub enum RustError {
+    #[error("Null/Empty argument: {}", name)]
     EmptyArg {
         name: String,
         #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
+        backtrace: Backtrace,
     },
     /// Whenever UTF-8 bytes cannot be decoded into a unicode string, e.g. in String::from_utf8 or str::from_utf8.
-    #[snafu(display("Cannot decode UTF8 bytes into string: {}", msg))]
+    #[error("Cannot decode UTF8 bytes into string: {}", msg)]
     InvalidUtf8 {
         msg: String,
-        backtrace: snafu::Backtrace,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
     },
-    #[snafu(display("Ran out of gas"))]
+    #[error("Ran out of gas")]
     OutOfGas {
         #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
+        backtrace: Backtrace,
     },
-    #[snafu(display("Caught Panic"))]
+    #[error("Caught panic")]
     Panic {
         #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
+        backtrace: Backtrace,
     },
-    #[snafu(display("Error calling the VM: {}", msg))]
+    #[error("Error calling the VM: {}", msg)]
     VmErr {
         msg: String,
         #[cfg(feature = "backtraces")]
-        backtrace: snafu::Backtrace,
+        backtrace: Backtrace,
     },
 }
 
-impl Error {
+impl RustError {
     pub fn empty_arg<T: Into<String>>(name: T) -> Self {
-        EmptyArg { name: name.into() }.build()
+        RustError::EmptyArg {
+            name: name.into(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
     }
 
     pub fn invalid_utf8<S: ToString>(msg: S) -> Self {
-        InvalidUtf8 {
+        RustError::InvalidUtf8 {
             msg: msg.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
         }
-        .build()
     }
 
     pub fn panic() -> Self {
-        Panic {}.build()
+        RustError::Panic {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
     }
 
     pub fn vm_err<S: ToString>(msg: S) -> Self {
-        VmErr {
+        RustError::VmErr {
             msg: msg.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
         }
-        .build()
     }
 
     pub fn out_of_gas() -> Self {
-        OutOfGas {}.build()
-    }
-}
-
-impl From<VmError> for Error {
-    fn from(source: VmError) -> Self {
-        match source {
-            VmError::GasDepletion => Error::out_of_gas(),
-            _ => Error::vm_err(source),
+        RustError::OutOfGas {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
         }
     }
 }
 
-impl From<std::str::Utf8Error> for Error {
-    fn from(source: std::str::Utf8Error) -> Self {
-        Error::invalid_utf8(source)
+impl From<VmError> for RustError {
+    fn from(source: VmError) -> Self {
+        match source {
+            VmError::GasDepletion => RustError::out_of_gas(),
+            _ => RustError::vm_err(source),
+        }
     }
 }
 
-impl From<std::string::FromUtf8Error> for Error {
+impl From<std::str::Utf8Error> for RustError {
+    fn from(source: std::str::Utf8Error) -> Self {
+        RustError::invalid_utf8(source)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for RustError {
     fn from(source: std::string::FromUtf8Error) -> Self {
-        Error::invalid_utf8(source)
+        RustError::invalid_utf8(source)
     }
 }
 
@@ -98,13 +112,13 @@ pub fn clear_error() {
     set_errno(Errno(ErrnoValue::Success as i32));
 }
 
-pub fn set_error(err: Error, errout: Option<&mut Buffer>) {
+pub fn set_error(err: RustError, errout: Option<&mut Buffer>) {
     let msg = err.to_string();
     if let Some(mb) = errout {
         *mb = Buffer::from_vec(msg.into_bytes());
     }
     let errno = match err {
-        Error::OutOfGas { .. } => ErrnoValue::OutOfGas,
+        RustError::OutOfGas { .. } => ErrnoValue::OutOfGas,
         _ => ErrnoValue::Other,
     } as i32;
     set_errno(Errno(errno));
@@ -112,7 +126,7 @@ pub fn set_error(err: Error, errout: Option<&mut Buffer>) {
 
 /// If `result` is Ok, this returns the binary representation of the Ok value and clears the error in `errout`.
 /// Otherwise it returns an empty vector and writes the error to `errout`.
-pub fn handle_c_error<T>(result: Result<T, Error>, errout: Option<&mut Buffer>) -> Vec<u8>
+pub fn handle_c_error<T>(result: Result<T, RustError>, errout: Option<&mut Buffer>) -> Vec<u8>
 where
     T: Into<Vec<u8>>,
 {
@@ -136,9 +150,9 @@ mod tests {
 
     #[test]
     fn empty_arg_works() {
-        let error = Error::empty_arg("gas");
+        let error = RustError::empty_arg("gas");
         match error {
-            Error::EmptyArg { name, .. } => {
+            RustError::EmptyArg { name, .. } => {
                 assert_eq!(name, "gas");
             }
             _ => panic!("expect different error"),
@@ -147,9 +161,9 @@ mod tests {
 
     #[test]
     fn invalid_utf8_works_for_strings() {
-        let error = Error::invalid_utf8("my text");
+        let error = RustError::invalid_utf8("my text");
         match error {
-            Error::InvalidUtf8 { msg, .. } => {
+            RustError::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "my text");
             }
             _ => panic!("expect different error"),
@@ -159,9 +173,9 @@ mod tests {
     #[test]
     fn invalid_utf8_works_for_errors() {
         let original = String::from_utf8(vec![0x80]).unwrap_err();
-        let error = Error::invalid_utf8(original);
+        let error = RustError::invalid_utf8(original);
         match error {
-            Error::InvalidUtf8 { msg, .. } => {
+            RustError::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 1 bytes from index 0");
             }
             _ => panic!("expect different error"),
@@ -170,18 +184,18 @@ mod tests {
 
     #[test]
     fn panic_works() {
-        let error = Error::panic();
+        let error = RustError::panic();
         match error {
-            Error::Panic { .. } => {}
+            RustError::Panic { .. } => {}
             _ => panic!("expect different error"),
         }
     }
 
     #[test]
     fn vm_err_works_for_strings() {
-        let error = Error::vm_err("my text");
+        let error = RustError::vm_err("my text");
         match error {
-            Error::VmErr { msg, .. } => {
+            RustError::VmErr { msg, .. } => {
                 assert_eq!(msg, "my text");
             }
             _ => panic!("expect different error"),
@@ -192,24 +206,24 @@ mod tests {
     fn vm_err_works_for_errors() {
         // No public interface exists to generate a VmError directly
         let original: VmError = BackendError::out_of_gas().into();
-        let error = Error::vm_err(original);
+        let error = RustError::vm_err(original);
         match error {
-            Error::VmErr { msg, .. } => {
+            RustError::VmErr { msg, .. } => {
                 assert_eq!(msg, "Ran out of gas during contract execution");
             }
             _ => panic!("expect different error"),
         }
     }
 
-    // Tests of `impl From<X> for Error` converters
+    // Tests of `impl From<X> for RustError` converters
 
     #[test]
     fn from_std_str_utf8error_works() {
-        let error: Error = str::from_utf8(b"Hello \xF0\x90\x80World")
+        let error: RustError = str::from_utf8(b"Hello \xF0\x90\x80World")
             .unwrap_err()
             .into();
         match error {
-            Error::InvalidUtf8 { msg, .. } => {
+            RustError::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")
             }
             _ => panic!("expect different error"),
@@ -218,11 +232,11 @@ mod tests {
 
     #[test]
     fn from_std_string_fromutf8error_works() {
-        let error: Error = String::from_utf8(b"Hello \xF0\x90\x80World".to_vec())
+        let error: RustError = String::from_utf8(b"Hello \xF0\x90\x80World".to_vec())
             .unwrap_err()
             .into();
         match error {
-            Error::InvalidUtf8 { msg, .. } => {
+            RustError::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")
             }
             _ => panic!("expect different error"),
