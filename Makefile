@@ -72,12 +72,20 @@ docker-publish: docker-images
 	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7
 	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine
 
-# and use them to compile release builds
-release:
-	rm -rf target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross
+# Created a release build in a containerized build environment of the shared library for glibc Linux (.so)
+release-build-linux:
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7
+
+# Created a release build in a containerized build environment of the shared library for macOS (.dylib)
+release-build-macos:
+	rm -rf target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross
+
+release-build:
+	# Write like this because those must not run in parallal
+	make release-build-linux
+	make release-build-macos
 
 test-alpine:
 	# build the muslc *.a file

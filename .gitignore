@@ -3,8 +3,9 @@
 *.iml
 .idea
 
-# no static binaries (35MB+)
-libgo*.a
+# no static libraries (35MB+)
+lib*.a
+
 # artifacts from compile tests
 muslc.exe
 tmp

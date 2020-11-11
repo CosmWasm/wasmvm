@@ -80,9 +80,10 @@ jobs:
           fingerprints:
             - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
-      - run: echo $CIRCLE_BRANCH
       - run: make test-alpine
-      - run: ls -l ./api/libgo*
+      - run:
+          name: Debug build results
+          command: ls -l ./api
 
   release:
     machine:
@@ -92,14 +93,27 @@ jobs:
           fingerprints:
             - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
-      - run: echo $CIRCLE_BRANCH
-      - run: make release
-      - run: ls -l ./api
-      - run: git config user.email "bot@circleci.com"
-      - run: git config user.name "CircleCI Bot"
-      - run: git add .
-      - run: git commit --allow-empty -m '[skip ci] Built release libraries'
-      - run: git push origin $CIRCLE_BRANCH
+      - run:
+          name: Build shared library for Linux
+          command: make release-build-linux
+      - run:
+          name: Build shared library for macOS
+          command: make release-build-macos
+      - run:
+          name: Debug build results
+          command: ls -l ./api
+      - run:
+          name: Configure git
+          command: |
+            git config user.email "bot@circleci.com"
+            git config user.name "CircleCI Bot"
+      - run:
+          name: Check-in and push new libraries
+          command: |
+            git status
+            git add ./api
+            git commit --allow-empty -m '[skip ci] Built release libraries'
+            git push origin $CIRCLE_BRANCH
 
 workflows:
   version: 2
