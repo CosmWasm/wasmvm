@@ -1,7 +1,7 @@
 .PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
 
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
-TAG_PREFIX := 0001
+TAG_PREFIX := 0002
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
