@@ -8,6 +8,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install shellcheck
+          command: sudo apt install shellcheck
+      - run:
           name: Setup Rust toolchain from ./rust-toolchain
           command: echo "RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN" && rustup show
       - run:
@@ -22,6 +25,9 @@ jobs:
       - run:
           name: Run linter
           command: cargo clippy -- -D warnings
+      - run:
+          name: Run shellcheck
+          command: find . -name "*.sh" -exec shellcheck {} +
 
   build_libwasmvm:
     docker:
