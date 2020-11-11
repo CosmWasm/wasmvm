@@ -1,11 +1,8 @@
-# Go-CosmWasm
+# wasmvm
 
-This provides go bindings to the [CosmWasm](https://github.com/CosmWasm/cosmwasm) smart
-contract framework. In particular, it allows you to easily compile, initialize,
-and execute these contracts from Go.
-
-As of the 0.7.0 release, we support [CosmWasm](https://github.com/CosmWasm/cosmwasm) 0.7.0
-and any compatible smart contracts.
+This is a wrapper around the [CosmWasm VM](https://github.com/CosmWasm/cosmwasm/tree/master/packages/vm).
+It allows you to compile, initialize and execute CosmWasm smart contracts
+from Go applications, in particular from [x/wasm](https://github.com/CosmWasm/wasmd/tree/master/x/wasm).
 
 ## Structure
 
@@ -38,7 +35,7 @@ Please read the [Documentation](./spec/Index.md) to understand both the general
 ## Development
 
 There are two halfs to this code - go and rust. The first step is to ensure that there is
-a proper dll built for your platform. This should be `api/libgo_cosmwasm.X`, where X is:
+a proper dll built for your platform. This should be `api/libwasmvm.X`, where X is:
 
 * `so` for Linux systems
 * `dylib` for MacOS

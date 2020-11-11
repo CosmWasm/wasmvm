@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/go-cosmwasm/types"
+	"github.com/CosmWasm/wasmvm/types"
 )
 
 const TESTING_FEATURES = "staking"
@@ -23,7 +23,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 	_, err := InitCache(dataDir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.Error(t, err)
 
-	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
+	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
@@ -33,7 +33,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 }
 
 func withCache(t *testing.T) (Cache, func()) {
-	tmpdir, err := ioutil.TempDir("", "go-cosmwasm")
+	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
 	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
