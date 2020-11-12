@@ -7,6 +7,7 @@
 lib*.a
 
 # artifacts from compile tests
+artifacts/
 muslc.exe
 tmp
 a.out

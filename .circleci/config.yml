@@ -131,7 +131,27 @@ jobs:
       - run:
           name: Debug build results
           command: ls -l ./api
-      # TODO: deploy using ghr
+      - run:
+          name: Collect artifacts
+          command: |
+            mkdir artifacts
+            cp ./api/libwasmvm_muslc.a artifacts
+      - run:
+          name: Create checksums
+          working_directory: artifacts
+          command: sha256sum * > checksums.txt && cat checksums.txt
+      - run:
+          name: Publish artifacts on GitHub
+          command: |
+            TAG="__testing__"
+            TITLE="$TAG"
+            BODY="Build artifacts generated at this tag."
+            ghr -t "$GITHUB_TOKEN" \
+              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+              -c "$CIRCLE_SHA1" \
+              -n "$TITLE" -b "$BODY" \
+              -delete \
+              "$TAG" ./artifacts/
 
 workflows:
   version: 2
