@@ -31,27 +31,18 @@ RUN chmod +rx /opt/osxcross
 RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
 
-## TODO: add support for windows cross-compile
-
-# PRE-FETCH MANY DEPS
-WORKDIR /scratch
-COPY Cargo.toml /scratch/
-COPY Cargo.lock /scratch/
-COPY src /scratch/src
-RUN cargo fetch
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo
 
 ## COPY BUILD SCRIPTS
 
 WORKDIR /code
-RUN rm -rf /scratch
 
-COPY builders/*.sh /opt/
+COPY guest/*.sh /opt/
 RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY builders/cargo-config /.cargo/config
+COPY guest/cargo-config /.cargo/config
 
 CMD ["/opt/build_osx.sh"]

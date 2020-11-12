@@ -14,7 +14,11 @@ can do the cross-compilation.
 
 ## Usage
 
-`make docker-images` will create a local docker image, capable of cross-compling linux and macos dynamic libs.
+Create a local docker image, capable of cross-compling linux and macos dynamic libs:
+
+```sh
+cd builders && make docker-images
+```
 
 `make release-build` will use the above docker image and copy the generated `{so,dylib}` files into `api` directory to be linked.
 

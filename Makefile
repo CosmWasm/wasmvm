@@ -1,4 +1,4 @@
-.PHONY: all build build-rust build-go test docker-image docker-image-centos7 docker-image-cross
+.PHONY: all build build-rust build-go test
 
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
 TAG_PREFIX := 0002
@@ -54,23 +54,6 @@ test:
 
 test-safety:
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
-
-# we should build all the docker images locally ONCE and publish them
-docker-image-centos7:
-	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7 -f ./Dockerfile.centos7
-
-docker-image-cross:
-	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross -f ./Dockerfile.cross
-
-docker-image-alpine:
-	docker build . -t cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine -f ./Dockerfile.alpine
-
-docker-images: docker-image-centos7 docker-image-cross docker-image-alpine
-
-docker-publish: docker-images
-	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-cross
-	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-centos7
-	docker push cosmwasm/go-ext-builder:$(TAG_PREFIX)-alpine
 
 # Created a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
