@@ -144,7 +144,7 @@ jobs:
       - run:
           name: Publish artifacts on GitHub
           command: |
-            TAG="__testing__"
+            TAG="$CIRCLE_TAG"
             TITLE="$TAG"
             BODY="Build artifacts generated at this tag."
             ghr -t "$GITHUB_TOKEN" \
@@ -189,9 +189,8 @@ workflows:
           requires:
             - sanity
             - test
-          # Use this tag filter when the CI job is finalized
-          # filters:
-          #   tags:
-          #     only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-          #   branches:
-          #     ignore: /.*/
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+            branches:
+              ignore: /.*/
