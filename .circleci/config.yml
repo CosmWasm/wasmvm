@@ -1,6 +1,7 @@
 version: 2
 
 jobs:
+  # All checks on the codebase that can run in parallel to build_library
   sanity:
     docker:
       # We don't use this Rust version but need an image with a Rust environment
@@ -26,10 +27,13 @@ jobs:
           name: Run linter
           command: cargo clippy -- -D warnings
       - run:
+          name: Run unit tests
+          command: cargo test
+      - run:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
 
-  build_libwasmvm:
+  build_library:
     docker:
       # We don't use this Rust version but need an image with a Rust environment
       - image: circleci/rust:1.47.0-buster
@@ -41,9 +45,6 @@ jobs:
       - run:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
-      - run:
-          name: Run tests
-          command: cargo test
       - run:
           name: Create release build of libwasmvm
           command: make build-rust
@@ -158,10 +159,10 @@ workflows:
   build_and_test:
     jobs:
       - sanity
-      - build_libwasmvm
+      - build_library
       - test:
           requires:
-            - build_libwasmvm
+            - build_library
       # This is long running, so only double-check on merge commits
       # ensures that all code works on alpine linux
       - test_alpine_build:
