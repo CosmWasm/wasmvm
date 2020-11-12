@@ -1,6 +1,5 @@
-# FROM rust:1.39
-# We need nightly currently for compiling with singlepass
-FROM rustlang/rust:nightly
+# We don't use this Rust version but need an image with a Rust environment
+FROM rust:1.47.0-buster
 
 # Install build dependencies
 RUN apt-get update
@@ -26,7 +25,7 @@ RUN git clone https://github.com/tpoechtrager/osxcross
 RUN cd osxcross && \
 	wget -nc https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz && \
     mv MacOSX10.10.sdk.tar.xz tarballs/ && \
-    UNATTENDED=yes OSX_VERSION_MIN=10.7 ./build.sh
+    UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
 RUN chmod +rx /opt/osxcross
 RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
@@ -45,4 +44,4 @@ RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY guest/cargo-config /.cargo/config
 
-CMD ["/opt/build_osx.sh"]
+CMD ["/opt/build_macos.sh"]
