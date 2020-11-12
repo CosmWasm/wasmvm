@@ -1,6 +1,0 @@
-# Avoid sending the hundreds of megabytes or even gigabytes of local builds
-# to the docker server when building the builder images
-target/
-
-# This is large an unneeded as well
-.git/

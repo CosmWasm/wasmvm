@@ -12,11 +12,33 @@ contains build scripts and a Docker image to create all dynamic libraries from o
 host. In general this is set up for a Linux host, but any machine that can run Docker
 can do the cross-compilation.
 
+## Changelog
+
+**Version 0003:**
+
+- Avoid pre-fetching of dependences to decouple builders from source code.
+- Bump `OSX_VERSION_MIN` to 10.10.
+- Use `rust:1.47.0-buster` as base image for cross compilation to macOS
+
+**Version 0002:**
+
+- Update hardcoded library name from `libgo_cosmwasm` to `libwasmvm`.
+
+**Version 0001:**
+
+- First release of builders that is versioned separately of CosmWasm.
+- Update Rust to nightly-2020-10-24.
+
 ## Usage
 
-`make docker-images` will create a local docker image, capable of cross-compling linux and macos dynamic libs.
+Create a local docker image, capable of cross-compling linux and macos dynamic libs:
 
-`make release-build` will use the above docker image and copy the generated `{so,dylib}` files into `api` directory to be linked.
+```sh
+cd builders && make docker-images
+```
+
+Then in the repo root, `make release-build` will use the above docker image and
+copy the generated `{so,dylib}` files into `api` directory to be linked.
 
 ## Future Work
 

@@ -26,25 +26,17 @@ ENV LIBRARY_PATH=/usr/local/rustup/toolchains/nightly-2020-10-24-x86_64-unknown-
 RUN mkdir -p /.cache/go-build
 RUN chmod -R 777 /.cache
 
-
-# PRE-FETCH MANY DEPS
-WORKDIR /scratch
-COPY Cargo.toml /scratch/
-COPY Cargo.lock /scratch/
-COPY src /scratch/src
-RUN cargo fetch
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo
 
 ## COPY BUILD SCRIPTS
 WORKDIR /code
-RUN rm -rf /scratch
 
-COPY build/build_muslc.sh /opt
-RUN chmod +x /opt/build*
+COPY guest/*.sh /opt/
+RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY build/cargo-config /.cargo/config
+COPY guest/cargo-config /.cargo/config
 
 CMD ["/opt/build_muslc.sh"]

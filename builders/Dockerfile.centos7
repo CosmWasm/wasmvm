@@ -19,26 +19,18 @@ RUN url="https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustu
     cargo --version; \
     rustc --version;
 
-# PRE-FETCH MANY DEPS
-WORKDIR /scratch
-COPY Cargo.toml /scratch/
-COPY Cargo.lock /scratch/
-COPY src /scratch/src
-RUN cargo fetch
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo
-
 
 ## COPY BUILD SCRIPTS
 
 WORKDIR /code
-RUN rm -rf /scratch
 
-COPY build/build_linux.sh /opt
-RUN chmod +x /opt/build*
+COPY guest/*.sh /opt/
+RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY build/cargo-config /.cargo/config
+COPY guest/cargo-config /.cargo/config
 
 CMD ["/opt/build_linux.sh"]
