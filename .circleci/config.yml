@@ -121,16 +121,16 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install ghr
+          command: |
+            go get github.com/tcnksm/ghr
+            ghr --version
+      - run:
           name: Build static library for Alpine
           command: make release-build-alpine
       - run:
           name: Debug build results
           command: ls -l ./api
-      - run:
-          name: Install ghr
-          command: |
-            go get github.com/tcnksm/ghr
-            ghr --version
       # TODO: deploy using ghr
 
 workflows:
