@@ -34,11 +34,11 @@ RUN chmod -R 777 /usr/local/cargo
 WORKDIR /code
 RUN rm -rf /scratch
 
-COPY build/build_linux.sh /opt
+COPY builders/build_linux.sh /opt
 RUN chmod +x /opt/build*
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY build/cargo-config /.cargo/config
+COPY builders/cargo-config /.cargo/config
 
 CMD ["/opt/build_linux.sh"]

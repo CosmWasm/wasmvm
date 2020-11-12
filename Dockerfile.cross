@@ -47,11 +47,11 @@ RUN chmod -R 777 /usr/local/cargo
 WORKDIR /code
 RUN rm -rf /scratch
 
-COPY build/*.sh /opt/
+COPY builders/*.sh /opt/
 RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY build/cargo-config /.cargo/config
+COPY builders/cargo-config /.cargo/config
 
 CMD ["/opt/build_osx.sh"]
