@@ -54,6 +54,15 @@ test:
 test-safety:
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
+# Created a release build in a containerized build environment of the static library for Alpine Linux (.a)
+release-build-alpine:
+	rm -rf target/release
+	# build the muslc *.a file
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-alpine
+	# try running go tests using this lib with muslc
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
+
 # Created a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
 	rm -rf target/release
@@ -66,16 +75,11 @@ release-build-macos:
 
 release-build:
 	# Write like this because those must not run in parallal
+	make release-build-alpine
 	make release-build-linux
 	make release-build-macos
 
-test-alpine:
-	# build the muslc *.a file
-	rm -rf target/release/examples
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-alpine
-	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc .
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
+test-alpine: release-build-alpine
 	# build a go binary
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
 	# run static binary in an alpine machines (not dlls)
