@@ -154,6 +154,9 @@ workflows:
                 - master
       # Run only on master, not on tags (auto-build on merge PR)
       - deploy_to_git:
+          requires:
+            - sanity
+            - test
           filters:
             tags:
               ignore:
@@ -161,7 +164,10 @@ workflows:
             branches:
               only:
                 - master
-      - deploy_to_github_releases
+      - deploy_to_github_releases:
+          requires:
+            - sanity
+            - test
           # Use this tag filter when the CI job is finalized
           # filters:
           #   tags:
