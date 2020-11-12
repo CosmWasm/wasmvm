@@ -115,6 +115,24 @@ jobs:
             git commit --allow-empty -m '[skip ci] Built release libraries'
             git push origin $CIRCLE_BRANCH
 
+  deploy_to_github_releases:
+    machine:
+      image: ubuntu-1604:202010-01
+    steps:
+      - checkout
+      - run:
+          name: Build static library for Alpine
+          command: make release-build-alpine
+      - run:
+          name: Debug build results
+          command: ls -l ./api
+      - run:
+          name: Install ghr
+          command: |
+            go get github.com/tcnksm/ghr
+            ghr --version
+      # TODO: deploy using ghr
+
 workflows:
   version: 2
   build_and_test:
@@ -143,3 +161,10 @@ workflows:
             branches:
               only:
                 - master
+      - deploy_to_github_releases
+          # Use this tag filter when the CI job is finalized
+          # filters:
+          #   tags:
+          #     only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+          #   branches:
+          #     ignore: /.*/
