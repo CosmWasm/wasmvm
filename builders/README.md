@@ -16,7 +16,7 @@ can do the cross-compilation.
 
 **Version 0004:**
 
-- Update Rust to 1.47.0.
+- Update Rust to 1.49.0.
 - Alpine: Update Go to 1.15
 
 **Version 0003:**

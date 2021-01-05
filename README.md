@@ -52,9 +52,9 @@ install all this with no problems.
 
 ## Toolchain
 
-The Rust toolchain is pinned in the file `rust-toolchain`. It must be in sync with `Dockerfile.cross`
-and `Dockerfile.centos7`.
-When choosing a version, please use version with clippy, rustfmt and rls available to make Simon happy.
+We fix the Rust version in the CI and build containers, so the following should be in sync:
 
-- Mac: https://rust-lang.github.io/rustup-components-history/x86_64-apple-darwin.html
-- Linux: https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu.html
+- `.circleci/config.yml`
+- `builders/Dockerfile.*`
+
+For development you should be able to use any reasonably up-to-date Rust stable.
