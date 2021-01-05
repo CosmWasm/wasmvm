@@ -56,7 +56,7 @@ jobs:
   test:
     working_directory: /go/src/github.com/CosmWasm/wasmvm
     docker:
-      - image: circleci/golang:1.14
+      - image: circleci/golang:1.15
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)

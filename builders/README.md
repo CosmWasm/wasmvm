@@ -14,6 +14,11 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0004:**
+
+- Update Rust to 1.47.0.
+- Alpine: Update Go to 1.15
+
 **Version 0003:**
 
 - Avoid pre-fetching of dependences to decouple builders from source code.
@@ -34,7 +39,7 @@ can do the cross-compilation.
 Create a local docker image, capable of cross-compling linux and macos dynamic libs:
 
 ```sh
-cd builders && make docker-images
+(cd builders && make docker-images)
 ```
 
 Then in the repo root, `make release-build` will use the above docker image and

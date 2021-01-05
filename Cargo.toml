@@ -25,7 +25,7 @@ circle-ci = { repository = "CosmWasm/wasmvm", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["backtraces"]
+default = []
 # This feature requires Rust nightly because it depends on the unstable backtrace feature.
 backtraces = []
 
