@@ -13,6 +13,7 @@ use cosmwasm_vm::{
 static CONTRACT: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
 const PRINT_DEBUG: bool = false;
 const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
+const MEMORY_LIMIT: Size = Size::mebi(32);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
@@ -45,6 +46,7 @@ fn handle_cpu_loop_with_cache() {
 
     let options = InstanceOptions {
         gas_limit: 2_000_000,
+        memory_limit: MEMORY_LIMIT,
         print_debug: PRINT_DEBUG,
     };
 
