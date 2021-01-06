@@ -37,9 +37,9 @@ Please read the [Documentation](./spec/Index.md) to understand both the general
 There are two halfs to this code - go and rust. The first step is to ensure that there is
 a proper dll built for your platform. This should be `api/libwasmvm.X`, where X is:
 
-* `so` for Linux systems
-* `dylib` for MacOS
-* `dll` for Windows - Not currently supported due to upstream dependency
+- `so` for Linux systems
+- `dylib` for MacOS
+- `dll` for Windows - Not currently supported due to upstream dependency
 
 If this is present, then `make test` will run the Go test suite and you can import this code freely.
 If it is not present you will have to build it for your system, and ideally add it to this repo
