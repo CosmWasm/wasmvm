@@ -14,11 +14,11 @@ use crate::storage::GoStorage;
 #[repr(C)]
 pub struct cache_t {}
 
-pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoStorage, GoApi, GoQuerier>> {
+pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
     if ptr.is_null() {
         None
     } else {
-        let c = unsafe { &mut *(ptr as *mut Cache<GoStorage, GoApi, GoQuerier>) };
+        let c = unsafe { &mut *(ptr as *mut Cache<GoApi, GoStorage, GoQuerier>) };
         Some(c)
     }
 }
@@ -48,7 +48,7 @@ pub fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
     cache_size: u32,
-) -> Result<*mut Cache<GoStorage, GoApi, GoQuerier>, Error> {
+) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features

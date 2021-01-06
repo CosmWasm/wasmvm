@@ -82,7 +82,7 @@ impl RustError {
 impl From<VmError> for RustError {
     fn from(source: VmError) -> Self {
         match source {
-            VmError::GasDepletion => RustError::out_of_gas(),
+            VmError::GasDepletion { .. } => RustError::out_of_gas(),
             _ => RustError::vm_err(source),
         }
     }

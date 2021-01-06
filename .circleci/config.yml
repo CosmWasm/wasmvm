@@ -4,16 +4,12 @@ jobs:
   # All checks on the codebase that can run in parallel to build_library
   sanity:
     docker:
-      # We don't use this Rust version but need an image with a Rust environment
-      - image: circleci/rust:1.47.0-buster
+      - image: circleci/rust:1.49.0-buster
     steps:
       - checkout
       - run:
           name: Install shellcheck
           command: sudo apt install shellcheck
-      - run:
-          name: Setup Rust toolchain from ./rust-toolchain
-          command: echo "RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN" && rustup show
       - run:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
@@ -35,13 +31,9 @@ jobs:
 
   build_library:
     docker:
-      # We don't use this Rust version but need an image with a Rust environment
-      - image: circleci/rust:1.47.0-buster
+      - image: circleci/rust:1.49.0-buster
     steps:
       - checkout
-      - run:
-          name: Setup Rust toolchain from ./rust-toolchain
-          command: echo "RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN" && rustup show
       - run:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
@@ -56,7 +48,7 @@ jobs:
   test:
     working_directory: /go/src/github.com/CosmWasm/wasmvm
     docker:
-      - image: circleci/golang:1.14
+      - image: circleci/golang:1.15
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
