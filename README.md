@@ -17,14 +17,31 @@ link with, and Go developers should just be able to import this directly.
 Since this package includes a rust prebuilt dll, you cannot just import the go code,
 but need to be on a system that works with an existing dll. Currently this is Linux
 (tested on Ubuntu, Debian, and CentOS7) and MacOS. We have a build system for Windows,
-but it is not supported by the wasmer singlepass backend which we rely upon for gas
-metering.
+but it is [not supported][wasmer_support] by the Wasmer Singlepass backend which we rely upon.
 
-*Note: CentOS support is currently disabled due to work on CD tooling. We require Linux with glibc 2.18+*
+[wasmer_support]: https://docs.wasmer.io/ecosystem/wasmer/wasmer-features
 
-*Note: Windows is not supported currently*
+### Overview
 
-*Note: We only currently support i686/amd64 architectures, although AMD support is an open issue*
+|               | [x86]               | [x86_64]            | [ARM32]              | [ARM64]              |
+| ------------- | ------------------- | ------------------- | -------------------- | -------------------- |
+| Linux (glibc) | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
+| Linux (muslc) | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
+| macOS         | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
+| Windows       | ❌ <sub>[#28]</sub> | ❌ <sub>[#28]</sub> | ❌ <sub>[#28]</sub>  | ❌ <sub>[#28]</sub>  |
+
+[x86]: https://en.wikipedia.org/wiki/X86
+[x86_64]: https://en.wikipedia.org/wiki/X86-64
+[arm32]: https://en.wikipedia.org/wiki/AArch32
+[arm64]: https://en.wikipedia.org/wiki/AArch64
+[#28]: https://github.com/CosmWasm/wasmvm/issues/28
+[#53]: https://github.com/CosmWasm/wasmvm/issues/53
+
+✅ Supported and activly maintained.
+
+❌ Blocked by external dependency.
+
+🤷‍ Not supported because nobody cares so far. Feel free to look into it.
 
 ## Design
 
