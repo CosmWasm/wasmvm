@@ -21,6 +21,7 @@ type cu64 = C.uint64_t
 type ci8 = C.int8_t
 type ci32 = C.int32_t
 type ci64 = C.int64_t
+
 // Pointers
 type cu8_ptr = *C.uint8_t
 
