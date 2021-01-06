@@ -30,9 +30,6 @@ use crate::args::{CACHE_ARG, CODE_ID_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_A
 use crate::cache::{cache_t, to_cache};
 use crate::error::{handle_c_error, Error};
 
-// TODO: Remove constant and make configurable by user
-const MEMORY_LIMIT: Size = Size::gibi(4);
-
 fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
         api,
@@ -108,10 +105,16 @@ pub extern "C" fn instantiate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: u32, // in MiB
     print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
+    let memory_limit = Size::mebi(
+        memory_limit
+            .try_into()
+            .expect("Cannot convert u32 to usize. What kind of system is this?"),
+    );
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_init(
@@ -124,6 +127,7 @@ pub extern "C" fn instantiate(
                 api,
                 querier,
                 gas_limit,
+                memory_limit,
                 print_debug,
                 gas_used,
             )
@@ -145,6 +149,7 @@ fn do_init(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: Size,
     print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -159,7 +164,7 @@ fn do_init(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        memory_limit: MEMORY_LIMIT,
+        memory_limit,
         print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
@@ -181,10 +186,16 @@ pub extern "C" fn handle(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: u32, // in MiB
     print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
+    let memory_limit = Size::mebi(
+        memory_limit
+            .try_into()
+            .expect("Cannot convert u32 to usize. What kind of system is this?"),
+    );
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_handle(
@@ -197,6 +208,7 @@ pub extern "C" fn handle(
                 api,
                 querier,
                 gas_limit,
+                memory_limit,
                 print_debug,
                 gas_used,
             )
@@ -218,6 +230,7 @@ fn do_handle(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: Size,
     print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -232,7 +245,7 @@ fn do_handle(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        memory_limit: MEMORY_LIMIT,
+        memory_limit,
         print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
@@ -254,10 +267,16 @@ pub extern "C" fn migrate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: u32, // in MiB
     print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
+    let memory_limit = Size::mebi(
+        memory_limit
+            .try_into()
+            .expect("Cannot convert u32 to usize. What kind of system is this?"),
+    );
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_migrate(
@@ -270,6 +289,7 @@ pub extern "C" fn migrate(
                 api,
                 querier,
                 gas_limit,
+                memory_limit,
                 print_debug,
                 gas_used,
             )
@@ -291,6 +311,7 @@ fn do_migrate(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: Size,
     print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -305,7 +326,7 @@ fn do_migrate(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        memory_limit: MEMORY_LIMIT,
+        memory_limit,
         print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
@@ -326,10 +347,16 @@ pub extern "C" fn query(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: u32, // in MiB
     print_debug: bool,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
+    let memory_limit = Size::mebi(
+        memory_limit
+            .try_into()
+            .expect("Cannot convert u32 to usize. What kind of system is this?"),
+    );
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_query(
@@ -341,6 +368,7 @@ pub extern "C" fn query(
                 api,
                 querier,
                 gas_limit,
+                memory_limit,
                 print_debug,
                 gas_used,
             )
@@ -361,6 +389,7 @@ fn do_query(
     api: GoApi,
     querier: GoQuerier,
     gas_limit: u64,
+    memory_limit: Size,
     print_debug: bool,
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
@@ -374,7 +403,7 @@ fn do_query(
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
         gas_limit,
-        memory_limit: MEMORY_LIMIT,
+        memory_limit,
         print_debug,
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;

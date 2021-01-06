@@ -30,22 +30,24 @@ type GasMeter = api.GasMeter
 // You should create an instance with its own subdirectory to manage state inside,
 // and call it for all cosmwasm code related actions.
 type VM struct {
-	cache      api.Cache
-	printDebug bool
+	cache       api.Cache
+	memoryLimit uint32 // memory limit of each contract execution (in MiB)
+	printDebug  bool
 }
 
 // NewVM creates a new VM.
 //
 // `dataDir` is a base directory for Wasm blobs and various caches.
 // `supportedFeatures` is a comma separated list of features suppored by the chain.
+// `memoryLimit` is the memory limit of each contract execution (in MiB)
 // `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
-func NewVM(dataDir string, supportedFeatures string, printDebug bool, cacheSize uint32) (*VM, error) {
+func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize)
 	if err != nil {
 		return nil, err
 	}
-	return &VM{cache: cache, printDebug: printDebug}, nil
+	return &VM{cache: cache, memoryLimit: memoryLimit, printDebug: printDebug}, nil
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
@@ -105,7 +107,7 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Instantiate(vm.cache, code, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.memoryLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -146,7 +148,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(vm.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Handle(vm.cache, code, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.memoryLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -179,7 +181,7 @@ func (vm *VM) Query(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Query(vm.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Query(vm.cache, code, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.memoryLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -220,7 +222,7 @@ func (vm *VM) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(vm.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Migrate(vm.cache, code, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.memoryLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
