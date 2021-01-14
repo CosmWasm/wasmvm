@@ -164,7 +164,9 @@ workflows:
                 - /.*/
             branches:
               only:
+                # long living branches
                 - master
+                - 0.14-dev
       # Run only on master, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
