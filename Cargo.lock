@@ -158,7 +158,7 @@ checksum = "28b9d6de7f49e22cf97ad17fc4036ece69300032f45f78f30b4a4482cdc3f4a6"
 [[package]]
 name = "cosmwasm-derive"
 version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=24c357a19a52#24c357a19a529a2c58106c2641368f0605f2b4cc"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=f77ffcf9#f77ffcf9fa350a823cc54eb607d5cf2b767487f0"
 dependencies = [
  "syn",
 ]
@@ -166,7 +166,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=24c357a19a52#24c357a19a529a2c58106c2641368f0605f2b4cc"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=f77ffcf9#f77ffcf9fa350a823cc54eb607d5cf2b767487f0"
 dependencies = [
  "base64",
  "cosmwasm-derive",
@@ -179,7 +179,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=24c357a19a52#24c357a19a529a2c58106c2641368f0605f2b4cc"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=f77ffcf9#f77ffcf9fa350a823cc54eb607d5cf2b767487f0"
 dependencies = [
  "clru",
  "cosmwasm-std",
