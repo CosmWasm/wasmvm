@@ -150,9 +150,8 @@ func TestHandle(t *testing.T) {
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
-	assert.Equal(t, send.ToAddress, "bob")
-	assert.Equal(t, send.FromAddress, MOCK_CONTRACT_ADDR)
-	assert.Equal(t, send.Amount, balance)
+	assert.Equal(t, "bob", send.ToAddress)
+	assert.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
 	assert.Equal(t, expectedData, resp.Ok.Data)

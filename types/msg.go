@@ -77,7 +77,6 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
 	Amount      Coins  `json:"amount"`
 }
