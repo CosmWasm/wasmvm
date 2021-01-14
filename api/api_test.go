@@ -34,7 +34,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
 	igasMeter := GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG)
+	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -67,7 +67,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
 	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG)
+	_, _, err = Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// call query which will call canonicalize address
@@ -75,7 +75,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	query := []byte(`{"verifier":{}}`)
 	igasMeter3 := GasMeter(gasMeter3)
-	res, _, err := Query(cache, id, env, query, &igasMeter3, store, badApi, &querier, TESTING_GAS_LIMIT, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG)
+	res, _, err := Query(cache, id, env, query, &igasMeter3, store, badApi, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var resp types.QueryResponse
 	err = json.Unmarshal(res, &resp)

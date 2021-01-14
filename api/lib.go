@@ -31,14 +31,14 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string, cacheSize uint32) (Cache, error) {
+func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
 	dir := sendSlice([]byte(dataDir))
 	defer freeAfterSend(dir)
 	features := sendSlice([]byte(supportedFeatures))
 	defer freeAfterSend(features)
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, features, cu32(cacheSize), &errmsg)
+	ptr, err := C.init_cache(dir, features, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -82,7 +82,6 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -105,7 +104,7 @@ func Instantiate(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -124,7 +123,6 @@ func Handle(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -147,7 +145,7 @@ func Handle(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -166,7 +164,6 @@ func Migrate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -189,7 +186,7 @@ func Migrate(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -207,7 +204,6 @@ func Query(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
 	id := sendSlice(code_id)
@@ -228,7 +224,7 @@ func Query(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.query(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
