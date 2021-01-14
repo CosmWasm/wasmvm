@@ -28,10 +28,18 @@ pub extern "C" fn init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
     cache_size: u32,
+    instance_memory_limit: u32,
     err: Option<&mut Buffer>,
 ) -> *mut cache_t {
-    let r = catch_unwind(|| do_init_cache(data_dir, supported_features, cache_size))
-        .unwrap_or_else(|_| Err(Error::panic()));
+    let r = catch_unwind(|| {
+        do_init_cache(
+            data_dir,
+            supported_features,
+            cache_size,
+            instance_memory_limit,
+        )
+    })
+    .unwrap_or_else(|_| Err(Error::panic()));
     match r {
         Ok(t) => {
             clear_error();
@@ -48,6 +56,7 @@ pub fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
     cache_size: u32,
+    instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
@@ -61,10 +70,16 @@ pub fn do_init_cache(
             .try_into()
             .expect("Cannot convert u32 to usize. What kind of system is this?"),
     );
+    let instance_memory_limit = Size::mebi(
+        instance_memory_limit
+            .try_into()
+            .expect("Cannot convert u32 to usize. What kind of system is this?"),
+    );
     let options = CacheOptions {
         base_dir: dir_str.into(),
         supported_features: features,
         memory_cache_size,
+        instance_memory_limit,
     };
     let cache = unsafe { Cache::new(options) }?;
     let out = Box::new(cache);

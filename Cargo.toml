@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "0.13.0"
+version = "0.14.0-dev"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"
@@ -30,8 +30,8 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { version = "0.13.0", features = ["iterator"]}
-cosmwasm-vm = { version = "0.13.0", features = ["iterator"] }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm", rev = "24c357a19a52", features = ["iterator"]}
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm", rev = "24c357a19a52", features = ["iterator"] }
 errno = "0.2"
 serde_json = "1.0"
 thiserror = "1.0"

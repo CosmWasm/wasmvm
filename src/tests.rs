@@ -41,12 +41,12 @@ fn handle_cpu_loop_with_cache() {
         base_dir: TempDir::new().unwrap().path().to_path_buf(),
         supported_features: features_from_csv("staking"),
         memory_cache_size: MEMORY_CACHE_SIZE,
+        instance_memory_limit: MEMORY_LIMIT,
     };
     let mut cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: 2_000_000,
-        memory_limit: MEMORY_LIMIT,
         print_debug: PRINT_DEBUG,
     };
 
