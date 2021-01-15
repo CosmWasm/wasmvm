@@ -121,15 +121,54 @@ type IbcQuery struct {
 
 type PortIdQuery struct{}
 
+type PortIdResponse struct {
+	PortId string `json:"port_id"`
+}
+
 type ListChannelsQuery struct {
 	// optional argument
 	PortId string `json:"port_id,omitempty"`
+}
+
+type ListChannelsResponse struct {
+	Channels IBCEndpoints `json:"channels"`
+}
+
+// IBCEndpoints must JSON encode empty array as [] (not null) for consistency with Rust parser
+type IBCEndpoints []IBCEndpoint
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (e IBCEndpoints) MarshalJSON() ([]byte, error) {
+	if len(e) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []IBCEndpoint = e
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []IBCEndpoint
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*e = raw
+	return nil
 }
 
 type ChannelQuery struct {
 	// optional argument
 	PortId    string `json:"port_id,omitempty"`
 	ChannelId string `json:"channel_id"`
+}
+
+type ChannelResponse struct {
+	// may be empty if there is no matching channel
+	Channel *IBCChannel `json:"channel,omitempty"`
 }
 
 type StakingQuery struct {
@@ -146,7 +185,7 @@ type ValidatorsResponse struct {
 	Validators Validators `json:"validators"`
 }
 
-// TODO: Validators must JSON encode empty array as []
+// Validators must JSON encode empty array as []
 type Validators []Validator
 
 // MarshalJSON ensures that we get [] for empty arrays
