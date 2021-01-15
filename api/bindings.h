@@ -223,7 +223,7 @@ cache_t *init_cache(Buffer data_dir,
                     Buffer *err);
 
 Buffer instantiate(cache_t *cache,
-                   Buffer contract_id,
+                   Buffer code_id,
                    Buffer env,
                    Buffer info,
                    Buffer msg,
@@ -236,7 +236,7 @@ Buffer instantiate(cache_t *cache,
                    Buffer *err);
 
 Buffer migrate(cache_t *cache,
-               Buffer contract_id,
+               Buffer code_id,
                Buffer env,
                Buffer info,
                Buffer msg,

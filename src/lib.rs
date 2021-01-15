@@ -99,7 +99,7 @@ fn do_get_code(
 #[no_mangle]
 pub extern "C" fn instantiate(
     cache: *mut cache_t,
-    contract_id: Buffer,
+    code_id: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -111,61 +111,21 @@ pub extern "C" fn instantiate(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_init(
-                c,
-                contract_id,
-                env,
-                info,
-                msg,
-                db,
-                api,
-                querier,
-                gas_limit,
-                print_debug,
-                gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_init(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    code_id: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    print_debug: bool,
-    gas_used: Option<&mut u64>,
-) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
-        .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
-
-    let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
+    call_3_args(
+        call_init_raw,
+        cache,
+        code_id,
+        env,
+        info,
+        msg,
+        db,
+        api,
+        querier,
         gas_limit,
         print_debug,
-    };
-    let mut instance = cache.get_instance(&code_id, backend, options)?;
-    // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_init_raw(&mut instance, env, info, msg);
-    *gas_used = instance.create_gas_report().used_internally;
-    instance.recycle();
-    Ok(res?)
+        gas_used,
+        err,
+    )
 }
 
 #[no_mangle]
@@ -183,67 +143,27 @@ pub extern "C" fn handle(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_handle(
-                c,
-                code_id,
-                env,
-                info,
-                msg,
-                db,
-                api,
-                querier,
-                gas_limit,
-                print_debug,
-                gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_handle(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    code_id: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    print_debug: bool,
-    gas_used: Option<&mut u64>,
-) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
-        .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
-
-    let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
+    call_3_args(
+        call_handle_raw,
+        cache,
+        code_id,
+        env,
+        info,
+        msg,
+        db,
+        api,
+        querier,
         gas_limit,
         print_debug,
-    };
-    let mut instance = cache.get_instance(&code_id, backend, options)?;
-    // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_handle_raw(&mut instance, env, info, msg);
-    *gas_used = instance.create_gas_report().used_internally;
-    instance.recycle();
-    Ok(res?)
+        gas_used,
+        err,
+    )
 }
 
 #[no_mangle]
 pub extern "C" fn migrate(
     cache: *mut cache_t,
-    contract_id: Buffer,
+    code_id: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -255,61 +175,21 @@ pub extern "C" fn migrate(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_migrate(
-                c,
-                contract_id,
-                env,
-                info,
-                msg,
-                db,
-                api,
-                querier,
-                gas_limit,
-                print_debug,
-                gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_migrate(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    code_id: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    print_debug: bool,
-    gas_used: Option<&mut u64>,
-) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
-        .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
-
-    let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
+    call_3_args(
+        call_migrate_raw,
+        cache,
+        code_id,
+        env,
+        info,
+        msg,
+        db,
+        api,
+        querier,
         gas_limit,
         print_debug,
-    };
-    let mut instance = cache.get_instance(&code_id, backend, options)?;
-    // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_migrate_raw(&mut instance, env, info, msg);
-    *gas_used = instance.create_gas_report().used_internally;
-    instance.recycle();
-    Ok(res?)
+        gas_used,
+        err,
+    )
 }
 
 #[no_mangle]
@@ -326,58 +206,20 @@ pub extern "C" fn query(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_query(
-                c,
-                code_id,
-                env,
-                msg,
-                db,
-                api,
-                querier,
-                gas_limit,
-                print_debug,
-                gas_used,
-            )
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_query(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    code_id: Buffer,
-    env: Buffer,
-    msg: Buffer,
-    db: DB,
-    api: GoApi,
-    querier: GoQuerier,
-    gas_limit: u64,
-    print_debug: bool,
-    gas_used: Option<&mut u64>,
-) -> Result<Vec<u8>, Error> {
-    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let code_id: Checksum = unsafe { code_id.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
-        .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
-
-    let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
+    call_2_args(
+        call_query_raw,
+        cache,
+        code_id,
+        env,
+        msg,
+        db,
+        api,
+        querier,
         gas_limit,
         print_debug,
-    };
-    let mut instance = cache.get_instance(&code_id, backend, options)?;
-    // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = call_query_raw(&mut instance, env, msg);
-    *gas_used = instance.create_gas_report().used_internally;
-    instance.recycle();
-    Ok(res?)
+        gas_used,
+        err,
+    )
 }
 
 #[no_mangle]
@@ -394,7 +236,7 @@ pub extern "C" fn ibc_channel_open(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_channel_open_raw,
         cache,
         code_id,
@@ -424,7 +266,7 @@ pub extern "C" fn ibc_channel_connect(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_channel_connect_raw,
         cache,
         code_id,
@@ -454,7 +296,7 @@ pub extern "C" fn ibc_channel_close(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_channel_close_raw,
         cache,
         code_id,
@@ -484,7 +326,7 @@ pub extern "C" fn ibc_packet_receive(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_packet_receive_raw,
         cache,
         code_id,
@@ -514,7 +356,7 @@ pub extern "C" fn ibc_packet_ack(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_packet_ack_raw,
         cache,
         code_id,
@@ -544,7 +386,7 @@ pub extern "C" fn ibc_packet_timeout(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    ibc_call(
+    call_2_args(
         call_ibc_packet_timeout_raw,
         cache,
         code_id,
@@ -560,16 +402,17 @@ pub extern "C" fn ibc_packet_timeout(
     )
 }
 
-type VmFn = fn(
+type VmFn2Args = fn(
     instance: &mut Instance<GoApi, GoStorage, GoQuerier>,
     env: &[u8],
-    channel: &[u8],
+    msg: &[u8],
 ) -> VmResult<Vec<u8>>;
 
-// this wraps all error handling and ffi for the 6 ibc entry points.
+// this wraps all error handling and ffi for the 6 ibc entry points and query.
+// (all of which take env and one "msg" argument).
 // the only difference is which low-level function they dispatch to.
-fn ibc_call(
-    vm_fn: VmFn,
+fn call_2_args(
+    vm_fn: VmFn2Args,
     cache: *mut cache_t,
     code_id: Buffer,
     env: Buffer,
@@ -584,7 +427,7 @@ fn ibc_call(
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_ibc_call(
+            do_call_2_args(
                 vm_fn,
                 c,
                 code_id,
@@ -606,8 +449,8 @@ fn ibc_call(
 }
 
 // this is internal processing, same for all the 6 ibc entry points
-fn do_ibc_call(
-    vm_fn: VmFn,
+fn do_call_2_args(
+    vm_fn: VmFn2Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     code_id: Buffer,
     env: Buffer,
@@ -634,6 +477,90 @@ fn do_ibc_call(
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, env, msg);
+    *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
+}
+
+type VmFn3Args = fn(
+    instance: &mut Instance<GoApi, GoStorage, GoQuerier>,
+    env: &[u8],
+    info: &[u8],
+    msg: &[u8],
+) -> VmResult<Vec<u8>>;
+
+// this wraps all error handling and ffi for handle, init, and migrate.
+// (and anything else that takes env, info and msg arguments).
+// the only difference is which low-level function they dispatch to.
+fn call_3_args(
+    vm_fn: VmFn3Args,
+    cache: *mut cache_t,
+    code_id: Buffer,
+    env: Buffer,
+    info: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_call_3_args(
+                vm_fn,
+                c,
+                code_id,
+                env,
+                info,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                print_debug,
+                gas_used,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_call_3_args(
+    vm_fn: VmFn3Args,
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    code_id: Buffer,
+    env: Buffer,
+    info: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    gas_used: Option<&mut u64>,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
+    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+
+    let backend = into_backend(db, api, querier);
+    let options = InstanceOptions {
+        gas_limit,
+        print_debug,
+    };
+    let mut instance = cache.get_instance(&code_id, backend, options)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = vm_fn(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
