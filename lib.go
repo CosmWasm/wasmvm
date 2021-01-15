@@ -236,3 +236,221 @@ func (vm *VM) Migrate(
 	}
 	return resp.Ok, gasUsed, nil
 }
+
+// IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
+// during the handshake pahse
+func (vm *VM) IBCChannelOpen(
+	code CodeID,
+	env types.Env,
+	channel types.IBCChannel,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return 0, err
+	}
+	chanBin, err := json.Marshal(channel)
+	if err != nil {
+		return 0, err
+	}
+	data, gasUsed, err := api.IBCChannelOpen(vm.cache, code, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return gasUsed, err
+	}
+
+	var resp types.IBCChannelOpenResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return gasUsed, err
+	}
+	if resp.Err != "" {
+		return gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return gasUsed, nil
+}
+
+// IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
+// during the handshake pahse
+func (vm *VM) IBCChannelConnect(
+	code CodeID,
+	env types.Env,
+	channel types.IBCChannel,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.IBCBasicResponse, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	chanBin, err := json.Marshal(channel)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.IBCChannelConnect(vm.cache, code, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.IBCBasicResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
+// IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
+// at the end of the channel lifetime
+func (vm *VM) IBCChannelClose(
+	code CodeID,
+	env types.Env,
+	channel types.IBCChannel,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.IBCBasicResponse, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	chanBin, err := json.Marshal(channel)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.IBCChannelClose(vm.cache, code, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.IBCBasicResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
+// IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
+// packet is received on a channel belonging to this contract
+func (vm *VM) IBCPacketReceive(
+	code CodeID,
+	env types.Env,
+	packet types.IBCPacket,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.IBCReceiveResponse, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	packetBin, err := json.Marshal(packet)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.IBCPacketReceive(vm.cache, code, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.IBCReceiveResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
+// IBCPacketAck is available on IBC-enabled contracts and is called when an
+// the response for an outgoing packet (previously sent by this contract)
+// is received
+func (vm *VM) IBCPacketAck(
+	code CodeID,
+	env types.Env,
+	ack types.IBCAcknowledgement,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.IBCBasicResponse, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	ackBin, err := json.Marshal(ack)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.IBCPacketAck(vm.cache, code, envBin, ackBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.IBCBasicResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
+// IBCPacketTimeout is available on IBC-enabled contracts and is called when an
+// outgoing packet (previously sent by this contract) will provably never be executed.
+// Usually handled like ack returning an error
+func (vm *VM) IBCPacketTimeout(
+	code CodeID,
+	env types.Env,
+	packet types.IBCPacket,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.IBCBasicResponse, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	packetBin, err := json.Marshal(packet)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, code, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.IBCBasicResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
