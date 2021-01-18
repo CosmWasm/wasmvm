@@ -28,7 +28,9 @@ use cosmwasm_vm::{
     Checksum, Instance, InstanceOptions, VmResult,
 };
 
-use crate::args::{CACHE_ARG, CODE_ID_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG};
+use crate::args::{
+    ARG1, ARG2, CACHE_ARG, CODE_ID_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
+};
 use crate::cache::{cache_t, to_cache};
 use crate::error::{handle_c_error, Error};
 
@@ -415,8 +417,8 @@ fn call_2_args(
     vm_fn: VmFn2Args,
     cache: *mut cache_t,
     code_id: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    arg1: Buffer,
+    arg2: Buffer,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -431,8 +433,8 @@ fn call_2_args(
                 vm_fn,
                 c,
                 code_id,
-                env,
-                msg,
+                arg1,
+                arg2,
                 db,
                 api,
                 querier,
@@ -453,8 +455,8 @@ fn do_call_2_args(
     vm_fn: VmFn2Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     code_id: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    arg1: Buffer,
+    arg2: Buffer,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -466,8 +468,8 @@ fn do_call_2_args(
     let code_id: Checksum = unsafe { code_id.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let arg1 = unsafe { arg1.read() }.ok_or_else(|| Error::empty_arg(ARG1))?;
+    let arg2 = unsafe { arg2.read() }.ok_or_else(|| Error::empty_arg(ARG2))?;
 
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
@@ -476,7 +478,7 @@ fn do_call_2_args(
     };
     let mut instance = cache.get_instance(&code_id, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = vm_fn(&mut instance, env, msg);
+    let res = vm_fn(&mut instance, arg1, arg2);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
