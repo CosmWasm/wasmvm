@@ -64,10 +64,12 @@ type EventAttribute struct {
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
-	Bank    *BankMsg        `json:"bank,omitempty"`
-	Custom  json.RawMessage `json:"custom,omitempty"`
-	Staking *StakingMsg     `json:"staking,omitempty"`
-	Wasm    *WasmMsg        `json:"wasm,omitempty"`
+	Bank     *BankMsg        `json:"bank,omitempty"`
+	Custom   json.RawMessage `json:"custom,omitempty"`
+	IBC      *IBCMsg         `json:"ibc,omitempty"`
+	Staking  *StakingMsg     `json:"staking,omitempty"`
+	Stargate *StargateMsg    `json:"stargate,omitempty"`
+	Wasm     *WasmMsg        `json:"wasm,omitempty"`
 }
 
 type BankMsg struct {
@@ -77,8 +79,37 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	ToAddress   string `json:"to_address"`
-	Amount      Coins  `json:"amount"`
+	ToAddress string `json:"to_address"`
+	Amount    Coins  `json:"amount"`
+}
+
+type IBCMsg struct {
+	Transfer     *TransferMsg     `json:"transfer,omitempty"`
+	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
+	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
+}
+
+type TransferMsg struct {
+	ChannelID     string            `json:"channel_id"`
+	ToAddress     string            `json:"to_address"`
+	Amount        Coins             `json:"amount"`
+	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+}
+
+type SendPacketMsg struct {
+	ChannelID     string            `json:"channel_id"`
+	Data          []byte            `json:"data"`
+	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+}
+
+type CloseChannelMsg struct {
+	ChannelID string `json:"channel_id"`
 }
 
 type StakingMsg struct {
@@ -108,6 +139,13 @@ type WithdrawMsg struct {
 	Validator string `json:"validator"`
 	// this is optional
 	Recipient string `json:"recipient,omitempty"`
+}
+
+// StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
+// This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
+type StargateMsg struct {
+	TypeURL string `json:"type_url"`
+	Value   []byte `json:"value"`
 }
 
 type WasmMsg struct {

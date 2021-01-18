@@ -13,7 +13,7 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
-const TESTING_FEATURES = "staking"
+const TESTING_FEATURES = "staking,stargate"
 const TESTING_PRINT_DEBUG = false
 const TESTING_GAS_LIMIT = 100_000_000
 const TESTING_MEMORY_LIMIT = 32 // MiB
