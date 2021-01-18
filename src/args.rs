@@ -8,5 +8,6 @@ pub const MSG_ARG: &str = "msg";
 pub const ENV_ARG: &str = "env";
 pub const INFO_ARG: &str = "message_info";
 pub const GAS_USED_ARG: &str = "gas_used";
+pub const CONTRACT_INFO_ARG: &str = "contract_info";
 pub const ARG1: &str = "arg1";
 pub const ARG2: &str = "arg2";

@@ -29,10 +29,20 @@ use cosmwasm_vm::{
 };
 
 use crate::args::{
-    ARG1, ARG2, CACHE_ARG, CODE_ID_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
+    ARG1, ARG2, CACHE_ARG, CODE_ID_ARG, CONTRACT_INFO_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG,
+    MSG_ARG, WASM_ARG,
 };
 use crate::cache::{cache_t, to_cache};
 use crate::error::{handle_c_error, Error};
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+/// A set of flags exposing some aspects of the contract configuration
+pub struct ContractFlags {
+    pub ibc_enabled: bool,
+    pub stargate: bool,
+    // TODO: add other flags here as needed
+}
 
 fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -114,11 +124,11 @@ pub extern "C" fn instantiate(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
+    contract_info: Option<&mut ContractFlags>,
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    call_3_args(
-        call_init_raw,
+    call_init(
         cache,
         contract_checksum,
         env,
@@ -129,6 +139,7 @@ pub extern "C" fn instantiate(
         querier,
         gas_limit,
         print_debug,
+        contract_info,
         gas_used,
         err,
     )
@@ -568,6 +579,87 @@ fn do_call_3_args(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
+    instance.recycle();
+    Ok(res?)
+}
+
+/// this is just for init. It is like the 3 args, but take a callback
+/// to return some info on the contract
+fn call_init(
+    cache: *mut cache_t,
+    code_id: Buffer,
+    env: Buffer,
+    info: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    contract_info: Option<&mut ContractFlags>,
+    gas_used: Option<&mut u64>,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_call_init(
+                c,
+                code_id,
+                env,
+                info,
+                msg,
+                db,
+                api,
+                querier,
+                gas_limit,
+                print_debug,
+                contract_info,
+                gas_used,
+            )
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_call_init(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    code_id: Buffer,
+    env: Buffer,
+    info: Buffer,
+    msg: Buffer,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    contract_info: Option<&mut ContractFlags>,
+    gas_used: Option<&mut u64>,
+) -> Result<Vec<u8>, Error> {
+    let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
+    let contract_info = contract_info.ok_or_else(|| Error::empty_arg(CONTRACT_INFO_ARG))?;
+
+    let code_id: Checksum = unsafe { code_id.read() }
+        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .try_into()?;
+    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
+    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
+    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+
+    let backend = into_backend(db, api, querier);
+    let options = InstanceOptions {
+        gas_limit,
+        print_debug,
+    };
+    let mut instance = cache.get_instance(&code_id, backend, options)?;
+    // We only check this result after reporting gas usage and returning the instance into the cache.
+    let res = call_init_raw(&mut instance, env, info, msg);
+    *gas_used = instance.create_gas_report().used_internally;
+    // add some flags about the contract here
+    contract_info.ibc_enabled = instance.has_ibc_entry_points();
+    contract_info.stargate = instance.required_features.contains("stargate");
     instance.recycle();
     Ok(res?)
 }

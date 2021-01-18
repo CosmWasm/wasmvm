@@ -123,6 +123,14 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
+/**
+ * A set of flags exposing some aspects of the contract configuration
+ */
+typedef struct ContractFlags {
+  bool ibc_enabled;
+  bool stargate;
+} ContractFlags;
+
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
@@ -232,6 +240,7 @@ Buffer instantiate(cache_t *cache,
                    GoQuerier querier,
                    uint64_t gas_limit,
                    bool print_debug,
+                   ContractFlags *contract_info,
                    uint64_t *gas_used,
                    Buffer *err);
 
