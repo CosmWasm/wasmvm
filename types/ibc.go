@@ -37,14 +37,19 @@ type IBCTimeoutHeight struct {
 	TimeoutHeight uint64 `json:"timeout_height"`
 }
 
+func (t IBCTimeoutHeight) IsZero() bool {
+	return t.RevisionNumber == 0 && t.TimeoutHeight == 0
+}
+
 type IBCPacket struct {
-	Data             []byte           `json:"data"`
-	Src              IBCEndpoint      `json:"src"`
-	Dest             IBCEndpoint      `json:"dest"`
-	Sequence         uint64           `json:"sequence"`
-	TimeoutHeight    IBCTimeoutHeight `json:"timeout_height"`
-	TimeoutTimestamp uint64           `json:"timeout_timestamp"`
-	Version          uint64           `json:"version"`
+	Data          []byte            `json:"data"`
+	Src           IBCEndpoint       `json:"src"`
+	Dest          IBCEndpoint       `json:"dest"`
+	Sequence      uint64            `json:"sequence"`
+	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
 }
 
 type IBCAcknowledgement struct {

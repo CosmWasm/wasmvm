@@ -66,7 +66,7 @@ type EventAttribute struct {
 type CosmosMsg struct {
 	Bank     *BankMsg        `json:"bank,omitempty"`
 	Custom   json.RawMessage `json:"custom,omitempty"`
-	Ibc      *IbcMsg         `json:"ibc,omitempty"`
+	IBC      *IBCMsg         `json:"ibc,omitempty"`
 	Staking  *StakingMsg     `json:"staking,omitempty"`
 	Stargate *StargateMsg    `json:"stargate,omitempty"`
 	Wasm     *WasmMsg        `json:"wasm,omitempty"`
@@ -83,33 +83,29 @@ type SendMsg struct {
 	Amount    Coins  `json:"amount"`
 }
 
-type IbcMsg struct {
-	Ics20Transfer *Ics20TransferMsg `json:"ics20_transfer,omitempty"`
-	SendPacket    *SendPacketMsg    `json:"send_packet,omitempty"`
-	CloseChannel  *CloseChannelMsg  `json:"close_channel,omitempty"`
+type IBCMsg struct {
+	Transfer     *TransferMsg     `json:"transfer,omitempty"`
+	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
+	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
 }
 
-type Ics20TransferMsg struct {
-	ChannelID string `json:"channel_id"`
-	ToAddress string `json:"to_address"`
-	Amount    Coins  `json:"amount"`
+type TransferMsg struct {
+	ChannelID     string            `json:"channel_id"`
+	ToAddress     string            `json:"to_address"`
+	Amount        Coins             `json:"amount"`
+	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
 }
 
 type SendPacketMsg struct {
-	ChannelID        string           `json:"channel_id"`
-	Data             []byte           `json:"data"`
-	TimeoutHeight    IbcTimeoutHeight `json:"timeout_timestamp"`
-	TimeoutTimestamp uint64           `json:"timeout_timestamp"`
-	Version          uint64           `json:"version"`
-}
-
-type IbcTimeoutHeight struct {
-	// the version that the client is currently on
-	// (eg. after reseting the chain this could increment 1 as height drops to 0)
-	RevisionNumber uint64 `json:"revision_number"`
-	/// block height after which the packet times out.
-	/// the height within the given revision
-	TimeoutHeight uint64 `json:"timeout_height"`
+	ChannelID     string            `json:"channel_id"`
+	Data          []byte            `json:"data"`
+	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
 }
 
 type CloseChannelMsg struct {
@@ -149,7 +145,7 @@ type WithdrawMsg struct {
 // This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
 type StargateMsg struct {
 	TypeURL string `json:"type_url"`
-	Data    []byte `json:"data"`
+	Value   []byte `json:"value"`
 }
 
 type WasmMsg struct {
