@@ -129,10 +129,10 @@ Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
 void free_rust(Buffer buf);
 
-Buffer get_code(cache_t *cache, Buffer id, Buffer *err);
+Buffer get_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
 
 Buffer handle(cache_t *cache,
-              Buffer code_id,
+              Buffer contract_checksum,
               Buffer env,
               Buffer info,
               Buffer msg,
@@ -145,7 +145,7 @@ Buffer handle(cache_t *cache,
               Buffer *err);
 
 Buffer ibc_channel_close(cache_t *cache,
-                         Buffer code_id,
+                         Buffer contract_checksum,
                          Buffer env,
                          Buffer msg,
                          DB db,
@@ -157,7 +157,7 @@ Buffer ibc_channel_close(cache_t *cache,
                          Buffer *err);
 
 Buffer ibc_channel_connect(cache_t *cache,
-                           Buffer code_id,
+                           Buffer contract_checksum,
                            Buffer env,
                            Buffer msg,
                            DB db,
@@ -169,7 +169,7 @@ Buffer ibc_channel_connect(cache_t *cache,
                            Buffer *err);
 
 Buffer ibc_channel_open(cache_t *cache,
-                        Buffer code_id,
+                        Buffer contract_checksum,
                         Buffer env,
                         Buffer msg,
                         DB db,
@@ -181,7 +181,7 @@ Buffer ibc_channel_open(cache_t *cache,
                         Buffer *err);
 
 Buffer ibc_packet_ack(cache_t *cache,
-                      Buffer code_id,
+                      Buffer contract_checksum,
                       Buffer env,
                       Buffer msg,
                       DB db,
@@ -193,7 +193,7 @@ Buffer ibc_packet_ack(cache_t *cache,
                       Buffer *err);
 
 Buffer ibc_packet_receive(cache_t *cache,
-                          Buffer code_id,
+                          Buffer contract_checksum,
                           Buffer env,
                           Buffer msg,
                           DB db,
@@ -205,7 +205,7 @@ Buffer ibc_packet_receive(cache_t *cache,
                           Buffer *err);
 
 Buffer ibc_packet_timeout(cache_t *cache,
-                          Buffer code_id,
+                          Buffer contract_checksum,
                           Buffer env,
                           Buffer msg,
                           DB db,
@@ -223,7 +223,7 @@ cache_t *init_cache(Buffer data_dir,
                     Buffer *err);
 
 Buffer instantiate(cache_t *cache,
-                   Buffer code_id,
+                   Buffer contract_checksum,
                    Buffer env,
                    Buffer info,
                    Buffer msg,
@@ -236,7 +236,7 @@ Buffer instantiate(cache_t *cache,
                    Buffer *err);
 
 Buffer migrate(cache_t *cache,
-               Buffer code_id,
+               Buffer contract_checksum,
                Buffer env,
                Buffer info,
                Buffer msg,
@@ -249,7 +249,7 @@ Buffer migrate(cache_t *cache,
                Buffer *err);
 
 Buffer query(cache_t *cache,
-             Buffer code_id,
+             Buffer contract_checksum,
              Buffer env,
              Buffer msg,
              DB db,
