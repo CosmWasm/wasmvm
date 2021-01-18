@@ -587,7 +587,7 @@ fn do_call_3_args(
 /// to return some info on the contract
 fn call_init(
     cache: *mut cache_t,
-    code_id: Buffer,
+    contract_checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -604,7 +604,7 @@ fn call_init(
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_call_init(
                 c,
-                code_id,
+                contract_checksum,
                 env,
                 info,
                 msg,
@@ -626,7 +626,7 @@ fn call_init(
 
 fn do_call_init(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    code_id: Buffer,
+    contract_checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -641,7 +641,7 @@ fn do_call_init(
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let contract_info = contract_info.ok_or_else(|| Error::empty_arg(CONTRACT_INFO_ARG))?;
 
-    let code_id: Checksum = unsafe { code_id.read() }
+    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
         .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
         .try_into()?;
     let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
@@ -653,7 +653,7 @@ fn do_call_init(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&code_id, backend, options)?;
+    let mut instance = cache.get_instance(&contract_checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = call_init_raw(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;
