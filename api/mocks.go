@@ -61,7 +61,7 @@ func MockInfoBin(t *testing.T, sender types.HumanAddress) []byte {
 
 func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannel {
 	return types.IBCChannel{
-		Endpoint:             types.IBCEndpoint{
+		Endpoint: types.IBCEndpoint{
 			PortID:    "my_port",
 			ChannelID: channelID,
 		},
@@ -69,10 +69,30 @@ func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string
 			PortID:    "their_port",
 			ChannelID: "channel-7",
 		},
-		Order:                ordering,
-		Version:              ibcVersion,
-		CounterpartyVersion:  ibcVersion,
-		ConnectionID:         "connection-3",
+		Order:               ordering,
+		Version:             ibcVersion,
+		CounterpartyVersion: ibcVersion,
+		ConnectionID:        "connection-3",
+	}
+}
+
+func MockIBCPacket(myChannel string, data []byte) types.IBCPacket {
+	return types.IBCPacket{
+		Data: data,
+		Src: types.IBCEndpoint{
+			PortID:    "their_port",
+			ChannelID: "channel-7",
+		},
+		Dest: types.IBCEndpoint{
+			PortID:    "my_port",
+			ChannelID: myChannel,
+		},
+		Sequence: 15,
+		TimeoutHeight: &types.IBCTimeoutHeight{
+			RevisionNumber: 1,
+			TimeoutHeight:  123456,
+		},
+		TimeoutTimestamp: nil,
 	}
 }
 
