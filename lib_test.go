@@ -68,9 +68,11 @@ func TestHappyPath(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	ires, _, err := vm.Instantiate(id, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, flags, _, err := vm.Instantiate(id, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
+	assert.False(t, flags.IBCEnabled)
+	assert.False(t, flags.Stargate)
 
 	// handle
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)

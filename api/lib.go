@@ -83,7 +83,7 @@ func Instantiate(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.ContractFlags, uint64, error) {
 	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
@@ -101,15 +101,20 @@ func Instantiate(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
+	var contractFlags C.ContractFlags
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &contractFlags, &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, types.ContractFlags{}, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	flags := types.ContractFlags{
+		IBCEnabled: bool(contractFlags.ibc_enabled),
+		Stargate:   bool(contractFlags.stargate),
+	}
+	return receiveVector(res), flags, uint64(gasUsed), nil
 }
 
 func Handle(

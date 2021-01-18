@@ -36,9 +36,11 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	msg := []byte(`{}`)
 
 	igasMeter1 := GasMeter(gasMeter1)
-	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, flags, _, err := Instantiate(cache, id, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
+	assert.False(t, flags.IBCEnabled)
+	assert.False(t, flags.Stargate)
 
 	for _, value := range values {
 		// push 17

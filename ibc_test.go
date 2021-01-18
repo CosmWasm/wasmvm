@@ -92,9 +92,11 @@ func TestIBCHandshake(t *testing.T) {
 	msg := IBCInitMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	ires, _, err := vm.Instantiate(id, env, info, toBytes(t, msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, flags, _, err := vm.Instantiate(id, env, info, toBytes(t, msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
+	assert.True(t, flags.IBCEnabled)
+	assert.True(t, flags.Stargate)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -153,8 +155,10 @@ func TestIBCPacketDispatch(t *testing.T) {
 	initMsg := IBCInitMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	_, _, err := vm.Instantiate(id, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	_, flags, _, err := vm.Instantiate(id, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
+	assert.True(t, flags.IBCEnabled)
+	assert.True(t, flags.Stargate)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)

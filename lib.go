@@ -97,29 +97,30 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-) (*types.InitResponse, uint64, error) {
+) (*types.InitResponse, types.ContractFlags, uint64, error) {
+	var noFlags types.ContractFlags
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, noFlags, 0, err
 	}
 	infoBin, err := json.Marshal(info)
 	if err != nil {
-		return nil, 0, err
+		return nil, noFlags, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, codeID, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, flags, gasUsed, err := api.Instantiate(vm.cache, codeID, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasUsed, err
+		return nil, noFlags, gasUsed, err
 	}
 
 	var resp types.InitResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
-		return nil, gasUsed, err
+		return nil, noFlags, gasUsed, err
 	}
 	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+		return nil, noFlags, gasUsed, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasUsed, nil
+	return resp.Ok, flags, gasUsed, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same CodeID is the

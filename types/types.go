@@ -57,3 +57,10 @@ var _ error = OutOfGasError{}
 func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
+
+// ContractFlags exposes some information about what is enabled in the contract
+// (currently just whether it uses IBC and requires stargate)
+type ContractFlags struct {
+	IBCEnabled bool
+	Stargate   bool
+}

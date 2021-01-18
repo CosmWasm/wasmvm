@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
 
@@ -34,8 +35,10 @@ func TestCanonicalAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
 	igasMeter := GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, flags, _, err := Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
+	assert.False(t, flags.IBCEnabled)
+	assert.False(t, flags.Stargate)
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
 	require.NoError(t, err)
@@ -67,7 +70,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	// instantiate it normally
 	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
 	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	_, _, _, err = Instantiate(cache, id, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// call query which will call canonicalize address
