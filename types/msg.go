@@ -92,7 +92,7 @@ type IBCMsg struct {
 type TransferMsg struct {
 	ChannelID     string            `json:"channel_id"`
 	ToAddress     string            `json:"to_address"`
-	Amount        Coins             `json:"amount"`
+	Amount        Coin              `json:"amount"`
 	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
 	// Nanoseconds since UNIX epoch
 	// See https://golang.org/pkg/time/#Time.UnixNano
