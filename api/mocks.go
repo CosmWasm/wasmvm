@@ -59,6 +59,23 @@ func MockInfoBin(t *testing.T, sender types.HumanAddress) []byte {
 	return bin
 }
 
+func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannel {
+	return types.IBCChannel{
+		Endpoint:             types.IBCEndpoint{
+			PortID:    "my_port",
+			ChannelID: channelID,
+		},
+		CounterpartyEndpoint: types.IBCEndpoint{
+			PortID:    "their_port",
+			ChannelID: "channel-7",
+		},
+		Order:                ordering,
+		Version:              ibcVersion,
+		CounterpartyVersion:  ibcVersion,
+		ConnectionID:         "connection-3",
+	}
+}
+
 /*** Mock GasMeter ****/
 // This code is borrowed from Cosmos-SDK store/types/gas.go
 
