@@ -60,8 +60,8 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	return receiveVector(id), nil
 }
 
-func GetCode(cache Cache, code_id []byte) ([]byte, error) {
-	id := sendSlice(code_id)
+func GetCode(cache Cache, codeID []byte) ([]byte, error) {
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	errmsg := C.Buffer{}
 	code, err := C.get_code(cache.ptr, id, &errmsg)
@@ -73,7 +73,7 @@ func GetCode(cache Cache, code_id []byte) ([]byte, error) {
 
 func Instantiate(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -84,7 +84,7 @@ func Instantiate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -114,7 +114,7 @@ func Instantiate(
 
 func Handle(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -125,7 +125,7 @@ func Handle(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -155,7 +155,7 @@ func Handle(
 
 func Migrate(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -166,7 +166,7 @@ func Migrate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -196,7 +196,7 @@ func Migrate(
 
 func Query(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -206,7 +206,7 @@ func Query(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -234,7 +234,7 @@ func Query(
 
 func IBCChannelOpen(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -244,7 +244,7 @@ func IBCChannelOpen(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -272,7 +272,7 @@ func IBCChannelOpen(
 
 func IBCChannelConnect(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -282,7 +282,7 @@ func IBCChannelConnect(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -310,7 +310,7 @@ func IBCChannelConnect(
 
 func IBCChannelClose(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -320,7 +320,7 @@ func IBCChannelClose(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -348,7 +348,7 @@ func IBCChannelClose(
 
 func IBCPacketReceive(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	packet []byte,
 	gasMeter *GasMeter,
@@ -358,7 +358,7 @@ func IBCPacketReceive(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -386,7 +386,7 @@ func IBCPacketReceive(
 
 func IBCPacketAck(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	ack []byte,
 	gasMeter *GasMeter,
@@ -396,7 +396,7 @@ func IBCPacketAck(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
@@ -424,7 +424,7 @@ func IBCPacketAck(
 
 func IBCPacketTimeout(
 	cache Cache,
-	code_id []byte,
+	codeID []byte,
 	env []byte,
 	packet []byte,
 	gasMeter *GasMeter,
@@ -434,7 +434,7 @@ func IBCPacketTimeout(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
+	id := sendSlice(codeID)
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)

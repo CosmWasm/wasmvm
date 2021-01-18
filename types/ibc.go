@@ -1,8 +1,8 @@
 package types
 
 type IBCEndpoint struct {
-	PortId    string `json:"port_id"`
-	ChannelId string `json:"channel_id"`
+	PortID    string `json:"port_id"`
+	ChannelID string `json:"channel_id"`
 }
 
 type IBCChannel struct {

@@ -114,20 +114,20 @@ type AllBalancesResponse struct {
 }
 
 type IbcQuery struct {
-	PortId       *PortIdQuery       `json:"port_id,omitempty"`
+	PortID       *PortIDQuery       `json:"port_id,omitempty"`
 	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
 	Channel      *ChannelQuery      `json:"channel,omitempty"`
 }
 
-type PortIdQuery struct{}
+type PortIDQuery struct{}
 
-type PortIdResponse struct {
-	PortId string `json:"port_id"`
+type PortIDResponse struct {
+	PortID string `json:"port_id"`
 }
 
 type ListChannelsQuery struct {
 	// optional argument
-	PortId string `json:"port_id,omitempty"`
+	PortID string `json:"port_id,omitempty"`
 }
 
 type ListChannelsResponse struct {
@@ -162,8 +162,8 @@ func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
 
 type ChannelQuery struct {
 	// optional argument
-	PortId    string `json:"port_id,omitempty"`
-	ChannelId string `json:"channel_id"`
+	PortID    string `json:"port_id,omitempty"`
+	ChannelID string `json:"channel_id"`
 }
 
 type ChannelResponse struct {
