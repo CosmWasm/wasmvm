@@ -228,3 +228,27 @@ func TestIBCPacketDispatch(t *testing.T) {
 	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::HumanAddr not found", ack2.Err)
 }
+
+func TestAnalyzeCode(t *testing.T) {
+	vm := withVM(t)
+
+	// instantiate non-ibc contract
+	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+	id, err := vm.Create(wasm)
+	require.NoError(t, err)
+	// and analyze
+	report, err := vm.AnalyzeCode(id)
+	require.NoError(t, err)
+	require.False(t, report.HasIBCEntryPoints)
+
+	// instantiate ibc contract
+	wasm2, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
+	require.NoError(t, err)
+	id2, err := vm.Create(wasm2)
+	require.NoError(t, err)
+	// and analyze
+	report2, err := vm.AnalyzeCode(id2)
+	require.NoError(t, err)
+	require.True(t, report2.HasIBCEntryPoints)
+}
