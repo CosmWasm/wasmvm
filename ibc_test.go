@@ -235,20 +235,20 @@ func TestAnalyzeCode(t *testing.T) {
 	// instantiate non-ibc contract
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
-	id, err := vm.Create(wasm)
+	checksum, err := vm.Create(wasm)
 	require.NoError(t, err)
 	// and analyze
-	report, err := vm.AnalyzeCode(id)
+	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
 
 	// instantiate ibc contract
 	wasm2, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
-	id2, err := vm.Create(wasm2)
+	checksum2, err := vm.Create(wasm2)
 	require.NoError(t, err)
 	// and analyze
-	report2, err := vm.AnalyzeCode(id2)
+	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
 }

@@ -148,8 +148,8 @@ fn do_analyze_code(
     let contract_checksum: Checksum = unsafe { contract_checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
-    let wasm = cache.analyze(&contract_checksum)?;
-    Ok(wasm.into())
+    let report = cache.analyze(&contract_checksum)?;
+    Ok(report.into())
 }
 
 #[no_mangle]
