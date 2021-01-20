@@ -71,6 +71,20 @@ func GetCode(cache Cache, codeID []byte) ([]byte, error) {
 	return receiveVector(code), nil
 }
 
+func AnalyzeCode(cache Cache, codeID []byte) (*types.AnalysisReport, error) {
+	id := sendSlice(codeID)
+	defer freeAfterSend(id)
+	errmsg := C.Buffer{}
+	report, err := C.analyze_code(cache.ptr, id, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	res := types.AnalysisReport{
+		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+	}
+	return &res, nil
+}
+
 func Instantiate(
 	cache Cache,
 	codeID []byte,

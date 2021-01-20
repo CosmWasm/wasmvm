@@ -79,6 +79,13 @@ func (vm *VM) GetCode(codeID CodeID) (WasmCode, error) {
 	return api.GetCode(vm.cache, codeID)
 }
 
+// Returns a report of static analysis of the wasm contract (uncompiled).
+// This contract must have been stored in the cache previously (via Create).
+// Only info currently returned is if it exposes all ibc entry points, but this may grow later
+func (vm *VM) AnalyzeCode(codeID CodeID) (*types.AnalysisReport, error) {
+	return api.AnalyzeCode(vm.cache, codeID)
+}
+
 // Instantiate will create a new contract based on the given codeID.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.

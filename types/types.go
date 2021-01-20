@@ -57,3 +57,8 @@ var _ error = OutOfGasError{}
 func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
+
+// Returns info on the contract
+type AnalysisReport struct {
+	HasIBCEntryPoints bool
+}
