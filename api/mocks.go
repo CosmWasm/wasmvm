@@ -88,9 +88,9 @@ func MockIBCPacket(myChannel string, data []byte) types.IBCPacket {
 			ChannelID: myChannel,
 		},
 		Sequence: 15,
-		TimeoutHeight: &types.IBCTimeoutHeight{
-			RevisionNumber: 1,
-			TimeoutHeight:  123456,
+		TimeoutBlock: &types.IBCTimeoutBlock{
+			Revision: 1,
+			Height:   123456,
 		},
 		TimeoutTimestamp: nil,
 	}
