@@ -221,7 +221,6 @@ pub extern "C" fn migrate(
     cache: *mut cache_t,
     contract_checksum: Buffer,
     env: Buffer,
-    info: Buffer,
     msg: Buffer,
     db: DB,
     api: GoApi,
@@ -231,12 +230,11 @@ pub extern "C" fn migrate(
     gas_used: Option<&mut u64>,
     err: Option<&mut Buffer>,
 ) -> Buffer {
-    call_3_args(
+    call_2_args(
         call_migrate_raw,
         cache,
         contract_checksum,
         env,
-        info,
         msg,
         db,
         api,
