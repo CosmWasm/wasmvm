@@ -171,7 +171,6 @@ func Migrate(
 	cache Cache,
 	codeID []byte,
 	env []byte,
-	info []byte,
 	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
@@ -184,8 +183,6 @@ func Migrate(
 	defer freeAfterSend(id)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
 	m := sendSlice(msg)
 	defer freeAfterSend(m)
 
@@ -200,7 +197,7 @@ func Migrate(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

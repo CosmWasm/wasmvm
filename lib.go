@@ -212,7 +212,6 @@ func (vm *VM) Query(
 func (vm *VM) Migrate(
 	codeID CodeID,
 	env types.Env,
-	info types.MessageInfo,
 	migrateMsg []byte,
 	store KVStore,
 	goapi GoAPI,
@@ -224,11 +223,7 @@ func (vm *VM) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
-	infoBin, err := json.Marshal(info)
-	if err != nil {
-		return nil, 0, err
-	}
-	data, gasUsed, err := api.Migrate(vm.cache, codeID, envBin, infoBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Migrate(vm.cache, codeID, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
