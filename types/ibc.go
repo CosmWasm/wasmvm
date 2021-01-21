@@ -24,31 +24,34 @@ type IBCOrder = string
 const Unordered = "ORDER_UNORDERED"
 const Ordered = "ORDER_ORDERED"
 
-// IBCTimeoutHeight Height is a monotonically increasing data type
+// IBCTimeoutBlock Height is a monotonically increasing data type
 // that can be compared against another Height for the purposes of updating and
 // freezing clients.
 // Ordering is (revision_number, timeout_height)
-type IBCTimeoutHeight struct {
+type IBCTimeoutBlock struct {
 	// the version that the client is currently on
 	// (eg. after reseting the chain this could increment 1 as height drops to 0)
-	RevisionNumber uint64 `json:"revision_number"`
+	Revision uint64 `json:"revision"`
 	// block height after which the packet times out.
 	// the height within the given revision
-	TimeoutHeight uint64 `json:"timeout_height"`
+	Height uint64 `json:"height"`
 }
 
-func (t IBCTimeoutHeight) IsZero() bool {
-	return t.RevisionNumber == 0 && t.TimeoutHeight == 0
+func (t IBCTimeoutBlock) IsZero() bool {
+	return t.Revision == 0 && t.Height == 0
 }
 
 type IBCPacket struct {
-	Data          []byte            `json:"data"`
-	Src           IBCEndpoint       `json:"src"`
-	Dest          IBCEndpoint       `json:"dest"`
-	Sequence      uint64            `json:"sequence"`
-	TimeoutHeight *IBCTimeoutHeight `json:"timeout_height,omitempty"`
+	Data     []byte      `json:"data"`
+	Src      IBCEndpoint `json:"src"`
+	Dest     IBCEndpoint `json:"dest"`
+	Sequence uint64      `json:"sequence"`
+	// block after which the packet times out.
+	// at least one of timeout_block, timeout_timestamp is required
+	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
 	// Nanoseconds since UNIX epoch
 	// See https://golang.org/pkg/time/#Time.UnixNano
+	// at least one of timeout_block, timeout_timestamp is required
 	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
 }
 

@@ -53,6 +53,10 @@ typedef struct Buffer {
   uintptr_t cap;
 } Buffer;
 
+typedef struct AnalysisReport {
+  bool has_ibc_entry_points;
+} AnalysisReport;
+
 typedef struct cache_t {
 
 } cache_t;
@@ -124,6 +128,8 @@ typedef struct GoQuerier {
 } GoQuerier;
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
+
+AnalysisReport analyze_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
 
 Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
 
