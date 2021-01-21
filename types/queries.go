@@ -83,7 +83,7 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 type QueryRequest struct {
 	Bank     *BankQuery      `json:"bank,omitempty"`
 	Custom   json.RawMessage `json:"custom,omitempty"`
-	Ibc      *IbcQuery       `json:"ibc,omitempty"`
+	IBC      *IBCQuery       `json:"ibc,omitempty"`
 	Staking  *StakingQuery   `json:"staking,omitempty"`
 	Stargate *StargateQuery  `json:"stargate,omitempty"`
 	Wasm     *WasmQuery      `json:"wasm,omitempty"`
@@ -113,7 +113,7 @@ type AllBalancesResponse struct {
 	Amount Coins `json:"amount"`
 }
 
-type IbcQuery struct {
+type IBCQuery struct {
 	PortID       *PortIDQuery       `json:"port_id,omitempty"`
 	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
 	Channel      *ChannelQuery      `json:"channel,omitempty"`
