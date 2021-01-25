@@ -144,6 +144,24 @@ mod tests {
     }
 
     #[test]
+    fn init_cache_writes_error() {
+        let dir: String = String::from("borken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert!(cache_ptr.is_null());
+        assert_ne!(err.len, 0);
+        let msg = String::from_utf8(unsafe { err.consume() }).unwrap();
+        assert_eq!(msg, "Error calling the VM: Cache error: Error creating Wasm dir for cache: data provided contains a nul byte");
+    }
+
+    #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
         let mut err = Buffer::default();
