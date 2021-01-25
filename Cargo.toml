@@ -19,11 +19,6 @@ name = "muslc"
 path = "src/lib.rs"
 crate-type = ["staticlib"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[badges]
-circle-ci = { repository = "CosmWasm/wasmvm", branch = "master" }
-maintenance = { status = "actively-developed" }
-
 [features]
 default = []
 # This feature requires Rust nightly because it depends on the unstable backtrace feature.

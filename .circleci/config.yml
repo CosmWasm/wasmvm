@@ -164,8 +164,8 @@ workflows:
                 - /.*/
             branches:
               only:
-                - master
-      # Run only on master, not on tags (auto-build on merge PR)
+                - main
+      # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
             - sanity
@@ -176,7 +176,7 @@ workflows:
                 - /.*/
             branches:
               only:
-                - master
+                - main
       - deploy_to_github_releases:
           filters:
             tags:
