@@ -60,22 +60,22 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	return receiveVector(id), nil
 }
 
-func GetCode(cache Cache, codeID []byte) ([]byte, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+func GetCode(cache Cache, checksum []byte) ([]byte, error) {
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	errmsg := C.Buffer{}
-	code, err := C.get_code(cache.ptr, id, &errmsg)
+	code, err := C.get_code(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return receiveVector(code), nil
 }
 
-func AnalyzeCode(cache Cache, codeID []byte) (*types.AnalysisReport, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	errmsg := C.Buffer{}
-	report, err := C.analyze_code(cache.ptr, id, &errmsg)
+	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -87,7 +87,7 @@ func AnalyzeCode(cache Cache, codeID []byte) (*types.AnalysisReport, error) {
 
 func Instantiate(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -98,8 +98,8 @@ func Instantiate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	i := sendSlice(info)
@@ -118,7 +118,7 @@ func Instantiate(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -128,7 +128,7 @@ func Instantiate(
 
 func Handle(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -139,8 +139,8 @@ func Handle(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	i := sendSlice(info)
@@ -159,7 +159,7 @@ func Handle(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -169,7 +169,7 @@ func Handle(
 
 func Migrate(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -179,8 +179,8 @@ func Migrate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	m := sendSlice(msg)
@@ -197,7 +197,7 @@ func Migrate(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.migrate(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -207,7 +207,7 @@ func Migrate(
 
 func Query(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -217,8 +217,8 @@ func Query(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	m := sendSlice(msg)
@@ -235,7 +235,7 @@ func Query(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.query(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -245,7 +245,7 @@ func Query(
 
 func IBCChannelOpen(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -255,8 +255,8 @@ func IBCChannelOpen(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	c := sendSlice(channel)
@@ -273,7 +273,7 @@ func IBCChannelOpen(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_open(cache.ptr, id, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -283,7 +283,7 @@ func IBCChannelOpen(
 
 func IBCChannelConnect(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -293,8 +293,8 @@ func IBCChannelConnect(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	c := sendSlice(channel)
@@ -311,7 +311,7 @@ func IBCChannelConnect(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_connect(cache.ptr, id, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -321,7 +321,7 @@ func IBCChannelConnect(
 
 func IBCChannelClose(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	channel []byte,
 	gasMeter *GasMeter,
@@ -331,8 +331,8 @@ func IBCChannelClose(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	c := sendSlice(channel)
@@ -349,7 +349,7 @@ func IBCChannelClose(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_close(cache.ptr, id, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -359,7 +359,7 @@ func IBCChannelClose(
 
 func IBCPacketReceive(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	packet []byte,
 	gasMeter *GasMeter,
@@ -369,8 +369,8 @@ func IBCPacketReceive(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	p := sendSlice(packet)
@@ -387,7 +387,7 @@ func IBCPacketReceive(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_receive(cache.ptr, id, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_receive(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -397,7 +397,7 @@ func IBCPacketReceive(
 
 func IBCPacketAck(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	ack []byte,
 	gasMeter *GasMeter,
@@ -407,8 +407,8 @@ func IBCPacketAck(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	ac := sendSlice(ack)
@@ -425,7 +425,7 @@ func IBCPacketAck(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_ack(cache.ptr, id, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -435,7 +435,7 @@ func IBCPacketAck(
 
 func IBCPacketTimeout(
 	cache Cache,
-	codeID []byte,
+	checksum []byte,
 	env []byte,
 	packet []byte,
 	gasMeter *GasMeter,
@@ -445,8 +445,8 @@ func IBCPacketTimeout(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(codeID)
-	defer freeAfterSend(id)
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
 	e := sendSlice(env)
 	defer freeAfterSend(e)
 	p := sendSlice(packet)
@@ -463,7 +463,7 @@ func IBCPacketTimeout(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_timeout(cache.ptr, id, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

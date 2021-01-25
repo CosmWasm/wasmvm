@@ -31,12 +31,12 @@ func withVM(t *testing.T) *VM {
 	return vm
 }
 
-func createTestContract(t *testing.T, vm *VM, path string) CodeID {
+func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	wasm, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-	id, err := vm.Create(wasm)
+	checksum, err := vm.Create(wasm)
 	require.NoError(t, err)
-	return id
+	return checksum
 }
 
 func TestCreateAndGet(t *testing.T) {
@@ -45,17 +45,17 @@ func TestCreateAndGet(t *testing.T) {
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	id, err := vm.Create(wasm)
+	checksum, err := vm.Create(wasm)
 	require.NoError(t, err)
 
-	code, err := vm.GetCode(id)
+	code, err := vm.GetCode(checksum)
 	require.NoError(t, err)
 	require.Equal(t, WasmCode(wasm), code)
 }
 
 func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
-	id := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
+	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
@@ -68,7 +68,7 @@ func TestHappyPath(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	ires, _, err := vm.Instantiate(id, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
@@ -77,7 +77,7 @@ func TestHappyPath(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	info = api.MockInfo("fred", nil)
-	hres, _, err := vm.Execute(id, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
+	hres, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(hres.Messages))
 

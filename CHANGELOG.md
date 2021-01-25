@@ -14,6 +14,11 @@ and this project adheres to
 [#167]: https://github.com/CosmWasm/wasmvm/pull/167
 [#174]: https://github.com/CosmWasm/wasmvm/pull/174
 
+### Changed
+
+- Renamed the Go type `CodeID` to `Checksum` to clarify the difference between
+  the numeric code ID assigned by x/wasm and the hash used to identify it in the cache.
+
 ## 0.13.0
 
 This is a baseline... no CHANGELOG was maintained until this point
