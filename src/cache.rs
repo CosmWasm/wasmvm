@@ -132,6 +132,56 @@ fn do_load_wasm(
     Ok(wasm)
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct AnalysisReport {
+    pub has_ibc_entry_points: bool,
+}
+
+impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
+    fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
+        AnalysisReport {
+            has_ibc_entry_points: report.has_ibc_entry_points,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn analyze_code(
+    cache: *mut cache_t,
+    contract_checksum: Buffer,
+    err: Option<&mut Buffer>,
+) -> AnalysisReport {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_analyze_code(c, contract_checksum)
+        }))
+        .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    match r {
+        Ok(value) => {
+            clear_error();
+            value
+        }
+        Err(error) => {
+            set_error(error, err);
+            AnalysisReport::default()
+        }
+    }
+}
+
+fn do_analyze_code(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    contract_checksum: Buffer,
+) -> Result<AnalysisReport, Error> {
+    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .try_into()?;
+    let report = cache.analyze(&contract_checksum)?;
+    Ok(report.into())
+}
+
 /// frees a cache reference
 ///
 /// # Safety
@@ -151,7 +201,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    static CONTRACT: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
+    static HACKATOM: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
+    static IBC_REFLECT: &[u8] = include_bytes!("../api/testdata/ibc_reflect.wasm");
 
     #[test]
     fn init_cache_and_release_cache_work() {
@@ -201,7 +252,7 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        save_wasm(cache_ptr, CONTRACT.into(), Some(&mut err));
+        save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
         assert_eq!(err.len, 0);
 
         release_cache(cache_ptr);
@@ -221,11 +272,48 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        let checksum = save_wasm(cache_ptr, CONTRACT.into(), Some(&mut err));
+        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
         assert_eq!(err.len, 0);
 
         let wasm = load_wasm(cache_ptr, checksum, Some(&mut err));
-        assert_eq!(unsafe { wasm.consume() }, CONTRACT);
+        assert_eq!(unsafe { wasm.consume() }, HACKATOM);
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn analyze_code_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"stargate";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+
+        let checksum_hackatom = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+        let checksum_ibc_reflect = save_wasm(cache_ptr, IBC_REFLECT.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        let hackatom_report = analyze_code(cache_ptr, checksum_hackatom, Some(&mut err));
+        assert_eq!(
+            hackatom_report,
+            AnalysisReport {
+                has_ibc_entry_points: false
+            }
+        );
+        let ibc_reflect_report = analyze_code(cache_ptr, checksum_ibc_reflect, Some(&mut err));
+        assert_eq!(
+            ibc_reflect_report,
+            AnalysisReport {
+                has_ibc_entry_points: true
+            }
+        );
 
         release_cache(cache_ptr);
     }
