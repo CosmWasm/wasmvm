@@ -110,11 +110,11 @@ fn do_save_wasm(
 #[no_mangle]
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, contract_checksum)))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
@@ -124,12 +124,12 @@ pub extern "C" fn load_wasm(
 
 fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<Vec<u8>, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
-    let wasm = cache.load_wasm(&contract_checksum)?;
+    let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
 }
 
@@ -145,12 +145,12 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Bu
 
 fn do_pin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<Nothing, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
-    cache.pin(&contract_checksum)?;
+    cache.pin(&checksum)?;
     Ok(Nothing)
 }
 
@@ -166,12 +166,12 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut 
 
 fn do_unpin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<Nothing, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
-    cache.unpin(&contract_checksum)?;
+    cache.unpin(&checksum)?;
     Ok(Nothing)
 }
 
@@ -192,14 +192,12 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
 #[no_mangle]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     err: Option<&mut Buffer>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_analyze_code(c, contract_checksum)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
     match r {
@@ -216,12 +214,12 @@ pub extern "C" fn analyze_code(
 
 fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<AnalysisReport, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
-    let report = cache.analyze(&contract_checksum)?;
+    let report = cache.analyze(&checksum)?;
     Ok(report.into())
 }
 
