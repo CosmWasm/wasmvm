@@ -93,7 +93,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xdbdf), cost)
+	assert.Equal(t, uint64(0xddf1), cost)
 
 	var resp types.InitResult
 	err = json.Unmarshal(res, &resp)
@@ -124,8 +124,8 @@ func TestHandle(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xdbdf), cost)
-	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
+	assert.Equal(t, uint64(0xddf1), cost)
+	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -179,8 +179,8 @@ func TestHandleCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xdbdf), cost)
-	t.Logf("Time (%d gas): %s\n", 0xbb66, diff)
+	assert.Equal(t, uint64(0xddf1), cost)
+	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute a cpu loop
 	maxGas := uint64(40_000_000)
@@ -330,7 +330,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0xdb18), cost)
+	assert.Equal(t, uint64(0xdd2a), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -341,7 +341,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xdb4d), cost)
+	assert.Equal(t, uint64(0xdd5f), cost)
 
 	// fail to execute store1 with mary
 	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x9ac1)
