@@ -34,6 +34,8 @@ type InitResult struct {
 type InitResponse struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
+	// base64-encoded bytes to return as ABCI.Data field
+	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
 }

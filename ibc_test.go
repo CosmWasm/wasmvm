@@ -71,6 +71,8 @@ func toBytes(t *testing.T, v interface{}) []byte {
 	return bz
 }
 
+const IBC_VERSION = "ibc-reflect-v1"
+
 func TestIBCHandshake(t *testing.T) {
 	// code id of the reflect contract
 	const REFLECT_ID uint64 = 101
@@ -105,7 +107,7 @@ func TestIBCHandshake(t *testing.T) {
 	_, err = vm.IBCChannelOpen(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.Error(t, err)
 	// passes on good version
-	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, "ibc-reflect")
+	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	channel.CounterpartyVersion = ""
 	_, err = vm.IBCChannelOpen(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
@@ -115,7 +117,7 @@ func TestIBCHandshake(t *testing.T) {
 	store.SetGasMeter(gasMeter3)
 	env = api.MockEnv()
 	// completes and dispatches message to create reflect contract
-	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, "ibc-reflect")
+	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	res, _, err := vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(res.Messages))
@@ -159,7 +161,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
-	channel := api.MockIBCChannel(CHANNEL_ID, types.Ordered, "ibc-reflect")
+	channel := api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	channel.CounterpartyVersion = ""
 	_, err = vm.IBCChannelOpen(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
@@ -168,7 +170,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter3)
 	// completes and dispatches message to create reflect contract
-	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, "ibc-reflect")
+	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	_, _, err = vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 
