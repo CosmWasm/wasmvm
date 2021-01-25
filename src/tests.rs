@@ -51,13 +51,13 @@ fn handle_cpu_loop_with_cache() {
     };
 
     // store code
-    let code_id = cache.save_wasm(CONTRACT).unwrap();
+    let checksum = cache.save_wasm(CONTRACT).unwrap();
 
     // init
     let (init_msg, creator) = make_init_msg();
     let env = mock_env();
     let info = mock_info(creator, &coins(1000, "cosm"));
-    let mut instance = cache.get_instance(&code_id, backend, options).unwrap();
+    let mut instance = cache.get_instance(&checksum, backend, options).unwrap();
     let raw_msg = to_vec(&init_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
     let raw_info = to_vec(&info).unwrap();
@@ -68,7 +68,7 @@ fn handle_cpu_loop_with_cache() {
     let backend = instance.recycle().unwrap();
 
     // handle
-    let mut instance = cache.get_instance(&code_id, backend, options).unwrap();
+    let mut instance = cache.get_instance(&checksum, backend, options).unwrap();
     let raw_msg = r#"{"cpu_loop":{}}"#;
     let res = call_handle_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
     let gas_used = options.gas_limit - instance.get_gas_left();

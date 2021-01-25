@@ -8,8 +8,8 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
-// CodeID represents an ID for a given wasm code blob, must be generated from this library
-type CodeID []byte
+// Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
+type Checksum []byte
 
 // WasmCode is an alias for raw bytes of the wasm compiled code
 type WasmCode []byte
@@ -55,7 +55,7 @@ func (vm *VM) Cleanup() {
 }
 
 // Create will compile the wasm code, and store the resulting pre-compile
-// as well as the original code. Both can be referenced later via CodeID
+// as well as the original code. Both can be referenced later via Checksum
 // This must be done one time for given code, after which it can be
 // instatitated many times, and each instance called many times.
 //
@@ -64,7 +64,7 @@ func (vm *VM) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (vm *VM) Create(code WasmCode) (CodeID, error) {
+func (vm *VM) Create(code WasmCode) (Checksum, error) {
 	return api.Create(vm.cache, code)
 }
 
@@ -75,18 +75,18 @@ func (vm *VM) Create(code WasmCode) (CodeID, error) {
 // This can be used so that the (short) code id (hash) is stored in the iavl tree
 // and the larger binary blobs (wasm and pre-compiles) are all managed by the
 // rust library
-func (vm *VM) GetCode(codeID CodeID) (WasmCode, error) {
-	return api.GetCode(vm.cache, codeID)
+func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
+	return api.GetCode(vm.cache, checksum)
 }
 
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
-func (vm *VM) AnalyzeCode(codeID CodeID) (*types.AnalysisReport, error) {
-	return api.AnalyzeCode(vm.cache, codeID)
+func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
+	return api.AnalyzeCode(vm.cache, checksum)
 }
 
-// Instantiate will create a new contract based on the given codeID.
+// Instantiate will create a new contract based on the given Checksum.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.
 //
@@ -95,7 +95,7 @@ func (vm *VM) AnalyzeCode(codeID CodeID) (*types.AnalysisReport, error) {
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
 func (vm *VM) Instantiate(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	initMsg []byte,
@@ -113,7 +113,7 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Instantiate(vm.cache, codeID, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -129,14 +129,14 @@ func (vm *VM) Instantiate(
 	return resp.Ok, gasUsed, nil
 }
 
-// Execute calls a given contract. Since the only difference between contracts with the same CodeID is the
+// Execute calls a given contract. Since the only difference between contracts with the same Checksum is the
 // data in their local storage, and their address in the outside world, we need no ContractID here.
 // (That is a detail for the external, sdk-facing, side).
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the env with relevent info on this instance (address, balance, etc)
 func (vm *VM) Execute(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
@@ -154,7 +154,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Handle(vm.cache, codeID, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Handle(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -174,7 +174,7 @@ func (vm *VM) Execute(
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 func (vm *VM) Query(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	queryMsg []byte,
 	store KVStore,
@@ -187,7 +187,7 @@ func (vm *VM) Query(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Query(vm.cache, codeID, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -204,13 +204,13 @@ func (vm *VM) Query(
 }
 
 // Migrate will migrate an existing contract to a new code binary.
-// This takes storage of the data from the original contract and the CodeID of the new contract that should
+// This takes storage of the data from the original contract and the Checksum of the new contract that should
 // replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
 func (vm *VM) Migrate(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	migrateMsg []byte,
 	store KVStore,
@@ -223,7 +223,7 @@ func (vm *VM) Migrate(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.Migrate(vm.cache, codeID, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -242,7 +242,7 @@ func (vm *VM) Migrate(
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
 // during the handshake pahse
 func (vm *VM) IBCChannelOpen(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	channel types.IBCChannel,
 	store KVStore,
@@ -259,7 +259,7 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return 0, err
 	}
-	data, gasUsed, err := api.IBCChannelOpen(vm.cache, codeID, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return gasUsed, err
 	}
@@ -278,7 +278,7 @@ func (vm *VM) IBCChannelOpen(
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
 // during the handshake pahse
 func (vm *VM) IBCChannelConnect(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	channel types.IBCChannel,
 	store KVStore,
@@ -295,7 +295,7 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelConnect(vm.cache, codeID, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -314,7 +314,7 @@ func (vm *VM) IBCChannelConnect(
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
 // at the end of the channel lifetime
 func (vm *VM) IBCChannelClose(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	channel types.IBCChannel,
 	store KVStore,
@@ -331,7 +331,7 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelClose(vm.cache, codeID, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -350,7 +350,7 @@ func (vm *VM) IBCChannelClose(
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
 // packet is received on a channel belonging to this contract
 func (vm *VM) IBCPacketReceive(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	packet types.IBCPacket,
 	store KVStore,
@@ -367,7 +367,7 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketReceive(vm.cache, codeID, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -387,7 +387,7 @@ func (vm *VM) IBCPacketReceive(
 // the response for an outgoing packet (previously sent by this contract)
 // is received
 func (vm *VM) IBCPacketAck(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	ack types.IBCAcknowledgement,
 	store KVStore,
@@ -404,7 +404,7 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketAck(vm.cache, codeID, envBin, ackBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, ackBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -424,7 +424,7 @@ func (vm *VM) IBCPacketAck(
 // outgoing packet (previously sent by this contract) will provably never be executed.
 // Usually handled like ack returning an error
 func (vm *VM) IBCPacketTimeout(
-	codeID CodeID,
+	checksum Checksum,
 	env types.Env,
 	packet types.IBCPacket,
 	store KVStore,
@@ -441,7 +441,7 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, codeID, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}

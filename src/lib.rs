@@ -29,7 +29,7 @@ use cosmwasm_vm::{
 };
 
 use crate::args::{
-    ARG1, ARG2, CACHE_ARG, CODE_ID_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
+    ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
 };
 use crate::cache::{cache_t, to_cache};
 use crate::error::{clear_error, handle_c_error, set_error, Error};
@@ -518,7 +518,7 @@ fn do_call_2_args(
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let arg1 = unsafe { arg1.read() }.ok_or_else(|| Error::empty_arg(ARG1))?;
     let arg2 = unsafe { arg2.read() }.ok_or_else(|| Error::empty_arg(ARG2))?;
@@ -601,7 +601,7 @@ fn do_call_3_args(
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CODE_ID_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
     let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
