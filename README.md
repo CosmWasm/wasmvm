@@ -1,6 +1,6 @@
 # wasmvm
 
-This is a wrapper around the [CosmWasm VM](https://github.com/CosmWasm/cosmwasm/tree/master/packages/vm).
+This is a wrapper around the [CosmWasm VM](https://github.com/CosmWasm/cosmwasm/tree/main/packages/vm).
 It allows you to compile, initialize and execute CosmWasm smart contracts
 from Go applications, in particular from [x/wasm](https://github.com/CosmWasm/wasmd/tree/master/x/wasm).
 

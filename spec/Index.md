@@ -12,7 +12,7 @@ This is based on work with the wasmer.io engine, including the following other r
 * Helper library to remove boilerplate (also see [cosmwasm-template](https://github.com/confio/cosmwasm-template))
 * Testing support for smart contracts
 
-[cosmwasm-vm](https://github.com/confio/cosmwasm/tree/master/lib/vm):
+[cosmwasm-vm](https://github.com/CosmWasm/cosmwasm/tree/main/packages/vm):
 
 * Repeatable gas metering (fixed backend compiler options)
 * Feature flags for backends
@@ -34,7 +34,7 @@ As Aaron put it well, anywhere we accept a Go *interface* in the SDK,
 we could place a WASM adapter there. But just as a struct only
 implements one interface, we need to concentrate on one interface to adapt.
 
-The majority of the use cases could be covered by a properly designed adapter for *Handler* 
+The majority of the use cases could be covered by a properly designed adapter for *Handler*
 and this is where we will focus our work. This is also where most zone development is going -
 into modules that expose a custom Handler. The initial implementation should minimally allow
 us to create such contracts:
@@ -46,18 +46,18 @@ us to create such contracts:
 * (maybe) Programmable NFTs: just as ethereum NFTs include some custom code to perform actions
 
 As we expand the allows messages and query options, we will enable more use-cases.
-The extensions to the API should probably be driven by real use cases - 
+The extensions to the API should probably be driven by real use cases -
 please add your needs as issues on this repo.
 
 ### Future Directions
 
 However, there are a number of other places where we could potentially provide another interface
-for custom web assembly contracts,to be added after the original integration work. Some other 
+for custom web assembly contracts,to be added after the original integration work. Some other
 important use cases that will need different adapters:
 
 * **IBC verification function** The current ICS23 spec mentions wasm uploaded code to verify external proofs. This should be easily creatable with a custom interface .
 * **Delegation Rewards** Support different commission to different validators based on on-chain rules.
-* **Signature Verification** Allow uploading new algorithms, like `ed25519` or `BLS`. These would obviously need to be enabled by a governance vote. 
+* **Signature Verification** Allow uploading new algorithms, like `ed25519` or `BLS`. These would obviously need to be enabled by a governance vote.
 
 ## Contents
 
