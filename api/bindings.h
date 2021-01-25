@@ -133,8 +133,6 @@ AnalysisReport analyze_code(cache_t *cache, Buffer contract_checksum, Buffer *er
 
 void free_rust(Buffer buf);
 
-Buffer get_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
-
 Buffer handle(cache_t *cache,
               Buffer contract_checksum,
               Buffer env,
@@ -238,6 +236,8 @@ Buffer instantiate(cache_t *cache,
                    bool print_debug,
                    uint64_t *gas_used,
                    Buffer *err);
+
+Buffer load_wasm(cache_t *cache, Buffer contract_checksum, Buffer *err);
 
 Buffer migrate(cache_t *cache,
                Buffer contract_checksum,

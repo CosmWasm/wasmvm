@@ -55,32 +55,6 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
 }
 
 #[no_mangle]
-pub extern "C" fn get_code(
-    cache: *mut cache_t,
-    contract_checksum: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, contract_checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_get_code(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
-) -> Result<Vec<u8>, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
-        .try_into()?;
-    let wasm = cache.load_wasm(&contract_checksum)?;
-    Ok(wasm)
-}
-
-#[no_mangle]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
     contract_checksum: Buffer,

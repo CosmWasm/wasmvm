@@ -106,6 +106,32 @@ fn do_save_wasm(
     Ok(checksum)
 }
 
+#[no_mangle]
+pub extern "C" fn load_wasm(
+    cache: *mut cache_t,
+    contract_checksum: Buffer,
+    err: Option<&mut Buffer>,
+) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, contract_checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_load_wasm(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    contract_checksum: Buffer,
+) -> Result<Vec<u8>, Error> {
+    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .try_into()?;
+    let wasm = cache.load_wasm(&contract_checksum)?;
+    Ok(wasm)
+}
+
 /// frees a cache reference
 ///
 /// # Safety
@@ -177,6 +203,29 @@ mod tests {
 
         save_wasm(cache_ptr, CONTRACT.into(), Some(&mut err));
         assert_eq!(err.len, 0);
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn load_wasm_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+
+        let checksum = save_wasm(cache_ptr, CONTRACT.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        let wasm = load_wasm(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(unsafe { wasm.consume() }, CONTRACT);
 
         release_cache(cache_ptr);
     }
