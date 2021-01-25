@@ -69,9 +69,6 @@ jobs:
     machine:
       image: ubuntu-1604:202010-01
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
       - run: make test-alpine
       - run:
@@ -84,6 +81,8 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
+            # Custom read/write deployment key with private key stored on CircleCI
+            # (see https://app.circleci.com/settings/project/github/CosmWasm/wasmvm/ssh and https://github.com/CosmWasm/wasmvm/settings/keys)
             - "31:de:e5:84:1b:12:81:94:aa:06:50:c0:cb:bd:79:f0"
       - checkout
       - run:
@@ -96,10 +95,12 @@ jobs:
           name: Debug build results
           command: ls -l ./api
       - run:
-          name: Configure git
+          name: Configure git user
+          # This is not a GitHub user and no permissions can be configured other than "push access", which
+          # we can configure for Deploy keys at https://github.com/CosmWasm/wasmvm/settings/keys
           command: |
-            git config user.email "bot@circleci.com"
-            git config user.name "CircleCI Bot"
+            git config user.email "wasmvm@circleci.confio.example.com"
+            git config user.name "Deployer"
       - run:
           name: Check-in and push new libraries
           command: |
@@ -165,9 +166,9 @@ workflows:
             branches:
               only:
                 # long living branches
-                - master
+                - main
                 - 0.14-dev
-      # Run only on master, not on tags (auto-build on merge PR)
+      # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
             - sanity
@@ -178,7 +179,7 @@ workflows:
                 - /.*/
             branches:
               only:
-                - master
+                - main
       - deploy_to_github_releases:
           filters:
             tags:
