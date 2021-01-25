@@ -28,11 +28,9 @@ use cosmwasm_vm::{
     Checksum, Instance, InstanceOptions, VmResult,
 };
 
-use crate::args::{
-    ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
-};
+use crate::args::{ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG};
 use crate::cache::{cache_t, to_cache};
-use crate::error::{clear_error, handle_c_error, set_error, Error};
+use crate::error::{handle_c_error, Error};
 
 fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -40,116 +38,6 @@ fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
         storage: GoStorage::new(db),
         querier,
     }
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Default)]
-pub struct AnalysisReport {
-    pub has_ibc_entry_points: bool,
-}
-
-impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
-    fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
-        AnalysisReport {
-            has_ibc_entry_points: report.has_ibc_entry_points,
-        }
-    }
-}
-
-/// frees a cache reference
-///
-/// # Safety
-///
-/// This must be called exactly once for any `*cache_t` returned by `init_cache`
-/// and cannot be called on any other pointer.
-#[no_mangle]
-pub extern "C" fn release_cache(cache: *mut cache_t) {
-    if !cache.is_null() {
-        // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
-            .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_create(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    wasm: Buffer,
-) -> Result<Checksum, Error> {
-    let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::empty_arg(WASM_ARG))?;
-    let checksum = cache.save_wasm(wasm)?;
-    Ok(checksum)
-}
-
-#[no_mangle]
-pub extern "C" fn get_code(
-    cache: *mut cache_t,
-    contract_checksum: Buffer,
-    err: Option<&mut Buffer>,
-) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_code(c, contract_checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_get_code(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
-) -> Result<Vec<u8>, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
-        .try_into()?;
-    let wasm = cache.load_wasm(&contract_checksum)?;
-    Ok(wasm)
-}
-
-#[no_mangle]
-pub extern "C" fn analyze_code(
-    cache: *mut cache_t,
-    contract_checksum: Buffer,
-    err: Option<&mut Buffer>,
-) -> AnalysisReport {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_analyze_code(c, contract_checksum)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    match r {
-        Ok(value) => {
-            clear_error();
-            value
-        }
-        Err(error) => {
-            set_error(error, err);
-            AnalysisReport::default()
-        }
-    }
-}
-
-fn do_analyze_code(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
-) -> Result<AnalysisReport, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
-        .try_into()?;
-    let report = cache.analyze(&contract_checksum)?;
-    Ok(report.into())
 }
 
 #[no_mangle]

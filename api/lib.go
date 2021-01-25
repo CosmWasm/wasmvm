@@ -53,7 +53,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
 	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
-	checksum, err := C.create(cache.ptr, code, &errmsg)
+	checksum, err := C.save_wasm(cache.ptr, code, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -64,11 +64,11 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := sendSlice(checksum)
 	defer freeAfterSend(cs)
 	errmsg := C.Buffer{}
-	code, err := C.get_code(cache.ptr, cs, &errmsg)
+	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(code), nil
+	return receiveVector(wasm), nil
 }
 
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {

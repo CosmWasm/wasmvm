@@ -66,12 +66,7 @@ impl Buffer {
 
     // this releases our memory to the caller
     pub fn from_vec(v: Vec<u8>) -> Self {
-        let mut v = mem::ManuallyDrop::new(v);
-        Buffer {
-            ptr: v.as_mut_ptr(),
-            len: v.len(),
-            cap: v.capacity(),
-        }
+        v.into()
     }
 }
 
@@ -82,6 +77,23 @@ impl Default for Buffer {
             len: 0,
             cap: 0,
         }
+    }
+}
+
+impl From<Vec<u8>> for Buffer {
+    fn from(original: Vec<u8>) -> Self {
+        let mut v = mem::ManuallyDrop::new(original);
+        Buffer {
+            ptr: v.as_mut_ptr(),
+            len: v.len(),
+            cap: v.capacity(),
+        }
+    }
+}
+
+impl From<&[u8]> for Buffer {
+    fn from(original: &[u8]) -> Self {
+        original.to_owned().into()
     }
 }
 
