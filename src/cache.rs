@@ -1,12 +1,12 @@
 use std::convert::TryInto;
-use std::panic::catch_unwind;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Size};
+use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
-use crate::args::{DATA_DIR_ARG, FEATURES_ARG};
-use crate::error::{clear_error, set_error, Error};
+use crate::args::{CACHE_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
+use crate::error::{clear_error, handle_c_error, set_error, Error};
 use crate::memory::Buffer;
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -86,6 +86,26 @@ fn do_init_cache(
     Ok(Box::into_raw(out))
 }
 
+#[no_mangle]
+pub extern "C" fn save_wasm(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error(r, err);
+    Buffer::from_vec(data)
+}
+
+fn do_save_wasm(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    wasm: Buffer,
+) -> Result<Checksum, Error> {
+    let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::empty_arg(WASM_ARG))?;
+    let checksum = cache.save_wasm(wasm)?;
+    Ok(checksum)
+}
+
 /// frees a cache reference
 ///
 /// # Safety
@@ -105,6 +125,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    static CONTRACT: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
+
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
@@ -118,6 +140,26 @@ mod tests {
             Some(&mut err),
         );
         assert_eq!(err.len, 0);
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn save_wasm_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+
+        save_wasm(cache_ptr, CONTRACT.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+
         release_cache(cache_ptr);
     }
 }

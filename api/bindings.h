@@ -131,8 +131,6 @@ Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
 
-Buffer create(cache_t *cache, Buffer wasm, Buffer *err);
-
 void free_rust(Buffer buf);
 
 Buffer get_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
@@ -274,3 +272,5 @@ Buffer query(cache_t *cache,
  * and cannot be called on any other pointer.
  */
 void release_cache(cache_t *cache);
+
+Buffer save_wasm(cache_t *cache, Buffer wasm, Buffer *err);

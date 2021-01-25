@@ -28,9 +28,7 @@ use cosmwasm_vm::{
     Checksum, Instance, InstanceOptions, VmResult,
 };
 
-use crate::args::{
-    ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG, WASM_ARG,
-};
+use crate::args::{ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG};
 use crate::cache::{cache_t, to_cache};
 use crate::error::{clear_error, handle_c_error, set_error, Error};
 
@@ -54,26 +52,6 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
             has_ibc_entry_points: report.has_ibc_entry_points,
         }
     }
-}
-
-#[no_mangle]
-pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
-    let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_create(c, wasm)))
-            .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
-    };
-    let data = handle_c_error(r, err);
-    Buffer::from_vec(data)
-}
-
-fn do_create(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    wasm: Buffer,
-) -> Result<Checksum, Error> {
-    let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::empty_arg(WASM_ARG))?;
-    let checksum = cache.save_wasm(wasm)?;
-    Ok(checksum)
 }
 
 #[no_mangle]
