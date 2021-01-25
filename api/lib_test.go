@@ -70,6 +70,45 @@ func TestCreateFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestPin(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	checksum, err := Create(cache, wasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+
+	// Can be called again with no effect
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+}
+
+func TestUnpin(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	checksum, err := Create(cache, wasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+
+	err = Unpin(cache, checksum)
+	require.NoError(t, err)
+
+	// Can be called again with no effect
+	err = Unpin(cache, checksum)
+	require.NoError(t, err)
+}
+
 func TestInstantiate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()

@@ -79,6 +79,21 @@ func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
 	return api.GetCode(vm.cache, checksum)
 }
 
+// Pin pins a code to an in-memory cache, such that is
+// always loaded quickly when executed.
+// Pin is idempotent.
+func (vm *VM) Pin(checksum Checksum) error {
+	return api.Pin(vm.cache, checksum)
+}
+
+// Unpin removes the guarantee of a contract to be pinned (see Pin).
+// After calling this, the code may or may not remain in memory depending on
+// the implementor's choice.
+// Unpin is idempotent.
+func (vm *VM) Unpin(checksum Checksum) error {
+	return api.Unpin(vm.cache, checksum)
+}
+
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
