@@ -56,20 +56,6 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     }
 }
 
-/// frees a cache reference
-///
-/// # Safety
-///
-/// This must be called exactly once for any `*cache_t` returned by `init_cache`
-/// and cannot be called on any other pointer.
-#[no_mangle]
-pub extern "C" fn release_cache(cache: *mut cache_t) {
-    if !cache.is_null() {
-        // this will free cache when it goes out of scope
-        let _ = unsafe { Box::from_raw(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn create(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
     let r = match to_cache(cache) {

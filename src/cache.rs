@@ -52,7 +52,7 @@ pub extern "C" fn init_cache(
     }
 }
 
-pub fn do_init_cache(
+fn do_init_cache(
     data_dir: Buffer,
     supported_features: Buffer,
     cache_size: u32,
@@ -84,4 +84,40 @@ pub fn do_init_cache(
     let cache = unsafe { Cache::new(options) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
+}
+
+/// frees a cache reference
+///
+/// # Safety
+///
+/// This must be called exactly once for any `*cache_t` returned by `init_cache`
+/// and cannot be called on any other pointer.
+#[no_mangle]
+pub extern "C" fn release_cache(cache: *mut cache_t) {
+    if !cache.is_null() {
+        // this will free cache when it goes out of scope
+        let _ = unsafe { Box::from_raw(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn init_cache_and_release_cache_work() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+        release_cache(cache_ptr);
+    }
 }
