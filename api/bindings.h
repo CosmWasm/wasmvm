@@ -251,6 +251,8 @@ Buffer migrate(cache_t *cache,
                uint64_t *gas_used,
                Buffer *err);
 
+void pin(cache_t *cache, Buffer checksum, Buffer *err);
+
 Buffer query(cache_t *cache,
              Buffer contract_checksum,
              Buffer env,
@@ -274,3 +276,5 @@ Buffer query(cache_t *cache,
 void release_cache(cache_t *cache);
 
 Buffer save_wasm(cache_t *cache, Buffer wasm, Buffer *err);
+
+void unpin(cache_t *cache, Buffer checksum, Buffer *err);
