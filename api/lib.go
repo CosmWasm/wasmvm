@@ -53,11 +53,11 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	code := sendSlice(wasm)
 	defer freeAfterSend(code)
 	errmsg := C.Buffer{}
-	id, err := C.create(cache.ptr, code, &errmsg)
+	checksum, err := C.create(cache.ptr, code, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(id), nil
+	return receiveVector(checksum), nil
 }
 
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {

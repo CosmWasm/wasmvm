@@ -53,10 +53,10 @@ func TestCreateAndGet(t *testing.T) {
 	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	id, err := Create(cache, wasm)
+	checksum, err := Create(cache, wasm)
 	require.NoError(t, err)
 
-	code, err := GetCode(cache, id)
+	code, err := GetCode(cache, checksum)
 	require.NoError(t, err)
 	require.Equal(t, wasm, code)
 }
@@ -389,9 +389,9 @@ func createReflectContract(t *testing.T, cache Cache) []byte {
 func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
-	id, err := Create(cache, wasm)
+	checksum, err := Create(cache, wasm)
 	require.NoError(t, err)
-	return id
+	return checksum
 }
 
 // exec runs the handle tx with the given signer
