@@ -8,7 +8,7 @@ use crate::memory::Buffer;
 
 #[derive(Error, Debug)]
 pub enum RustError {
-    #[error("Null/Empty argument: {}", name)]
+    #[error("Empty argument: {}", name)]
     EmptyArg {
         name: String,
         #[cfg(feature = "backtraces")]
@@ -28,6 +28,12 @@ pub enum RustError {
     },
     #[error("Caught panic")]
     Panic {
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
+    #[error("Null/Nil argument: {}", name)]
+    UnsetArg {
+        name: String,
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
@@ -58,6 +64,14 @@ impl RustError {
 
     pub fn panic() -> Self {
         RustError::Panic {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn unset_arg<T: Into<String>>(name: T) -> Self {
+        RustError::UnsetArg {
+            name: name.into(),
             #[cfg(feature = "backtraces")]
             backtrace: Backtrace::capture(),
         }
@@ -213,6 +227,17 @@ mod tests {
         let error = RustError::panic();
         match error {
             RustError::Panic { .. } => {}
+            _ => panic!("expect different error"),
+        }
+    }
+
+    #[test]
+    fn unset_arg_works() {
+        let error = RustError::unset_arg("gas");
+        match error {
+            RustError::UnsetArg { name, .. } => {
+                assert_eq!(name, "gas");
+            }
             _ => panic!("expect different error"),
         }
     }

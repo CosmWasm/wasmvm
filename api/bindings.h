@@ -62,6 +62,22 @@ typedef struct cache_t {
 } cache_t;
 
 /**
+ * A view into an externally owned byte slice (Go `[]byte`).
+ * Use this for the current call only. A view cannot be copied for safety reasons.
+ * If you need a copy, use [`to_owned`].
+ *
+ * Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
+ */
+typedef struct ByteSliceView {
+  /**
+   * True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
+   */
+  bool is_nil;
+  const uint8_t *ptr;
+  uintptr_t len;
+} ByteSliceView;
+
+/**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
 typedef struct gas_meter_t {
@@ -129,15 +145,15 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *err);
+AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 void free_rust(Buffer buf);
 
 Buffer handle(cache_t *cache,
-              Buffer checksum,
-              Buffer env,
-              Buffer info,
-              Buffer msg,
+              ByteSliceView checksum,
+              ByteSliceView env,
+              ByteSliceView info,
+              ByteSliceView msg,
               DB db,
               GoApi api,
               GoQuerier querier,
@@ -147,9 +163,9 @@ Buffer handle(cache_t *cache,
               Buffer *err);
 
 Buffer ibc_channel_close(cache_t *cache,
-                         Buffer checksum,
-                         Buffer env,
-                         Buffer msg,
+                         ByteSliceView checksum,
+                         ByteSliceView env,
+                         ByteSliceView msg,
                          DB db,
                          GoApi api,
                          GoQuerier querier,
@@ -159,9 +175,9 @@ Buffer ibc_channel_close(cache_t *cache,
                          Buffer *err);
 
 Buffer ibc_channel_connect(cache_t *cache,
-                           Buffer checksum,
-                           Buffer env,
-                           Buffer msg,
+                           ByteSliceView checksum,
+                           ByteSliceView env,
+                           ByteSliceView msg,
                            DB db,
                            GoApi api,
                            GoQuerier querier,
@@ -171,9 +187,9 @@ Buffer ibc_channel_connect(cache_t *cache,
                            Buffer *err);
 
 Buffer ibc_channel_open(cache_t *cache,
-                        Buffer checksum,
-                        Buffer env,
-                        Buffer msg,
+                        ByteSliceView checksum,
+                        ByteSliceView env,
+                        ByteSliceView msg,
                         DB db,
                         GoApi api,
                         GoQuerier querier,
@@ -183,9 +199,9 @@ Buffer ibc_channel_open(cache_t *cache,
                         Buffer *err);
 
 Buffer ibc_packet_ack(cache_t *cache,
-                      Buffer checksum,
-                      Buffer env,
-                      Buffer msg,
+                      ByteSliceView checksum,
+                      ByteSliceView env,
+                      ByteSliceView msg,
                       DB db,
                       GoApi api,
                       GoQuerier querier,
@@ -195,9 +211,9 @@ Buffer ibc_packet_ack(cache_t *cache,
                       Buffer *err);
 
 Buffer ibc_packet_receive(cache_t *cache,
-                          Buffer checksum,
-                          Buffer env,
-                          Buffer msg,
+                          ByteSliceView checksum,
+                          ByteSliceView env,
+                          ByteSliceView msg,
                           DB db,
                           GoApi api,
                           GoQuerier querier,
@@ -207,9 +223,9 @@ Buffer ibc_packet_receive(cache_t *cache,
                           Buffer *err);
 
 Buffer ibc_packet_timeout(cache_t *cache,
-                          Buffer checksum,
-                          Buffer env,
-                          Buffer msg,
+                          ByteSliceView checksum,
+                          ByteSliceView env,
+                          ByteSliceView msg,
                           DB db,
                           GoApi api,
                           GoQuerier querier,
@@ -218,17 +234,17 @@ Buffer ibc_packet_timeout(cache_t *cache,
                           uint64_t *gas_used,
                           Buffer *err);
 
-cache_t *init_cache(Buffer data_dir,
-                    Buffer supported_features,
+cache_t *init_cache(ByteSliceView data_dir,
+                    ByteSliceView supported_features,
                     uint32_t cache_size,
                     uint32_t instance_memory_limit,
                     Buffer *err);
 
 Buffer instantiate(cache_t *cache,
-                   Buffer checksum,
-                   Buffer env,
-                   Buffer info,
-                   Buffer msg,
+                   ByteSliceView checksum,
+                   ByteSliceView env,
+                   ByteSliceView info,
+                   ByteSliceView msg,
                    DB db,
                    GoApi api,
                    GoQuerier querier,
@@ -237,12 +253,12 @@ Buffer instantiate(cache_t *cache,
                    uint64_t *gas_used,
                    Buffer *err);
 
-Buffer load_wasm(cache_t *cache, Buffer checksum, Buffer *err);
+Buffer load_wasm(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 Buffer migrate(cache_t *cache,
-               Buffer checksum,
-               Buffer env,
-               Buffer msg,
+               ByteSliceView checksum,
+               ByteSliceView env,
+               ByteSliceView msg,
                DB db,
                GoApi api,
                GoQuerier querier,
@@ -251,12 +267,12 @@ Buffer migrate(cache_t *cache,
                uint64_t *gas_used,
                Buffer *err);
 
-void pin(cache_t *cache, Buffer checksum, Buffer *err);
+void pin(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 Buffer query(cache_t *cache,
-             Buffer checksum,
-             Buffer env,
-             Buffer msg,
+             ByteSliceView checksum,
+             ByteSliceView env,
+             ByteSliceView msg,
              DB db,
              GoApi api,
              GoQuerier querier,
@@ -275,6 +291,6 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer save_wasm(cache_t *cache, Buffer wasm, Buffer *err);
+Buffer save_wasm(cache_t *cache, ByteSliceView wasm, Buffer *err);
 
-void unpin(cache_t *cache, Buffer checksum, Buffer *err);
+void unpin(cache_t *cache, ByteSliceView checksum, Buffer *err);

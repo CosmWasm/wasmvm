@@ -1,6 +1,59 @@
 use std::mem;
 use std::slice;
 
+/// A view into an externally owned byte slice (Go `[]byte`).
+/// Use this for the current call only. A view cannot be copied for safety reasons.
+/// If you need a copy, use [`to_owned`].
+///
+/// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
+#[repr(C)]
+pub struct ByteSliceView {
+    /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
+    is_nil: bool,
+    ptr: *const u8,
+    len: usize,
+}
+
+impl ByteSliceView {
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    #[cfg(test)]
+    pub fn new(source: &[u8]) -> Self {
+        Self {
+            is_nil: false,
+            ptr: source.as_ptr(),
+            len: source.len(),
+        }
+    }
+
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    #[cfg(test)]
+    pub fn nil() -> Self {
+        Self {
+            is_nil: true,
+            ptr: std::ptr::null::<u8>(),
+            len: 0,
+        }
+    }
+
+    /// Provides a reference to the included data to be parsed or copied elsewhere
+    /// This is safe as long as the `ByteSliceView` is constructed correctly.
+    pub fn read(&self) -> Option<&[u8]> {
+        if self.is_nil {
+            None
+        } else {
+            Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })
+        }
+    }
+
+    /// Created an owned copy that can safely be stored.
+    #[allow(dead_code)]
+    pub fn to_owned(&self) -> Option<Vec<u8>> {
+        self.read().map(|slice| slice.to_owned())
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
     // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
@@ -100,6 +153,34 @@ impl From<&[u8]> for Buffer {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn byte_slice_view_read_works() {
+        let data = vec![0xAA, 0xBB, 0xCC];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.read().unwrap(), &[0xAA, 0xBB, 0xCC]);
+
+        let data = vec![];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.read().unwrap(), &[] as &[u8]);
+
+        let view = ByteSliceView::nil();
+        assert_eq!(view.read().is_none(), true);
+    }
+
+    #[test]
+    fn byte_slice_view_to_owned_works() {
+        let data = vec![0xAA, 0xBB, 0xCC];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.to_owned().unwrap(), vec![0xAA, 0xBB, 0xCC]);
+
+        let data = vec![];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.to_owned().unwrap(), Vec::<u8>::new());
+
+        let view = ByteSliceView::nil();
+        assert_eq!(view.to_owned().is_none(), true);
+    }
 
     #[test]
     fn read_works() {

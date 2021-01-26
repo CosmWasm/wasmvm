@@ -6,6 +6,7 @@ import "C"
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 
 	"github.com/CosmWasm/wasmvm/types"
@@ -32,13 +33,17 @@ type Cache struct {
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
-	dir := sendSlice([]byte(dataDir))
-	defer freeAfterSend(dir)
-	features := sendSlice([]byte(supportedFeatures))
-	defer freeAfterSend(features)
+	dataDirBytes := []byte(dataDir)
+	supportedFeaturesBytes := []byte(supportedFeatures)
+
+	d := makeView(dataDirBytes)
+	defer runtime.KeepAlive(dataDirBytes)
+	f := makeView(supportedFeaturesBytes)
+	defer runtime.KeepAlive(supportedFeaturesBytes)
+
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, features, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -50,10 +55,10 @@ func ReleaseCache(cache Cache) {
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
-	code := sendSlice(wasm)
-	defer freeAfterSend(code)
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
 	errmsg := C.Buffer{}
-	checksum, err := C.save_wasm(cache.ptr, code, &errmsg)
+	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -61,8 +66,8 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 }
 
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -72,8 +77,8 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 }
 
 func Pin(cache Cache, checksum []byte) error {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	_, err := C.pin(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -83,8 +88,8 @@ func Pin(cache Cache, checksum []byte) error {
 }
 
 func Unpin(cache Cache, checksum []byte) error {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	_, err := C.unpin(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -94,8 +99,8 @@ func Unpin(cache Cache, checksum []byte) error {
 }
 
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -120,14 +125,14 @@ func Instantiate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -161,14 +166,14 @@ func Handle(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -201,12 +206,12 @@ func Migrate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -239,12 +244,12 @@ func Query(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -277,12 +282,12 @@ func IBCChannelOpen(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -295,7 +300,7 @@ func IBCChannelOpen(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_open(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -315,12 +320,12 @@ func IBCChannelConnect(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -333,7 +338,7 @@ func IBCChannelConnect(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_connect(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -353,12 +358,12 @@ func IBCChannelClose(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -371,7 +376,7 @@ func IBCChannelClose(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_close(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -391,12 +396,12 @@ func IBCPacketReceive(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	p := sendSlice(packet)
-	defer freeAfterSend(p)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -409,7 +414,7 @@ func IBCPacketReceive(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_receive(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -429,12 +434,12 @@ func IBCPacketAck(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	ac := sendSlice(ack)
-	defer freeAfterSend(ac)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ac := makeView(ack)
+	defer runtime.KeepAlive(ack)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -467,12 +472,12 @@ func IBCPacketTimeout(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	p := sendSlice(packet)
-	defer freeAfterSend(p)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -485,7 +490,7 @@ func IBCPacketTimeout(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

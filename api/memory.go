@@ -7,6 +7,28 @@ import "C"
 
 import "unsafe"
 
+// makeView creates a view into the given byte slice what allows Rust code to read it.
+// The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
+// to ensure the byte slice lives long enough.
+func makeView(s []byte) C.ByteSliceView {
+	if s == nil {
+		return C.ByteSliceView{is_nil: true, ptr: cu8_ptr(nil), len: cusize(0)}
+	}
+
+	// In Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
+	// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
+	// below with `&data[0]`. https://play.golang.org/p/xvDY3g9OqUk
+	if len(s) == 0 {
+		return C.ByteSliceView{is_nil: false, ptr: cu8_ptr(nil), len: cusize(0)}
+	}
+
+	return C.ByteSliceView{
+		is_nil: false,
+		ptr:    cu8_ptr(unsafe.Pointer(&s[0])),
+		len:    cusize(len(s)),
+	}
+}
+
 func allocateRust(data []byte) C.Buffer {
 	var ret C.Buffer
 	if data == nil {
@@ -36,17 +58,6 @@ func allocateRust(data []byte) C.Buffer {
 	return ret
 }
 
-func sendSlice(s []byte) C.Buffer {
-	if s == nil {
-		return C.Buffer{ptr: cu8_ptr(nil), len: cusize(0), cap: cusize(0)}
-	}
-	return C.Buffer{
-		ptr: cu8_ptr(C.CBytes(s)),
-		len: cusize(len(s)),
-		cap: cusize(len(s)),
-	}
-}
-
 // Take an owned vector that was passed to us, copy it, and then free it on the Rust side.
 // This should only be used for vectors that will never be observed again on the Rust side
 func receiveVector(b C.Buffer) []byte {
@@ -68,12 +79,6 @@ func receiveSlice(b C.Buffer) []byte {
 	}
 	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
 	return res
-}
-
-func freeAfterSend(b C.Buffer) {
-	if !bufIsNil(b) {
-		C.free(unsafe.Pointer(b.ptr))
-	}
 }
 
 func bufIsNil(b C.Buffer) bool {
