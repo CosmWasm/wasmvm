@@ -48,17 +48,6 @@ func allocateRust(data []byte) C.Buffer {
 	return ret
 }
 
-func sendSlice(s []byte) C.Buffer {
-	if s == nil {
-		return C.Buffer{ptr: cu8_ptr(nil), len: cusize(0), cap: cusize(0)}
-	}
-	return C.Buffer{
-		ptr: cu8_ptr(C.CBytes(s)),
-		len: cusize(len(s)),
-		cap: cusize(len(s)),
-	}
-}
-
 // Take an owned vector that was passed to us, copy it, and then free it on the Rust side.
 // This should only be used for vectors that will never be observed again on the Rust side
 func receiveVector(b C.Buffer) []byte {
@@ -80,12 +69,6 @@ func receiveSlice(b C.Buffer) []byte {
 	}
 	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
 	return res
-}
-
-func freeAfterSend(b C.Buffer) {
-	if !bufIsNil(b) {
-		C.free(unsafe.Pointer(b.ptr))
-	}
 }
 
 func bufIsNil(b C.Buffer) bool {
