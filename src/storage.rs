@@ -7,7 +7,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 use crate::db::DB;
 use crate::error::GoResult;
 use crate::iterator::GoIter;
-use crate::memory::Buffer;
+use crate::memory::{Buffer, U8SliceView};
 
 pub struct GoStorage {
     db: DB,
@@ -25,7 +25,6 @@ impl GoStorage {
 
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
-        let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
         let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
@@ -33,13 +32,12 @@ impl Storage for GoStorage {
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
-            key_buf,
+            U8SliceView::new(Some(key)),
             &mut result_buf as *mut Buffer,
             &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        let _key = unsafe { key_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || {
@@ -70,13 +68,6 @@ impl Storage for GoStorage {
         end: Option<&[u8]>,
         order: Order,
     ) -> BackendResult<u32> {
-        // returns nul pointer in Buffer in none, otherwise proper buffer
-        let start_buf = start
-            .map(|s| Buffer::from_vec(s.to_vec()))
-            .unwrap_or_default();
-        let end_buf = end
-            .map(|e| Buffer::from_vec(e.to_vec()))
-            .unwrap_or_default();
         let mut error_msg = Buffer::default();
         let mut iter = GoIter::new(self.db.gas_meter);
         let mut used_gas = 0_u64;
@@ -84,16 +75,14 @@ impl Storage for GoStorage {
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
-            start_buf,
-            end_buf,
+            U8SliceView::new(start),
+            U8SliceView::new(end),
             order.into(),
             &mut iter as *mut GoIter,
             &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        let _start = unsafe { start_buf.consume() };
-        let _end = unsafe { end_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || {
@@ -132,22 +121,18 @@ impl Storage for GoStorage {
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
-        let key_buf = Buffer::from_vec(key.to_vec());
-        let value_buf = Buffer::from_vec(value.to_vec());
         let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.write_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
-            key_buf,
-            value_buf,
+            U8SliceView::new(Some(key)),
+            U8SliceView::new(Some(value)),
             &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        let _key = unsafe { key_buf.consume() };
-        let _value = unsafe { value_buf.consume() };
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || {
             format!(
@@ -164,19 +149,17 @@ impl Storage for GoStorage {
     }
 
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
-        let key_buf = Buffer::from_vec(key.to_vec());
         let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.remove_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
-            key_buf,
+            U8SliceView::new(Some(key)),
             &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        let _key = unsafe { key_buf.consume() };
         let default = || {
             format!(
                 "Failed to delete a key in the db: {}",

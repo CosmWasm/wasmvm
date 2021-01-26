@@ -69,6 +69,21 @@ func receiveVector(b C.Buffer) []byte {
 	return res
 }
 
+// copyU8Slice copies the contents of a Option<&[u8]> that was allocated on the Rust side.
+// Returns nil if and only if the source is None.
+func copyU8Slice(view C.U8SliceView) []byte {
+	if view.is_nil {
+		return nil
+	}
+	if view.len == 0 {
+		// In this case, we don't want to look into the ptr
+		return []byte{}
+	}
+	// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
+	res := C.GoBytes(unsafe.Pointer(view.ptr), cint(view.len))
+	return res
+}
+
 // Copy the contents of a vector that was allocated on the Rust side.
 // Unlike receiveVector, we do not free it, because it will be manually
 // freed on the Rust side after control returns to it.

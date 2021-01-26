@@ -88,6 +88,20 @@ typedef struct db_t {
   uint8_t _private[0];
 } db_t;
 
+/**
+ * A view into a `Option<&[u8]>`, created and maintained by Rust.
+ *
+ * This can be copied into a []byte in Go.
+ */
+typedef struct U8SliceView {
+  /**
+   * True if and only if the this is None/nil. If this is true, the other fields must be ignored.
+   */
+  bool is_nil;
+  const uint8_t *ptr;
+  uintptr_t len;
+} U8SliceView;
+
 typedef struct iterator_t {
   uint64_t db_counter;
   uint64_t iterator_index;
@@ -104,10 +118,10 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
-  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
-  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
-  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*, Buffer*);
+  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, Buffer*);
+  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*);
+  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, int32_t, GoIter*, Buffer*);
 } DB_vtable;
 
 typedef struct DB {

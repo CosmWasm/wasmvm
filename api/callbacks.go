@@ -1,13 +1,16 @@
 package api
 
+// Check https://akrennmair.github.io/golang-cgo-slides/ to learn
+// how this embedded C code works.
+
 /*
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
-typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
-typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
-typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
+typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *val, Buffer *errOut);
+typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, Buffer *errOut);
+typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *errOut);
+typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, Buffer *errOut);
 // iterator
 typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // and api
@@ -16,10 +19,10 @@ typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *ca
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
-GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
-GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
-GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *val, Buffer *errOut);
+GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, Buffer *errOut);
+GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *errOut);
+GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, Buffer *errOut);
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // api
@@ -154,7 +157,7 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
 		// we received an invalid pointer
@@ -163,7 +166,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
+	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
@@ -183,7 +186,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val
 }
 
 //export cSet
-func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, val C.U8SliceView, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil {
 		// we received an invalid pointer
@@ -192,8 +195,8 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
-	v := receiveSlice(val)
+	k := copyU8Slice(key)
+	v := copyU8Slice(val)
 
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
@@ -204,7 +207,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 }
 
 //export cDelete
-func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil {
 		// we received an invalid pointer
@@ -213,7 +216,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
+	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
@@ -224,7 +227,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 }
 
 //export cScan
-func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order ci32, out *C.GoIter, errOut *C.Buffer) (ret C.GoResult) {
+func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil {
 		// we received an invalid pointer
@@ -234,14 +237,8 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	state := (*DBState)(unsafe.Pointer(ptr))
 	kv := state.Store
-	// handle null as well as data
-	var s, e []byte
-	if start.ptr != nil {
-		s = receiveSlice(start)
-	}
-	if end.ptr != nil {
-		e = receiveSlice(end)
-	}
+	s := copyU8Slice(start)
+	e := copyU8Slice(end)
 
 	var iter dbm.Iterator
 	gasBefore := gm.GasConsumed()
