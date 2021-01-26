@@ -127,6 +127,16 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
+/**
+ * A view into an externally owned byte slice (Go `[]byte`).
+ * Use this for the current call only. A view cannot be copied for safety reasons.
+ * If you need a copy, use [`to_owned`].
+ */
+typedef struct ByteSliceView {
+  const uint8_t *ptr;
+  uintptr_t len;
+} ByteSliceView;
+
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *err);
@@ -218,8 +228,8 @@ Buffer ibc_packet_timeout(cache_t *cache,
                           uint64_t *gas_used,
                           Buffer *err);
 
-cache_t *init_cache(Buffer data_dir,
-                    Buffer supported_features,
+cache_t *init_cache(ByteSliceView data_dir,
+                    ByteSliceView supported_features,
                     uint32_t cache_size,
                     uint32_t instance_memory_limit,
                     Buffer *err);

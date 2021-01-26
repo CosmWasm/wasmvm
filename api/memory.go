@@ -7,6 +7,16 @@ import "C"
 
 import "unsafe"
 
+func makeView(s []byte) C.ByteSliceView {
+	if s == nil {
+		return C.ByteSliceView{ptr: cu8_ptr(nil), len: cusize(0)}
+	}
+	return C.ByteSliceView{
+		ptr: cu8_ptr(C.CBytes(s)),
+		len: cusize(len(s)),
+	}
+}
+
 func allocateRust(data []byte) C.Buffer {
 	var ret C.Buffer
 	if data == nil {

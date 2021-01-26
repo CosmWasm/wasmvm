@@ -7,7 +7,7 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
 use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
-use crate::memory::Buffer;
+use crate::memory::{Buffer, ByteSliceView};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -25,8 +25,8 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 
 #[no_mangle]
 pub extern "C" fn init_cache(
-    data_dir: Buffer,
-    supported_features: Buffer,
+    data_dir: ByteSliceView,
+    supported_features: ByteSliceView,
     cache_size: u32,
     instance_memory_limit: u32,
     err: Option<&mut Buffer>,
@@ -53,16 +53,19 @@ pub extern "C" fn init_cache(
 }
 
 fn do_init_cache(
-    data_dir: Buffer,
-    supported_features: Buffer,
+    data_dir: ByteSliceView,
+    supported_features: ByteSliceView,
     cache_size: u32,
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    let dir = unsafe { data_dir.read() }.ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
+    let dir = data_dir
+        .read()
+        .ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features
-    let features_bin =
-        unsafe { supported_features.read() }.ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
+    let features_bin = supported_features
+        .read()
+        .ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
     let memory_cache_size = Size::mebi(
@@ -244,8 +247,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -260,8 +263,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -278,8 +281,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -298,8 +301,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -321,8 +324,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -348,8 +351,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),
@@ -378,8 +381,8 @@ mod tests {
         let mut err = Buffer::default();
         let features: &[u8] = b"stargate";
         let cache_ptr = init_cache(
-            dir.as_bytes().into(),
-            features.into(),
+            ByteSliceView::new(Some(dir.as_bytes())),
+            ByteSliceView::new(Some(features)),
             512,
             32,
             Some(&mut err),

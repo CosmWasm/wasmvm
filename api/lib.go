@@ -7,6 +7,7 @@ import "C"
 import (
 	"fmt"
 	"syscall"
+	"runtime"
 
 	"github.com/CosmWasm/wasmvm/types"
 )
@@ -32,13 +33,17 @@ type Cache struct {
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
-	dir := sendSlice([]byte(dataDir))
-	defer freeAfterSend(dir)
-	features := sendSlice([]byte(supportedFeatures))
-	defer freeAfterSend(features)
+	dir := []byte(dataDir)
+	features := []byte(supportedFeatures)
+
+	dirView := makeView(dir)
+	defer runtime.KeepAlive(dir)
+	featuresView := makeView(features)
+	defer runtime.KeepAlive(features)
+
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dir, features, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache(dirView, featuresView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
