@@ -84,18 +84,6 @@ func copyU8Slice(view C.U8SliceView) []byte {
 	return res
 }
 
-// Copy the contents of a vector that was allocated on the Rust side.
-// Unlike receiveVector, we do not free it, because it will be manually
-// freed on the Rust side after control returns to it.
-//This should be used in places like callbacks from Rust to Go.
-func receiveSlice(b C.Buffer) []byte {
-	if bufIsNil(b) {
-		return nil
-	}
-	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
-	return res
-}
-
 func bufIsNil(b C.Buffer) bool {
 	return b.ptr == cu8_ptr(nil)
 }

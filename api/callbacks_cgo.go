@@ -12,10 +12,10 @@ GoResult cScan(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceVie
 // imports (iterator)
 GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // imports (api)
-GoResult cHumanAddress(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-GoResult cCanonicalAddress(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+GoResult cHumanAddress(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // imports (querier)
-GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
 
 // Gateway functions (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *val, Buffer *errOut) {
@@ -37,15 +37,15 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 }
 
 // Gateway functions (api)
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas) {
+GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas) {
     return cCanonicalAddress(ptr, human, canon, errOut, used_gas);
 }
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas) {
+GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas) {
     return cHumanAddress(ptr, canon, human, errOut, used_gas);
 }
 
 // Gateway functions (querier)
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut) {
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut) {
     return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 */

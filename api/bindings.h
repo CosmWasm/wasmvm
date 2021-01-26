@@ -135,8 +135,8 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, Buffer, Buffer*, Buffer*, uint64_t*);
-  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer*, Buffer*, uint64_t*);
+  int32_t (*humanize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
+  int32_t (*canonicalize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
 } GoApi_vtable;
 
 typedef struct GoApi {
@@ -149,7 +149,7 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, Buffer, Buffer*, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, U8SliceView, Buffer*, Buffer*);
 } Querier_vtable;
 
 typedef struct GoQuerier {

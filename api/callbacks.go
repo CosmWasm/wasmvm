@@ -14,9 +14,9 @@ typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used
 // iterator
 typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // and api
-typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+typedef GoResult (*humanize_address_fn)(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+typedef GoResult (*canonicalize_address_fn)(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *val, Buffer *errOut);
@@ -26,10 +26,10 @@ GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8Slic
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // api
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
 
 
 */
@@ -320,14 +320,14 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, canon C.U8SliceView, human *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if human == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	c := receiveSlice(canon)
+	c := copyU8Slice(canon)
 	h, cost, err := api.HumanAddress(c)
 	*used_gas = cu64(cost)
 	if err != nil {
@@ -343,7 +343,7 @@ func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buff
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, human C.U8SliceView, canon *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
 	if canon == nil {
@@ -352,7 +352,7 @@ func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	h := string(receiveSlice(human))
+	h := string(copyU8Slice(human))
 	c, cost, err := api.CanonicalAddress(h)
 	*used_gas = cu64(cost)
 	if err != nil {
@@ -385,7 +385,7 @@ func buildQuerier(q *Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.U8SliceView, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 	if ptr == nil || usedGas == nil || result == nil {
 		// we received an invalid pointer
@@ -394,7 +394,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 
 	// query the data
 	querier := *(*Querier)(unsafe.Pointer(ptr))
-	req := receiveSlice(request)
+	req := copyU8Slice(request)
 
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint64(gasLimit))
