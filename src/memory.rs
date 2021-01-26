@@ -4,8 +4,12 @@ use std::slice;
 /// A view into an externally owned byte slice (Go `[]byte`).
 /// Use this for the current call only. A view cannot be copied for safety reasons.
 /// If you need a copy, use [`to_owned`].
+///
+/// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
 #[repr(C)]
 pub struct ByteSliceView {
+    /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
+    is_nil: bool,
     ptr: *const u8,
     len: usize,
 }
@@ -16,6 +20,7 @@ impl ByteSliceView {
     #[cfg(test)]
     pub fn new(source: &[u8]) -> Self {
         Self {
+            is_nil: false,
             ptr: source.as_ptr(),
             len: source.len(),
         }
@@ -26,6 +31,7 @@ impl ByteSliceView {
     #[cfg(test)]
     pub fn nil() -> Self {
         Self {
+            is_nil: true,
             ptr: std::ptr::null::<u8>(),
             len: 0,
         }
@@ -34,7 +40,7 @@ impl ByteSliceView {
     /// Provides a reference to the included data to be parsed or copied elsewhere
     /// This is safe as long as the `ByteSliceView` is constructed correctly.
     pub fn read(&self) -> Option<&[u8]> {
-        if self.ptr.is_null() {
+        if self.is_nil {
             None
         } else {
             Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })

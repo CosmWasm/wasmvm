@@ -384,7 +384,7 @@ fn call_2_args(
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
@@ -407,10 +407,10 @@ fn do_call_2_args(
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let arg1 = arg1.read().ok_or_else(|| Error::empty_arg(ARG1))?;
-    let arg2 = arg2.read().ok_or_else(|| Error::empty_arg(ARG2))?;
+    let arg1 = arg1.read().ok_or_else(|| Error::unset_arg(ARG1))?;
+    let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
 
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
@@ -468,7 +468,7 @@ fn call_3_args(
             )
         }))
         .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
@@ -491,11 +491,11 @@ fn do_call_3_args(
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let arg1 = arg1.read().ok_or_else(|| Error::empty_arg(ARG1))?;
-    let arg2 = arg2.read().ok_or_else(|| Error::empty_arg(ARG2))?;
-    let arg3 = arg3.read().ok_or_else(|| Error::empty_arg(ARG3))?;
+    let arg1 = arg1.read().ok_or_else(|| Error::unset_arg(ARG1))?;
+    let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
+    let arg3 = arg3.read().ok_or_else(|| Error::unset_arg(ARG3))?;
 
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {

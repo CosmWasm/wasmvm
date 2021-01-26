@@ -98,7 +98,7 @@ func TestPinErrors(t *testing.T) {
 	err = Pin(cache, nilChecksum)
 	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Null/Empty argument: checksum")
+	require.Contains(t, err.Error(), "Null/Nil argument: checksum")
 
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}
@@ -149,7 +149,7 @@ func TestUnpinErrors(t *testing.T) {
 	err = Unpin(cache, nilChecksum)
 	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Null/Empty argument: checksum")
+	require.Contains(t, err.Error(), "Null/Nil argument: checksum")
 
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}

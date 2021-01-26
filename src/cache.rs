@@ -60,12 +60,12 @@ fn do_init_cache(
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = data_dir
         .read()
-        .ok_or_else(|| Error::empty_arg(DATA_DIR_ARG))?;
+        .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features
     let features_bin = supported_features
         .read()
-        .ok_or_else(|| Error::empty_arg(FEATURES_ARG))?;
+        .ok_or_else(|| Error::unset_arg(FEATURES_ARG))?;
     let features_str = from_utf8(features_bin)?;
     let features = features_from_csv(features_str);
     let memory_cache_size = Size::mebi(
@@ -98,7 +98,7 @@ pub extern "C" fn save_wasm(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
@@ -108,7 +108,7 @@ fn do_save_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
 ) -> Result<Checksum, Error> {
-    let wasm = wasm.read().ok_or_else(|| Error::empty_arg(WASM_ARG))?;
+    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
     let checksum = cache.save_wasm(wasm)?;
     Ok(checksum)
 }
@@ -122,7 +122,7 @@ pub extern "C" fn load_wasm(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
@@ -134,7 +134,7 @@ fn do_load_wasm(
 ) -> Result<Vec<u8>, Error> {
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
@@ -145,7 +145,7 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: ByteSliceView, err: Option<
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, err);
 }
@@ -156,7 +156,7 @@ fn do_pin(
 ) -> Result<(), Error> {
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.pin(&checksum)?;
     Ok(())
@@ -167,7 +167,7 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: ByteSliceView, err: Optio
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, err);
 }
@@ -178,7 +178,7 @@ fn do_unpin(
 ) -> Result<(), Error> {
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.unpin(&checksum)?;
     Ok(())
@@ -207,7 +207,7 @@ pub extern "C" fn analyze_code(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
-        None => Err(Error::empty_arg(CACHE_ARG)),
+        None => Err(Error::unset_arg(CACHE_ARG)),
     };
     match r {
         Ok(value) => {
@@ -227,7 +227,7 @@ fn do_analyze_code(
 ) -> Result<AnalysisReport, Error> {
     let checksum: Checksum = checksum
         .read()
-        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     let report = cache.analyze(&checksum)?;
     Ok(report.into())
