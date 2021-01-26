@@ -1,7 +1,7 @@
 use cosmwasm_vm::BackendError;
 use std::fmt;
 
-use crate::Buffer;
+use crate::memory::Buffer;
 
 /// This enum gives names to the status codes returned from Go callbacks to Rust.
 ///
