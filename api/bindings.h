@@ -95,7 +95,7 @@ typedef struct db_t {
  */
 typedef struct U8SliceView {
   /**
-   * True if and only if the this is None/nil. If this is true, the other fields must be ignored.
+   * True if and only if this is None/nil. If this is true, the other fields must be ignored.
    */
   bool is_nil;
   const uint8_t *ptr;

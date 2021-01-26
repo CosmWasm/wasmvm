@@ -59,7 +59,7 @@ impl ByteSliceView {
 /// This can be copied into a []byte in Go.
 #[repr(C)]
 pub struct U8SliceView {
-    /// True if and only if the this is None/nil. If this is true, the other fields must be ignored.
+    /// True if and only if this is None/nil. If this is true, the other fields must be ignored.
     is_nil: bool,
     ptr: *const u8,
     len: usize,
