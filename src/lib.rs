@@ -8,7 +8,6 @@ mod error;
 mod gas_meter;
 mod iterator;
 mod memory;
-mod nothing;
 mod querier;
 mod storage;
 mod tests;

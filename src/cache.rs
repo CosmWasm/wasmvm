@@ -6,9 +6,8 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
-use crate::error::{clear_error, handle_c_error_binary, set_error, Error};
+use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
 use crate::memory::Buffer;
-use crate::nothing::Nothing;
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -140,18 +139,15 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Bu
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let _data = handle_c_error_binary(r, err);
+    handle_c_error_default(r, err);
 }
 
-fn do_pin(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
-) -> Result<Nothing, Error> {
+fn do_pin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
     let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
     cache.pin(&checksum)?;
-    Ok(Nothing)
+    Ok(())
 }
 
 #[no_mangle]
@@ -161,18 +157,15 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut 
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let _data = handle_c_error_binary(r, err);
+    handle_c_error_default(r, err);
 }
 
-fn do_unpin(
-    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
-) -> Result<Nothing, Error> {
+fn do_unpin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
     let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
         .try_into()?;
     cache.unpin(&checksum)?;
-    Ok(Nothing)
+    Ok(())
 }
 
 #[repr(C)]
