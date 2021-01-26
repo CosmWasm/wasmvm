@@ -14,16 +14,20 @@ impl ByteSliceView {
     /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
     /// when testing FFI calls from Rust. It must not be used in production code.
     #[cfg(test)]
-    pub fn new(source: Option<&[u8]>) -> Self {
-        match source {
-            Some(data) => Self {
-                ptr: data.as_ptr(),
-                len: data.len(),
-            },
-            None => Self {
-                ptr: std::ptr::null::<u8>(),
-                len: 0,
-            },
+    pub fn new(source: &[u8]) -> Self {
+        Self {
+            ptr: source.as_ptr(),
+            len: source.len(),
+        }
+    }
+
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    #[cfg(test)]
+    pub fn nil() -> Self {
+        Self {
+            ptr: std::ptr::null::<u8>(),
+            len: 0,
         }
     }
 
@@ -147,28 +151,28 @@ mod test {
     #[test]
     fn byte_slice_view_read_works() {
         let data = vec![0xAA, 0xBB, 0xCC];
-        let view = ByteSliceView::new(Some(&data));
+        let view = ByteSliceView::new(&data);
         assert_eq!(view.read().unwrap(), &[0xAA, 0xBB, 0xCC]);
 
         let data = vec![];
-        let view = ByteSliceView::new(Some(&data));
+        let view = ByteSliceView::new(&data);
         assert_eq!(view.read().unwrap(), &[] as &[u8]);
 
-        let view = ByteSliceView::new(None);
+        let view = ByteSliceView::nil();
         assert_eq!(view.read().is_none(), true);
     }
 
     #[test]
     fn byte_slice_view_to_owned_works() {
         let data = vec![0xAA, 0xBB, 0xCC];
-        let view = ByteSliceView::new(Some(&data));
+        let view = ByteSliceView::new(&data);
         assert_eq!(view.to_owned().unwrap(), vec![0xAA, 0xBB, 0xCC]);
 
         let data = vec![];
-        let view = ByteSliceView::new(Some(&data));
+        let view = ByteSliceView::new(&data);
         assert_eq!(view.to_owned().unwrap(), Vec::<u8>::new());
 
-        let view = ByteSliceView::new(None);
+        let view = ByteSliceView::nil();
         assert_eq!(view.to_owned().is_none(), true);
     }
 
