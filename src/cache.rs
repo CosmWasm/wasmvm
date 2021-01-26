@@ -5,7 +5,7 @@ use std::str::from_utf8;
 use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
+use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
 use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
 use crate::memory::Buffer;
 use crate::querier::GoQuerier;
@@ -126,7 +126,7 @@ fn do_load_wasm(
     checksum: Buffer,
 ) -> Result<Vec<u8>, Error> {
     let checksum: Checksum = unsafe { checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
@@ -144,7 +144,7 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Bu
 
 fn do_pin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
     let checksum: Checksum = unsafe { checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.pin(&checksum)?;
     Ok(())
@@ -162,7 +162,7 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut 
 
 fn do_unpin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
     let checksum: Checksum = unsafe { checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.unpin(&checksum)?;
     Ok(())
@@ -210,7 +210,7 @@ fn do_analyze_code(
     checksum: Buffer,
 ) -> Result<AnalysisReport, Error> {
     let checksum: Checksum = unsafe { checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let report = cache.analyze(&checksum)?;
     Ok(report.into())
