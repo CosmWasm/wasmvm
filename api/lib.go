@@ -6,8 +6,8 @@ import "C"
 
 import (
 	"fmt"
-	"syscall"
 	"runtime"
+	"syscall"
 
 	"github.com/CosmWasm/wasmvm/types"
 )
@@ -125,14 +125,14 @@ func Instantiate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -166,14 +166,14 @@ func Handle(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -206,12 +206,12 @@ func Migrate(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -244,12 +244,12 @@ func Query(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -282,12 +282,12 @@ func IBCChannelOpen(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -300,7 +300,7 @@ func IBCChannelOpen(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_open(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -320,12 +320,12 @@ func IBCChannelConnect(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -338,7 +338,7 @@ func IBCChannelConnect(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_connect(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -358,12 +358,12 @@ func IBCChannelClose(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	c := sendSlice(channel)
-	defer freeAfterSend(c)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -376,7 +376,7 @@ func IBCChannelClose(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_channel_close(cache.ptr, cs, e, c, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -396,12 +396,12 @@ func IBCPacketReceive(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	p := sendSlice(packet)
-	defer freeAfterSend(p)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -414,7 +414,7 @@ func IBCPacketReceive(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_receive(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -434,12 +434,12 @@ func IBCPacketAck(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	ac := sendSlice(ack)
-	defer freeAfterSend(ac)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ac := makeView(ack)
+	defer runtime.KeepAlive(ack)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -472,12 +472,12 @@ func IBCPacketTimeout(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	p := sendSlice(packet)
-	defer freeAfterSend(p)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -490,7 +490,7 @@ func IBCPacketTimeout(
 	var gasUsed cu64
 	errmsg := C.Buffer{}
 
-	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, p, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

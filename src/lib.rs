@@ -14,7 +14,7 @@ mod tests;
 
 pub use api::GoApi;
 pub use db::{db_t, DB};
-pub use memory::{free_rust, Buffer};
+pub use memory::{free_rust, Buffer, ByteSliceView};
 pub use querier::GoQuerier;
 pub use storage::GoStorage;
 
@@ -28,7 +28,7 @@ use cosmwasm_vm::{
     Checksum, Instance, InstanceOptions, VmResult,
 };
 
-use crate::args::{ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG};
+use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
 use crate::cache::{cache_t, to_cache};
 use crate::error::{handle_c_error_binary, Error};
 
@@ -43,10 +43,10 @@ fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
 #[no_mangle]
 pub extern "C" fn instantiate(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    info: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -75,10 +75,10 @@ pub extern "C" fn instantiate(
 #[no_mangle]
 pub extern "C" fn handle(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    info: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -107,9 +107,9 @@ pub extern "C" fn handle(
 #[no_mangle]
 pub extern "C" fn migrate(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -137,9 +137,9 @@ pub extern "C" fn migrate(
 #[no_mangle]
 pub extern "C" fn query(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -167,9 +167,9 @@ pub extern "C" fn query(
 #[no_mangle]
 pub extern "C" fn ibc_channel_open(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -197,9 +197,9 @@ pub extern "C" fn ibc_channel_open(
 #[no_mangle]
 pub extern "C" fn ibc_channel_connect(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -227,9 +227,9 @@ pub extern "C" fn ibc_channel_connect(
 #[no_mangle]
 pub extern "C" fn ibc_channel_close(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -257,9 +257,9 @@ pub extern "C" fn ibc_channel_close(
 #[no_mangle]
 pub extern "C" fn ibc_packet_receive(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -287,9 +287,9 @@ pub extern "C" fn ibc_packet_receive(
 #[no_mangle]
 pub extern "C" fn ibc_packet_ack(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -317,9 +317,9 @@ pub extern "C" fn ibc_packet_ack(
 #[no_mangle]
 pub extern "C" fn ibc_packet_timeout(
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -346,8 +346,8 @@ pub extern "C" fn ibc_packet_timeout(
 
 type VmFn2Args = fn(
     instance: &mut Instance<GoApi, GoStorage, GoQuerier>,
-    env: &[u8],
-    msg: &[u8],
+    arg1: &[u8],
+    arg2: &[u8],
 ) -> VmResult<Vec<u8>>;
 
 // this wraps all error handling and ffi for the 6 ibc entry points and query.
@@ -356,9 +356,9 @@ type VmFn2Args = fn(
 fn call_2_args(
     vm_fn: VmFn2Args,
     cache: *mut cache_t,
-    checksum: Buffer,
-    arg1: Buffer,
-    arg2: Buffer,
+    checksum: ByteSliceView,
+    arg1: ByteSliceView,
+    arg2: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -394,9 +394,9 @@ fn call_2_args(
 fn do_call_2_args(
     vm_fn: VmFn2Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
-    arg1: Buffer,
-    arg2: Buffer,
+    checksum: ByteSliceView,
+    arg1: ByteSliceView,
+    arg2: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -405,11 +405,12 @@ fn do_call_2_args(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let checksum: Checksum = unsafe { checksum.read() }
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let arg1 = unsafe { arg1.read() }.ok_or_else(|| Error::empty_arg(ARG1))?;
-    let arg2 = unsafe { arg2.read() }.ok_or_else(|| Error::empty_arg(ARG2))?;
+    let arg1 = arg1.read().ok_or_else(|| Error::empty_arg(ARG1))?;
+    let arg2 = arg2.read().ok_or_else(|| Error::empty_arg(ARG2))?;
 
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
@@ -426,9 +427,9 @@ fn do_call_2_args(
 
 type VmFn3Args = fn(
     instance: &mut Instance<GoApi, GoStorage, GoQuerier>,
-    env: &[u8],
-    info: &[u8],
-    msg: &[u8],
+    arg1: &[u8],
+    arg2: &[u8],
+    arg3: &[u8],
 ) -> VmResult<Vec<u8>>;
 
 // this wraps all error handling and ffi for handle, init, and migrate.
@@ -437,10 +438,10 @@ type VmFn3Args = fn(
 fn call_3_args(
     vm_fn: VmFn3Args,
     cache: *mut cache_t,
-    checksum: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    arg1: ByteSliceView,
+    arg2: ByteSliceView,
+    arg3: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -455,9 +456,9 @@ fn call_3_args(
                 vm_fn,
                 c,
                 checksum,
-                env,
-                info,
-                msg,
+                arg1,
+                arg2,
+                arg3,
                 db,
                 api,
                 querier,
@@ -476,10 +477,10 @@ fn call_3_args(
 fn do_call_3_args(
     vm_fn: VmFn3Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
-    env: Buffer,
-    info: Buffer,
-    msg: Buffer,
+    checksum: ByteSliceView,
+    arg1: ByteSliceView,
+    arg2: ByteSliceView,
+    arg3: ByteSliceView,
     db: DB,
     api: GoApi,
     querier: GoQuerier,
@@ -488,12 +489,13 @@ fn do_call_3_args(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let checksum: Checksum = unsafe { checksum.read() }
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
-    let info = unsafe { info.read() }.ok_or_else(|| Error::empty_arg(INFO_ARG))?;
-    let msg = unsafe { msg.read() }.ok_or_else(|| Error::empty_arg(MSG_ARG))?;
+    let arg1 = arg1.read().ok_or_else(|| Error::empty_arg(ARG1))?;
+    let arg2 = arg2.read().ok_or_else(|| Error::empty_arg(ARG2))?;
+    let arg3 = arg3.read().ok_or_else(|| Error::empty_arg(ARG3))?;
 
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions {
@@ -502,7 +504,7 @@ fn do_call_3_args(
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
-    let res = vm_fn(&mut instance, env, info, msg);
+    let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_used = instance.create_gas_report().used_internally;
     instance.recycle();
     Ok(res?)
