@@ -7,12 +7,14 @@ import "C"
 
 import "unsafe"
 
+// makeView creates a view into the given byte slice what allows Rust code to read it.
+// The byte slice is managed by Go and can be
 func makeView(s []byte) C.ByteSliceView {
 	if s == nil {
 		return C.ByteSliceView{ptr: cu8_ptr(nil), len: cusize(0)}
 	}
 	return C.ByteSliceView{
-		ptr: cu8_ptr(C.CBytes(s)),
+		ptr: cu8_ptr(unsafe.Pointer(&s[0])),
 		len: cusize(len(s)),
 	}
 }
