@@ -27,7 +27,7 @@ impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let mut result_buf = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.read_db)(
             self.db.state,
@@ -35,7 +35,7 @@ impl Storage for GoStorage {
             &mut used_gas as *mut u64,
             key_buf,
             &mut result_buf as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -49,7 +49,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -77,7 +77,7 @@ impl Storage for GoStorage {
         let end_buf = end
             .map(|e| Buffer::from_vec(e.to_vec()))
             .unwrap_or_default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut iter = GoIter::new(self.db.gas_meter);
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.scan_db)(
@@ -88,7 +88,7 @@ impl Storage for GoStorage {
             end_buf,
             order.into(),
             &mut iter as *mut GoIter,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -104,7 +104,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -134,7 +134,7 @@ impl Storage for GoStorage {
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
         let key_buf = Buffer::from_vec(key.to_vec());
         let value_buf = Buffer::from_vec(value.to_vec());
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.write_db)(
             self.db.state,
@@ -142,7 +142,7 @@ impl Storage for GoStorage {
             &mut used_gas as *mut u64,
             key_buf,
             value_buf,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -156,7 +156,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -165,14 +165,14 @@ impl Storage for GoStorage {
 
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
         let key_buf = Buffer::from_vec(key.to_vec());
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.remove_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
             key_buf,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -184,7 +184,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

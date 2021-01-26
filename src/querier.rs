@@ -37,7 +37,7 @@ impl Querier for GoQuerier {
     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
         let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
             self.state,
@@ -45,7 +45,7 @@ impl Querier for GoQuerier {
             &mut used_gas as *mut u64,
             request_buf,
             &mut result_buf as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -59,7 +59,7 @@ impl Querier for GoQuerier {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

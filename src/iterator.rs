@@ -57,7 +57,7 @@ impl GoIter {
 
         let mut key_buf = Buffer::default();
         let mut value_buf = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
@@ -65,7 +65,7 @@ impl GoIter {
             &mut used_gas as *mut u64,
             &mut key_buf as *mut Buffer,
             &mut value_buf as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -73,7 +73,7 @@ impl GoIter {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || "Failed to fetch next item from iterator".to_string();
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

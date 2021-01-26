@@ -40,7 +40,7 @@ pub extern "C" fn instantiate(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_3_args(
         call_init_raw,
@@ -55,7 +55,7 @@ pub extern "C" fn instantiate(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -72,7 +72,7 @@ pub extern "C" fn handle(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_3_args(
         call_handle_raw,
@@ -87,7 +87,7 @@ pub extern "C" fn handle(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -103,7 +103,7 @@ pub extern "C" fn migrate(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_migrate_raw,
@@ -117,7 +117,7 @@ pub extern "C" fn migrate(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -133,7 +133,7 @@ pub extern "C" fn query(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_query_raw,
@@ -147,7 +147,7 @@ pub extern "C" fn query(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -163,7 +163,7 @@ pub extern "C" fn ibc_channel_open(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_channel_open_raw,
@@ -177,7 +177,7 @@ pub extern "C" fn ibc_channel_open(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -193,7 +193,7 @@ pub extern "C" fn ibc_channel_connect(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_channel_connect_raw,
@@ -207,7 +207,7 @@ pub extern "C" fn ibc_channel_connect(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -223,7 +223,7 @@ pub extern "C" fn ibc_channel_close(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_channel_close_raw,
@@ -237,7 +237,7 @@ pub extern "C" fn ibc_channel_close(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -253,7 +253,7 @@ pub extern "C" fn ibc_packet_receive(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_packet_receive_raw,
@@ -267,7 +267,7 @@ pub extern "C" fn ibc_packet_receive(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -283,7 +283,7 @@ pub extern "C" fn ibc_packet_ack(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_packet_ack_raw,
@@ -297,7 +297,7 @@ pub extern "C" fn ibc_packet_ack(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -313,7 +313,7 @@ pub extern "C" fn ibc_packet_timeout(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     call_2_args(
         call_ibc_packet_timeout_raw,
@@ -327,7 +327,7 @@ pub extern "C" fn ibc_packet_timeout(
         gas_limit,
         print_debug,
         gas_used,
-        err,
+        error_msg,
     )
 }
 
@@ -352,7 +352,7 @@ fn call_2_args(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -373,7 +373,7 @@ fn call_2_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    let data = handle_c_error_binary(r, err);
+    let data = handle_c_error_binary(r, error_msg);
     Buffer::from_vec(data)
 }
 
@@ -435,7 +435,7 @@ fn call_3_args(
     gas_limit: u64,
     print_debug: bool,
     gas_used: Option<&mut u64>,
-    err: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
@@ -457,7 +457,7 @@ fn call_3_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    let data = handle_c_error_binary(r, err);
+    let data = handle_c_error_binary(r, error_msg);
     Buffer::from_vec(data)
 }
 

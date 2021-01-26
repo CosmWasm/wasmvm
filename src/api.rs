@@ -41,13 +41,13 @@ impl Api for GoApi {
         let human_bytes = human.as_str().as_bytes();
         let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.canonicalize_address)(
             self.state,
             human_bytes,
             &mut output as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
             &mut used_gas as *mut u64,
         )
         .into();
@@ -57,7 +57,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -76,13 +76,13 @@ impl Api for GoApi {
         let canonical_bytes = canonical.as_slice();
         let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.humanize_address)(
             self.state,
             canonical_buf,
             &mut output as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
             &mut used_gas as *mut u64,
         )
         .into();
@@ -92,7 +92,7 @@ impl Api for GoApi {
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to humanize the address: {}", canonical);
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
