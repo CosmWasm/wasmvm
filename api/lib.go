@@ -33,17 +33,17 @@ type Cache struct {
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
-	dir := []byte(dataDir)
-	features := []byte(supportedFeatures)
+	dataDirBytes := []byte(dataDir)
+	supportedFeaturesBytes := []byte(supportedFeatures)
 
-	dirView := makeView(dir)
-	defer runtime.KeepAlive(dir)
-	featuresView := makeView(features)
-	defer runtime.KeepAlive(features)
+	d := makeView(dataDirBytes)
+	defer runtime.KeepAlive(dataDirBytes)
+	f := makeView(supportedFeaturesBytes)
+	defer runtime.KeepAlive(supportedFeaturesBytes)
 
 	errmsg := C.Buffer{}
 
-	ptr, err := C.init_cache(dirView, featuresView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -55,10 +55,10 @@ func ReleaseCache(cache Cache) {
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
-	code := sendSlice(wasm)
-	defer freeAfterSend(code)
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
 	errmsg := C.Buffer{}
-	checksum, err := C.save_wasm(cache.ptr, code, &errmsg)
+	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -66,8 +66,8 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 }
 
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -77,8 +77,8 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 }
 
 func Pin(cache Cache, checksum []byte) error {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	_, err := C.pin(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -88,8 +88,8 @@ func Pin(cache Cache, checksum []byte) error {
 }
 
 func Unpin(cache Cache, checksum []byte) error {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	_, err := C.unpin(cache.ptr, cs, &errmsg)
 	if err != nil {
@@ -99,8 +99,8 @@ func Unpin(cache Cache, checksum []byte) error {
 }
 
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
-	cs := sendSlice(checksum)
-	defer freeAfterSend(cs)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
 	errmsg := C.Buffer{}
 	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
 	if err != nil {

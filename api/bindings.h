@@ -62,6 +62,16 @@ typedef struct cache_t {
 } cache_t;
 
 /**
+ * A view into an externally owned byte slice (Go `[]byte`).
+ * Use this for the current call only. A view cannot be copied for safety reasons.
+ * If you need a copy, use [`to_owned`].
+ */
+typedef struct ByteSliceView {
+  const uint8_t *ptr;
+  uintptr_t len;
+} ByteSliceView;
+
+/**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
 typedef struct gas_meter_t {
@@ -127,19 +137,9 @@ typedef struct GoQuerier {
   Querier_vtable vtable;
 } GoQuerier;
 
-/**
- * A view into an externally owned byte slice (Go `[]byte`).
- * Use this for the current call only. A view cannot be copied for safety reasons.
- * If you need a copy, use [`to_owned`].
- */
-typedef struct ByteSliceView {
-  const uint8_t *ptr;
-  uintptr_t len;
-} ByteSliceView;
-
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *err);
+AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 void free_rust(Buffer buf);
 
@@ -247,7 +247,7 @@ Buffer instantiate(cache_t *cache,
                    uint64_t *gas_used,
                    Buffer *err);
 
-Buffer load_wasm(cache_t *cache, Buffer checksum, Buffer *err);
+Buffer load_wasm(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 Buffer migrate(cache_t *cache,
                Buffer checksum,
@@ -261,7 +261,7 @@ Buffer migrate(cache_t *cache,
                uint64_t *gas_used,
                Buffer *err);
 
-void pin(cache_t *cache, Buffer checksum, Buffer *err);
+void pin(cache_t *cache, ByteSliceView checksum, Buffer *err);
 
 Buffer query(cache_t *cache,
              Buffer checksum,
@@ -285,6 +285,6 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer save_wasm(cache_t *cache, Buffer wasm, Buffer *err);
+Buffer save_wasm(cache_t *cache, ByteSliceView wasm, Buffer *err);
 
-void unpin(cache_t *cache, Buffer checksum, Buffer *err);
+void unpin(cache_t *cache, ByteSliceView checksum, Buffer *err);

@@ -90,7 +90,11 @@ fn do_init_cache(
 }
 
 #[no_mangle]
-pub extern "C" fn save_wasm(cache: *mut cache_t, wasm: Buffer, err: Option<&mut Buffer>) -> Buffer {
+pub extern "C" fn save_wasm(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    err: Option<&mut Buffer>,
+) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
             .unwrap_or_else(|_| Err(Error::panic())),
@@ -102,9 +106,9 @@ pub extern "C" fn save_wasm(cache: *mut cache_t, wasm: Buffer, err: Option<&mut 
 
 fn do_save_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    wasm: Buffer,
+    wasm: ByteSliceView,
 ) -> Result<Checksum, Error> {
-    let wasm = unsafe { wasm.read() }.ok_or_else(|| Error::empty_arg(WASM_ARG))?;
+    let wasm = wasm.read().ok_or_else(|| Error::empty_arg(WASM_ARG))?;
     let checksum = cache.save_wasm(wasm)?;
     Ok(checksum)
 }
@@ -112,7 +116,7 @@ fn do_save_wasm(
 #[no_mangle]
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
-    checksum: Buffer,
+    checksum: ByteSliceView,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
@@ -126,9 +130,10 @@ pub extern "C" fn load_wasm(
 
 fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
+    checksum: ByteSliceView,
 ) -> Result<Vec<u8>, Error> {
-    let checksum: Checksum = unsafe { checksum.read() }
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let wasm = cache.load_wasm(&checksum)?;
@@ -136,7 +141,7 @@ fn do_load_wasm(
 }
 
 #[no_mangle]
-pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Buffer>) {
+pub extern "C" fn pin(cache: *mut cache_t, checksum: ByteSliceView, err: Option<&mut Buffer>) {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
@@ -145,8 +150,12 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Bu
     handle_c_error_default(r, err);
 }
 
-fn do_pin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
-    let checksum: Checksum = unsafe { checksum.read() }
+fn do_pin(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksum: ByteSliceView,
+) -> Result<(), Error> {
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.pin(&checksum)?;
@@ -154,7 +163,7 @@ fn do_pin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> R
 }
 
 #[no_mangle]
-pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Buffer>) {
+pub extern "C" fn unpin(cache: *mut cache_t, checksum: ByteSliceView, err: Option<&mut Buffer>) {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
@@ -163,8 +172,12 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut 
     handle_c_error_default(r, err);
 }
 
-fn do_unpin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
-    let checksum: Checksum = unsafe { checksum.read() }
+fn do_unpin(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksum: ByteSliceView,
+) -> Result<(), Error> {
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.unpin(&checksum)?;
@@ -188,7 +201,7 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
 #[no_mangle]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
-    checksum: Buffer,
+    checksum: ByteSliceView,
     err: Option<&mut Buffer>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
@@ -210,9 +223,10 @@ pub extern "C" fn analyze_code(
 
 fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    checksum: Buffer,
+    checksum: ByteSliceView,
 ) -> Result<AnalysisReport, Error> {
-    let checksum: Checksum = unsafe { checksum.read() }
+    let checksum: Checksum = checksum
+        .read()
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let report = cache.analyze(&checksum)?;
@@ -289,7 +303,7 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        save_wasm(cache_ptr, ByteSliceView::new(HACKATOM), Some(&mut err));
         assert_eq!(err.len, 0);
 
         release_cache(cache_ptr);
@@ -309,10 +323,11 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        let checksum = save_wasm(cache_ptr, ByteSliceView::new(HACKATOM), Some(&mut err));
         assert_eq!(err.len, 0);
+        let checksum = unsafe { checksum.consume() };
 
-        let wasm = load_wasm(cache_ptr, checksum, Some(&mut err));
+        let wasm = load_wasm(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(unsafe { wasm.consume() }, HACKATOM);
 
         release_cache(cache_ptr);
@@ -332,14 +347,15 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        let checksum = save_wasm(cache_ptr, ByteSliceView::new(HACKATOM), Some(&mut err));
         assert_eq!(err.len, 0);
+        let checksum = unsafe { checksum.consume() };
 
-        pin(cache_ptr, checksum, Some(&mut err));
+        pin(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(err.len, 0);
 
         // pinning again has no effect
-        pin(cache_ptr, checksum, Some(&mut err));
+        pin(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(err.len, 0);
 
         release_cache(cache_ptr);
@@ -359,17 +375,18 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        let checksum = save_wasm(cache_ptr, ByteSliceView::new(HACKATOM), Some(&mut err));
+        assert_eq!(err.len, 0);
+        let checksum = unsafe { checksum.consume() };
+
+        pin(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(err.len, 0);
 
-        pin(cache_ptr, checksum, Some(&mut err));
-        assert_eq!(err.len, 0);
-
-        unpin(cache_ptr, checksum, Some(&mut err));
+        unpin(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(err.len, 0);
 
         // Unpinning again has no effect
-        unpin(cache_ptr, checksum, Some(&mut err));
+        unpin(cache_ptr, ByteSliceView::new(&checksum), Some(&mut err));
         assert_eq!(err.len, 0);
 
         release_cache(cache_ptr);
@@ -389,19 +406,30 @@ mod tests {
         );
         assert_eq!(err.len, 0);
 
-        let checksum_hackatom = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        let checksum_hackatom = save_wasm(cache_ptr, ByteSliceView::new(HACKATOM), Some(&mut err));
         assert_eq!(err.len, 0);
-        let checksum_ibc_reflect = save_wasm(cache_ptr, IBC_REFLECT.into(), Some(&mut err));
+        let checksum_hackatom = unsafe { checksum_hackatom.consume() };
+        let checksum_ibc_reflect =
+            save_wasm(cache_ptr, ByteSliceView::new(IBC_REFLECT), Some(&mut err));
         assert_eq!(err.len, 0);
+        let checksum_ibc_reflect = unsafe { checksum_ibc_reflect.consume() };
 
-        let hackatom_report = analyze_code(cache_ptr, checksum_hackatom, Some(&mut err));
+        let hackatom_report = analyze_code(
+            cache_ptr,
+            ByteSliceView::new(&checksum_hackatom),
+            Some(&mut err),
+        );
         assert_eq!(
             hackatom_report,
             AnalysisReport {
                 has_ibc_entry_points: false
             }
         );
-        let ibc_reflect_report = analyze_code(cache_ptr, checksum_ibc_reflect, Some(&mut err));
+        let ibc_reflect_report = analyze_code(
+            cache_ptr,
+            ByteSliceView::new(&checksum_ibc_reflect),
+            Some(&mut err),
+        );
         assert_eq!(
             ibc_reflect_report,
             AnalysisReport {
