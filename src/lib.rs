@@ -31,7 +31,7 @@ use cosmwasm_vm::{
 
 use crate::args::{ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG};
 use crate::cache::{cache_t, to_cache};
-use crate::error::{handle_c_error, Error};
+use crate::error::{handle_c_error_binary, Error};
 
 fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -387,7 +387,7 @@ fn call_2_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
@@ -470,7 +470,7 @@ fn call_3_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 

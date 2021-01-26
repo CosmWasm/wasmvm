@@ -6,7 +6,7 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
-use crate::error::{clear_error, handle_c_error, set_error, Error};
+use crate::error::{clear_error, handle_c_error_binary, set_error, Error};
 use crate::memory::Buffer;
 use crate::nothing::Nothing;
 use crate::querier::GoQuerier;
@@ -94,7 +94,7 @@ pub extern "C" fn save_wasm(cache: *mut cache_t, wasm: Buffer, err: Option<&mut 
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
@@ -118,7 +118,7 @@ pub extern "C" fn load_wasm(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
@@ -140,7 +140,7 @@ pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Bu
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let _data = handle_c_error(r, err);
+    let _data = handle_c_error_binary(r, err);
 }
 
 fn do_pin(
@@ -161,7 +161,7 @@ pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut 
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let _data = handle_c_error(r, err);
+    let _data = handle_c_error_binary(r, err);
 }
 
 fn do_unpin(
