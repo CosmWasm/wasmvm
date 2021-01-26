@@ -8,7 +8,7 @@ import "C"
 import "unsafe"
 
 // makeView creates a view into the given byte slice what allows Rust code to read it.
-// The byte slice is managed by Go and will be garabage collected. Use runtime.KeppAlive
+// The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
 // to ensure the byte slice lives long enough.
 func makeView(s []byte) C.ByteSliceView {
 	if s == nil {
