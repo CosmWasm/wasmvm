@@ -102,6 +102,24 @@ typedef struct U8SliceView {
   uintptr_t len;
 } U8SliceView;
 
+/**
+ * A Vector type that requires explicit creation and destruction and
+ * can be sent via FFI.
+ * It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
+ * This type is always created in Rust and always dropped in Rust.
+ * If Go code wants to consume it's data, it must create a copy and
+ * instruct Rust to destroy it.
+ */
+typedef struct UnmanagedVector {
+  /**
+   * True if and only if this is None/nil. If this is true, the other fields must be ignored.
+   */
+  bool is_nil;
+  uint8_t *ptr;
+  uintptr_t len;
+  uintptr_t cap;
+} UnmanagedVector;
+
 typedef struct iterator_t {
   uint64_t db_counter;
   uint64_t iterator_index;
@@ -118,7 +136,7 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, UnmanagedVector*, Buffer*);
   int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, Buffer*);
   int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*);
   int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, int32_t, GoIter*, Buffer*);
@@ -280,6 +298,8 @@ Buffer migrate(cache_t *cache,
                bool print_debug,
                uint64_t *gas_used,
                Buffer *error_msg);
+
+UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
 void pin(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
 

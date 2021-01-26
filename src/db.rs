@@ -1,6 +1,6 @@
 use crate::gas_meter::gas_meter_t;
 use crate::iterator::GoIter;
-use crate::memory::{Buffer, U8SliceView};
+use crate::memory::{Buffer, U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -17,7 +17,7 @@ pub struct DB_vtable {
         *mut gas_meter_t,
         *mut u64,
         U8SliceView,
-        *mut Buffer,
+        *mut UnmanagedVector,
         *mut Buffer,
     ) -> i32,
     pub write_db: extern "C" fn(

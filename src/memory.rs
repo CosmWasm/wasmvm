@@ -82,6 +82,83 @@ impl U8SliceView {
     }
 }
 
+/// A Vector type that requires explicit creation and destruction and
+/// can be sent via FFI.
+/// It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
+/// This type is always created in Rust and always dropped in Rust.
+/// If Go code wants to consume it's data, it must create a copy and
+/// instruct Rust to destroy it.
+#[repr(C)]
+pub struct UnmanagedVector {
+    /// True if and only if this is None/nil. If this is true, the other fields must be ignored.
+    is_nil: bool,
+    ptr: *mut u8,
+    len: usize,
+    cap: usize,
+}
+
+impl UnmanagedVector {
+    /// Consumes this optional vector for manual management.
+    /// This is a zero-copy operation.
+    fn new(source: Option<Vec<u8>>) -> Self {
+        match source {
+            Some(data) => {
+                let mut data = mem::ManuallyDrop::new(data);
+                Self {
+                    is_nil: false,
+                    ptr: data.as_mut_ptr(),
+                    len: data.len(),
+                    cap: data.capacity(),
+                }
+            }
+            None => Self {
+                is_nil: true,
+                ptr: std::ptr::null_mut::<u8>(),
+                len: 0,
+                cap: 0,
+            },
+        }
+    }
+
+    /// Takes this UnmanagedVector and turns it into a regular, managed Rust vector.
+    /// Calling this on two copies of UnmanagedVector leads to double free crashes.
+    pub fn consume(self) -> Option<Vec<u8>> {
+        if self.is_nil {
+            None
+        } else {
+            Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
+        }
+    }
+}
+
+impl Default for UnmanagedVector {
+    fn default() -> Self {
+        Self {
+            is_nil: true,
+            ptr: std::ptr::null_mut::<u8>(),
+            len: 0,
+            cap: 0,
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn new_unmanaged_vector(
+    nil: bool,
+    ptr: *const u8,
+    length: usize,
+) -> UnmanagedVector {
+    if nil {
+        UnmanagedVector::new(None)
+    } else if length == 0 {
+        UnmanagedVector::new(Some(Vec::new()))
+    } else {
+        let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
+        let copy = Vec::from(external_memory);
+        UnmanagedVector::new(Some(copy))
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
     // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
@@ -207,6 +284,22 @@ mod test {
 
         let view = ByteSliceView::nil();
         assert_eq!(view.to_owned().is_none(), true);
+    }
+
+    #[test]
+    fn unmanaged_vector_consume_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.consume(), Some(vec![0x11u8, 0x22]));
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.consume(), None);
+    }
+
+    #[test]
+    fn unmanaged_vector_defaults_to_none() {
+        let x = UnmanagedVector::default();
+        assert_eq!(x.consume(), None);
     }
 
     #[test]

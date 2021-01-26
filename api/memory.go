@@ -29,6 +29,21 @@ func makeView(s []byte) C.ByteSliceView {
 	}
 }
 
+func newUnmanagedVector(data []byte) C.UnmanagedVector {
+	if data == nil {
+		return C.new_unmanaged_vector(cbool(true), cu8_ptr(nil), cusize(0))
+	} else if len(data) == 0 {
+		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
+		// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
+		// below with `&data[0]`.
+		// https://play.golang.org/p/xvDY3g9OqUk
+		return C.new_unmanaged_vector(cbool(false), cu8_ptr(nil), cusize(0))
+	} else {
+		// This will allocate a proper vector with content and return a description of it
+		return C.new_unmanaged_vector(cbool(false), cu8_ptr(unsafe.Pointer(&data[0])), cusize(len(data)))
+	}
+}
+
 func allocateRust(data []byte) C.Buffer {
 	var ret C.Buffer
 	if data == nil {
