@@ -30,7 +30,7 @@ use cosmwasm_vm::{
 
 use crate::args::{ARG1, ARG2, CACHE_ARG, CHECKSUM_ARG, ENV_ARG, GAS_USED_ARG, INFO_ARG, MSG_ARG};
 use crate::cache::{cache_t, to_cache};
-use crate::error::{handle_c_error, Error};
+use crate::error::{handle_c_error_binary, Error};
 
 fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -43,7 +43,7 @@ fn into_backend(db: DB, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
 #[no_mangle]
 pub extern "C" fn instantiate(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -58,7 +58,7 @@ pub extern "C" fn instantiate(
     call_3_args(
         call_init_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         info,
         msg,
@@ -75,7 +75,7 @@ pub extern "C" fn instantiate(
 #[no_mangle]
 pub extern "C" fn handle(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -90,7 +90,7 @@ pub extern "C" fn handle(
     call_3_args(
         call_handle_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         info,
         msg,
@@ -107,7 +107,7 @@ pub extern "C" fn handle(
 #[no_mangle]
 pub extern "C" fn migrate(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -121,7 +121,7 @@ pub extern "C" fn migrate(
     call_2_args(
         call_migrate_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -137,7 +137,7 @@ pub extern "C" fn migrate(
 #[no_mangle]
 pub extern "C" fn query(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -151,7 +151,7 @@ pub extern "C" fn query(
     call_2_args(
         call_query_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -167,7 +167,7 @@ pub extern "C" fn query(
 #[no_mangle]
 pub extern "C" fn ibc_channel_open(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -181,7 +181,7 @@ pub extern "C" fn ibc_channel_open(
     call_2_args(
         call_ibc_channel_open_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -197,7 +197,7 @@ pub extern "C" fn ibc_channel_open(
 #[no_mangle]
 pub extern "C" fn ibc_channel_connect(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -211,7 +211,7 @@ pub extern "C" fn ibc_channel_connect(
     call_2_args(
         call_ibc_channel_connect_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -227,7 +227,7 @@ pub extern "C" fn ibc_channel_connect(
 #[no_mangle]
 pub extern "C" fn ibc_channel_close(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -241,7 +241,7 @@ pub extern "C" fn ibc_channel_close(
     call_2_args(
         call_ibc_channel_close_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -257,7 +257,7 @@ pub extern "C" fn ibc_channel_close(
 #[no_mangle]
 pub extern "C" fn ibc_packet_receive(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -271,7 +271,7 @@ pub extern "C" fn ibc_packet_receive(
     call_2_args(
         call_ibc_packet_receive_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -287,7 +287,7 @@ pub extern "C" fn ibc_packet_receive(
 #[no_mangle]
 pub extern "C" fn ibc_packet_ack(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -301,7 +301,7 @@ pub extern "C" fn ibc_packet_ack(
     call_2_args(
         call_ibc_packet_ack_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -317,7 +317,7 @@ pub extern "C" fn ibc_packet_ack(
 #[no_mangle]
 pub extern "C" fn ibc_packet_timeout(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     msg: Buffer,
     db: DB,
@@ -331,7 +331,7 @@ pub extern "C" fn ibc_packet_timeout(
     call_2_args(
         call_ibc_packet_timeout_raw,
         cache,
-        contract_checksum,
+        checksum,
         env,
         msg,
         db,
@@ -356,7 +356,7 @@ type VmFn2Args = fn(
 fn call_2_args(
     vm_fn: VmFn2Args,
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     arg1: Buffer,
     arg2: Buffer,
     db: DB,
@@ -372,7 +372,7 @@ fn call_2_args(
             do_call_2_args(
                 vm_fn,
                 c,
-                contract_checksum,
+                checksum,
                 arg1,
                 arg2,
                 db,
@@ -386,7 +386,7 @@ fn call_2_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
@@ -394,7 +394,7 @@ fn call_2_args(
 fn do_call_2_args(
     vm_fn: VmFn2Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     arg1: Buffer,
     arg2: Buffer,
     db: DB,
@@ -405,7 +405,7 @@ fn do_call_2_args(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let arg1 = unsafe { arg1.read() }.ok_or_else(|| Error::empty_arg(ARG1))?;
@@ -416,7 +416,7 @@ fn do_call_2_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&contract_checksum, backend, options)?;
+    let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2);
     *gas_used = instance.create_gas_report().used_internally;
@@ -437,7 +437,7 @@ type VmFn3Args = fn(
 fn call_3_args(
     vm_fn: VmFn3Args,
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -454,7 +454,7 @@ fn call_3_args(
             do_call_3_args(
                 vm_fn,
                 c,
-                contract_checksum,
+                checksum,
                 env,
                 info,
                 msg,
@@ -469,14 +469,14 @@ fn call_3_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
 fn do_call_3_args(
     vm_fn: VmFn3Args,
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     env: Buffer,
     info: Buffer,
     msg: Buffer,
@@ -488,7 +488,7 @@ fn do_call_3_args(
     gas_used: Option<&mut u64>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
+    let checksum: Checksum = unsafe { checksum.read() }
         .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
     let env = unsafe { env.read() }.ok_or_else(|| Error::empty_arg(ENV_ARG))?;
@@ -500,7 +500,7 @@ fn do_call_3_args(
         gas_limit,
         print_debug,
     };
-    let mut instance = cache.get_instance(&contract_checksum, backend, options)?;
+    let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, env, info, msg);
     *gas_used = instance.create_gas_report().used_internally;

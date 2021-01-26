@@ -71,6 +71,28 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	return receiveVector(wasm), nil
 }
 
+func Pin(cache Cache, checksum []byte) error {
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
+	errmsg := C.Buffer{}
+	_, err := C.pin(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func Unpin(cache Cache, checksum []byte) error {
+	cs := sendSlice(checksum)
+	defer freeAfterSend(cs)
+	errmsg := C.Buffer{}
+	_, err := C.unpin(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := sendSlice(checksum)
 	defer freeAfterSend(cs)

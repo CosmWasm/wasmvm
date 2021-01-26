@@ -5,8 +5,8 @@ use std::str::from_utf8;
 use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
-use crate::error::{clear_error, handle_c_error, set_error, Error};
+use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
+use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
 use crate::memory::Buffer;
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -93,7 +93,7 @@ pub extern "C" fn save_wasm(cache: *mut cache_t, wasm: Buffer, err: Option<&mut 
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
@@ -109,27 +109,63 @@ fn do_save_wasm(
 #[no_mangle]
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     err: Option<&mut Buffer>,
 ) -> Buffer {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, contract_checksum)))
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
-    let data = handle_c_error(r, err);
+    let data = handle_c_error_binary(r, err);
     Buffer::from_vec(data)
 }
 
 fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<Vec<u8>, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let wasm = cache.load_wasm(&contract_checksum)?;
+    let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
+}
+
+#[no_mangle]
+pub extern "C" fn pin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Buffer>) {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, err);
+}
+
+fn do_pin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .try_into()?;
+    cache.pin(&checksum)?;
+    Ok(())
+}
+
+#[no_mangle]
+pub extern "C" fn unpin(cache: *mut cache_t, checksum: Buffer, err: Option<&mut Buffer>) {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::empty_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, err);
+}
+
+fn do_unpin(cache: &mut Cache<GoApi, GoStorage, GoQuerier>, checksum: Buffer) -> Result<(), Error> {
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
+        .try_into()?;
+    cache.unpin(&checksum)?;
+    Ok(())
 }
 
 #[repr(C)]
@@ -149,14 +185,12 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
 #[no_mangle]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
-    contract_checksum: Buffer,
+    checksum: Buffer,
     err: Option<&mut Buffer>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || {
-            do_analyze_code(c, contract_checksum)
-        }))
-        .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::empty_arg(CACHE_ARG)),
     };
     match r {
@@ -173,12 +207,12 @@ pub extern "C" fn analyze_code(
 
 fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
-    contract_checksum: Buffer,
+    checksum: Buffer,
 ) -> Result<AnalysisReport, Error> {
-    let contract_checksum: Checksum = unsafe { contract_checksum.read() }
-        .ok_or_else(|| Error::empty_arg(CACHE_ARG))?
+    let checksum: Checksum = unsafe { checksum.read() }
+        .ok_or_else(|| Error::empty_arg(CHECKSUM_ARG))?
         .try_into()?;
-    let report = cache.analyze(&contract_checksum)?;
+    let report = cache.analyze(&checksum)?;
     Ok(report.into())
 }
 
@@ -277,6 +311,63 @@ mod tests {
 
         let wasm = load_wasm(cache_ptr, checksum, Some(&mut err));
         assert_eq!(unsafe { wasm.consume() }, HACKATOM);
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn pin_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+
+        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        pin(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        // pinning again has no effect
+        pin(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn unpin_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let mut err = Buffer::default();
+        let features: &[u8] = b"staking";
+        let cache_ptr = init_cache(
+            dir.as_bytes().into(),
+            features.into(),
+            512,
+            32,
+            Some(&mut err),
+        );
+        assert_eq!(err.len, 0);
+
+        let checksum = save_wasm(cache_ptr, HACKATOM.into(), Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        pin(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        unpin(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(err.len, 0);
+
+        // Unpinning again has no effect
+        unpin(cache_ptr, checksum, Some(&mut err));
+        assert_eq!(err.len, 0);
 
         release_cache(cache_ptr);
     }

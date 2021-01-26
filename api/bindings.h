@@ -129,12 +129,12 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, Buffer contract_checksum, Buffer *err);
+AnalysisReport analyze_code(cache_t *cache, Buffer checksum, Buffer *err);
 
 void free_rust(Buffer buf);
 
 Buffer handle(cache_t *cache,
-              Buffer contract_checksum,
+              Buffer checksum,
               Buffer env,
               Buffer info,
               Buffer msg,
@@ -147,7 +147,7 @@ Buffer handle(cache_t *cache,
               Buffer *err);
 
 Buffer ibc_channel_close(cache_t *cache,
-                         Buffer contract_checksum,
+                         Buffer checksum,
                          Buffer env,
                          Buffer msg,
                          DB db,
@@ -159,7 +159,7 @@ Buffer ibc_channel_close(cache_t *cache,
                          Buffer *err);
 
 Buffer ibc_channel_connect(cache_t *cache,
-                           Buffer contract_checksum,
+                           Buffer checksum,
                            Buffer env,
                            Buffer msg,
                            DB db,
@@ -171,7 +171,7 @@ Buffer ibc_channel_connect(cache_t *cache,
                            Buffer *err);
 
 Buffer ibc_channel_open(cache_t *cache,
-                        Buffer contract_checksum,
+                        Buffer checksum,
                         Buffer env,
                         Buffer msg,
                         DB db,
@@ -183,7 +183,7 @@ Buffer ibc_channel_open(cache_t *cache,
                         Buffer *err);
 
 Buffer ibc_packet_ack(cache_t *cache,
-                      Buffer contract_checksum,
+                      Buffer checksum,
                       Buffer env,
                       Buffer msg,
                       DB db,
@@ -195,7 +195,7 @@ Buffer ibc_packet_ack(cache_t *cache,
                       Buffer *err);
 
 Buffer ibc_packet_receive(cache_t *cache,
-                          Buffer contract_checksum,
+                          Buffer checksum,
                           Buffer env,
                           Buffer msg,
                           DB db,
@@ -207,7 +207,7 @@ Buffer ibc_packet_receive(cache_t *cache,
                           Buffer *err);
 
 Buffer ibc_packet_timeout(cache_t *cache,
-                          Buffer contract_checksum,
+                          Buffer checksum,
                           Buffer env,
                           Buffer msg,
                           DB db,
@@ -225,7 +225,7 @@ cache_t *init_cache(Buffer data_dir,
                     Buffer *err);
 
 Buffer instantiate(cache_t *cache,
-                   Buffer contract_checksum,
+                   Buffer checksum,
                    Buffer env,
                    Buffer info,
                    Buffer msg,
@@ -237,10 +237,10 @@ Buffer instantiate(cache_t *cache,
                    uint64_t *gas_used,
                    Buffer *err);
 
-Buffer load_wasm(cache_t *cache, Buffer contract_checksum, Buffer *err);
+Buffer load_wasm(cache_t *cache, Buffer checksum, Buffer *err);
 
 Buffer migrate(cache_t *cache,
-               Buffer contract_checksum,
+               Buffer checksum,
                Buffer env,
                Buffer msg,
                DB db,
@@ -251,8 +251,10 @@ Buffer migrate(cache_t *cache,
                uint64_t *gas_used,
                Buffer *err);
 
+void pin(cache_t *cache, Buffer checksum, Buffer *err);
+
 Buffer query(cache_t *cache,
-             Buffer contract_checksum,
+             Buffer checksum,
              Buffer env,
              Buffer msg,
              DB db,
@@ -274,3 +276,5 @@ Buffer query(cache_t *cache,
 void release_cache(cache_t *cache);
 
 Buffer save_wasm(cache_t *cache, Buffer wasm, Buffer *err);
+
+void unpin(cache_t *cache, Buffer checksum, Buffer *err);
