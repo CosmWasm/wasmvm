@@ -14,8 +14,8 @@ typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used
 // iterator
 typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // and api
-typedef GoResult (*humanize_address_fn)(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*canonicalize_address_fn)(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+typedef GoResult (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
+typedef GoResult (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
 
 // forward declarations (db)
@@ -26,8 +26,8 @@ GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8Slic
 // iterator
 GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
 // api
-GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 // and querier
 GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
 
@@ -318,15 +318,20 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.U8SliceView, human *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if human == nil {
-		// we received an invalid pointer
+
+	if dest == nil {
 		return C.GoResult_BadArgument
 	}
+	if !(*dest).is_nil {
+		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	c := copyU8Slice(canon)
-	h, cost, err := api.HumanAddress(c)
+	s := copyU8Slice(src)
+
+	h, cost, err := api.HumanAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
@@ -334,24 +339,26 @@ func cHumanAddress(ptr *C.api_t, canon C.U8SliceView, human *C.Buffer, errOut *C
 		return C.GoResult_User
 	}
 	if len(h) == 0 {
-		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", c))
+		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", s))
 	}
-	*human = allocateRust([]byte(h))
+	*dest = newUnmanagedVector([]byte(h))
 	return C.GoResult_Ok
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.U8SliceView, canon *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
-	if canon == nil {
-		// we received an invalid pointer
+	if dest == nil {
 		return C.GoResult_BadArgument
+	}
+	if !(*dest).is_nil {
+		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	h := string(copyU8Slice(human))
-	c, cost, err := api.CanonicalAddress(h)
+	s := string(copyU8Slice(src))
+	c, cost, err := api.CanonicalAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
@@ -359,11 +366,9 @@ func cCanonicalAddress(ptr *C.api_t, human C.U8SliceView, canon *C.Buffer, errOu
 		return C.GoResult_User
 	}
 	if len(c) == 0 {
-		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", h))
+		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", s))
 	}
-	*canon = allocateRust(c)
-
-	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
+	*dest = newUnmanagedVector(c)
 	return C.GoResult_Ok
 }
 

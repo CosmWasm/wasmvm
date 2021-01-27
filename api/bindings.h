@@ -153,8 +153,8 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
-  int32_t (*canonicalize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
+  int32_t (*humanize_address)(const api_t*, U8SliceView, UnmanagedVector*, Buffer*, uint64_t*);
+  int32_t (*canonicalize_address)(const api_t*, U8SliceView, UnmanagedVector*, Buffer*, uint64_t*);
 } GoApi_vtable;
 
 typedef struct GoApi {
