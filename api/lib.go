@@ -62,7 +62,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(checksum), nil
+	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
@@ -73,7 +73,7 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(wasm), nil
+	return copyAndDestroyUnmanagedVector(wasm), nil
 }
 
 func Pin(cache Cache, checksum []byte) error {
@@ -150,7 +150,7 @@ func Instantiate(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Handle(
@@ -191,7 +191,7 @@ func Handle(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Migrate(
@@ -229,7 +229,7 @@ func Migrate(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Query(
@@ -267,7 +267,7 @@ func Query(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCChannelOpen(
@@ -305,7 +305,7 @@ func IBCChannelOpen(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCChannelConnect(
@@ -343,7 +343,7 @@ func IBCChannelConnect(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCChannelClose(
@@ -381,7 +381,7 @@ func IBCChannelClose(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCPacketReceive(
@@ -419,7 +419,7 @@ func IBCPacketReceive(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCPacketAck(
@@ -457,7 +457,7 @@ func IBCPacketAck(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func IBCPacketTimeout(
@@ -495,7 +495,7 @@ func IBCPacketTimeout(
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 /**** To error module ***/

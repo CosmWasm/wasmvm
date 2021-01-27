@@ -181,44 +181,113 @@ void destroy_unmanaged_vector(UnmanagedVector v);
 
 void free_rust(Buffer buf);
 
-Buffer handle(cache_t *cache,
-              ByteSliceView checksum,
-              ByteSliceView env,
-              ByteSliceView info,
-              ByteSliceView msg,
-              DB db,
-              GoApi api,
-              GoQuerier querier,
-              uint64_t gas_limit,
-              bool print_debug,
-              uint64_t *gas_used,
-              UnmanagedVector *error_msg);
+UnmanagedVector handle(cache_t *cache,
+                       ByteSliceView checksum,
+                       ByteSliceView env,
+                       ByteSliceView info,
+                       ByteSliceView msg,
+                       DB db,
+                       GoApi api,
+                       GoQuerier querier,
+                       uint64_t gas_limit,
+                       bool print_debug,
+                       uint64_t *gas_used,
+                       UnmanagedVector *error_msg);
 
-Buffer ibc_channel_close(cache_t *cache,
-                         ByteSliceView checksum,
-                         ByteSliceView env,
-                         ByteSliceView msg,
-                         DB db,
-                         GoApi api,
-                         GoQuerier querier,
-                         uint64_t gas_limit,
-                         bool print_debug,
-                         uint64_t *gas_used,
-                         UnmanagedVector *error_msg);
+UnmanagedVector ibc_channel_close(cache_t *cache,
+                                  ByteSliceView checksum,
+                                  ByteSliceView env,
+                                  ByteSliceView msg,
+                                  DB db,
+                                  GoApi api,
+                                  GoQuerier querier,
+                                  uint64_t gas_limit,
+                                  bool print_debug,
+                                  uint64_t *gas_used,
+                                  UnmanagedVector *error_msg);
 
-Buffer ibc_channel_connect(cache_t *cache,
-                           ByteSliceView checksum,
-                           ByteSliceView env,
-                           ByteSliceView msg,
-                           DB db,
-                           GoApi api,
-                           GoQuerier querier,
-                           uint64_t gas_limit,
-                           bool print_debug,
-                           uint64_t *gas_used,
-                           UnmanagedVector *error_msg);
+UnmanagedVector ibc_channel_connect(cache_t *cache,
+                                    ByteSliceView checksum,
+                                    ByteSliceView env,
+                                    ByteSliceView msg,
+                                    DB db,
+                                    GoApi api,
+                                    GoQuerier querier,
+                                    uint64_t gas_limit,
+                                    bool print_debug,
+                                    uint64_t *gas_used,
+                                    UnmanagedVector *error_msg);
 
-Buffer ibc_channel_open(cache_t *cache,
+UnmanagedVector ibc_channel_open(cache_t *cache,
+                                 ByteSliceView checksum,
+                                 ByteSliceView env,
+                                 ByteSliceView msg,
+                                 DB db,
+                                 GoApi api,
+                                 GoQuerier querier,
+                                 uint64_t gas_limit,
+                                 bool print_debug,
+                                 uint64_t *gas_used,
+                                 UnmanagedVector *error_msg);
+
+UnmanagedVector ibc_packet_ack(cache_t *cache,
+                               ByteSliceView checksum,
+                               ByteSliceView env,
+                               ByteSliceView msg,
+                               DB db,
+                               GoApi api,
+                               GoQuerier querier,
+                               uint64_t gas_limit,
+                               bool print_debug,
+                               uint64_t *gas_used,
+                               UnmanagedVector *error_msg);
+
+UnmanagedVector ibc_packet_receive(cache_t *cache,
+                                   ByteSliceView checksum,
+                                   ByteSliceView env,
+                                   ByteSliceView msg,
+                                   DB db,
+                                   GoApi api,
+                                   GoQuerier querier,
+                                   uint64_t gas_limit,
+                                   bool print_debug,
+                                   uint64_t *gas_used,
+                                   UnmanagedVector *error_msg);
+
+UnmanagedVector ibc_packet_timeout(cache_t *cache,
+                                   ByteSliceView checksum,
+                                   ByteSliceView env,
+                                   ByteSliceView msg,
+                                   DB db,
+                                   GoApi api,
+                                   GoQuerier querier,
+                                   uint64_t gas_limit,
+                                   bool print_debug,
+                                   uint64_t *gas_used,
+                                   UnmanagedVector *error_msg);
+
+cache_t *init_cache(ByteSliceView data_dir,
+                    ByteSliceView supported_features,
+                    uint32_t cache_size,
+                    uint32_t instance_memory_limit,
+                    UnmanagedVector *error_msg);
+
+UnmanagedVector instantiate(cache_t *cache,
+                            ByteSliceView checksum,
+                            ByteSliceView env,
+                            ByteSliceView info,
+                            ByteSliceView msg,
+                            DB db,
+                            GoApi api,
+                            GoQuerier querier,
+                            uint64_t gas_limit,
+                            bool print_debug,
+                            uint64_t *gas_used,
+                            UnmanagedVector *error_msg);
+
+UnmanagedVector load_wasm(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
+
+UnmanagedVector migrate(cache_t *cache,
                         ByteSliceView checksum,
                         ByteSliceView env,
                         ByteSliceView msg,
@@ -230,7 +299,11 @@ Buffer ibc_channel_open(cache_t *cache,
                         uint64_t *gas_used,
                         UnmanagedVector *error_msg);
 
-Buffer ibc_packet_ack(cache_t *cache,
+UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
+
+void pin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
+
+UnmanagedVector query(cache_t *cache,
                       ByteSliceView checksum,
                       ByteSliceView env,
                       ByteSliceView msg,
@@ -242,79 +315,6 @@ Buffer ibc_packet_ack(cache_t *cache,
                       uint64_t *gas_used,
                       UnmanagedVector *error_msg);
 
-Buffer ibc_packet_receive(cache_t *cache,
-                          ByteSliceView checksum,
-                          ByteSliceView env,
-                          ByteSliceView msg,
-                          DB db,
-                          GoApi api,
-                          GoQuerier querier,
-                          uint64_t gas_limit,
-                          bool print_debug,
-                          uint64_t *gas_used,
-                          UnmanagedVector *error_msg);
-
-Buffer ibc_packet_timeout(cache_t *cache,
-                          ByteSliceView checksum,
-                          ByteSliceView env,
-                          ByteSliceView msg,
-                          DB db,
-                          GoApi api,
-                          GoQuerier querier,
-                          uint64_t gas_limit,
-                          bool print_debug,
-                          uint64_t *gas_used,
-                          UnmanagedVector *error_msg);
-
-cache_t *init_cache(ByteSliceView data_dir,
-                    ByteSliceView supported_features,
-                    uint32_t cache_size,
-                    uint32_t instance_memory_limit,
-                    UnmanagedVector *error_msg);
-
-Buffer instantiate(cache_t *cache,
-                   ByteSliceView checksum,
-                   ByteSliceView env,
-                   ByteSliceView info,
-                   ByteSliceView msg,
-                   DB db,
-                   GoApi api,
-                   GoQuerier querier,
-                   uint64_t gas_limit,
-                   bool print_debug,
-                   uint64_t *gas_used,
-                   UnmanagedVector *error_msg);
-
-Buffer load_wasm(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
-
-Buffer migrate(cache_t *cache,
-               ByteSliceView checksum,
-               ByteSliceView env,
-               ByteSliceView msg,
-               DB db,
-               GoApi api,
-               GoQuerier querier,
-               uint64_t gas_limit,
-               bool print_debug,
-               uint64_t *gas_used,
-               UnmanagedVector *error_msg);
-
-UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
-
-void pin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
-
-Buffer query(cache_t *cache,
-             ByteSliceView checksum,
-             ByteSliceView env,
-             ByteSliceView msg,
-             DB db,
-             GoApi api,
-             GoQuerier querier,
-             uint64_t gas_limit,
-             bool print_debug,
-             uint64_t *gas_used,
-             UnmanagedVector *error_msg);
-
 /**
  * frees a cache reference
  *
@@ -325,6 +325,6 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer save_wasm(cache_t *cache, ByteSliceView wasm, UnmanagedVector *error_msg);
+UnmanagedVector save_wasm(cache_t *cache, ByteSliceView wasm, UnmanagedVector *error_msg);
 
 void unpin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);

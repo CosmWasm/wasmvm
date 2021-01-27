@@ -15,7 +15,7 @@ use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
 use crate::cache::{cache_t, to_cache};
 use crate::db::DB;
 use crate::error::{handle_c_error_binary, Error};
-use crate::memory::{Buffer, ByteSliceView, UnmanagedVector};
+use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -41,7 +41,7 @@ pub extern "C" fn instantiate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_3_args(
         call_init_raw,
         cache,
@@ -73,7 +73,7 @@ pub extern "C" fn handle(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_3_args(
         call_handle_raw,
         cache,
@@ -104,7 +104,7 @@ pub extern "C" fn migrate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_migrate_raw,
         cache,
@@ -134,7 +134,7 @@ pub extern "C" fn query(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_query_raw,
         cache,
@@ -164,7 +164,7 @@ pub extern "C" fn ibc_channel_open(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_open_raw,
         cache,
@@ -194,7 +194,7 @@ pub extern "C" fn ibc_channel_connect(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_connect_raw,
         cache,
@@ -224,7 +224,7 @@ pub extern "C" fn ibc_channel_close(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_channel_close_raw,
         cache,
@@ -254,7 +254,7 @@ pub extern "C" fn ibc_packet_receive(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_receive_raw,
         cache,
@@ -284,7 +284,7 @@ pub extern "C" fn ibc_packet_ack(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_ack_raw,
         cache,
@@ -314,7 +314,7 @@ pub extern "C" fn ibc_packet_timeout(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     call_2_args(
         call_ibc_packet_timeout_raw,
         cache,
@@ -353,7 +353,7 @@ fn call_2_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_call_2_args(
@@ -374,7 +374,7 @@ fn call_2_args(
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
-    Buffer::from_vec(data)
+    UnmanagedVector::new(Some(data))
 }
 
 // this is internal processing, same for all the 6 ibc entry points
@@ -436,7 +436,7 @@ fn call_3_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_call_3_args(
@@ -458,7 +458,7 @@ fn call_3_args(
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
-    Buffer::from_vec(data)
+    UnmanagedVector::new(Some(data))
 }
 
 fn do_call_3_args(

@@ -7,7 +7,7 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
 use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
-use crate::memory::{Buffer, ByteSliceView, UnmanagedVector};
+use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -94,14 +94,14 @@ pub extern "C" fn save_wasm(
     cache: *mut cache_t,
     wasm: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
-    Buffer::from_vec(data)
+    UnmanagedVector::new(Some(data))
 }
 
 fn do_save_wasm(
@@ -118,14 +118,14 @@ pub extern "C" fn load_wasm(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Buffer {
+) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
-    Buffer::from_vec(data)
+    UnmanagedVector::new(Some(data))
 }
 
 fn do_load_wasm(
@@ -343,14 +343,15 @@ mod tests {
             Some(&mut error_msg),
         );
         assert_eq!(error_msg.is_none(), true);
-        let checksum = unsafe { checksum.consume() };
+        let checksum = checksum.consume().unwrap_or_default();
 
         let wasm = load_wasm(
             cache_ptr,
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(unsafe { wasm.consume() }, HACKATOM);
+        let wasm = wasm.consume().unwrap_or_default();
+        assert_eq!(wasm, HACKATOM);
 
         release_cache(cache_ptr);
         let _ = error_msg.consume();
@@ -376,7 +377,7 @@ mod tests {
             Some(&mut error_msg),
         );
         assert_eq!(error_msg.is_none(), true);
-        let checksum = unsafe { checksum.consume() };
+        let checksum = checksum.consume().unwrap_or_default();
 
         pin(
             cache_ptr,
@@ -417,7 +418,7 @@ mod tests {
             Some(&mut error_msg),
         );
         assert_eq!(error_msg.is_none(), true);
-        let checksum = unsafe { checksum.consume() };
+        let checksum = checksum.consume().unwrap_or_default();
 
         pin(
             cache_ptr,
@@ -465,14 +466,14 @@ mod tests {
             Some(&mut error_msg),
         );
         assert_eq!(error_msg.is_none(), true);
-        let checksum_hackatom = unsafe { checksum_hackatom.consume() };
+        let checksum_hackatom = checksum_hackatom.consume().unwrap_or_default();
         let checksum_ibc_reflect = save_wasm(
             cache_ptr,
             ByteSliceView::new(IBC_REFLECT),
             Some(&mut error_msg),
         );
         assert_eq!(error_msg.is_none(), true);
-        let checksum_ibc_reflect = unsafe { checksum_ibc_reflect.consume() };
+        let checksum_ibc_reflect = checksum_ibc_reflect.consume().unwrap_or_default();
 
         let hackatom_report = analyze_code(
             cache_ptr,
