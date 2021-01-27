@@ -47,12 +47,6 @@ enum GoResult {
 };
 typedef int32_t GoResult;
 
-typedef struct Buffer {
-  uint8_t *ptr;
-  uintptr_t len;
-  uintptr_t cap;
-} Buffer;
-
 typedef struct AnalysisReport {
   bool has_ibc_entry_points;
 } AnalysisReport;
@@ -94,6 +88,12 @@ typedef struct UnmanagedVector {
   uintptr_t len;
   uintptr_t cap;
 } UnmanagedVector;
+
+typedef struct Buffer {
+  uint8_t *ptr;
+  uintptr_t len;
+  uintptr_t cap;
+} Buffer;
 
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
@@ -174,8 +174,6 @@ typedef struct GoQuerier {
   const querier_t *state;
   Querier_vtable vtable;
 } GoQuerier;
-
-Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
 

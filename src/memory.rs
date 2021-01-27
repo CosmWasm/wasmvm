@@ -180,18 +180,6 @@ pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     let _ = v.consume();
 }
 
-#[no_mangle]
-pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
-    // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
-    // equal to the offset of the type, which would be equal to 1 in this case)
-    // so when it wants to represent an empty buffer, it passes a null pointer with 0 length here.
-    if length == 0 {
-        Buffer::from_vec(Vec::new())
-    } else {
-        Buffer::from_vec(Vec::from(unsafe { slice::from_raw_parts(ptr, length) }))
-    }
-}
-
 // this frees memory we released earlier
 #[no_mangle]
 pub extern "C" fn free_rust(buf: Buffer) {
