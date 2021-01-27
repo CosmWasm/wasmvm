@@ -120,6 +120,22 @@ impl UnmanagedVector {
         }
     }
 
+    pub fn len(&self) -> Option<usize> {
+        if self.is_nil {
+            None
+        } else {
+            Some(self.len)
+        }
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.is_nil
+    }
+
+    pub fn is_some(&self) -> bool {
+        !self.is_none()
+    }
+
     /// Takes this UnmanagedVector and turns it into a regular, managed Rust vector.
     /// Calling this on two copies of UnmanagedVector leads to double free crashes.
     pub fn consume(self) -> Option<Vec<u8>> {
@@ -284,6 +300,36 @@ mod test {
 
         let view = ByteSliceView::nil();
         assert_eq!(view.to_owned().is_none(), true);
+    }
+
+    #[test]
+    fn unmanaged_vector_len_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.len(), Some(2));
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.len(), Some(0));
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.len(), None);
+    }
+
+    #[test]
+    fn unmanaged_vector_is_some_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.is_some(), true);
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.is_some(), true);
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.is_some(), false);
+    }
+
+    #[test]
+    fn unmanaged_vector_is_none_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.is_none(), false);
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.is_none(), false);
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.is_none(), true);
     }
 
     #[test]
