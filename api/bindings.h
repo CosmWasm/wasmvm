@@ -72,12 +72,15 @@ typedef struct ByteSliceView {
 } ByteSliceView;
 
 /**
- * A Vector type that requires explicit creation and destruction and
- * can be sent via FFI.
+ * An optional Vector type that requires explicit creation and destruction
+ * and can be sent via FFI.
  * It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
+ *
  * This type is always created in Rust and always dropped in Rust.
- * If Go code wants to consume it's data, it must create a copy and
- * instruct Rust to destroy it.
+ * If Go code want to create it, it must instruct Rust to do so via the
+ * `new_unmanaged_vector` FFI export. If Go code wants to consume its data,
+ * it must create a copy and instruct Rust to destroy it via the
+ * `destroy_unmanaged_vector` FFI export.
  */
 typedef struct UnmanagedVector {
   /**
