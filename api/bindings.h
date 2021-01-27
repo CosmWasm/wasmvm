@@ -78,6 +78,24 @@ typedef struct ByteSliceView {
 } ByteSliceView;
 
 /**
+ * A Vector type that requires explicit creation and destruction and
+ * can be sent via FFI.
+ * It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
+ * This type is always created in Rust and always dropped in Rust.
+ * If Go code wants to consume it's data, it must create a copy and
+ * instruct Rust to destroy it.
+ */
+typedef struct UnmanagedVector {
+  /**
+   * True if and only if this is None/nil. If this is true, the other fields must be ignored.
+   */
+  bool is_nil;
+  uint8_t *ptr;
+  uintptr_t len;
+  uintptr_t cap;
+} UnmanagedVector;
+
+/**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
 typedef struct gas_meter_t {
@@ -101,24 +119,6 @@ typedef struct U8SliceView {
   const uint8_t *ptr;
   uintptr_t len;
 } U8SliceView;
-
-/**
- * A Vector type that requires explicit creation and destruction and
- * can be sent via FFI.
- * It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
- * This type is always created in Rust and always dropped in Rust.
- * If Go code wants to consume it's data, it must create a copy and
- * instruct Rust to destroy it.
- */
-typedef struct UnmanagedVector {
-  /**
-   * True if and only if this is None/nil. If this is true, the other fields must be ignored.
-   */
-  bool is_nil;
-  uint8_t *ptr;
-  uintptr_t len;
-  uintptr_t cap;
-} UnmanagedVector;
 
 typedef struct iterator_t {
   uint64_t db_counter;
@@ -178,6 +178,8 @@ typedef struct GoQuerier {
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
 AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+
+void destroy_unmanaged_vector(UnmanagedVector v);
 
 void free_rust(Buffer buf);
 

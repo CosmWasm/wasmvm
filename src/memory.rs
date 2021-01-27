@@ -176,6 +176,11 @@ pub extern "C" fn new_unmanaged_vector(
 }
 
 #[no_mangle]
+pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
+    let _ = v.consume();
+}
+
+#[no_mangle]
 pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
     // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
     // equal to the offset of the type, which would be equal to 1 in this case)
