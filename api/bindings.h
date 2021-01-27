@@ -126,7 +126,7 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, Buffer*, Buffer*, Buffer*);
+  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, UnmanagedVector*, UnmanagedVector*, Buffer*);
 } Iterator_vtable;
 
 typedef struct GoIter {

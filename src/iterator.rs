@@ -3,7 +3,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
-use crate::memory::Buffer;
+use crate::memory::{Buffer, UnmanagedVector};
 
 // Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
@@ -23,9 +23,9 @@ pub struct Iterator_vtable {
             iterator_t,
             *mut gas_meter_t,
             *mut u64,
-            *mut Buffer,
-            *mut Buffer,
-            *mut Buffer,
+            *mut UnmanagedVector, // key output
+            *mut UnmanagedVector, // value output
+            *mut Buffer,          // error message output
         ) -> i32,
     >,
 }
@@ -55,16 +55,16 @@ impl GoIter {
             }
         };
 
-        let mut key_buf = Buffer::default();
-        let mut value_buf = Buffer::default();
+        let mut key = UnmanagedVector::default();
+        let mut value = UnmanagedVector::default();
         let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
-            &mut key_buf as *mut Buffer,
-            &mut value_buf as *mut Buffer,
+            &mut key as *mut UnmanagedVector,
+            &mut value as *mut UnmanagedVector,
             &mut error_msg as *mut Buffer,
         )
         .into();
@@ -78,12 +78,10 @@ impl GoIter {
             }
         }
 
-        let okey = unsafe { key_buf.read() };
-        let result = match okey {
+        let result = match key.consume() {
             Some(key) => {
-                let value = unsafe { value_buf.read() };
-                if let Some(value) = value {
-                    Ok(Some((key.into(), value.into())))
+                if let Some(value) = value.consume() {
+                    Ok(Some((key, value)))
                 } else {
                     Err(BackendError::unknown(
                         "Failed to read value while reading the next key in the db",
