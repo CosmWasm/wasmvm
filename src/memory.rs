@@ -120,14 +120,6 @@ impl UnmanagedVector {
         }
     }
 
-    pub fn len(&self) -> Option<usize> {
-        if self.is_nil {
-            None
-        } else {
-            Some(self.len)
-        }
-    }
-
     pub fn is_none(&self) -> bool {
         self.is_nil
     }
@@ -210,16 +202,6 @@ mod test {
 
         let view = ByteSliceView::nil();
         assert_eq!(view.to_owned().is_none(), true);
-    }
-
-    #[test]
-    fn unmanaged_vector_len_works() {
-        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
-        assert_eq!(x.len(), Some(2));
-        let x = UnmanagedVector::new(Some(vec![]));
-        assert_eq!(x.len(), Some(0));
-        let x = UnmanagedVector::new(None);
-        assert_eq!(x.len(), None);
     }
 
     #[test]
