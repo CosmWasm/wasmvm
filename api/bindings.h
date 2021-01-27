@@ -177,7 +177,7 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
 
 void destroy_unmanaged_vector(UnmanagedVector v);
 
@@ -194,7 +194,7 @@ Buffer handle(cache_t *cache,
               uint64_t gas_limit,
               bool print_debug,
               uint64_t *gas_used,
-              Buffer *error_msg);
+              UnmanagedVector *error_msg);
 
 Buffer ibc_channel_close(cache_t *cache,
                          ByteSliceView checksum,
@@ -206,7 +206,7 @@ Buffer ibc_channel_close(cache_t *cache,
                          uint64_t gas_limit,
                          bool print_debug,
                          uint64_t *gas_used,
-                         Buffer *error_msg);
+                         UnmanagedVector *error_msg);
 
 Buffer ibc_channel_connect(cache_t *cache,
                            ByteSliceView checksum,
@@ -218,7 +218,7 @@ Buffer ibc_channel_connect(cache_t *cache,
                            uint64_t gas_limit,
                            bool print_debug,
                            uint64_t *gas_used,
-                           Buffer *error_msg);
+                           UnmanagedVector *error_msg);
 
 Buffer ibc_channel_open(cache_t *cache,
                         ByteSliceView checksum,
@@ -230,7 +230,7 @@ Buffer ibc_channel_open(cache_t *cache,
                         uint64_t gas_limit,
                         bool print_debug,
                         uint64_t *gas_used,
-                        Buffer *error_msg);
+                        UnmanagedVector *error_msg);
 
 Buffer ibc_packet_ack(cache_t *cache,
                       ByteSliceView checksum,
@@ -242,7 +242,7 @@ Buffer ibc_packet_ack(cache_t *cache,
                       uint64_t gas_limit,
                       bool print_debug,
                       uint64_t *gas_used,
-                      Buffer *error_msg);
+                      UnmanagedVector *error_msg);
 
 Buffer ibc_packet_receive(cache_t *cache,
                           ByteSliceView checksum,
@@ -254,7 +254,7 @@ Buffer ibc_packet_receive(cache_t *cache,
                           uint64_t gas_limit,
                           bool print_debug,
                           uint64_t *gas_used,
-                          Buffer *error_msg);
+                          UnmanagedVector *error_msg);
 
 Buffer ibc_packet_timeout(cache_t *cache,
                           ByteSliceView checksum,
@@ -266,13 +266,13 @@ Buffer ibc_packet_timeout(cache_t *cache,
                           uint64_t gas_limit,
                           bool print_debug,
                           uint64_t *gas_used,
-                          Buffer *error_msg);
+                          UnmanagedVector *error_msg);
 
 cache_t *init_cache(ByteSliceView data_dir,
                     ByteSliceView supported_features,
                     uint32_t cache_size,
                     uint32_t instance_memory_limit,
-                    Buffer *error_msg);
+                    UnmanagedVector *error_msg);
 
 Buffer instantiate(cache_t *cache,
                    ByteSliceView checksum,
@@ -285,9 +285,9 @@ Buffer instantiate(cache_t *cache,
                    uint64_t gas_limit,
                    bool print_debug,
                    uint64_t *gas_used,
-                   Buffer *error_msg);
+                   UnmanagedVector *error_msg);
 
-Buffer load_wasm(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+Buffer load_wasm(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
 
 Buffer migrate(cache_t *cache,
                ByteSliceView checksum,
@@ -299,11 +299,11 @@ Buffer migrate(cache_t *cache,
                uint64_t gas_limit,
                bool print_debug,
                uint64_t *gas_used,
-               Buffer *error_msg);
+               UnmanagedVector *error_msg);
 
 UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
-void pin(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+void pin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
 
 Buffer query(cache_t *cache,
              ByteSliceView checksum,
@@ -315,7 +315,7 @@ Buffer query(cache_t *cache,
              uint64_t gas_limit,
              bool print_debug,
              uint64_t *gas_used,
-             Buffer *error_msg);
+             UnmanagedVector *error_msg);
 
 /**
  * frees a cache reference
@@ -327,6 +327,6 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer save_wasm(cache_t *cache, ByteSliceView wasm, Buffer *error_msg);
+Buffer save_wasm(cache_t *cache, ByteSliceView wasm, UnmanagedVector *error_msg);
 
-void unpin(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
+void unpin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);

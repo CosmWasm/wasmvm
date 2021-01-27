@@ -7,7 +7,7 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
 use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
-use crate::memory::{Buffer, ByteSliceView};
+use crate::memory::{Buffer, ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -29,7 +29,7 @@ pub extern "C" fn init_cache(
     supported_features: ByteSliceView,
     cache_size: u32,
     instance_memory_limit: u32,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| {
         do_init_cache(
@@ -93,7 +93,7 @@ fn do_init_cache(
 pub extern "C" fn save_wasm(
     cache: *mut cache_t,
     wasm: ByteSliceView,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
@@ -117,7 +117,7 @@ fn do_save_wasm(
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
     checksum: ByteSliceView,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) -> Buffer {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
@@ -144,7 +144,7 @@ fn do_load_wasm(
 pub extern "C" fn pin(
     cache: *mut cache_t,
     checksum: ByteSliceView,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum)))
@@ -170,7 +170,7 @@ fn do_pin(
 pub extern "C" fn unpin(
     cache: *mut cache_t,
     checksum: ByteSliceView,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum)))
@@ -210,7 +210,7 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
     checksum: ByteSliceView,
-    error_msg: Option<&mut Buffer>,
+    error_msg: Option<&mut UnmanagedVector>,
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -275,14 +275,15 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 
     #[test]
     fn init_cache_writes_error() {
         let dir: String = String::from("borken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -292,15 +293,15 @@ mod tests {
             Some(&mut error_msg),
         );
         assert!(cache_ptr.is_null());
-        assert_ne!(error_msg.len, 0);
-        let msg = String::from_utf8(unsafe { error_msg.consume() }).unwrap();
+        assert_eq!(error_msg.is_some(), true);
+        let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
         assert_eq!(msg, "Error calling the VM: Cache error: Error creating Wasm dir for cache: data provided contains a nul byte");
     }
 
     #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -309,22 +310,23 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         save_wasm(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 
     #[test]
     fn load_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -333,14 +335,14 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         let checksum = save_wasm(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         let checksum = unsafe { checksum.consume() };
 
         let wasm = load_wasm(
@@ -351,12 +353,13 @@ mod tests {
         assert_eq!(unsafe { wasm.consume() }, HACKATOM);
 
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 
     #[test]
     fn pin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -365,14 +368,14 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         let checksum = save_wasm(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         let checksum = unsafe { checksum.consume() };
 
         pin(
@@ -380,7 +383,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         // pinning again has no effect
         pin(
@@ -388,15 +391,16 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 
     #[test]
     fn unpin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"staking";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -405,14 +409,14 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         let checksum = save_wasm(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         let checksum = unsafe { checksum.consume() };
 
         pin(
@@ -420,14 +424,14 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         unpin(
             cache_ptr,
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         // Unpinning again has no effect
         unpin(
@@ -435,15 +439,16 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let features: &[u8] = b"stargate";
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
@@ -452,21 +457,21 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
 
         let checksum_hackatom = save_wasm(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         let checksum_hackatom = unsafe { checksum_hackatom.consume() };
         let checksum_ibc_reflect = save_wasm(
             cache_ptr,
             ByteSliceView::new(IBC_REFLECT),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.len, 0);
+        assert_eq!(error_msg.is_none(), true);
         let checksum_ibc_reflect = unsafe { checksum_ibc_reflect.consume() };
 
         let hackatom_report = analyze_code(
@@ -493,5 +498,6 @@ mod tests {
         );
 
         release_cache(cache_ptr);
+        let _ = error_msg.consume();
     }
 }
