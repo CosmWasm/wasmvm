@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoResult;
-use crate::memory::{Buffer, U8SliceView, UnmanagedVector};
+use crate::memory::{U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -21,7 +21,7 @@ pub struct Querier_vtable {
         *mut u64,
         U8SliceView,
         *mut UnmanagedVector, // result output
-        *mut Buffer,          // error message output
+        *mut UnmanagedVector, // error message output
     ) -> i32,
 }
 
@@ -42,7 +42,7 @@ impl Querier for GoQuerier {
         gas_limit: u64,
     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
         let mut query_result = UnmanagedVector::default();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
             self.state,
@@ -50,7 +50,7 @@ impl Querier for GoQuerier {
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(request)),
             &mut query_result as *mut UnmanagedVector,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);

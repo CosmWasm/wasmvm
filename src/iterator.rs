@@ -3,7 +3,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
 use crate::gas_meter::gas_meter_t;
-use crate::memory::{Buffer, UnmanagedVector};
+use crate::memory::UnmanagedVector;
 
 // Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
@@ -25,7 +25,7 @@ pub struct Iterator_vtable {
             *mut u64,
             *mut UnmanagedVector, // key output
             *mut UnmanagedVector, // value output
-            *mut Buffer,          // error message output
+            *mut UnmanagedVector, // error message output
         ) -> i32,
     >,
 }
@@ -57,7 +57,7 @@ impl GoIter {
 
         let mut key = UnmanagedVector::default();
         let mut value = UnmanagedVector::default();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
@@ -65,7 +65,7 @@ impl GoIter {
             &mut used_gas as *mut u64,
             &mut key as *mut UnmanagedVector,
             &mut value as *mut UnmanagedVector,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);

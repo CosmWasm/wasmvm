@@ -126,7 +126,7 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, UnmanagedVector*, UnmanagedVector*, Buffer*);
+  int32_t (*next_db)(iterator_t, gas_meter_t*, uint64_t*, UnmanagedVector*, UnmanagedVector*, UnmanagedVector*);
 } Iterator_vtable;
 
 typedef struct GoIter {
@@ -136,10 +136,10 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, UnmanagedVector*, Buffer*);
-  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, Buffer*);
-  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*);
-  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, int32_t, GoIter*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, UnmanagedVector*, UnmanagedVector*);
+  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, UnmanagedVector*);
+  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, UnmanagedVector*);
+  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, int32_t, GoIter*, UnmanagedVector*);
 } DB_vtable;
 
 typedef struct DB {
@@ -153,8 +153,8 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, U8SliceView, UnmanagedVector*, Buffer*, uint64_t*);
-  int32_t (*canonicalize_address)(const api_t*, U8SliceView, UnmanagedVector*, Buffer*, uint64_t*);
+  int32_t (*humanize_address)(const api_t*, U8SliceView, UnmanagedVector*, UnmanagedVector*, uint64_t*);
+  int32_t (*canonicalize_address)(const api_t*, U8SliceView, UnmanagedVector*, UnmanagedVector*, uint64_t*);
 } GoApi_vtable;
 
 typedef struct GoApi {
@@ -167,7 +167,7 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, U8SliceView, UnmanagedVector*, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, U8SliceView, UnmanagedVector*, UnmanagedVector*);
 } Querier_vtable;
 
 typedef struct GoQuerier {

@@ -7,7 +7,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 use crate::db::DB;
 use crate::error::GoResult;
 use crate::iterator::GoIter;
-use crate::memory::{Buffer, U8SliceView, UnmanagedVector};
+use crate::memory::{U8SliceView, UnmanagedVector};
 
 pub struct GoStorage {
     db: DB,
@@ -26,7 +26,7 @@ impl GoStorage {
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
         let mut result = UnmanagedVector::default();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.read_db)(
             self.db.state,
@@ -34,7 +34,7 @@ impl Storage for GoStorage {
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(key)),
             &mut result as *mut UnmanagedVector,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -62,7 +62,7 @@ impl Storage for GoStorage {
         end: Option<&[u8]>,
         order: Order,
     ) -> BackendResult<u32> {
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut iter = GoIter::new(self.db.gas_meter);
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.scan_db)(
@@ -73,7 +73,7 @@ impl Storage for GoStorage {
             U8SliceView::new(end),
             order.into(),
             &mut iter as *mut GoIter,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -115,7 +115,7 @@ impl Storage for GoStorage {
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.write_db)(
             self.db.state,
@@ -123,7 +123,7 @@ impl Storage for GoStorage {
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(key)),
             U8SliceView::new(Some(value)),
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
@@ -143,14 +143,14 @@ impl Storage for GoStorage {
     }
 
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.remove_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(key)),
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);

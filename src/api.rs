@@ -2,7 +2,7 @@ use cosmwasm_std::{CanonicalAddr, HumanAddr};
 use cosmwasm_vm::{Api, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
-use crate::memory::{Buffer, U8SliceView, UnmanagedVector};
+use crate::memory::{U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -20,14 +20,14 @@ pub struct GoApi_vtable {
         *const api_t,
         U8SliceView,
         *mut UnmanagedVector, // human output
-        *mut Buffer,          // error message output
+        *mut UnmanagedVector, // error message output
         *mut u64,
     ) -> i32,
     pub canonicalize_address: extern "C" fn(
         *const api_t,
         U8SliceView,
         *mut UnmanagedVector, // canonical output
-        *mut Buffer,          // error message output
+        *mut UnmanagedVector, // error message output
         *mut u64,
     ) -> i32,
 }
@@ -49,13 +49,13 @@ unsafe impl Send for GoApi {}
 impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> BackendResult<CanonicalAddr> {
         let mut output = UnmanagedVector::default();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.canonicalize_address)(
             self.state,
             U8SliceView::new(Some(human.as_bytes())),
             &mut output as *mut UnmanagedVector,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
             &mut used_gas as *mut u64,
         )
         .into();
@@ -78,13 +78,13 @@ impl Api for GoApi {
 
     fn human_address(&self, canonical: &CanonicalAddr) -> BackendResult<HumanAddr> {
         let mut output = UnmanagedVector::default();
-        let mut error_msg = Buffer::default();
+        let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.humanize_address)(
             self.state,
             U8SliceView::new(Some(canonical.as_slice())),
             &mut output as *mut UnmanagedVector,
-            &mut error_msg as *mut Buffer,
+            &mut error_msg as *mut UnmanagedVector,
             &mut used_gas as *mut u64,
         )
         .into();
