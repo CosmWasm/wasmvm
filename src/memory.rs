@@ -100,7 +100,7 @@ pub struct UnmanagedVector {
 impl UnmanagedVector {
     /// Consumes this optional vector for manual management.
     /// This is a zero-copy operation.
-    fn new(source: Option<Vec<u8>>) -> Self {
+    pub fn new(source: Option<Vec<u8>>) -> Self {
         match source {
             Some(data) => {
                 let mut data = mem::ManuallyDrop::new(data);
