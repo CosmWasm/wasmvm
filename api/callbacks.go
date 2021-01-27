@@ -164,8 +164,8 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*val).is_nil || !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*val).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -192,8 +192,8 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8Sli
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -217,8 +217,8 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -241,8 +241,8 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -282,8 +282,8 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*key).is_nil || !(*val).is_nil || !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*key).is_none || !(*val).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -338,8 +338,8 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 	if dest == nil || errOut == nil {
 		return C.GoResult_BadArgument
 	}
-	if !(*dest).is_nil || !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*dest).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
@@ -366,8 +366,8 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 	if dest == nil || errOut == nil {
 		return C.GoResult_BadArgument
 	}
-	if !(*dest).is_nil || !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*dest).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
@@ -409,8 +409,8 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
-	if !(*result).is_nil || !(*errOut).is_nil {
-		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	if !(*result).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	// query the data

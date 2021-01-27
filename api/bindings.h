@@ -84,9 +84,9 @@ typedef struct ByteSliceView {
  */
 typedef struct UnmanagedVector {
   /**
-   * True if and only if this is None/nil. If this is true, the other fields must be ignored.
+   * True if and only if this is None. If this is true, the other fields must be ignored.
    */
-  bool is_nil;
+  bool is_none;
   uint8_t *ptr;
   uintptr_t len;
   uintptr_t cap;

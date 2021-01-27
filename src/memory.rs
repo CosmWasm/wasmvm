@@ -93,8 +93,8 @@ impl U8SliceView {
 /// `destroy_unmanaged_vector` FFI export.
 #[repr(C)]
 pub struct UnmanagedVector {
-    /// True if and only if this is None/nil. If this is true, the other fields must be ignored.
-    is_nil: bool,
+    /// True if and only if this is None. If this is true, the other fields must be ignored.
+    is_none: bool,
     ptr: *mut u8,
     len: usize,
     cap: usize,
@@ -108,14 +108,14 @@ impl UnmanagedVector {
             Some(data) => {
                 let mut data = mem::ManuallyDrop::new(data);
                 Self {
-                    is_nil: false,
+                    is_none: false,
                     ptr: data.as_mut_ptr(),
                     len: data.len(),
                     cap: data.capacity(),
                 }
             }
             None => Self {
-                is_nil: true,
+                is_none: true,
                 ptr: std::ptr::null_mut::<u8>(),
                 len: 0,
                 cap: 0,
@@ -124,7 +124,7 @@ impl UnmanagedVector {
     }
 
     pub fn is_none(&self) -> bool {
-        self.is_nil
+        self.is_none
     }
 
     pub fn is_some(&self) -> bool {
@@ -134,7 +134,7 @@ impl UnmanagedVector {
     /// Takes this UnmanagedVector and turns it into a regular, managed Rust vector.
     /// Calling this on two copies of UnmanagedVector leads to double free crashes.
     pub fn consume(self) -> Option<Vec<u8>> {
-        if self.is_nil {
+        if self.is_none {
             None
         } else {
             Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
@@ -145,7 +145,7 @@ impl UnmanagedVector {
 impl Default for UnmanagedVector {
     fn default() -> Self {
         Self {
-            is_nil: true,
+            is_none: true,
             ptr: std::ptr::null_mut::<u8>(),
             len: 0,
             cap: 0,
