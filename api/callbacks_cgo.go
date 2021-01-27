@@ -15,7 +15,7 @@ GoResult cNext(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buff
 GoResult cHumanAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 GoResult cCanonicalAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 // imports (querier)
-GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, Buffer *errOut);
 
 // Gateway functions (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, Buffer *val, Buffer *errOut) {
@@ -45,7 +45,7 @@ GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, B
 }
 
 // Gateway functions (querier)
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut) {
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, Buffer *errOut) {
     return cQueryExternal(ptr, gas_limit, used_gas, request, result, errOut);
 }
 */

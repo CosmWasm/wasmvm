@@ -16,7 +16,7 @@ typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t 
 // and api
 typedef GoResult (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 typedef GoResult (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, Buffer *errOut);
 
 // forward declarations (db)
 GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, Buffer *errOut);
@@ -29,7 +29,7 @@ GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, Buffer *errOut, uint64_t *used_gas);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, Buffer *errOut);
 
 
 */
@@ -389,11 +389,15 @@ func buildQuerier(q *Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.U8SliceView, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.U8SliceView, result *C.UnmanagedVector, errOut *C.Buffer) (ret C.GoResult) {
 	defer recoverPanic(&ret)
+
 	if ptr == nil || usedGas == nil || result == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*result).is_nil {
+		panic("Got a non-nil UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	// query the data
@@ -411,6 +415,6 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 		*errOut = allocateRust([]byte(err.Error()))
 		return C.GoResult_Other
 	}
-	*result = allocateRust(bz)
+	*result = newUnmanagedVector(bz)
 	return C.GoResult_Ok
 }

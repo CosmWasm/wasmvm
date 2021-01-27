@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoResult;
-use crate::memory::{Buffer, U8SliceView};
+use crate::memory::{Buffer, U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -20,8 +20,8 @@ pub struct Querier_vtable {
         u64,
         *mut u64,
         U8SliceView,
-        *mut Buffer,
-        *mut Buffer,
+        *mut UnmanagedVector, // result output
+        *mut Buffer,          // error message output
     ) -> i32,
 }
 
@@ -41,7 +41,7 @@ impl Querier for GoQuerier {
         request: &[u8],
         gas_limit: u64,
     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
-        let mut result_buf = Buffer::default();
+        let mut query_result = UnmanagedVector::default();
         let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
@@ -49,7 +49,7 @@ impl Querier for GoQuerier {
             gas_limit,
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(request)),
-            &mut result_buf as *mut Buffer,
+            &mut query_result as *mut UnmanagedVector,
             &mut error_msg as *mut Buffer,
         )
         .into();
@@ -68,7 +68,7 @@ impl Querier for GoQuerier {
             }
         }
 
-        let bin_result = unsafe { result_buf.consume() };
+        let bin_result: Vec<u8> = query_result.consume().unwrap_or_default();
         let result = serde_json::from_slice(&bin_result).or_else(|e| {
             Ok(SystemResult::Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {}", e),
