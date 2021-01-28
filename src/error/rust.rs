@@ -126,9 +126,9 @@ pub fn clear_error() {
     set_errno(Errno(ErrnoValue::Success as i32));
 }
 
-pub fn set_error(err: RustError, errout: Option<&mut Buffer>) {
+pub fn set_error(err: RustError, error_msg: Option<&mut Buffer>) {
     let msg = err.to_string();
-    if let Some(mb) = errout {
+    if let Some(mb) = error_msg {
         *mb = Buffer::from_vec(msg.into_bytes());
     }
     let errno = match err {
@@ -139,12 +139,12 @@ pub fn set_error(err: RustError, errout: Option<&mut Buffer>) {
 }
 
 /// If `result` is Ok, this returns the binary representation of the Ok value and clears [errno].
-/// Otherwise it returns an empty vector, writes the error message to `errout` and sets [errno].
+/// Otherwise it returns an empty vector, writes the error message to `error_msg` and sets [errno].
 ///
 /// [errno]: https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns
 pub fn handle_c_error_binary<T>(
     result: Result<T, RustError>,
-    errout: Option<&mut Buffer>,
+    error_msg: Option<&mut Buffer>,
 ) -> Vec<u8>
 where
     T: Into<Vec<u8>>,
@@ -155,17 +155,17 @@ where
             value.into()
         }
         Err(error) => {
-            set_error(error, errout);
+            set_error(error, error_msg);
             Vec::new()
         }
     }
 }
 
 /// If `result` is Ok, this returns the Ok value and clears [errno].
-/// Otherwise it returns the default value, writes the error message to `errout` and sets [errno].
+/// Otherwise it returns the default value, writes the error message to `error_msg` and sets [errno].
 ///
 /// [errno]: https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns
-pub fn handle_c_error_default<T>(result: Result<T, RustError>, errout: Option<&mut Buffer>) -> T
+pub fn handle_c_error_default<T>(result: Result<T, RustError>, error_msg: Option<&mut Buffer>) -> T
 where
     T: Default,
 {
@@ -175,7 +175,7 @@ where
             value
         }
         Err(error) => {
-            set_error(error, errout);
+            set_error(error, error_msg);
             Default::default()
         }
     }

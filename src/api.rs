@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use cosmwasm_vm::{Api, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
-use crate::memory::Buffer;
+use crate::memory::{Buffer, U8SliceView};
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -17,9 +17,9 @@ pub struct api_t {
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
     pub humanize_address:
-        extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer, *mut u64) -> i32,
+        extern "C" fn(*const api_t, U8SliceView, *mut Buffer, *mut Buffer, *mut u64) -> i32,
     pub canonicalize_address:
-        extern "C" fn(*const api_t, Buffer, *mut Buffer, *mut Buffer, *mut u64) -> i32,
+        extern "C" fn(*const api_t, U8SliceView, *mut Buffer, *mut Buffer, *mut u64) -> i32,
 }
 
 #[repr(C)]
@@ -38,26 +38,23 @@ unsafe impl Send for GoApi {}
 
 impl Api for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> BackendResult<CanonicalAddr> {
-        let human_bytes = human.as_str().as_bytes();
-        let human_bytes = Buffer::from_vec(human_bytes.to_vec());
         let mut output = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.canonicalize_address)(
             self.state,
-            human_bytes,
+            U8SliceView::new(Some(human.as_bytes())),
             &mut output as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
             &mut used_gas as *mut u64,
         )
         .into();
         let gas_info = GasInfo::with_cost(used_gas);
-        let _human = unsafe { human_bytes.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -73,26 +70,23 @@ impl Api for GoApi {
     }
 
     fn human_address(&self, canonical: &CanonicalAddr) -> BackendResult<HumanAddr> {
-        let canonical_bytes = canonical.as_slice();
-        let canonical_buf = Buffer::from_vec(canonical_bytes.to_vec());
         let mut output = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.humanize_address)(
             self.state,
-            canonical_buf,
+            U8SliceView::new(Some(canonical.as_slice())),
             &mut output as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
             &mut used_gas as *mut u64,
         )
         .into();
         let gas_info = GasInfo::with_cost(used_gas);
-        let _canonical = unsafe { canonical_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || format!("Failed to humanize the address: {}", canonical);
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

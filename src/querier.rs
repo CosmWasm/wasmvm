@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoResult;
-use crate::memory::Buffer;
+use crate::memory::{Buffer, U8SliceView};
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -15,8 +15,14 @@ pub struct querier_t {
 #[derive(Clone)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external:
-        extern "C" fn(*const querier_t, u64, *mut u64, Buffer, *mut Buffer, *mut Buffer) -> i32,
+    pub query_external: extern "C" fn(
+        *const querier_t,
+        u64,
+        *mut u64,
+        U8SliceView,
+        *mut Buffer,
+        *mut Buffer,
+    ) -> i32,
 }
 
 #[repr(C)]
@@ -35,21 +41,19 @@ impl Querier for GoQuerier {
         request: &[u8],
         gas_limit: u64,
     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
-        let request_buf = Buffer::from_vec(request.to_vec());
         let mut result_buf = Buffer::default();
-        let mut err = Buffer::default();
+        let mut error_msg = Buffer::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
             self.state,
             gas_limit,
             &mut used_gas as *mut u64,
-            request_buf,
+            U8SliceView::new(Some(request)),
             &mut result_buf as *mut Buffer,
-            &mut err as *mut Buffer,
+            &mut error_msg as *mut Buffer,
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        let _request = unsafe { request_buf.consume() };
 
         // return complete error message (reading from buffer for GoResult::Other)
         let default = || {
@@ -59,7 +63,7 @@ impl Querier for GoQuerier {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(err, default) {
+            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

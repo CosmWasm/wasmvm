@@ -88,6 +88,20 @@ typedef struct db_t {
   uint8_t _private[0];
 } db_t;
 
+/**
+ * A view into a `Option<&[u8]>`, created and maintained by Rust.
+ *
+ * This can be copied into a []byte in Go.
+ */
+typedef struct U8SliceView {
+  /**
+   * True if and only if this is None. If this is true, the other fields must be ignored.
+   */
+  bool is_none;
+  const uint8_t *ptr;
+  uintptr_t len;
+} U8SliceView;
+
 typedef struct iterator_t {
   uint64_t db_counter;
   uint64_t iterator_index;
@@ -104,10 +118,10 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DB_vtable {
-  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*, Buffer*);
-  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, Buffer*);
-  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer*);
-  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, Buffer, Buffer, int32_t, GoIter*, Buffer*);
+  int32_t (*read_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*, Buffer*);
+  int32_t (*write_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, Buffer*);
+  int32_t (*remove_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, Buffer*);
+  int32_t (*scan_db)(db_t*, gas_meter_t*, uint64_t*, U8SliceView, U8SliceView, int32_t, GoIter*, Buffer*);
 } DB_vtable;
 
 typedef struct DB {
@@ -121,8 +135,8 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApi_vtable {
-  int32_t (*humanize_address)(const api_t*, Buffer, Buffer*, Buffer*, uint64_t*);
-  int32_t (*canonicalize_address)(const api_t*, Buffer, Buffer*, Buffer*, uint64_t*);
+  int32_t (*humanize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
+  int32_t (*canonicalize_address)(const api_t*, U8SliceView, Buffer*, Buffer*, uint64_t*);
 } GoApi_vtable;
 
 typedef struct GoApi {
@@ -135,7 +149,7 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct Querier_vtable {
-  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, Buffer, Buffer*, Buffer*);
+  int32_t (*query_external)(const querier_t*, uint64_t, uint64_t*, U8SliceView, Buffer*, Buffer*);
 } Querier_vtable;
 
 typedef struct GoQuerier {
@@ -145,7 +159,7 @@ typedef struct GoQuerier {
 
 Buffer allocate_rust(const uint8_t *ptr, uintptr_t length);
 
-AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *err);
+AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
 
 void free_rust(Buffer buf);
 
@@ -160,7 +174,7 @@ Buffer handle(cache_t *cache,
               uint64_t gas_limit,
               bool print_debug,
               uint64_t *gas_used,
-              Buffer *err);
+              Buffer *error_msg);
 
 Buffer ibc_channel_close(cache_t *cache,
                          ByteSliceView checksum,
@@ -172,7 +186,7 @@ Buffer ibc_channel_close(cache_t *cache,
                          uint64_t gas_limit,
                          bool print_debug,
                          uint64_t *gas_used,
-                         Buffer *err);
+                         Buffer *error_msg);
 
 Buffer ibc_channel_connect(cache_t *cache,
                            ByteSliceView checksum,
@@ -184,7 +198,7 @@ Buffer ibc_channel_connect(cache_t *cache,
                            uint64_t gas_limit,
                            bool print_debug,
                            uint64_t *gas_used,
-                           Buffer *err);
+                           Buffer *error_msg);
 
 Buffer ibc_channel_open(cache_t *cache,
                         ByteSliceView checksum,
@@ -196,7 +210,7 @@ Buffer ibc_channel_open(cache_t *cache,
                         uint64_t gas_limit,
                         bool print_debug,
                         uint64_t *gas_used,
-                        Buffer *err);
+                        Buffer *error_msg);
 
 Buffer ibc_packet_ack(cache_t *cache,
                       ByteSliceView checksum,
@@ -208,7 +222,7 @@ Buffer ibc_packet_ack(cache_t *cache,
                       uint64_t gas_limit,
                       bool print_debug,
                       uint64_t *gas_used,
-                      Buffer *err);
+                      Buffer *error_msg);
 
 Buffer ibc_packet_receive(cache_t *cache,
                           ByteSliceView checksum,
@@ -220,7 +234,7 @@ Buffer ibc_packet_receive(cache_t *cache,
                           uint64_t gas_limit,
                           bool print_debug,
                           uint64_t *gas_used,
-                          Buffer *err);
+                          Buffer *error_msg);
 
 Buffer ibc_packet_timeout(cache_t *cache,
                           ByteSliceView checksum,
@@ -232,13 +246,13 @@ Buffer ibc_packet_timeout(cache_t *cache,
                           uint64_t gas_limit,
                           bool print_debug,
                           uint64_t *gas_used,
-                          Buffer *err);
+                          Buffer *error_msg);
 
 cache_t *init_cache(ByteSliceView data_dir,
                     ByteSliceView supported_features,
                     uint32_t cache_size,
                     uint32_t instance_memory_limit,
-                    Buffer *err);
+                    Buffer *error_msg);
 
 Buffer instantiate(cache_t *cache,
                    ByteSliceView checksum,
@@ -251,9 +265,9 @@ Buffer instantiate(cache_t *cache,
                    uint64_t gas_limit,
                    bool print_debug,
                    uint64_t *gas_used,
-                   Buffer *err);
+                   Buffer *error_msg);
 
-Buffer load_wasm(cache_t *cache, ByteSliceView checksum, Buffer *err);
+Buffer load_wasm(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
 
 Buffer migrate(cache_t *cache,
                ByteSliceView checksum,
@@ -265,9 +279,9 @@ Buffer migrate(cache_t *cache,
                uint64_t gas_limit,
                bool print_debug,
                uint64_t *gas_used,
-               Buffer *err);
+               Buffer *error_msg);
 
-void pin(cache_t *cache, ByteSliceView checksum, Buffer *err);
+void pin(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
 
 Buffer query(cache_t *cache,
              ByteSliceView checksum,
@@ -279,7 +293,7 @@ Buffer query(cache_t *cache,
              uint64_t gas_limit,
              bool print_debug,
              uint64_t *gas_used,
-             Buffer *err);
+             Buffer *error_msg);
 
 /**
  * frees a cache reference
@@ -291,6 +305,6 @@ Buffer query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
-Buffer save_wasm(cache_t *cache, ByteSliceView wasm, Buffer *err);
+Buffer save_wasm(cache_t *cache, ByteSliceView wasm, Buffer *error_msg);
 
-void unpin(cache_t *cache, ByteSliceView checksum, Buffer *err);
+void unpin(cache_t *cache, ByteSliceView checksum, Buffer *error_msg);
