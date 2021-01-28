@@ -122,7 +122,7 @@ impl U8SliceView {
 /// ```
 /// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
 /// #[no_mangle]
-/// pub extern "C" fn save_wasm(
+/// pub extern "C" fn save_wasm_to_cache(
 ///     cache: *mut cache_t,
 ///     wasm: ByteSliceView,
 ///     error_msg: Option<&mut UnmanagedVector>,
