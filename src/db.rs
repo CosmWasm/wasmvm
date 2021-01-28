@@ -17,7 +17,7 @@ pub struct DB_vtable {
         *mut gas_meter_t,
         *mut u64,
         U8SliceView,
-        *mut UnmanagedVector, // result outpur
+        *mut UnmanagedVector, // result output
         *mut UnmanagedVector, // error message output
     ) -> i32,
     pub write_db: extern "C" fn(
