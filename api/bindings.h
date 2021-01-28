@@ -78,9 +78,98 @@ typedef struct ByteSliceView {
  *
  * This type is always created in Rust and always dropped in Rust.
  * If Go code want to create it, it must instruct Rust to do so via the
- * `new_unmanaged_vector` FFI export. If Go code wants to consume its data,
+ * [`new_unmanaged_vector`] FFI export. If Go code wants to consume its data,
  * it must create a copy and instruct Rust to destroy it via the
- * `destroy_unmanaged_vector` FFI export.
+ * [`destroy_unmanaged_vector`] FFI export.
+ *
+ * An UnmanagedVector is immutable.
+ *
+ * ## Ownership
+ *
+ * Ownership is the right and the obligation to destroy an `UnmanagedVector`
+ * exactly once. Both Rust and Go can create an `UnmanagedVector`, which gives
+ * then ownership. Sometimes it is necessary to transfer ownership.
+ *
+ * ### Transfer ownership from Rust to Go
+ *
+ * When an `UnmanagedVector` was created in Rust using [`UnmanagedVector::new`], [`UnmanagedVector::default`]
+ * or [`new_unmanaged_vector`], it can be passted to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
+ * Rust then has no chance to destroy the vector anymore, so ownership is transferred to Go.
+ * In Go, the data has to be copied to a garbage collected `[]byte`. Then the vector must be destroyed
+ * using [`destroy_unmanaged_vector`].
+ *
+ * ### Transfer ownership from Go to Rust
+ *
+ * When Rust code calls into Go (using the vtable methods), return data or error messages must be created
+ * in Go. This is done by calling [`new_unmanaged_vector`] from Go, which copies data into a newly created
+ * `UnmanagedVector`. Since Go created it, it owns it. The ownership is then passed to Rust via the
+ * mutable return value pointers. On the Rust side, the vector is destroyed using [`UnmanagedVector::consume`].
+ *
+ * ## Examples
+ *
+ * Transferring ownership from Rust to Go using return values of FFI calls:
+ *
+ * ```
+ * #[no_mangle]
+ * pub extern "C" fn save_wasm(
+ *     cache: *mut cache_t,
+ *     wasm: ByteSliceView,
+ *     error_msg: Option<&mut UnmanagedVector>,
+ * ) -> UnmanagedVector {
+ *     // some operation producing a `let checksum: Vec<u8>`
+ *
+ *     UnmanagedVector::new(Some(checksum)) // this unmanaged vector is owned by the caller
+ * }
+ * ```
+ *
+ * Transferring ownership from Go to Rust using return value pointers:
+ *
+ * ```rust
+ * fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+ *     // Create a None vector in order to reserve memory for the result
+ *     let mut result = UnmanagedVector::default();
+ *
+ *     // …
+ *
+ *     let go_result: GoResult = (self.db.vtable.read_db)(
+ *         self.db.state,
+ *         self.db.gas_meter,
+ *         &mut used_gas as *mut u64,
+ *         U8SliceView::new(Some(key)),
+ *         // Go will create a new UnmanagedVector and override this address
+ *         &mut result as *mut UnmanagedVector,
+ *         &mut error_msg as *mut UnmanagedVector,
+ *     )
+ *     .into();
+ *
+ *     // Some gas processing and error handling
+ *
+ *     // We now own the new UnmanagedVector written to the pointer and must destroy it
+ *     let value = result.consume();
+ *     (Ok(value), gas_info)
+ * }
+ * ```
+ *
+ *
+ * If you want to mutate data, you need to comsume the vector and create a new one:
+ *
+ * ```rust
+ * # let input = UnmanagedVector::new(Some(vec![0xAA]));
+ * let mut mutable: Vec<u8> = input.consume().unwrap_or_default();
+ * assert_eq!(mutable, vec![0xAA]);
+ *
+ * // `input` is now gone and we cam do everything we want to `mutable`,
+ * // including operations that reallocate the underylying data.
+ *
+ * mutable.push(0xBB);
+ * mutable.push(0xCC);
+ *
+ * assert_eq!(mutable, vec![0xAA, 0xBB, 0xCC]);
+ *
+ * let output = UnmanagedVector::new(Some(mutable));
+ *
+ * // `output` is ready to be passed around
+ * ```
  */
 typedef struct UnmanagedVector {
   /**
