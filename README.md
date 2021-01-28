@@ -45,7 +45,7 @@ but it is [not supported][wasmer_support] by the Wasmer Singlepass backend which
 
 ## Docs
 
-Run `cargo doc --no-deps` and open `target/doc/wasmvm/index.html` in your browser of choice.
+Run `cargo doc --no-deps --open`.
 
 ## Design
 
