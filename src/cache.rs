@@ -100,8 +100,8 @@ pub extern "C" fn save_wasm(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    let data = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(data))
+    let checksum = handle_c_error_binary(r, error_msg);
+    UnmanagedVector::new(Some(checksum))
 }
 
 fn do_save_wasm(
