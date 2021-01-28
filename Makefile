@@ -55,7 +55,7 @@ test:
 test-safety:
 	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
 
-# Created a release build in a containerized build environment of the static library for Alpine Linux (.a)
+# Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
 	rm -rf target/release
 	# build the muslc *.a file
@@ -64,12 +64,12 @@ release-build-alpine:
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc .
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
 
-# Created a release build in a containerized build environment of the shared library for glibc Linux (.so)
+# Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-centos7
 
-# Created a release build in a containerized build environment of the shared library for macOS (.dylib)
+# Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
 	rm -rf target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-cross

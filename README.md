@@ -43,6 +43,10 @@ but it is [not supported][wasmer_support] by the Wasmer Singlepass backend which
 
 🤷‍ Not supported because nobody cares so far. Feel free to look into it.
 
+## Docs
+
+Run `cargo doc --no-deps --open`.
+
 ## Design
 
 Please read the [Documentation](./spec/Index.md) to understand both the general

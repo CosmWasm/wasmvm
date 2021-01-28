@@ -20,3 +20,37 @@ func TestMakeView(t *testing.T) {
 	nilView := makeView(nil)
 	require.Equal(t, cbool(true), nilView.is_nil)
 }
+
+func TestCreateAndDestroyUnmanagesVector(t *testing.T) {
+	// non-empty
+	{
+		original := []byte{0xaa, 0xbb, 0x64}
+		unmanaged := newUnmanagedVector(original)
+		require.Equal(t, cbool(false), unmanaged.is_none)
+		require.Equal(t, 3, int(unmanaged.len))
+		require.GreaterOrEqual(t, 3, int(unmanaged.cap)) // Rust implementation decides this
+		copy := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Equal(t, original, copy)
+	}
+
+	// empty
+	{
+		original := []byte{}
+		unmanaged := newUnmanagedVector(original)
+		require.Equal(t, cbool(false), unmanaged.is_none)
+		require.Equal(t, 0, int(unmanaged.len))
+		require.GreaterOrEqual(t, 0, int(unmanaged.cap)) // Rust implementation decides this
+		copy := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Equal(t, original, copy)
+	}
+
+	// none
+	{
+		var original []byte
+		unmanaged := newUnmanagedVector(original)
+		require.Equal(t, cbool(true), unmanaged.is_none)
+		// We must not make assumtions on the other fields in this case
+		copy := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Nil(t, copy)
+	}
+}
