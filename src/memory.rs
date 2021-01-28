@@ -59,8 +59,8 @@ impl ByteSliceView {
 /// This can be copied into a []byte in Go.
 #[repr(C)]
 pub struct U8SliceView {
-    /// True if and only if this is None/nil. If this is true, the other fields must be ignored.
-    is_nil: bool,
+    /// True if and only if this is None. If this is true, the other fields must be ignored.
+    is_none: bool,
     ptr: *const u8,
     len: usize,
 }
@@ -69,12 +69,12 @@ impl U8SliceView {
     pub fn new(source: Option<&[u8]>) -> Self {
         match source {
             Some(data) => Self {
-                is_nil: false,
+                is_none: false,
                 ptr: data.as_ptr(),
                 len: data.len(),
             },
             None => Self {
-                is_nil: true,
+                is_none: true,
                 ptr: std::ptr::null::<u8>(),
                 len: 0,
             },

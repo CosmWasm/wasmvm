@@ -69,10 +69,10 @@ func receiveVector(b C.Buffer) []byte {
 	return res
 }
 
-// copyU8Slice copies the contents of a Option<&[u8]> that was allocated on the Rust side.
+// copyU8Slice copies the contents of an Option<&[u8]> that was allocated on the Rust side.
 // Returns nil if and only if the source is None.
 func copyU8Slice(view C.U8SliceView) []byte {
-	if view.is_nil {
+	if view.is_none {
 		return nil
 	}
 	if view.len == 0 {
