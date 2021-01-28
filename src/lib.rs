@@ -18,8 +18,9 @@ mod tests;
 // exports. There are no guarantees those exports are stable.
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use api::GoApi;
-pub use cache::load_wasm;
+pub use cache::{cache_t, load_wasm};
 pub use db::{db_t, DB};
+pub use error::GoResult;
 pub use memory::{
     destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, U8SliceView, UnmanagedVector,
 };

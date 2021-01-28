@@ -29,6 +29,11 @@ jobs:
           name: Build docs
           command: cargo doc --no-deps
       - run:
+          name: Test docs
+          command: |
+            sed -i  '/^crate-type = \["cdylib"\]/d' Cargo.toml
+            cargo test --doc
+      - run:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
 

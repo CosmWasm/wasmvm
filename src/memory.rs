@@ -120,12 +120,14 @@ impl U8SliceView {
 /// Transferring ownership from Rust to Go using return values of FFI calls:
 ///
 /// ```
+/// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
 /// #[no_mangle]
 /// pub extern "C" fn save_wasm(
 ///     cache: *mut cache_t,
 ///     wasm: ByteSliceView,
 ///     error_msg: Option<&mut UnmanagedVector>,
 /// ) -> UnmanagedVector {
+///     # let checksum: Vec<u8> = Default::default();
 ///     // some operation producing a `let checksum: Vec<u8>`
 ///
 ///     UnmanagedVector::new(Some(checksum)) // this unmanaged vector is owned by the caller
@@ -135,15 +137,20 @@ impl U8SliceView {
 /// Transferring ownership from Go to Rust using return value pointers:
 ///
 /// ```rust
-/// fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+/// # use cosmwasm_vm::{BackendResult, GasInfo};
+/// # use wasmvm::{DB, GoResult, U8SliceView, UnmanagedVector};
+/// fn db_read(db: &DB, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+///
 ///     // Create a None vector in order to reserve memory for the result
 ///     let mut result = UnmanagedVector::default();
 ///
 ///     // …
+///     # let mut error_msg = UnmanagedVector::default();
+///     # let mut used_gas = 0_u64;
 ///
-///     let go_result: GoResult = (self.db.vtable.read_db)(
-///         self.db.state,
-///         self.db.gas_meter,
+///     let go_result: GoResult = (db.vtable.read_db)(
+///         db.state,
+///         db.gas_meter,
 ///         &mut used_gas as *mut u64,
 ///         U8SliceView::new(Some(key)),
 ///         // Go will create a new UnmanagedVector and override this address
@@ -153,6 +160,7 @@ impl U8SliceView {
 ///     .into();
 ///
 ///     // Some gas processing and error handling
+///     # let gas_info = GasInfo::free();
 ///
 ///     // We now own the new UnmanagedVector written to the pointer and must destroy it
 ///     let value = result.consume();
@@ -164,6 +172,7 @@ impl U8SliceView {
 /// If you want to mutate data, you need to comsume the vector and create a new one:
 ///
 /// ```rust
+/// # use wasmvm::{UnmanagedVector};
 /// # let input = UnmanagedVector::new(Some(vec![0xAA]));
 /// let mut mutable: Vec<u8> = input.consume().unwrap_or_default();
 /// assert_eq!(mutable, vec![0xAA]);
