@@ -3,7 +3,7 @@ use std::slice;
 
 /// A view into an externally owned byte slice (Go `[]byte`).
 /// Use this for the current call only. A view cannot be copied for safety reasons.
-/// If you need a copy, use [`to_owned`].
+/// If you need a copy, use [`ByteSliceView::to_owned`].
 ///
 /// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
 #[repr(C)]
@@ -47,7 +47,7 @@ impl ByteSliceView {
         }
     }
 
-    /// Created an owned copy that can safely be stored.
+    /// Creates an owned copy that can safely be stored and mutated.
     #[allow(dead_code)]
     pub fn to_owned(&self) -> Option<Vec<u8>> {
         self.read().map(|slice| slice.to_owned())

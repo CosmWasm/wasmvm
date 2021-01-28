@@ -26,6 +26,9 @@ jobs:
           name: Run unit tests
           command: cargo test
       - run:
+          name: Build docs
+          command: cargo doc --no-deps
+      - run:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
 
