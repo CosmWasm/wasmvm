@@ -61,17 +61,6 @@ func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 	return out
 }
 
-// Take an owned vector that was passed to us, copy it, and then free it on the Rust side.
-// This should only be used for vectors that will never be observed again on the Rust side
-func receiveVector(b C.Buffer) []byte {
-	if bufIsNil(b) {
-		return nil
-	}
-	res := C.GoBytes(unsafe.Pointer(b.ptr), cint(b.len))
-	C.free_rust(b)
-	return res
-}
-
 // copyU8Slice copies the contents of an Option<&[u8]> that was allocated on the Rust side.
 // Returns nil if and only if the source is None.
 func copyU8Slice(view C.U8SliceView) []byte {
@@ -85,8 +74,4 @@ func copyU8Slice(view C.U8SliceView) []byte {
 	// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 	res := C.GoBytes(unsafe.Pointer(view.ptr), cint(view.len))
 	return res
-}
-
-func bufIsNil(b C.Buffer) bool {
-	return b.ptr == cu8_ptr(nil)
 }

@@ -180,14 +180,6 @@ pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     let _ = v.consume();
 }
 
-// this frees memory we released earlier
-#[no_mangle]
-pub extern "C" fn free_rust(buf: Buffer) {
-    unsafe {
-        let _ = buf.consume();
-    }
-}
-
 #[repr(C)]
 pub struct Buffer {
     pub ptr: *mut u8,

@@ -89,12 +89,6 @@ typedef struct UnmanagedVector {
   uintptr_t cap;
 } UnmanagedVector;
 
-typedef struct Buffer {
-  uint8_t *ptr;
-  uintptr_t len;
-  uintptr_t cap;
-} Buffer;
-
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
@@ -178,8 +172,6 @@ typedef struct GoQuerier {
 AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);
 
 void destroy_unmanaged_vector(UnmanagedVector v);
-
-void free_rust(Buffer buf);
 
 UnmanagedVector handle(cache_t *cache,
                        ByteSliceView checksum,

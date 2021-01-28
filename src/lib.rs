@@ -17,6 +17,6 @@ mod tests;
 // We should only need the `extern "C"`s.
 pub use api::GoApi;
 pub use db::{db_t, DB};
-pub use memory::{free_rust, Buffer, ByteSliceView};
+pub use memory::{Buffer, ByteSliceView};
 pub use querier::GoQuerier;
 pub use storage::GoStorage;
