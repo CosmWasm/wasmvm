@@ -26,7 +26,7 @@ type MessageInfo struct {
 	// binary encoding of sdk.AccAddress executing the contract
 	Sender HumanAddress `json:"sender"`
 	// amount of funds send to the contract along with this message
-	SentFunds Coins `json:"sent_funds"`
+	Funds Coins `json:"funds"`
 }
 
 type ContractInfo struct {
