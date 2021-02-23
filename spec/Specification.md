@@ -89,10 +89,10 @@ type BlockInfo struct {
 }
 
 type MessageInfo struct {
-    // bech32 encoding of sdk.AccAddress executing the contract
-    Signer    string       `json:"signer"`
-    // amount of funds send to the contract along with this message
-    SentFunds []Coin `json:"sent_funds"`
+	// binary encoding of sdk.AccAddress executing the contract
+	Sender HumanAddress `json:"sender"`
+	// amount of funds send to the contract along with this message
+	Funds Coins `json:"funds"`
 }
 
 type ContractInfo struct {

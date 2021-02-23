@@ -41,8 +41,8 @@ func MockEnvBin(t *testing.T) []byte {
 
 func MockInfo(sender types.HumanAddress, funds []types.Coin) types.MessageInfo {
 	return types.MessageInfo{
-		Sender:    sender,
-		SentFunds: funds,
+		Sender: sender,
+		Funds:  funds,
 	}
 }
 

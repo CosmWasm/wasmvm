@@ -1,5 +1,5 @@
 use cosmwasm_std::{CanonicalAddr, HumanAddr};
-use cosmwasm_vm::{Api, BackendError, BackendResult, GasInfo};
+use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
 use crate::memory::{U8SliceView, UnmanagedVector};
@@ -46,7 +46,7 @@ pub struct GoApi {
 // see: https://stackoverflow.com/questions/50258359/can-a-struct-containing-a-raw-pointer-implement-send-and-be-ffi-safe
 unsafe impl Send for GoApi {}
 
-impl Api for GoApi {
+impl BackendApi for GoApi {
     fn canonical_address(&self, human: &HumanAddr) -> BackendResult<CanonicalAddr> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();

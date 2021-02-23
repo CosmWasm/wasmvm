@@ -11,7 +11,7 @@ import (
 func TestMessageInfoHandlesMultipleCoins(t *testing.T) {
 	info := MessageInfo{
 		Sender: "foobar",
-		SentFunds: []Coin{
+		Funds: []Coin{
 			{Denom: "peth", Amount: "12345"},
 			{Denom: "uatom", Amount: "789876"},
 		},
@@ -39,11 +39,11 @@ func TestMessageInfoHandlesMissingCoins(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, info, recover)
 
-	// make sure "sent_funds":[] is in JSON
+	// make sure "funds":[] is in JSON
 	var raw map[string]json.RawMessage
 	err = json.Unmarshal(bz, &raw)
 	require.NoError(t, err)
-	sent, ok := raw["sent_funds"]
+	funds, ok := raw["funds"]
 	require.True(t, ok)
-	assert.Equal(t, string(sent), "[]")
+	assert.Equal(t, string(funds), "[]")
 }
