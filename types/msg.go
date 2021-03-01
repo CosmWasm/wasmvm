@@ -6,49 +6,15 @@ import (
 
 //------- Results / Msgs -------------
 
-// HandleResult is the raw response from the handle call.
-// This is mirrors Rust's ContractResult<HandleResponse>.
-type HandleResult struct {
-	Ok  *HandleResponse `json:"ok,omitempty"`
-	Err string          `json:"error,omitempty"`
+// ContractResult is the raw response from the init/handle/migrate calls.
+// This is mirrors Rust's ContractResult<Response>.
+type ContractResult struct {
+	Ok  *Response `json:"ok,omitempty"`
+	Err string    `json:"error,omitempty"`
 }
 
-// HandleResponse defines the return value on a successful handle
-type HandleResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// base64-encoded bytes to return as ABCI.Data field
-	Data []byte `json:"data"`
-	// attributes for a log event to return over abci interface
-	Attributes []EventAttribute `json:"attributes"`
-}
-
-// InitResult is the raw response from the handle call.
-// This is mirrors Rust's ContractResult<InitResponse>.
-type InitResult struct {
-	Ok  *InitResponse `json:"ok,omitempty"`
-	Err string        `json:"error,omitempty"`
-}
-
-// InitResponse defines the return value on a successful handle
-type InitResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// base64-encoded bytes to return as ABCI.Data field
-	Data []byte `json:"data"`
-	// attributes for a log event to return over abci interface
-	Attributes []EventAttribute `json:"attributes"`
-}
-
-// MigrateResult is the raw response from the migrate call.
-// This is mirrors Rust's ContractResult<MigrateResponse>.
-type MigrateResult struct {
-	Ok  *MigrateResponse `json:"ok,omitempty"`
-	Err string           `json:"error,omitempty"`
-}
-
-// MigrateResponse defines the return value on a successful handle
-type MigrateResponse struct {
+// Response defines the return value on a successful init/handle/migrate
+type Response struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field

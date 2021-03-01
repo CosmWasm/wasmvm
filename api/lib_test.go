@@ -186,11 +186,11 @@ func TestInstantiate(t *testing.T) {
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0xd830), cost)
 
-	var resp types.InitResult
-	err = json.Unmarshal(res, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", resp.Err)
-	require.Equal(t, 0, len(resp.Ok.Messages))
+	require.Equal(t, "", result.Err)
+	require.Equal(t, 0, len(result.Ok.Messages))
 }
 
 func TestHandle(t *testing.T) {
@@ -232,12 +232,12 @@ func TestHandle(t *testing.T) {
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
-	var resp types.HandleResult
-	err = json.Unmarshal(res, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Messages))
-	dispatch := resp.Ok.Messages[0]
+	require.Equal(t, "", result.Err)
+	require.Equal(t, 1, len(result.Ok.Messages))
+	dispatch := result.Ok.Messages[0]
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -245,7 +245,7 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
-	assert.Equal(t, expectedData, resp.Ok.Data)
+	assert.Equal(t, expectedData, result.Ok.Data)
 }
 
 func TestHandleCpuLoop(t *testing.T) {
@@ -458,11 +458,11 @@ func TestMultipleInstances(t *testing.T) {
 }
 
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
-	var resp types.HandleResult
-	err := json.Unmarshal(res, &resp)
+	var result types.ContractResult
+	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", resp.Err)
-	require.Equal(t, expectedMsgs, len(resp.Ok.Messages))
+	require.Equal(t, "", result.Err)
+	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
@@ -486,7 +486,7 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store KVStore, api *GoAPI, querier Querier, gasExpected uint64) types.HandleResult {
+func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store KVStore, api *GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -495,10 +495,10 @@ func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress,
 	require.NoError(t, err)
 	assert.Equal(t, gasExpected, cost)
 
-	var resp types.HandleResult
-	err = json.Unmarshal(res, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	return resp
+	return result
 }
 
 func TestQuery(t *testing.T) {
