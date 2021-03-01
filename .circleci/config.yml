@@ -173,6 +173,15 @@ workflows:
       - build_static_lib:
           requires:
             - build_library
+          filters:
+            # tags and branches are OR combined
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+            branches:
+              only:
+                # long living branches
+                - main
+                - 0.14-dev
       # This is long running, so only double-check on merge commits
       # ensures that all code works on alpine linux
       - test_alpine_build:
