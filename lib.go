@@ -119,7 +119,7 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-) (*types.InitResponse, uint64, error) {
+) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -133,15 +133,15 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	var resp types.InitResult
-	err = json.Unmarshal(data, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(data, &result)
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	if result.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", result.Err)
 	}
-	return resp.Ok, gasUsed, nil
+	return result.Ok, gasUsed, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same Checksum is the
@@ -160,7 +160,7 @@ func (vm *VM) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-) (*types.HandleResponse, uint64, error) {
+) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -174,15 +174,15 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
-	var resp types.HandleResult
-	err = json.Unmarshal(data, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(data, &result)
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	if result.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", result.Err)
 	}
-	return resp.Ok, gasUsed, nil
+	return result.Ok, gasUsed, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -233,7 +233,7 @@ func (vm *VM) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-) (*types.MigrateResponse, uint64, error) {
+) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -243,7 +243,7 @@ func (vm *VM) Migrate(
 		return nil, gasUsed, err
 	}
 
-	var resp types.MigrateResult
+	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return nil, gasUsed, err

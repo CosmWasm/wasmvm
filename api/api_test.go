@@ -32,18 +32,18 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	longName := "long123456789012345678901234567890long"
 	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "bob"}`)
 
-	// make sure the call doesn't error, but we get a JSON-encoded error result from InitResult
+	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
 	igasMeter := GasMeter(gasMeter)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var resp types.InitResult
-	err = json.Unmarshal(res, &resp)
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 
 	// ensure the error message is what we expect
-	require.Nil(t, resp.Ok)
+	require.Nil(t, result.Ok)
 	// with this error
-	require.Equal(t, "Generic error: canonicalize_address errored: human encoding too long", resp.Err)
+	require.Equal(t, "Generic error: canonicalize_address errored: human encoding too long", result.Err)
 }
 
 func TestHumanAddressFailure(t *testing.T) {
