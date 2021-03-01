@@ -28,11 +28,11 @@ func main() {
 		panic(err)
 	}
 
-	id, err := vm.Create(bz)
+	checksum, err := vm.Create(bz)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Got code id: %X\n", id)
+	fmt.Printf("Stored code with checksum: %X\n", checksum)
 
 	vm.Cleanup()
 	fmt.Println("finished")

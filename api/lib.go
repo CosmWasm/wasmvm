@@ -6,6 +6,7 @@ import "C"
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 
 	"github.com/CosmWasm/wasmvm/types"
@@ -31,14 +32,18 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string, cacheSize uint32) (Cache, error) {
-	dir := sendSlice([]byte(dataDir))
-	defer freeAfterSend(dir)
-	features := sendSlice([]byte(supportedFeatures))
-	defer freeAfterSend(features)
-	errmsg := C.Buffer{}
+func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+	dataDirBytes := []byte(dataDir)
+	supportedFeaturesBytes := []byte(supportedFeatures)
 
-	ptr, err := C.init_cache(dir, features, cu32(cacheSize), &errmsg)
+	d := makeView(dataDirBytes)
+	defer runtime.KeepAlive(dataDirBytes)
+	f := makeView(supportedFeaturesBytes)
+	defer runtime.KeepAlive(supportedFeaturesBytes)
+
+	errmsg := newUnmanagedVector(nil)
+
+	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
@@ -50,30 +55,66 @@ func ReleaseCache(cache Cache) {
 }
 
 func Create(cache Cache, wasm []byte) ([]byte, error) {
-	code := sendSlice(wasm)
-	defer freeAfterSend(code)
-	errmsg := C.Buffer{}
-	id, err := C.create(cache.ptr, code, &errmsg)
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
+	errmsg := newUnmanagedVector(nil)
+	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(id), nil
+	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
-func GetCode(cache Cache, code_id []byte) ([]byte, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	errmsg := C.Buffer{}
-	code, err := C.get_code(cache.ptr, id, &errmsg)
+func GetCode(cache Cache, checksum []byte) ([]byte, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
-	return receiveVector(code), nil
+	return copyAndDestroyUnmanagedVector(wasm), nil
+}
+
+func Pin(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	_, err := C.pin(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func Unpin(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	_, err := C.unpin(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
+func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	res := types.AnalysisReport{
+		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
+	}
+	return &res, nil
 }
 
 func Instantiate(
 	cache Cache,
-	code_id []byte,
+	checksum []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -82,17 +123,16 @@ func Instantiate(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -103,19 +143,19 @@ func Instantiate(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := C.Buffer{}
+	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.instantiate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Handle(
 	cache Cache,
-	code_id []byte,
+	checksum []byte,
 	env []byte,
 	info []byte,
 	msg []byte,
@@ -124,17 +164,16 @@ func Handle(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	i := makeView(info)
+	defer runtime.KeepAlive(info)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -145,38 +184,34 @@ func Handle(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := C.Buffer{}
+	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.handle(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.handle(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Migrate(
 	cache Cache,
-	code_id []byte,
+	checksum []byte,
 	env []byte,
-	info []byte,
 	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	i := sendSlice(info)
-	defer freeAfterSend(i)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -187,19 +222,19 @@ func Migrate(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := C.Buffer{}
+	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.migrate(cache.ptr, id, e, i, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 func Query(
 	cache Cache,
-	code_id []byte,
+	checksum []byte,
 	env []byte,
 	msg []byte,
 	gasMeter *GasMeter,
@@ -207,15 +242,14 @@ func Query(
 	api *GoAPI,
 	querier *Querier,
 	gasLimit uint64,
-	memoryLimit uint32,
 	printDebug bool,
 ) ([]byte, uint64, error) {
-	id := sendSlice(code_id)
-	defer freeAfterSend(id)
-	e := sendSlice(env)
-	defer freeAfterSend(e)
-	m := sendSlice(msg)
-	defer freeAfterSend(m)
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -226,24 +260,252 @@ func Query(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := C.Buffer{}
+	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.query(cache.ptr, id, e, m, db, a, q, cu64(gasLimit), cu32(memoryLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
 	}
-	return receiveVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCChannelOpen(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	channel []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCChannelConnect(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	channel []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCChannelClose(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	channel []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ch := makeView(channel)
+	defer runtime.KeepAlive(channel)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCPacketReceive(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	packet []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCPacketAck(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	ack []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ac := makeView(ack)
+	defer runtime.KeepAlive(ack)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+}
+
+func IBCPacketTimeout(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	packet []byte,
+	gasMeter *GasMeter,
+	store KVStore,
+	api *GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, uint64, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(packet)
+	defer runtime.KeepAlive(packet)
+
+	// set up a new stack frame to handle iterators
+	counter := startContract()
+	defer endContract(counter)
+
+	dbState := buildDBState(store, counter)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasUsed cu64
+	errmsg := newUnmanagedVector(nil)
+
+	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
 /**** To error module ***/
 
-func errorWithMessage(err error, b C.Buffer) error {
+func errorWithMessage(err error, b C.UnmanagedVector) error {
 	// this checks for out of gas as a special case
 	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 		return types.OutOfGasError{}
 	}
-	msg := receiveVector(b)
+	msg := copyAndDestroyUnmanagedVector(b)
 	if msg == nil {
 		return err
 	}

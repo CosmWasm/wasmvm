@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 jobs:
   # All checks on the codebase that can run in parallel to build_library
@@ -25,6 +25,14 @@ jobs:
       - run:
           name: Run unit tests
           command: cargo test
+      - run:
+          name: Build docs
+          command: cargo doc --no-deps
+      - run:
+          name: Test docs
+          command: |
+            sed -i  '/^crate-type = \["cdylib"\]/d' Cargo.toml
+            cargo test --doc
       - run:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
@@ -109,16 +117,11 @@ jobs:
             git commit --allow-empty -m '[skip ci] Built release libraries'
             git push origin $CIRCLE_BRANCH
 
-  deploy_to_github_releases:
+  build_static_lib:
     machine:
       image: ubuntu-1604:202010-01
     steps:
       - checkout
-      - run:
-          name: Install ghr
-          command: |
-            go get github.com/tcnksm/ghr
-            ghr --version
       - run:
           name: Build static library for Alpine
           command: make release-build-alpine
@@ -134,18 +137,29 @@ jobs:
           name: Create checksums
           working_directory: artifacts
           command: sha256sum * > checksums.txt && cat checksums.txt
-      - run:
-          name: Publish artifacts on GitHub
-          command: |
-            TAG="$CIRCLE_TAG"
-            TITLE="$TAG"
-            BODY="Build artifacts generated at this tag."
-            ghr -t "$GITHUB_TOKEN" \
-              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
-              -c "$CIRCLE_SHA1" \
-              -n "$TITLE" -b "$BODY" \
-              -delete \
-              "$TAG" ./artifacts/
+      - store_artifacts:
+          path: artifacts
+      # Deploy to GitHub releases on tag builds
+      - when:
+          condition: << pipeline.git.tag >>
+          steps:
+            - run:
+                name: Install ghr
+                command: |
+                  go get github.com/tcnksm/ghr
+                  ghr --version
+            - run:
+                name: Publish artifacts on GitHub
+                command: |
+                  TAG="$CIRCLE_TAG"
+                  TITLE="$TAG"
+                  BODY="Build artifacts generated at this tag."
+                  ghr -t "$GITHUB_TOKEN" \
+                    -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+                    -c "$CIRCLE_SHA1" \
+                    -n "$TITLE" -b "$BODY" \
+                    -delete \
+                    "$TAG" ./artifacts/
 
 workflows:
   version: 2
@@ -156,6 +170,18 @@ workflows:
       - test:
           requires:
             - build_library
+      - build_static_lib:
+          requires:
+            - build_library
+          filters:
+            # tags and branches are OR combined
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+            branches:
+              only:
+                # long living branches
+                - main
+                - 0.14-dev
       # This is long running, so only double-check on merge commits
       # ensures that all code works on alpine linux
       - test_alpine_build:
@@ -165,7 +191,9 @@ workflows:
                 - /.*/
             branches:
               only:
+                # long living branches
                 - main
+                - 0.14-dev
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
@@ -178,9 +206,3 @@ workflows:
             branches:
               only:
                 - main
-      - deploy_to_github_releases:
-          filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-            branches:
-              ignore: /.*/

@@ -81,10 +81,12 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 // QueryRequest is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type QueryRequest struct {
-	Bank    *BankQuery      `json:"bank,omitempty"`
-	Custom  json.RawMessage `json:"custom,omitempty"`
-	Staking *StakingQuery   `json:"staking,omitempty"`
-	Wasm    *WasmQuery      `json:"wasm,omitempty"`
+	Bank     *BankQuery      `json:"bank,omitempty"`
+	Custom   json.RawMessage `json:"custom,omitempty"`
+	IBC      *IBCQuery       `json:"ibc,omitempty"`
+	Staking  *StakingQuery   `json:"staking,omitempty"`
+	Stargate *StargateQuery  `json:"stargate,omitempty"`
+	Wasm     *WasmQuery      `json:"wasm,omitempty"`
 }
 
 type BankQuery struct {
@@ -111,6 +113,64 @@ type AllBalancesResponse struct {
 	Amount Coins `json:"amount"`
 }
 
+type IBCQuery struct {
+	PortID       *PortIDQuery       `json:"port_id,omitempty"`
+	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
+	Channel      *ChannelQuery      `json:"channel,omitempty"`
+}
+
+type PortIDQuery struct{}
+
+type PortIDResponse struct {
+	PortID string `json:"port_id"`
+}
+
+type ListChannelsQuery struct {
+	// optional argument
+	PortID string `json:"port_id,omitempty"`
+}
+
+type ListChannelsResponse struct {
+	Channels IBCEndpoints `json:"channels"`
+}
+
+// IBCEndpoints must JSON encode empty array as [] (not null) for consistency with Rust parser
+type IBCEndpoints []IBCEndpoint
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (e IBCEndpoints) MarshalJSON() ([]byte, error) {
+	if len(e) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []IBCEndpoint = e
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []IBCEndpoint
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*e = raw
+	return nil
+}
+
+type ChannelQuery struct {
+	// optional argument
+	PortID    string `json:"port_id,omitempty"`
+	ChannelID string `json:"channel_id"`
+}
+
+type ChannelResponse struct {
+	// may be empty if there is no matching channel
+	Channel *IBCChannel `json:"channel,omitempty"`
+}
+
 type StakingQuery struct {
 	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
 	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
@@ -125,7 +185,7 @@ type ValidatorsResponse struct {
 	Validators Validators `json:"validators"`
 }
 
-// TODO: Validators must JSON encode empty array as []
+// Validators must JSON encode empty array as []
 type Validators []Validator
 
 // MarshalJSON ensures that we get [] for empty arrays
@@ -221,6 +281,23 @@ type FullDelegation struct {
 
 type BondedDenomResponse struct {
 	Denom string `json:"denom"`
+}
+
+// A Stargate query encoded the same way as abci_query, with path and protobuf encoded Data.
+// The format is defined in [ADR-21](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-021-protobuf-query-encoding.md)
+// The response is also protobuf encoded. The caller is responsible for compiling the proper protobuf definitions
+type StargateQuery struct {
+	// this is the fully qualified service path used for routing,
+	// eg. custom/cosmos_sdk.x.bank.v1.Query/QueryBalance
+	Path string `json:"path"`
+	// this is the expected protobuf message type (not any), binary encoded
+	Data []byte `json:"data"`
+}
+
+// This is the protobuf response, binary encoded.
+// The caller is responsible for knowing how to parse.
+type StargateResponse struct {
+	Response []byte `json:"response"`
 }
 
 type WasmQuery struct {

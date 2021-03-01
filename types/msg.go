@@ -6,47 +6,15 @@ import (
 
 //------- Results / Msgs -------------
 
-// HandleResult is the raw response from the handle call.
-// This is mirrors Rust's ContractResult<HandleResponse>.
-type HandleResult struct {
-	Ok  *HandleResponse `json:"ok,omitempty"`
-	Err string          `json:"error,omitempty"`
+// ContractResult is the raw response from the init/handle/migrate calls.
+// This is mirrors Rust's ContractResult<Response>.
+type ContractResult struct {
+	Ok  *Response `json:"ok,omitempty"`
+	Err string    `json:"error,omitempty"`
 }
 
-// HandleResponse defines the return value on a successful handle
-type HandleResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// base64-encoded bytes to return as ABCI.Data field
-	Data []byte `json:"data"`
-	// attributes for a log event to return over abci interface
-	Attributes []EventAttribute `json:"attributes"`
-}
-
-// InitResult is the raw response from the handle call.
-// This is mirrors Rust's ContractResult<InitResponse>.
-type InitResult struct {
-	Ok  *InitResponse `json:"ok,omitempty"`
-	Err string        `json:"error,omitempty"`
-}
-
-// InitResponse defines the return value on a successful handle
-type InitResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// attributes for a log event to return over abci interface
-	Attributes []EventAttribute `json:"attributes"`
-}
-
-// MigrateResult is the raw response from the migrate call.
-// This is mirrors Rust's ContractResult<MigrateResponse>.
-type MigrateResult struct {
-	Ok  *MigrateResponse `json:"ok,omitempty"`
-	Err string           `json:"error,omitempty"`
-}
-
-// MigrateResponse defines the return value on a successful handle
-type MigrateResponse struct {
+// Response defines the return value on a successful init/handle/migrate
+type Response struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
@@ -64,10 +32,12 @@ type EventAttribute struct {
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
-	Bank    *BankMsg        `json:"bank,omitempty"`
-	Custom  json.RawMessage `json:"custom,omitempty"`
-	Staking *StakingMsg     `json:"staking,omitempty"`
-	Wasm    *WasmMsg        `json:"wasm,omitempty"`
+	Bank     *BankMsg        `json:"bank,omitempty"`
+	Custom   json.RawMessage `json:"custom,omitempty"`
+	IBC      *IBCMsg         `json:"ibc,omitempty"`
+	Staking  *StakingMsg     `json:"staking,omitempty"`
+	Stargate *StargateMsg    `json:"stargate,omitempty"`
+	Wasm     *WasmMsg        `json:"wasm,omitempty"`
 }
 
 type BankMsg struct {
@@ -77,9 +47,43 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	FromAddress string `json:"from_address"`
-	ToAddress   string `json:"to_address"`
-	Amount      Coins  `json:"amount"`
+	ToAddress string `json:"to_address"`
+	Amount    Coins  `json:"amount"`
+}
+
+type IBCMsg struct {
+	Transfer     *TransferMsg     `json:"transfer,omitempty"`
+	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
+	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
+}
+
+type TransferMsg struct {
+	ChannelID string `json:"channel_id"`
+	ToAddress string `json:"to_address"`
+	Amount    Coin   `json:"amount"`
+	// block after which the packet times out.
+	// at least one of timeout_block, timeout_timestamp is required
+	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	// at least one of timeout_block, timeout_timestamp is required
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+}
+
+type SendPacketMsg struct {
+	ChannelID string `json:"channel_id"`
+	Data      []byte `json:"data"`
+	// block after which the packet times out.
+	// at least one of timeout_block, timeout_timestamp is required
+	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
+	// Nanoseconds since UNIX epoch
+	// See https://golang.org/pkg/time/#Time.UnixNano
+	// at least one of timeout_block, timeout_timestamp is required
+	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+}
+
+type CloseChannelMsg struct {
+	ChannelID string `json:"channel_id"`
 }
 
 type StakingMsg struct {
@@ -109,6 +113,13 @@ type WithdrawMsg struct {
 	Validator string `json:"validator"`
 	// this is optional
 	Recipient string `json:"recipient,omitempty"`
+}
+
+// StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
+// This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
+type StargateMsg struct {
+	TypeURL string `json:"type_url"`
+	Value   []byte `json:"value"`
 }
 
 type WasmMsg struct {

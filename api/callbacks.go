@@ -1,32 +1,35 @@
 package api
 
+// Check https://akrennmair.github.io/golang-cgo-slides/ to learn
+// how this embedded C code works.
+
 /*
 #include "bindings.h"
 
 // typedefs for _cgo functions (db)
-typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
-typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
-typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
-typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
+typedef GoResult (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
+typedef GoResult (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
+typedef GoResult (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
+typedef GoResult (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // iterator
-typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
+typedef GoResult (*next_db_fn)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *val, UnmanagedVector *errOut);
 // and api
-typedef GoResult (*humanize_address_fn)(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*canonicalize_address_fn)(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
-typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+typedef GoResult (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+typedef GoResult (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+typedef GoResult (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
 // forward declarations (db)
-GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *val, Buffer *errOut);
-GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer val, Buffer *errOut);
-GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer key, Buffer *errOut);
-GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer start, Buffer end, int32_t order, GoIter *out, Buffer *errOut);
+GoResult cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
+GoResult cSet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
+GoResult cDelete_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
+GoResult cScan_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // iterator
-GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, Buffer *key, Buffer *val, Buffer *errOut);
+GoResult cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *val, UnmanagedVector *errOut);
 // api
-GoResult cHumanAddress_cgo(api_t *ptr, Buffer canon, Buffer *human, Buffer *errOut, uint64_t *used_gas);
-GoResult cCanonicalAddress_cgo(api_t *ptr, Buffer human, Buffer *canon, Buffer *errOut, uint64_t *used_gas);
+GoResult cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoResult cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
-GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, Buffer request, Buffer *result, Buffer *errOut);
+GoResult cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
 
 */
@@ -154,16 +157,20 @@ func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
 }
 
 //export cGet
-func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil {
+
+	if ptr == nil || gasMeter == nil || usedGas == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*val).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
+	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
@@ -172,28 +179,27 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.Buffer, val
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
-	if v != nil {
-		*val = allocateRust(v)
-	}
-	// else: the Buffer on the rust side is initialised as a "null" buffer,
-	// so if we don't write a non-null address to it, it will understand that
-	// the key it requested does not exist in the kv store
+	*val = newUnmanagedVector(v)
 
 	return C.GoResult_Ok
 }
 
 //export cSet
-func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, val C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, val C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil {
+
+	if ptr == nil || gasMeter == nil || usedGas == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
-	v := receiveSlice(val)
+	k := copyU8Slice(key)
+	v := copyU8Slice(val)
 
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
@@ -204,16 +210,20 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffe
 }
 
 //export cDelete
-func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil {
+
+	if ptr == nil || gasMeter == nil || usedGas == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*KVStore)(unsafe.Pointer(ptr))
-	k := receiveSlice(key)
+	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
@@ -224,24 +234,22 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.Bu
 }
 
 //export cScan
-func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Buffer, end C.Buffer, order ci32, out *C.GoIter, errOut *C.Buffer) (ret C.GoResult) {
+func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil {
+
+	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	state := (*DBState)(unsafe.Pointer(ptr))
 	kv := state.Store
-	// handle null as well as data
-	var s, e []byte
-	if start.ptr != nil {
-		s = receiveSlice(start)
-	}
-	if end.ptr != nil {
-		e = receiveSlice(end)
-	}
+	s := copyU8Slice(start)
+	e := copyU8Slice(end)
 
 	var iter dbm.Iterator
 	gasBefore := gm.GasConsumed()
@@ -262,7 +270,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.Bu
 }
 
 //export cNext
-func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.Buffer, val *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -270,9 +278,12 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	// 	}
 
 	defer recoverPanic(&ret)
-	if ref.db_counter == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil {
+	if ref.db_counter == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*key).is_none || !(*val).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
@@ -291,10 +302,8 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
-	if k != nil {
-		*key = allocateRust(k)
-		*val = allocateRust(v)
-	}
+	*key = newUnmanagedVector(k)
+	*val = newUnmanagedVector(v)
 	return C.GoResult_Ok
 }
 
@@ -323,52 +332,57 @@ func buildAPI(api *GoAPI) C.GoApi {
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, canon C.Buffer, human *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if human == nil {
-		// we received an invalid pointer
+
+	if dest == nil || errOut == nil {
 		return C.GoResult_BadArgument
 	}
+	if !(*dest).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	c := receiveSlice(canon)
-	h, cost, err := api.HumanAddress(c)
+	s := copyU8Slice(src)
+
+	h, cost, err := api.HumanAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
-		*errOut = allocateRust([]byte(err.Error()))
+		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoResult_User
 	}
 	if len(h) == 0 {
-		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", c))
+		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", s))
 	}
-	*human = allocateRust([]byte(h))
+	*dest = newUnmanagedVector([]byte(h))
 	return C.GoResult_Ok
 }
 
 //export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, human C.Buffer, canon *C.Buffer, errOut *C.Buffer, used_gas *cu64) (ret C.GoResult) {
+func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoResult) {
 	defer recoverPanic(&ret)
 
-	if canon == nil {
-		// we received an invalid pointer
+	if dest == nil || errOut == nil {
 		return C.GoResult_BadArgument
+	}
+	if !(*dest).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	api := (*GoAPI)(unsafe.Pointer(ptr))
-	h := string(receiveSlice(human))
-	c, cost, err := api.CanonicalAddress(h)
+	s := string(copyU8Slice(src))
+	c, cost, err := api.CanonicalAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
-		*errOut = allocateRust([]byte(err.Error()))
+		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoResult_User
 	}
 	if len(c) == 0 {
-		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", h))
+		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", s))
 	}
-	*canon = allocateRust(c)
-
-	// If we do not set canon to a meaningful value, then the other side will interpret that as an empty result.
+	*dest = newUnmanagedVector(c)
 	return C.GoResult_Ok
 }
 
@@ -388,16 +402,20 @@ func buildQuerier(q *Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.Buffer, result *C.Buffer, errOut *C.Buffer) (ret C.GoResult) {
+func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.U8SliceView, result *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoResult) {
 	defer recoverPanic(&ret)
-	if ptr == nil || usedGas == nil || result == nil {
+
+	if ptr == nil || usedGas == nil || result == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
+	}
+	if !(*result).is_none || !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
 	// query the data
 	querier := *(*Querier)(unsafe.Pointer(ptr))
-	req := receiveSlice(request)
+	req := copyU8Slice(request)
 
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint64(gasLimit))
@@ -407,9 +425,9 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 	// serialize the response
 	bz, err := json.Marshal(res)
 	if err != nil {
-		*errOut = allocateRust([]byte(err.Error()))
+		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoResult_Other
 	}
-	*result = allocateRust(bz)
+	*result = newUnmanagedVector(bz)
 	return C.GoResult_Ok
 }

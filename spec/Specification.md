@@ -89,10 +89,10 @@ type BlockInfo struct {
 }
 
 type MessageInfo struct {
-    // bech32 encoding of sdk.AccAddress executing the contract
-    Signer    string       `json:"signer"`
-    // amount of funds send to the contract along with this message
-    SentFunds []Coin `json:"sent_funds"`
+	// binary encoding of sdk.AccAddress executing the contract
+	Sender HumanAddress `json:"sender"`
+	// amount of funds send to the contract along with this message
+	Funds Coins `json:"funds"`
 }
 
 type ContractInfo struct {
@@ -150,7 +150,6 @@ type CosmosMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
 	Amount      []Coin `json:"amount"`
 }

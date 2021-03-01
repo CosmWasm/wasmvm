@@ -1,83 +1,249 @@
 use std::mem;
 use std::slice;
 
-#[no_mangle]
-pub extern "C" fn allocate_rust(ptr: *const u8, length: usize) -> Buffer {
-    // Go doesn't store empty buffers the same way Rust stores empty slices (with NonNull  pointers
-    // equal to the offset of the type, which would be equal to 1 in this case)
-    // so when it wants to represent an empty buffer, it passes a null pointer with 0 length here.
-    if length == 0 {
-        Buffer::from_vec(Vec::new())
-    } else {
-        Buffer::from_vec(Vec::from(unsafe { slice::from_raw_parts(ptr, length) }))
-    }
-}
-
-// this frees memory we released earlier
-#[no_mangle]
-pub extern "C" fn free_rust(buf: Buffer) {
-    unsafe {
-        let _ = buf.consume();
-    }
-}
-
-#[derive(Copy, Clone)]
+/// A view into an externally owned byte slice (Go `[]byte`).
+/// Use this for the current call only. A view cannot be copied for safety reasons.
+/// If you need a copy, use [`ByteSliceView::to_owned`].
+///
+/// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
 #[repr(C)]
-pub struct Buffer {
-    pub ptr: *mut u8,
-    pub len: usize,
-    pub cap: usize,
+pub struct ByteSliceView {
+    /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
+    is_nil: bool,
+    ptr: *const u8,
+    len: usize,
 }
 
-impl Buffer {
-    /// `read` provides a reference to the included data to be parsed or copied elsewhere
-    ///
-    /// # Safety
-    ///
-    /// The caller must make sure that the `Buffer` points to valid and initialized memory
-    pub unsafe fn read(&self) -> Option<&[u8]> {
-        if self.ptr.is_null() {
+impl ByteSliceView {
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    #[cfg(test)]
+    pub fn new(source: &[u8]) -> Self {
+        Self {
+            is_nil: false,
+            ptr: source.as_ptr(),
+            len: source.len(),
+        }
+    }
+
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    #[cfg(test)]
+    pub fn nil() -> Self {
+        Self {
+            is_nil: true,
+            ptr: std::ptr::null::<u8>(),
+            len: 0,
+        }
+    }
+
+    /// Provides a reference to the included data to be parsed or copied elsewhere
+    /// This is safe as long as the `ByteSliceView` is constructed correctly.
+    pub fn read(&self) -> Option<&[u8]> {
+        if self.is_nil {
             None
         } else {
-            Some(slice::from_raw_parts(self.ptr, self.len))
+            Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })
         }
     }
 
-    /// consume must only be used on memory previously released by from_vec
-    /// when the Vec is out of scope, it will deallocate the memory previously referenced by Buffer
-    ///
-    /// # Safety
-    ///
-    /// if not empty, `ptr` must be a valid memory reference, which was previously
-    /// created by `from_vec`. You may not consume a slice twice.
-    /// Otherwise you risk double free panics
-    pub unsafe fn consume(self) -> Vec<u8> {
-        if self.ptr.is_null() {
-            vec![]
-        } else {
-            Vec::from_raw_parts(self.ptr, self.len, self.cap)
-        }
+    /// Creates an owned copy that can safely be stored and mutated.
+    #[allow(dead_code)]
+    pub fn to_owned(&self) -> Option<Vec<u8>> {
+        self.read().map(|slice| slice.to_owned())
     }
+}
 
-    /// Creates a new zero length Buffer with the given capacity
-    pub fn with_capacity(capacity: usize) -> Self {
-        Buffer::from_vec(Vec::<u8>::with_capacity(capacity))
-    }
+/// A view into a `Option<&[u8]>`, created and maintained by Rust.
+///
+/// This can be copied into a []byte in Go.
+#[repr(C)]
+pub struct U8SliceView {
+    /// True if and only if this is None. If this is true, the other fields must be ignored.
+    is_none: bool,
+    ptr: *const u8,
+    len: usize,
+}
 
-    // this releases our memory to the caller
-    pub fn from_vec(v: Vec<u8>) -> Self {
-        let mut v = mem::ManuallyDrop::new(v);
-        Buffer {
-            ptr: v.as_mut_ptr(),
-            len: v.len(),
-            cap: v.capacity(),
+impl U8SliceView {
+    pub fn new(source: Option<&[u8]>) -> Self {
+        match source {
+            Some(data) => Self {
+                is_none: false,
+                ptr: data.as_ptr(),
+                len: data.len(),
+            },
+            None => Self {
+                is_none: true,
+                ptr: std::ptr::null::<u8>(),
+                len: 0,
+            },
         }
     }
 }
 
-impl Default for Buffer {
+/// An optional Vector type that requires explicit creation and destruction
+/// and can be sent via FFI.
+/// It can be created from `Option<Vec<u8>>` and be converted into `Option<Vec<u8>>`.
+///
+/// This type is always created in Rust and always dropped in Rust.
+/// If Go code want to create it, it must instruct Rust to do so via the
+/// [`new_unmanaged_vector`] FFI export. If Go code wants to consume its data,
+/// it must create a copy and instruct Rust to destroy it via the
+/// [`destroy_unmanaged_vector`] FFI export.
+///
+/// An UnmanagedVector is immutable.
+///
+/// ## Ownership
+///
+/// Ownership is the right and the obligation to destroy an `UnmanagedVector`
+/// exactly once. Both Rust and Go can create an `UnmanagedVector`, which gives
+/// then ownership. Sometimes it is necessary to transfer ownership.
+///
+/// ### Transfer ownership from Rust to Go
+///
+/// When an `UnmanagedVector` was created in Rust using [`UnmanagedVector::new`], [`UnmanagedVector::default`]
+/// or [`new_unmanaged_vector`], it can be passted to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
+/// Rust then has no chance to destroy the vector anymore, so ownership is transferred to Go.
+/// In Go, the data has to be copied to a garbage collected `[]byte`. Then the vector must be destroyed
+/// using [`destroy_unmanaged_vector`].
+///
+/// ### Transfer ownership from Go to Rust
+///
+/// When Rust code calls into Go (using the vtable methods), return data or error messages must be created
+/// in Go. This is done by calling [`new_unmanaged_vector`] from Go, which copies data into a newly created
+/// `UnmanagedVector`. Since Go created it, it owns it. The ownership is then passed to Rust via the
+/// mutable return value pointers. On the Rust side, the vector is destroyed using [`UnmanagedVector::consume`].
+///
+/// ## Examples
+///
+/// Transferring ownership from Rust to Go using return values of FFI calls:
+///
+/// ```
+/// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
+/// #[no_mangle]
+/// pub extern "C" fn save_wasm_to_cache(
+///     cache: *mut cache_t,
+///     wasm: ByteSliceView,
+///     error_msg: Option<&mut UnmanagedVector>,
+/// ) -> UnmanagedVector {
+///     # let checksum: Vec<u8> = Default::default();
+///     // some operation producing a `let checksum: Vec<u8>`
+///
+///     UnmanagedVector::new(Some(checksum)) // this unmanaged vector is owned by the caller
+/// }
+/// ```
+///
+/// Transferring ownership from Go to Rust using return value pointers:
+///
+/// ```rust
+/// # use cosmwasm_vm::{BackendResult, GasInfo};
+/// # use wasmvm::{DB, GoResult, U8SliceView, UnmanagedVector};
+/// fn db_read(db: &DB, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+///
+///     // Create a None vector in order to reserve memory for the result
+///     let mut result = UnmanagedVector::default();
+///
+///     // …
+///     # let mut error_msg = UnmanagedVector::default();
+///     # let mut used_gas = 0_u64;
+///
+///     let go_result: GoResult = (db.vtable.read_db)(
+///         db.state,
+///         db.gas_meter,
+///         &mut used_gas as *mut u64,
+///         U8SliceView::new(Some(key)),
+///         // Go will create a new UnmanagedVector and override this address
+///         &mut result as *mut UnmanagedVector,
+///         &mut error_msg as *mut UnmanagedVector,
+///     )
+///     .into();
+///
+///     // Some gas processing and error handling
+///     # let gas_info = GasInfo::free();
+///
+///     // We now own the new UnmanagedVector written to the pointer and must destroy it
+///     let value = result.consume();
+///     (Ok(value), gas_info)
+/// }
+/// ```
+///
+///
+/// If you want to mutate data, you need to comsume the vector and create a new one:
+///
+/// ```rust
+/// # use wasmvm::{UnmanagedVector};
+/// # let input = UnmanagedVector::new(Some(vec![0xAA]));
+/// let mut mutable: Vec<u8> = input.consume().unwrap_or_default();
+/// assert_eq!(mutable, vec![0xAA]);
+///
+/// // `input` is now gone and we cam do everything we want to `mutable`,
+/// // including operations that reallocate the underylying data.
+///
+/// mutable.push(0xBB);
+/// mutable.push(0xCC);
+///
+/// assert_eq!(mutable, vec![0xAA, 0xBB, 0xCC]);
+///
+/// let output = UnmanagedVector::new(Some(mutable));
+///
+/// // `output` is ready to be passed around
+/// ```
+#[repr(C)]
+pub struct UnmanagedVector {
+    /// True if and only if this is None. If this is true, the other fields must be ignored.
+    is_none: bool,
+    ptr: *mut u8,
+    len: usize,
+    cap: usize,
+}
+
+impl UnmanagedVector {
+    /// Consumes this optional vector for manual management.
+    /// This is a zero-copy operation.
+    pub fn new(source: Option<Vec<u8>>) -> Self {
+        match source {
+            Some(data) => {
+                let mut data = mem::ManuallyDrop::new(data);
+                Self {
+                    is_none: false,
+                    ptr: data.as_mut_ptr(),
+                    len: data.len(),
+                    cap: data.capacity(),
+                }
+            }
+            None => Self {
+                is_none: true,
+                ptr: std::ptr::null_mut::<u8>(),
+                len: 0,
+                cap: 0,
+            },
+        }
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.is_none
+    }
+
+    pub fn is_some(&self) -> bool {
+        !self.is_none()
+    }
+
+    /// Takes this UnmanagedVector and turns it into a regular, managed Rust vector.
+    /// Calling this on two copies of UnmanagedVector leads to double free crashes.
+    pub fn consume(self) -> Option<Vec<u8>> {
+        if self.is_none {
+            None
+        } else {
+            Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
+        }
+    }
+}
+
+impl Default for UnmanagedVector {
     fn default() -> Self {
-        Buffer {
+        Self {
+            is_none: true,
             ptr: std::ptr::null_mut::<u8>(),
             len: 0,
             cap: 0,
@@ -85,95 +251,93 @@ impl Default for Buffer {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn new_unmanaged_vector(
+    nil: bool,
+    ptr: *const u8,
+    length: usize,
+) -> UnmanagedVector {
+    if nil {
+        UnmanagedVector::new(None)
+    } else if length == 0 {
+        UnmanagedVector::new(Some(Vec::new()))
+    } else {
+        let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
+        let copy = Vec::from(external_memory);
+        UnmanagedVector::new(Some(copy))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
+    let _ = v.consume();
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn read_works() {
-        let buffer1 = Buffer::from_vec(vec![0xAA]);
-        assert_eq!(unsafe { buffer1.read() }, Some(&[0xAAu8] as &[u8]));
+    fn byte_slice_view_read_works() {
+        let data = vec![0xAA, 0xBB, 0xCC];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.read().unwrap(), &[0xAA, 0xBB, 0xCC]);
 
-        let buffer2 = Buffer::from_vec(vec![0xAA, 0xBB, 0xCC]);
-        assert_eq!(
-            unsafe { buffer2.read() },
-            Some(&[0xAAu8, 0xBBu8, 0xCCu8] as &[u8])
-        );
+        let data = vec![];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.read().unwrap(), &[] as &[u8]);
 
-        let empty: &[u8] = b"";
-
-        let buffer3 = Buffer::from_vec(Vec::new());
-        assert_eq!(unsafe { buffer3.read() }, Some(empty));
-
-        let buffer4 = Buffer::with_capacity(7);
-        assert_eq!(unsafe { buffer4.read() }, Some(empty));
-
-        // Cleanup
-        unsafe { buffer1.consume() };
-        unsafe { buffer2.consume() };
-        unsafe { buffer3.consume() };
-        unsafe { buffer4.consume() };
+        let view = ByteSliceView::nil();
+        assert_eq!(view.read().is_none(), true);
     }
 
     #[test]
-    fn with_capacity_works() {
-        let buffer = Buffer::with_capacity(7);
-        assert_eq!(buffer.ptr.is_null(), false);
-        assert_eq!(buffer.len, 0);
-        assert_eq!(buffer.cap, 7);
+    fn byte_slice_view_to_owned_works() {
+        let data = vec![0xAA, 0xBB, 0xCC];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.to_owned().unwrap(), vec![0xAA, 0xBB, 0xCC]);
 
-        // Cleanup
-        unsafe { buffer.consume() };
+        let data = vec![];
+        let view = ByteSliceView::new(&data);
+        assert_eq!(view.to_owned().unwrap(), Vec::<u8>::new());
+
+        let view = ByteSliceView::nil();
+        assert_eq!(view.to_owned().is_none(), true);
     }
 
     #[test]
-    fn from_vec_and_consume_work() {
-        let mut original: Vec<u8> = vec![0x00, 0xaa, 0x76];
-        original.reserve_exact(2);
-        let original_ptr = original.as_ptr();
-
-        let buffer = Buffer::from_vec(original);
-        assert_eq!(buffer.ptr.is_null(), false);
-        assert_eq!(buffer.len, 3);
-        assert_eq!(buffer.cap, 5);
-
-        let restored = unsafe { buffer.consume() };
-        assert_eq!(restored.as_ptr(), original_ptr);
-        assert_eq!(restored.len(), 3);
-        assert_eq!(restored.capacity(), 5);
-        assert_eq!(&restored, &[0x00, 0xaa, 0x76]);
+    fn unmanaged_vector_is_some_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.is_some(), true);
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.is_some(), true);
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.is_some(), false);
     }
 
     #[test]
-    fn from_vec_and_consume_work_for_zero_len() {
-        let mut original: Vec<u8> = vec![];
-        original.reserve_exact(2);
-        let original_ptr = original.as_ptr();
-
-        let buffer = Buffer::from_vec(original);
-        assert_eq!(buffer.ptr.is_null(), false);
-        assert_eq!(buffer.len, 0);
-        assert_eq!(buffer.cap, 2);
-
-        let restored = unsafe { buffer.consume() };
-        assert_eq!(restored.as_ptr(), original_ptr);
-        assert_eq!(restored.len(), 0);
-        assert_eq!(restored.capacity(), 2);
+    fn unmanaged_vector_is_none_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.is_none(), false);
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.is_none(), false);
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.is_none(), true);
     }
 
     #[test]
-    fn from_vec_and_consume_work_for_zero_capacity() {
-        let original: Vec<u8> = vec![];
-        let original_ptr = original.as_ptr();
+    fn unmanaged_vector_consume_works() {
+        let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
+        assert_eq!(x.consume(), Some(vec![0x11u8, 0x22]));
+        let x = UnmanagedVector::new(Some(vec![]));
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+        let x = UnmanagedVector::new(None);
+        assert_eq!(x.consume(), None);
+    }
 
-        let buffer = Buffer::from_vec(original);
-        // Skip ptr test here. Since Vec does not allocate memory when capacity is 0, this could be anything
-        assert_eq!(buffer.len, 0);
-        assert_eq!(buffer.cap, 0);
-
-        let restored = unsafe { buffer.consume() };
-        assert_eq!(restored.as_ptr(), original_ptr);
-        assert_eq!(restored.len(), 0);
-        assert_eq!(restored.capacity(), 0);
+    #[test]
+    fn unmanaged_vector_defaults_to_none() {
+        let x = UnmanagedVector::default();
+        assert_eq!(x.consume(), None);
     }
 }
