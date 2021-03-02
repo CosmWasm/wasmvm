@@ -157,10 +157,8 @@ dependencies = [
 [[package]]
 name = "clru"
 version = "0.4.0"
-source = "git+https://github.com/maurolacy/clru-rs?rev=88bb2300#88bb23002249c9b74cf99aaa858cfd0b15df6a36"
-dependencies = [
- "thiserror",
-]
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "591ff76ca0691bd91c1b0b5b987e5cf93b21ec810ad96665c5a569c60846dd93"
 
 [[package]]
 name = "const-oid"
@@ -176,27 +174,28 @@ checksum = "28b9d6de7f49e22cf97ad17fc4036ece69300032f45f78f30b4a4482cdc3f4a6"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=c4a583c#c4a583c60197b1a310abbe79c98a675610d5840b"
+version = "0.14.0-alpha1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-alpha1#ad0d61e6668fdc52697c07dd09a6694ee6ca141d"
 dependencies = [
  "digest",
  "ed25519-zebra",
  "k256",
+ "rand_core",
  "thiserror",
 ]
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=c4a583c#c4a583c60197b1a310abbe79c98a675610d5840b"
+version = "0.14.0-alpha1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-alpha1#ad0d61e6668fdc52697c07dd09a6694ee6ca141d"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=c4a583c#c4a583c60197b1a310abbe79c98a675610d5840b"
+version = "0.14.0-alpha1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-alpha1#ad0d61e6668fdc52697c07dd09a6694ee6ca141d"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -209,8 +208,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.13.2"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=c4a583c#c4a583c60197b1a310abbe79c98a675610d5840b"
+version = "0.14.0-alpha1"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-alpha1#ad0d61e6668fdc52697c07dd09a6694ee6ca141d"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
