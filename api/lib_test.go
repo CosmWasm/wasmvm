@@ -194,7 +194,7 @@ func TestInstantiate(t *testing.T) {
 	require.Equal(t, 0, len(result.Ok.Messages))
 }
 
-func TestHandle(t *testing.T) {
+func TestExecute(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createTestContract(t, cache)
@@ -226,10 +226,10 @@ func TestHandle(t *testing.T) {
 	env = MockEnvBin(t)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	res, cost, err = Handle(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x12168), cost)
+	assert.Equal(t, uint64(0x12165), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -249,7 +249,7 @@ func TestHandle(t *testing.T) {
 	assert.Equal(t, expectedData, result.Ok.Data)
 }
 
-func TestHandleCpuLoop(t *testing.T) {
+func TestExecuteCpuLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createTestContract(t, cache)
@@ -281,14 +281,14 @@ func TestHandleCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	res, cost, err = Handle(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
 	t.Logf("CPULoop Time (%d gas): %s\n", cost, diff)
 }
 
-func TestHandleStorageLoop(t *testing.T) {
+func TestExecuteStorageLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createTestContract(t, cache)
@@ -316,7 +316,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	res, cost, err = Handle(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff := time.Now().Sub(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
@@ -328,7 +328,7 @@ func TestHandleStorageLoop(t *testing.T) {
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
-func TestHandleUserErrorsInApiCalls(t *testing.T) {
+func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createTestContract(t, cache)
@@ -354,7 +354,7 @@ func TestHandleUserErrorsInApiCalls(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	failingApi := NewMockFailureAPI()
-	res, _, err = Handle(cache, checksum, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, _, err = Execute(cache, checksum, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 }
@@ -440,7 +440,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x12168)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x12165)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -449,7 +449,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x12168)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x12165)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes
@@ -483,8 +483,7 @@ func TestSudo(t *testing.T) {
 	igasMeter2 := GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
-	// TODO: update to steal_funds
-	msg = []byte(`{"StealFunds":{"recipient":"community-pool","amount":[{"amount":"700","denom":"gold"}]}}`)
+	msg = []byte(`{"steal_funds":{"recipient":"community-pool","amount":[{"amount":"700","denom":"gold"}]}}`)
 	res, _, err = Sudo(cache, checksum, env, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -539,7 +538,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	igasMeter2 := GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
-	res, _, err = Handle(cache, checksum, env, info, payloadMsg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, _, err = Execute(cache, checksum, env, info, payloadMsg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// make sure it blindly followed orders
@@ -674,7 +673,7 @@ func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress,
 	igasMeter := GasMeter(gasMeter)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, signer)
-	res, cost, err := Handle(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, cost, err := Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	assert.Equal(t, gasExpected, cost)
 

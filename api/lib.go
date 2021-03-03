@@ -153,7 +153,7 @@ func Instantiate(
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
-func Handle(
+func Execute(
 	cache Cache,
 	checksum []byte,
 	env []byte,
@@ -186,7 +186,7 @@ func Handle(
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.handle(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
