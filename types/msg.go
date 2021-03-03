@@ -17,10 +17,39 @@ type ContractResult struct {
 type Response struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
+	// Submessages are like Messages, but they guarantee a reply to the calling contract
+	// after their execution, and return both success and error rather than auto-failing on error
+	Submessages []SubMsg `json:"submessages"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
+}
+
+// EventAttributes must encode empty array as []
+type EventAttributes []EventAttribute
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (a EventAttributes) MarshalJSON() ([]byte, error) {
+	if len(a) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []EventAttribute = a
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (a *EventAttributes) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var raw []EventAttribute
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*a = raw
+	return nil
 }
 
 // EventAttribute
@@ -125,6 +154,7 @@ type StargateMsg struct {
 type WasmMsg struct {
 	Execute     *ExecuteMsg     `json:"execute,omitempty"`
 	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
+	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -145,12 +175,27 @@ type ExecuteMsg struct {
 	Send Coins `json:"send"`
 }
 
+// InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
+// This allows one contract to spawn "sub-contracts".
 type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Handle` on the above-defined contract
+	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Send Coins `json:"send"`
+}
+
+// MigrateMsg will migrate an existing contract from it's current wasm code (logic)
+// to another previously uploaded wasm code. It requires the calling contract to be
+// listed as "admin" of the contract to be migrated.
+type MigrateMsg struct {
+	// ContractAddr is the sdk.AccAddress of the target contract, to migrate.
+	ContractAddr string `json:"contract_addr"`
+	// NewCodeID is the reference to the wasm byte code for the new logic to migrate to
+	NewCodeID uint64 `json:"new_code_id"`
+	// Msg is assumed to be a json-encoded message, which will be passed directly
+	// as `userMsg` when calling `Migrate` on the above-defined contract
+	Msg []byte `json:"msg"`
 }

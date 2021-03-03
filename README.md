@@ -14,6 +14,8 @@ link with, and Go developers should just be able to import this directly.
 
 ## Supported Platforms
 
+Requires Rust 1.50+, Requires Go 1.15+
+
 Since this package includes a rust prebuilt dll, you cannot just import the go code,
 but need to be on a system that works with an existing dll. Currently this is Linux
 (tested on Ubuntu, Debian, and CentOS7) and MacOS. We have a build system for Windows,
