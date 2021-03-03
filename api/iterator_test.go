@@ -44,7 +44,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 		// push 17
 		var gasMeter2 GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
-		res, _, err = Handle(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
 	}

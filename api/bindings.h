@@ -274,18 +274,18 @@ AnalysisReport analyze_code(cache_t *cache, ByteSliceView checksum, UnmanagedVec
 
 void destroy_unmanaged_vector(UnmanagedVector v);
 
-UnmanagedVector handle(cache_t *cache,
-                       ByteSliceView checksum,
-                       ByteSliceView env,
-                       ByteSliceView info,
-                       ByteSliceView msg,
-                       DB db,
-                       GoApi api,
-                       GoQuerier querier,
-                       uint64_t gas_limit,
-                       bool print_debug,
-                       uint64_t *gas_used,
-                       UnmanagedVector *error_msg);
+UnmanagedVector execute(cache_t *cache,
+                        ByteSliceView checksum,
+                        ByteSliceView env,
+                        ByteSliceView info,
+                        ByteSliceView msg,
+                        DB db,
+                        GoApi api,
+                        GoQuerier querier,
+                        uint64_t gas_limit,
+                        bool print_debug,
+                        uint64_t *gas_used,
+                        UnmanagedVector *error_msg);
 
 UnmanagedVector ibc_channel_close(cache_t *cache,
                                   ByteSliceView checksum,
