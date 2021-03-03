@@ -4,7 +4,7 @@ jobs:
   # All checks on the codebase that can run in parallel to build_library
   sanity:
     docker:
-      - image: circleci/rust:1.49.0-buster
+      - image: circleci/rust:1.50.0-buster
     steps:
       - checkout
       - run:
@@ -39,7 +39,7 @@ jobs:
 
   build_library:
     docker:
-      - image: circleci/rust:1.49.0-buster
+      - image: circleci/rust:1.50.0-buster
     steps:
       - checkout
       - run:

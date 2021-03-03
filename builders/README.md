@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0005:**
+
+- Update Rust to 1.50.0.
+
 **Version 0004:**
 
 - Update Rust to 1.49.0.

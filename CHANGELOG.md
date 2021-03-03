@@ -18,6 +18,7 @@ and this project adheres to
 
 - Renamed the Go type `CodeID` to `Checksum` to clarify the difference between
   the numeric code ID assigned by x/wasm and the hash used to identify it in the cache.
+- Update required Rust version in build scripts to 1.50
 
 ## 0.13.0
 
