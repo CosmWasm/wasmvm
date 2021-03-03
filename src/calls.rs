@@ -6,8 +6,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use cosmwasm_vm::{
     call_handle_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
-    call_ibc_packet_timeout_raw, call_init_raw, call_migrate_raw, call_query_raw, Backend, Cache,
-    Checksum, Instance, InstanceOptions, VmResult,
+    call_ibc_packet_timeout_raw, call_init_raw, call_migrate_raw, call_query_raw, call_reply_raw,
+    call_system_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
 };
 
 use crate::api::GoApi;
@@ -107,6 +107,67 @@ pub extern "C" fn migrate(
 ) -> UnmanagedVector {
     call_2_args(
         call_migrate_raw,
+        cache,
+        checksum,
+        env,
+        msg,
+        db,
+        api,
+        querier,
+        gas_limit,
+        print_debug,
+        gas_used,
+        error_msg,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn sudo(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    gas_used: Option<&mut u64>,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    call_2_args(
+        // TODO: rename to sudo when change in CosmWasm
+        call_system_raw,
+        cache,
+        checksum,
+        env,
+        msg,
+        db,
+        api,
+        querier,
+        gas_limit,
+        print_debug,
+        gas_used,
+        error_msg,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn reply(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    env: ByteSliceView,
+    msg: ByteSliceView,
+    db: DB,
+    api: GoApi,
+    querier: GoQuerier,
+    gas_limit: u64,
+    print_debug: bool,
+    gas_used: Option<&mut u64>,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    call_2_args(
+        call_reply_raw,
         cache,
         checksum,
         env,
