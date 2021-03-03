@@ -34,6 +34,14 @@ func TestInitAndReleaseCache(t *testing.T) {
 	ReleaseCache(cache)
 }
 
+func TestInitCacheEmptyFeatures(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	cache, err := InitCache(tmpdir, "", TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	ReleaseCache(cache)
+}
+
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
