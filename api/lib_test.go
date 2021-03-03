@@ -554,12 +554,98 @@ func TestDispatchSubmessage(t *testing.T) {
 	assert.Equal(t, payload.Msg, dispatch.Msg)
 }
 
+func TestReplyAndQuery(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createReflectContract(t, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	msg := []byte(`{}`)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	var id uint64 = 1234
+	data := []byte("foobar")
+	events := types.Events{{
+		Type: "message",
+		Attributes: types.EventAttributes{{
+			Key:   "signer",
+			Value: "caller-addr",
+		}},
+	}}
+	reply := types.Reply{
+		ID: id,
+		Result: types.SubcallResult{
+			Ok: &types.SubcallResponse{
+				Events: events,
+				Data:   data,
+			},
+		},
+	}
+	replyBin, err := json.Marshal(reply)
+	require.NoError(t, err)
+
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter2 := GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	env = MockEnvBin(t)
+	res, _, err = Reply(cache, checksum, env, replyBin, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// now query the state to see if it stored the data properly
+	badQuery := []byte(`{"sub_call_result":{"id":7777}}`)
+	res, _, err = Query(cache, checksum, env, badQuery, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireQueryError(t, res)
+
+	query := []byte(`{"sub_call_result":{"id":1234}}`)
+	res, _, err = Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	qres := requireQueryOk(t, res)
+
+	var stored types.Reply
+	err = json.Unmarshal(qres, &stored)
+	require.NoError(t, err)
+	assert.Equal(t, id, stored.ID)
+	require.NotNil(t, stored.Result.Ok)
+	val := stored.Result.Ok
+	require.Equal(t, data, val.Data)
+	require.Equal(t, events, val.Events)
+}
+
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
+}
+
+func requireQueryError(t *testing.T, res []byte) {
+	var result types.QueryResponse
+	err := json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Empty(t, result.Ok)
+	require.NotEmpty(t, result.Err)
+}
+
+func requireQueryOk(t *testing.T, res []byte) []byte {
+	var result types.QueryResponse
+	err := json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Empty(t, result.Err)
+	require.NotEmpty(t, result.Ok)
+	return result.Ok
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {

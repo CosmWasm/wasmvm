@@ -274,7 +274,7 @@ func Reply(
 	cache Cache,
 	checksum []byte,
 	env []byte,
-	msg []byte,
+	reply []byte,
 	gasMeter *GasMeter,
 	store KVStore,
 	api *GoAPI,
@@ -286,8 +286,8 @@ func Reply(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	m := makeView(msg)
-	defer runtime.KeepAlive(msg)
+	r := makeView(reply)
+	defer runtime.KeepAlive(reply)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -300,7 +300,7 @@ func Reply(
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.reply(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
