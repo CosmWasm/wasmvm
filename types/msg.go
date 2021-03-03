@@ -185,6 +185,8 @@ type InstantiateMsg struct {
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Send Coins `json:"send"`
+	// Label is optional metadata to be stored with a contract instance.
+	Label string `json:"label"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)
