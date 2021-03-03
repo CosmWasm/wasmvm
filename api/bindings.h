@@ -418,6 +418,30 @@ UnmanagedVector query(cache_t *cache,
  */
 void release_cache(cache_t *cache);
 
+UnmanagedVector reply(cache_t *cache,
+                      ByteSliceView checksum,
+                      ByteSliceView env,
+                      ByteSliceView msg,
+                      DB db,
+                      GoApi api,
+                      GoQuerier querier,
+                      uint64_t gas_limit,
+                      bool print_debug,
+                      uint64_t *gas_used,
+                      UnmanagedVector *error_msg);
+
 UnmanagedVector save_wasm(cache_t *cache, ByteSliceView wasm, UnmanagedVector *error_msg);
+
+UnmanagedVector sudo(cache_t *cache,
+                     ByteSliceView checksum,
+                     ByteSliceView env,
+                     ByteSliceView msg,
+                     DB db,
+                     GoApi api,
+                     GoQuerier querier,
+                     uint64_t gas_limit,
+                     bool print_debug,
+                     uint64_t *gas_used,
+                     UnmanagedVector *error_msg);
 
 void unpin(cache_t *cache, ByteSliceView checksum, UnmanagedVector *error_msg);

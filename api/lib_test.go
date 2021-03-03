@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -457,12 +458,194 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "sue", attributes[1].Value)
 }
 
+func TestSudo(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createTestContract(t, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// call sudo with same store
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter2 := GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	env = MockEnvBin(t)
+	// TODO: update to steal_funds
+	msg = []byte(`{"StealFunds":{"recipient":"community-pool","amount":[{"amount":"700","denom":"gold"}]}}`)
+	res, _, err = Sudo(cache, checksum, env, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+
+	// make sure it blindly followed orders
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Equal(t, "", result.Err)
+	require.Equal(t, 1, len(result.Ok.Messages))
+	dispatch := result.Ok.Messages[0]
+	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
+	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
+	send := dispatch.Bank.Send
+	assert.Equal(t, "community-pool", send.ToAddress)
+	expectedPayout := types.Coins{types.NewCoin(700, "gold")}
+	assert.Equal(t, expectedPayout, send.Amount)
+}
+
+func TestDispatchSubmessage(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createReflectContract(t, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	msg := []byte(`{}`)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// dispatch a submessage
+	var id uint64 = 1234
+	payload := types.SubMsg{
+		ID: id,
+		Msg: types.CosmosMsg{Bank: &types.BankMsg{Send: &types.SendMsg{
+			ToAddress: "friend",
+			Amount:    types.Coins{types.NewCoin(1, "token")},
+		}}},
+	}
+	payloadBin, err := json.Marshal(payload)
+	require.NoError(t, err)
+	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_call":{"msgs":[%s]}}`, string(payloadBin)))
+
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter2 := GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	env = MockEnvBin(t)
+	res, _, err = Handle(cache, checksum, env, info, payloadMsg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+
+	// make sure it blindly followed orders
+	var result types.ContractResult
+	err = json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Equal(t, "", result.Err)
+	require.Equal(t, 0, len(result.Ok.Messages))
+	require.Equal(t, 1, len(result.Ok.Submessages))
+	dispatch := result.Ok.Submessages[0]
+	assert.Equal(t, id, dispatch.ID)
+	assert.Equal(t, payload.Msg, dispatch.Msg)
+}
+
+func TestReplyAndQuery(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createReflectContract(t, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	msg := []byte(`{}`)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	var id uint64 = 1234
+	data := []byte("foobar")
+	events := types.Events{{
+		Type: "message",
+		Attributes: types.EventAttributes{{
+			Key:   "signer",
+			Value: "caller-addr",
+		}},
+	}}
+	reply := types.Reply{
+		ID: id,
+		Result: types.SubcallResult{
+			Ok: &types.SubcallResponse{
+				Events: events,
+				Data:   data,
+			},
+		},
+	}
+	replyBin, err := json.Marshal(reply)
+	require.NoError(t, err)
+
+	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter2 := GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	env = MockEnvBin(t)
+	res, _, err = Reply(cache, checksum, env, replyBin, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// now query the state to see if it stored the data properly
+	badQuery := []byte(`{"sub_call_result":{"id":7777}}`)
+	res, _, err = Query(cache, checksum, env, badQuery, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireQueryError(t, res)
+
+	query := []byte(`{"sub_call_result":{"id":1234}}`)
+	res, _, err = Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	qres := requireQueryOk(t, res)
+
+	var stored types.Reply
+	err = json.Unmarshal(qres, &stored)
+	require.NoError(t, err)
+	assert.Equal(t, id, stored.ID)
+	require.NotNil(t, stored.Result.Ok)
+	val := stored.Result.Ok
+	require.Equal(t, data, val.Data)
+	require.Equal(t, events, val.Events)
+}
+
 func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
+}
+
+func requireQueryError(t *testing.T, res []byte) {
+	var result types.QueryResponse
+	err := json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Empty(t, result.Ok)
+	require.NotEmpty(t, result.Err)
+}
+
+func requireQueryOk(t *testing.T, res []byte) []byte {
+	var result types.QueryResponse
+	err := json.Unmarshal(res, &result)
+	require.NoError(t, err)
+	require.Empty(t, result.Err)
+	require.NotEmpty(t, result.Ok)
+	return result.Ok
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {

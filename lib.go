@@ -254,6 +254,80 @@ func (vm *VM) Migrate(
 	return resp.Ok, gasUsed, nil
 }
 
+// Sudo allows native Go modules to make priviledged (sudo) calls on the contract.
+// The contract can expose entry points that cannot be triggered by any transaction, but only via
+// native Go modules, and delegate the access control to the system.
+//
+// These work much like Migrate (same scenario) but allows custom apps to extend the priviledged entry points
+// without forking cosmwasm-vm.
+func (vm *VM) Sudo(
+	checksum Checksum,
+	env types.Env,
+	sudoMsg []byte,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.Response, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.ContractResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
+// Reply allows the native Go wasm modules to make a priviledged call to return the result
+// of executing a SubMsg.
+//
+// These work much like Sudo (same scenario) but focuses on one specific case (and one message type)
+func (vm *VM) Reply(
+	checksum Checksum,
+	env types.Env,
+	reply types.Reply,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+) (*types.Response, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	replyBin, err := json.Marshal(reply)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasUsed, err := api.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+
+	var resp types.ContractResult
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return nil, gasUsed, err
+	}
+	if resp.Err != "" {
+		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
+	}
+	return resp.Ok, gasUsed, nil
+}
+
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
 // during the handshake pahse
 func (vm *VM) IBCChannelOpen(
