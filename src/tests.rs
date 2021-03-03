@@ -6,7 +6,7 @@ use tempfile::TempDir;
 use cosmwasm_std::{coins, HumanAddr};
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
 use cosmwasm_vm::{
-    call_handle_raw, call_init_raw, features_from_csv, to_vec, Cache, CacheOptions,
+    call_execute_raw, call_init_raw, features_from_csv, to_vec, Cache, CacheOptions,
     InstanceOptions, Size,
 };
 
@@ -71,7 +71,7 @@ fn handle_cpu_loop_with_cache() {
     // handle
     let mut instance = cache.get_instance(&checksum, backend, options).unwrap();
     let raw_msg = r#"{"cpu_loop":{}}"#;
-    let res = call_handle_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
+    let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
     let gas_left = instance.get_gas_left();
     let gas_used = options.gas_limit - gas_left;
     println!("Handle gas left: {}, used: {}", gas_left, gas_used);
@@ -100,7 +100,7 @@ fn handle_cpu_loop_no_cache() {
 
     // handle
     let raw_msg = r#"{"cpu_loop":{}}"#;
-    let res = call_handle_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
+    let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
     let gas_left = instance.get_gas_left();
     let gas_used = gas_limit - gas_left;
     println!("Handle gas left: {}, used: {}", gas_left, gas_used);

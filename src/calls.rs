@@ -136,7 +136,6 @@ pub extern "C" fn sudo(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
-        // TODO: rename to sudo when change in CosmWasm
         call_sudo_raw,
         cache,
         checksum,
