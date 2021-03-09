@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  # All checks on the codebase that can run in parallel to build_library
+  # All checks on the codebase that can run in parallel to build_shared_library
   sanity:
     docker:
       - image: circleci/rust:1.50.0-buster
@@ -37,7 +37,7 @@ jobs:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
 
-  build_library:
+  build_shared_library:
     docker:
       - image: circleci/rust:1.50.0-buster
     steps:
@@ -166,13 +166,16 @@ workflows:
   build_and_test:
     jobs:
       - sanity
-      - build_library
+      - build_shared_library:
+          filters: # required since other jobs with tag filters require this one
+            tags:
+              only: /.*/
       - test:
           requires:
-            - build_library
+            - build_shared_library
       - build_static_lib:
           requires:
-            - build_library
+            - build_shared_library
           filters:
             # tags and branches are OR combined
             tags:
