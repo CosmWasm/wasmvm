@@ -53,7 +53,7 @@ fn handle_cpu_loop_with_cache() {
     // store code
     let checksum = cache.save_wasm(CONTRACT).unwrap();
 
-    // init
+    // instantiate
     let (instantiate_msg, creator) = make_instantiate_msg();
     let env = mock_env();
     let info = mock_info(creator, &coins(1000, "cosm"));
@@ -68,7 +68,7 @@ fn handle_cpu_loop_with_cache() {
     assert!(res.is_ok());
     let backend = instance.recycle().unwrap();
 
-    // handle
+    // execute
     let mut instance = cache.get_instance(&checksum, backend, options).unwrap();
     let raw_msg = r#"{"cpu_loop":{}}"#;
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
@@ -85,7 +85,7 @@ fn handle_cpu_loop_no_cache() {
     let gas_limit = 2_000_000u64;
     let mut instance = mock_instance_with_gas_limit(CONTRACT, gas_limit);
 
-    // init
+    // instantiate
     let (instantiate_msg, creator) = make_instantiate_msg();
     let env = mock_env();
     let info = mock_info(creator, &coins(1000, "cosm"));
@@ -98,7 +98,7 @@ fn handle_cpu_loop_no_cache() {
     println!("Init gas left: {}, used: {}", gas_left, gas_used);
     assert!(res.is_ok());
 
-    // handle
+    // execute
     let raw_msg = r#"{"cpu_loop":{}}"#;
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg.as_bytes());
     let gas_left = instance.get_gas_left();

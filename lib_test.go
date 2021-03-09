@@ -64,7 +64,7 @@ func TestHappyPath(t *testing.T) {
 	balance := types.Coins{types.NewCoin(250, "ATOM")}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
-	// init
+	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -72,7 +72,7 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
-	// handle
+	// execute
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()

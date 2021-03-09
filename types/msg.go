@@ -6,14 +6,14 @@ import (
 
 //------- Results / Msgs -------------
 
-// ContractResult is the raw response from the init/handle/migrate calls.
+// ContractResult is the raw response from the instantiate/execute/migrate calls.
 // This is mirrors Rust's ContractResult<Response>.
 type ContractResult struct {
 	Ok  *Response `json:"ok,omitempty"`
 	Err string    `json:"error,omitempty"`
 }
 
-// Response defines the return value on a successful init/handle/migrate
+// Response defines the return value on a successful instantiate/execute/migrate
 type Response struct {
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`

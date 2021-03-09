@@ -479,9 +479,9 @@ type VmFn3Args = fn(
     arg3: &[u8],
 ) -> VmResult<Vec<u8>>;
 
-// this wraps all error handling and ffi for handle, init, and migrate.
+// This wraps all error handling and ffi for instantiate, execute and migrate
 // (and anything else that takes env, info and msg arguments).
-// the only difference is which low-level function they dispatch to.
+// The only difference is which low-level function they dispatch to.
 fn call_3_args(
     vm_fn: VmFn3Args,
     cache: *mut cache_t,

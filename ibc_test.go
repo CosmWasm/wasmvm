@@ -26,14 +26,20 @@ func TestIBC(t *testing.T) {
 	require.Equal(t, WasmCode(wasm), code)
 }
 
-type IBCInitMsg struct {
+// IBCInstantiateMsg is the Go version of
+// https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/contracts/ibc-reflect/src/msg.rs#L9-L11
+type IBCInstantiateMsg struct {
 	ReflectCodeID uint64 `json:"reflect_code_id"`
 }
 
-type IBCHandleMsg struct {
+// IBCExecuteMsg is the Go version of
+// https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/contracts/ibc-reflect/src/msg.rs#L15
+type IBCExecuteMsg struct {
 	InitCallback InitCallback `json:"init_callback"`
 }
 
+// InitCallback is the Go version of
+// https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/contracts/ibc-reflect/src/msg.rs#L17-L22
 type InitCallback struct {
 	ID           string `json:"id"`
 	ContractAddr string `json:"contract_addr"`
@@ -88,10 +94,10 @@ func TestIBCHandshake(t *testing.T) {
 	balance := types.Coins{}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
-	// init
+	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
-	msg := IBCInitMsg{
+	msg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
 	ires, _, err := vm.Instantiate(checksum, env, info, toBytes(t, msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
@@ -149,10 +155,10 @@ func TestIBCPacketDispatch(t *testing.T) {
 	balance := types.Coins{}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
-	// init
+	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
-	initMsg := IBCInitMsg{
+	initMsg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
 	_, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
@@ -177,7 +183,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// mock reflect init callback (to store address)
 	gasMeter4 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter4)
-	handleMsg := IBCHandleMsg{
+	handleMsg := IBCExecuteMsg{
 		InitCallback: InitCallback{
 			ID:           CHANNEL_ID,
 			ContractAddr: REFLECT_ADDR,
