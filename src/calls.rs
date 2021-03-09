@@ -6,8 +6,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
-    call_ibc_packet_timeout_raw, call_init_raw, call_migrate_raw, call_query_raw, call_reply_raw,
-    call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
+    call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
+    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
 };
 
 use crate::api::GoApi;
@@ -43,7 +43,7 @@ pub extern "C" fn instantiate(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_3_args(
-        call_init_raw,
+        call_instantiate_raw,
         cache,
         checksum,
         env,
