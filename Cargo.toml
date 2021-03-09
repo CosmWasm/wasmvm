@@ -1,6 +1,7 @@
 [package]
 name = "wasmvm"
-version = "0.14.0-dev"
+version = "0.0.0"
+publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
 description = "Go bindings for cosmwasm contracts"

@@ -1513,7 +1513,7 @@ checksum = "87cc2fe6350834b4e528ba0901e7aa405d78b89dc1fa3145359eb4de0e323fcf"
 
 [[package]]
 name = "wasmvm"
-version = "0.14.0-dev"
+version = "0.0.0"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
