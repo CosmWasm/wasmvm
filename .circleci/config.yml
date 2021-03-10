@@ -101,7 +101,7 @@ jobs:
 
   test_alpine_build:
     machine:
-      image: ubuntu-1604:202010-01
+      image: ubuntu-2004:202101-01
     steps:
       - checkout
       - run: make test-alpine
@@ -111,7 +111,7 @@ jobs:
 
   deploy_to_git:
     machine:
-      image: ubuntu-1604:202010-01
+      image: ubuntu-2004:202101-01
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -145,7 +145,7 @@ jobs:
 
   build_static_lib:
     machine:
-      image: ubuntu-1604:202010-01
+      image: ubuntu-2004:202101-01
     steps:
       - checkout
       - run:
