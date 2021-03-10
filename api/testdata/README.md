@@ -1,3 +1,3 @@
-Current contracts manually generated from commit `5be73f97`
+Current contracts manually generated from commit `v0.14.0-beta1`
 of https://github.com/CosmWasm/cosmwasm. Using
-[these instructions](https://github.com/CosmWasm/cosmwasm/blob/5be73f97/contracts/README.md#optimized-builds).
+[these instructions](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/contracts/README.md#optimized-builds).

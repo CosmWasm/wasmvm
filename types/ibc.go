@@ -80,8 +80,12 @@ type IBCBasicResult struct {
 	Err string            `json:"error,omitempty"`
 }
 
-// IBCBasicResponse defines the return value on a successful processing
+// IBCBasicResponse defines the return value on a successful processing.
+// This is the counterpart of [IbcBasicResponse](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L194-L216).
 type IBCBasicResponse struct {
+	// Submessages are like Messages, but they guarantee a reply to the calling contract
+	// after their execution, and return both success and error rather than auto-failing on error
+	Submessages []SubMsg `json:"submessages"`
 	// Messages comes directly from the contract and is it's request for action
 	Messages []CosmosMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
@@ -105,11 +109,15 @@ type IBCReceiveResult struct {
 // Where the Acknowledgement bytes contain an encoded error message to be returned to
 // the calling chain. (Returning IBCReceiveResult::Err will abort processing of this packet
 // and not inform the calling chain).
+// This is the counterpart of (IbcReceiveResponse)(https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L231-L254).
 type IBCReceiveResponse struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
 	// binary encoded data to be returned to calling chain as the acknowledgement
 	Acknowledgement []byte `json:"acknowledgement"`
+	// Submessages are like Messages, but they guarantee a reply to the calling contract
+	// after their execution, and return both success and error rather than auto-failing on error
+	Submessages []SubMsg `json:"submessages"`
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
 }
