@@ -13,13 +13,14 @@ type ContractResult struct {
 	Err string    `json:"error,omitempty"`
 }
 
-// Response defines the return value on a successful instantiate/execute/migrate
+// Response defines the return value on a successful instantiate/execute/migrate.
+// This is the counterpart of [Response](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/results/response.rs#L73-L88)
 type Response struct {
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
 	// Submessages are like Messages, but they guarantee a reply to the calling contract
 	// after their execution, and return both success and error rather than auto-failing on error
 	Submessages []SubMsg `json:"submessages"`
+	// Messages comes directly from the contract and is it's request for action
+	Messages []CosmosMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
