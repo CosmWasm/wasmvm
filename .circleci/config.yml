@@ -16,6 +16,9 @@ jobs:
       - run:
           name: Add Rust components
           command: rustup component add clippy rustfmt
+      - restore_cache:
+          keys:
+            - cargocache-v2-sanity-rust:1.50.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Check formatting
           command: cargo fmt -- --check
@@ -36,6 +39,16 @@ jobs:
       - run:
           name: Run shellcheck
           command: find . -name "*.sh" -exec shellcheck {} +
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+            - target/release/.fingerprint
+            - target/release/build
+            - target/release/deps
+          key: cargocache-v2-sanity-rust:1.50.0-{{ checksum "Cargo.lock" }}
 
   build_shared_library:
     docker:
@@ -45,6 +58,9 @@ jobs:
       - run:
           name: Show version information
           command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cargocache-v2-build_shared_library-rust:1.50.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Create release build of libwasmvm
           command: make build-rust
@@ -52,6 +68,16 @@ jobs:
           root: ./api
           paths:
             - libwasmvm.so
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+            - target/release/.fingerprint
+            - target/release/build
+            - target/release/deps
+          key: cargocache-v2-build_shared_library-rust:1.50.0-{{ checksum "Cargo.lock" }}
 
   test:
     working_directory: /go/src/github.com/CosmWasm/wasmvm
