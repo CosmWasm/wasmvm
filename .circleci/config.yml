@@ -11,7 +11,18 @@ jobs:
           name: Install shellcheck
           command: sudo apt install shellcheck
       - run:
-          name: Show version information
+          name: Install Go
+          command: |
+            cd /tmp
+            wget https://golang.org/dl/go1.15.8.linux-amd64.tar.gz
+            rm -rf /tmp/go
+            tar -C /tmp -xzf go*linux-amd64.tar.gz
+            export PATH=$PATH:/tmp/go/bin
+      - run:
+          name: Show Go version information
+          command: /tmp/go/bin/go version
+      - run:
+          name: Show Rust version information
           command: rustc --version; cargo --version; rustup --version
       - run:
           name: Add Rust components
@@ -20,7 +31,18 @@ jobs:
           keys:
             - cargocache-v2-sanity-rust:1.50.0-{{ checksum "Cargo.lock" }}
       - run:
-          name: Check formatting
+          name: Check Go formatting
+          command: |
+            /tmp/go/bin/go fmt ./...
+
+            CHANGES_IN_REPO=$(git status --porcelain)
+            if [[ -n "$CHANGES_IN_REPO" ]]; then
+              echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+              git status && git --no-pager diff
+              exit 1
+            fi
+      - run:
+          name: Check Rust formatting
           command: cargo fmt -- --check
       - run:
           name: Run linter
