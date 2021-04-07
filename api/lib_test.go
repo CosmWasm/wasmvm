@@ -537,6 +537,7 @@ func TestDispatchSubmessage(t *testing.T) {
 			ToAddress: "friend",
 			Amount:    types.Coins{types.NewCoin(1, "token")},
 		}}},
+		ReplyOn: types.ReplyAlways,
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
@@ -559,6 +560,8 @@ func TestDispatchSubmessage(t *testing.T) {
 	dispatch := result.Ok.Submessages[0]
 	assert.Equal(t, id, dispatch.ID)
 	assert.Equal(t, payload.Msg, dispatch.Msg)
+	assert.Nil(t, dispatch.GasLimit)
+	assert.Equal(t, payload.ReplyOn, dispatch.ReplyOn)
 }
 
 func TestReplyAndQuery(t *testing.T) {

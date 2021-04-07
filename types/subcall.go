@@ -2,12 +2,21 @@ package types
 
 import "encoding/json"
 
+type replyOn string
+
+const (
+	ReplyAlways  replyOn = "always"
+	ReplySuccess replyOn = "success"
+	ReplyError   replyOn = "error"
+)
+
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
 // limiting the gas usage (GasLimit)
 type SubMsg struct {
 	ID       uint64    `json:"id"`
 	Msg      CosmosMsg `json:"msg"`
 	GasLimit *uint64   `json:"gas_limit,omitempty"`
+	ReplyOn  replyOn   `json:"reply_on"`
 }
 
 type Reply struct {
