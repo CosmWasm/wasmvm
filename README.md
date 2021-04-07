@@ -27,9 +27,9 @@ but it is [not supported][wasmer_support] by the Wasmer Singlepass backend which
 
 |               | [x86]               | [x86_64]            | [ARM32]              | [ARM64]              |
 | ------------- | ------------------- | ------------------- | -------------------- | -------------------- |
-| Linux (glibc) | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
-| Linux (muslc) | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
-| macOS         | 🤷‍                 | ✅                  | 🤷‍ <sub>[#53]</sub> | 🤷‍ <sub>[#53]</sub> |
+| Linux (glibc) | ❌‍                 | ✅                  | ❌‍ <sub>[#53]</sub> | ❌‍ <sub>[#53]</sub> |
+| Linux (muslc) | ❌‍                 | ✅                  | ❌‍ <sub>[#53]</sub> | ❌‍ <sub>[#53]</sub> |
+| macOS         | ❌‍                 | ✅                  | ❌‍ <sub>[#53]</sub> | ❌‍ <sub>[#53]</sub> |
 | Windows       | ❌ <sub>[#28]</sub> | ❌ <sub>[#28]</sub> | ❌ <sub>[#28]</sub>  | ❌ <sub>[#28]</sub>  |
 
 [x86]: https://en.wikipedia.org/wiki/X86
@@ -44,6 +44,9 @@ but it is [not supported][wasmer_support] by the Wasmer Singlepass backend which
 ❌ Blocked by external dependency.
 
 🤷‍ Not supported because nobody cares so far. Feel free to look into it.
+
+This is all blocked on [wasmer support for singlepass backend](https://docs.wasmer.io/ecosystem/wasmer/wasmer-features#compiler-support-by-chipset).
+We can only move on these wasmvm issues when the upstream has support.
 
 ## Docs
 
