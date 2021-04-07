@@ -169,8 +169,8 @@ checksum = "9f6b64db6932c7e49332728e3a6bd82c6b7e16016607d20923b537c3bc4c0d5f"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.14.0-beta1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta1#7f3f838b71931fac35fc2456d532b5a75710b2f3"
+version = "0.14.0-beta2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta2#345fada8528a35c28580ba0b61ccabc4941b8684"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -181,16 +181,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.14.0-beta1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta1#7f3f838b71931fac35fc2456d532b5a75710b2f3"
+version = "0.14.0-beta2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta2#345fada8528a35c28580ba0b61ccabc4941b8684"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.14.0-beta1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta1#7f3f838b71931fac35fc2456d532b5a75710b2f3"
+version = "0.14.0-beta2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta2#345fada8528a35c28580ba0b61ccabc4941b8684"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -203,8 +203,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.14.0-beta1"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta1#7f3f838b71931fac35fc2456d532b5a75710b2f3"
+version = "0.14.0-beta2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.14.0-beta2#345fada8528a35c28580ba0b61ccabc4941b8684"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -420,6 +420,12 @@ checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 dependencies = [
  "generic-array",
 ]
+
+[[package]]
+name = "dyn-clone"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee2626afccd7561a06cf1367e2950c4718ea04565e20fb5029b6c7d8ad09abcf"
 
 [[package]]
 name = "dynasm"
@@ -1029,10 +1035,11 @@ checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "schemars"
-version = "0.7.6"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be77ed66abed6954aabf6a3e31a84706bedbf93750d267e92ef4a6d90bbd6a61"
+checksum = "bc6ab463ae35acccb5cba66c0084c985257b797d288b6050cc2f6ac1b266cb78"
 dependencies = [
+ "dyn-clone",
  "schemars_derive",
  "serde",
  "serde_json",
@@ -1040,9 +1047,9 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "0.7.6"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11af7a475c9ee266cfaa9e303a47c830ebe072bf3101ab907a7b7b9d816fa01d"
+checksum = "902fdfbcf871ae8f653bddf4b2c05905ddaabc08f69d32a915787e3be0d31356"
 dependencies = [
  "proc-macro2",
  "quote",

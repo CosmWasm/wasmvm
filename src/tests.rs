@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 
-use cosmwasm_std::{coins, HumanAddr};
+use cosmwasm_std::coins;
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
 use cosmwasm_vm::{
     call_execute_raw, call_instantiate_raw, features_from_csv, to_vec, Cache, CacheOptions,
@@ -17,14 +17,14 @@ const MEMORY_LIMIT: Size = Size::mebi(32);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InstantiateMsg {
-    pub verifier: HumanAddr,
-    pub beneficiary: HumanAddr,
+    pub verifier: String,
+    pub beneficiary: String,
 }
 
-fn make_instantiate_msg() -> (InstantiateMsg, HumanAddr) {
-    let verifier = HumanAddr::from("verifies");
-    let beneficiary = HumanAddr::from("benefits");
-    let creator = HumanAddr::from("creator");
+fn make_instantiate_msg() -> (InstantiateMsg, String) {
+    let verifier = String::from("verifies");
+    let beneficiary = String::from("benefits");
+    let creator = String::from("creator");
     (
         InstantiateMsg {
             verifier: verifier.clone(),
@@ -43,7 +43,7 @@ fn handle_cpu_loop_with_cache() {
         memory_cache_size: MEMORY_CACHE_SIZE,
         instance_memory_limit: MEMORY_LIMIT,
     };
-    let mut cache = unsafe { Cache::new(options) }.unwrap();
+    let cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: 2_000_000,
@@ -56,7 +56,7 @@ fn handle_cpu_loop_with_cache() {
     // instantiate
     let (instantiate_msg, creator) = make_instantiate_msg();
     let env = mock_env();
-    let info = mock_info(creator, &coins(1000, "cosm"));
+    let info = mock_info(&creator, &coins(1000, "cosm"));
     let mut instance = cache.get_instance(&checksum, backend, options).unwrap();
     let raw_msg = to_vec(&instantiate_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
@@ -88,7 +88,7 @@ fn handle_cpu_loop_no_cache() {
     // instantiate
     let (instantiate_msg, creator) = make_instantiate_msg();
     let env = mock_env();
-    let info = mock_info(creator, &coins(1000, "cosm"));
+    let info = mock_info(&creator, &coins(1000, "cosm"));
     let raw_msg = to_vec(&instantiate_msg).unwrap();
     let raw_env = to_vec(&env).unwrap();
     let raw_info = to_vec(&info).unwrap();
