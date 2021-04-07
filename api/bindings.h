@@ -124,8 +124,8 @@ typedef struct ByteSliceView {
  *
  * ```rust
  * # use cosmwasm_vm::{BackendResult, GasInfo};
- * # use wasmvm::{DB, GoResult, U8SliceView, UnmanagedVector};
- * fn db_read(db: &DB, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+ * # use wasmvm::{Db, GoResult, U8SliceView, UnmanagedVector};
+ * fn db_read(db: &Db, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
  *
  *     // Create a None vector in order to reserve memory for the result
  *     let mut result = UnmanagedVector::default();
