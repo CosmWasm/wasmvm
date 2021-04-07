@@ -4,18 +4,18 @@ use std::convert::TryInto;
 use cosmwasm_std::{Order, Pair};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
-use crate::db::DB;
+use crate::db::Db;
 use crate::error::GoResult;
 use crate::iterator::GoIter;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 pub struct GoStorage {
-    db: DB,
+    db: Db,
     iterators: HashMap<u32, GoIter>,
 }
 
 impl GoStorage {
-    pub fn new(db: DB) -> Self {
+    pub fn new(db: Db) -> Self {
         GoStorage {
             db,
             iterators: HashMap::new(),
