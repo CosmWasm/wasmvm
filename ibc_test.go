@@ -234,7 +234,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// assert app-level failure
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
-	require.Equal(t, "invalid packet: cosmwasm_std::addresses::HumanAddr not found", ack2.Err)
+	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
 }
 
 func TestAnalyzeCode(t *testing.T) {

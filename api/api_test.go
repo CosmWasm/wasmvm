@@ -43,7 +43,7 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	// ensure the error message is what we expect
 	require.Nil(t, result.Ok)
 	// with this error
-	require.Equal(t, "Generic error: canonicalize_address errored: human encoding too long", result.Err)
+	require.Equal(t, "Generic error: addr_validate errored: human encoding too long", result.Err)
 }
 
 func TestHumanAddressFailure(t *testing.T) {
@@ -70,6 +70,7 @@ func TestHumanAddressFailure(t *testing.T) {
 	_, _, err = Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
+	// TODO: find new call to trigger this
 	// call query which will call canonicalize address
 	badApi := NewMockFailureAPI()
 	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
