@@ -10,7 +10,7 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
-func TestCanonicalAddressFailure(t *testing.T) {
+func TestValidateAddressFailure(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
@@ -44,46 +44,4 @@ func TestCanonicalAddressFailure(t *testing.T) {
 	require.Nil(t, result.Ok)
 	// with this error
 	require.Equal(t, "Generic error: addr_validate errored: human encoding too long", result.Err)
-}
-
-func TestHumanAddressFailure(t *testing.T) {
-	cache, cleanup := withCache(t)
-	defer cleanup()
-
-	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
-	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
-	require.NoError(t, err)
-
-	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	// instantiate it with this store
-	store := NewLookup(gasMeter)
-	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
-	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
-
-	// instantiate it normally
-	msg := []byte(`{"verifier": "short", "beneficiary": "bob"}`)
-	igasMeter := GasMeter(gasMeter)
-	_, _, err = Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	require.NoError(t, err)
-
-	// TODO: find new call to trigger this
-	// call query which will call canonicalize address
-	badApi := NewMockFailureAPI()
-	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	query := []byte(`{"verifier":{}}`)
-	igasMeter3 := GasMeter(gasMeter3)
-	res, _, err := Query(cache, checksum, env, query, &igasMeter3, store, badApi, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	require.NoError(t, err)
-	var resp types.QueryResponse
-	err = json.Unmarshal(res, &resp)
-	require.NoError(t, err)
-
-	// ensure the error message is what we expect (system -ok, stderr -generic)
-	require.Nil(t, resp.Ok)
-	// with this error
-	require.Equal(t, "Generic error: humanize_address errored: mock failure - human_address", resp.Err)
 }
