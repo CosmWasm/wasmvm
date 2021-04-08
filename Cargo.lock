@@ -1544,6 +1544,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-vm",
  "errno",
+ "hex",
  "serde",
  "serde_json",
  "tempfile",

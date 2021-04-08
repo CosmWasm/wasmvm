@@ -38,18 +38,6 @@ pub struct GoApi {
     pub vtable: GoApi_vtable,
 }
 
-// Debug helper - where to put this?
-pub struct HexBytes<'a>(&'a [u8]);
-
-impl<'a> std::fmt::Display for HexBytes<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for byte in self.0 {
-            write!(f, "{:02X}", byte)?;
-        }
-        Ok(())
-    }
-}
-
 // We must declare that these are safe to Send, to use in wasm.
 // The known go caller passes in immutable function pointers, but this is indeed
 // unsafe for possible other callers.
@@ -101,7 +89,12 @@ impl BackendApi for GoApi {
         let gas_info = GasInfo::with_cost(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
-        let default = || format!("Failed to humanize the address: {}", HexBytes(canonical));
+        let default = || {
+            format!(
+                "Failed to humanize the address: {}",
+                hex::encode_upper(canonical)
+            )
+        };
         unsafe {
             if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
