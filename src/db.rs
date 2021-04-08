@@ -11,7 +11,7 @@ pub struct db_t {
 // These functions should return GoResult but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoResult manually
 #[repr(C)]
-pub struct DB_vtable {
+pub struct Db_vtable {
     pub read_db: extern "C" fn(
         *mut db_t,
         *mut gas_meter_t,
@@ -51,8 +51,8 @@ pub struct DB_vtable {
 }
 
 #[repr(C)]
-pub struct DB {
+pub struct Db {
     pub gas_meter: *mut gas_meter_t,
     pub state: *mut db_t,
-    pub vtable: DB_vtable,
+    pub vtable: Db_vtable,
 }

@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test
 
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0005
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0006
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 

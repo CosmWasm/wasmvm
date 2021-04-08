@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use cosmwasm_std::{Order, KV};
+use cosmwasm_std::{Order, Pair};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
-use crate::db::DB;
+use crate::db::Db;
 use crate::error::GoResult;
 use crate::iterator::GoIter;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 pub struct GoStorage {
-    db: DB,
+    db: Db,
     iterators: HashMap<u32, GoIter>,
 }
 
 impl GoStorage {
-    pub fn new(db: DB) -> Self {
+    pub fn new(db: Db) -> Self {
         GoStorage {
             db,
             iterators: HashMap::new(),
@@ -101,7 +101,7 @@ impl Storage for GoStorage {
         (Ok(next_id), gas_info)
     }
 
-    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<KV>> {
+    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Pair>> {
         let iterator = match self.iterators.get_mut(&iterator_id) {
             Some(i) => i,
             None => {

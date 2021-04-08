@@ -1,4 +1,3 @@
-use cosmwasm_std::{CanonicalAddr, HumanAddr};
 use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
@@ -47,7 +46,7 @@ pub struct GoApi {
 unsafe impl Send for GoApi {}
 
 impl BackendApi for GoApi {
-    fn canonical_address(&self, human: &HumanAddr) -> BackendResult<CanonicalAddr> {
+    fn canonical_address(&self, human: &str) -> BackendResult<Vec<u8>> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -71,18 +70,17 @@ impl BackendApi for GoApi {
 
         let result = output
             .consume()
-            .ok_or_else(|| BackendError::unknown("Unset output"))
-            .map(CanonicalAddr::from);
+            .ok_or_else(|| BackendError::unknown("Unset output"));
         (result, gas_info)
     }
 
-    fn human_address(&self, canonical: &CanonicalAddr) -> BackendResult<HumanAddr> {
+    fn human_address(&self, canonical: &[u8]) -> BackendResult<String> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.humanize_address)(
             self.state,
-            U8SliceView::new(Some(canonical.as_slice())),
+            U8SliceView::new(Some(canonical)),
             &mut output as *mut UnmanagedVector,
             &mut error_msg as *mut UnmanagedVector,
             &mut used_gas as *mut u64,
@@ -91,7 +89,12 @@ impl BackendApi for GoApi {
         let gas_info = GasInfo::with_cost(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
-        let default = || format!("Failed to humanize the address: {}", canonical);
+        let default = || {
+            format!(
+                "Failed to humanize the address: {}",
+                hex::encode_upper(canonical)
+            )
+        };
         unsafe {
             if let Err(err) = go_result.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
@@ -101,11 +104,7 @@ impl BackendApi for GoApi {
         let result = output
             .consume()
             .ok_or_else(|| BackendError::unknown("Unset output"))
-            .and_then(|human_data| {
-                String::from_utf8(human_data)
-                    .map_err(BackendError::from)
-                    .map(HumanAddr)
-            });
+            .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
         (result, gas_info)
     }
 }
