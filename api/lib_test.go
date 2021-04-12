@@ -237,7 +237,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0xf375), cost)
+	assert.Equal(t, uint64(0xf37d), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -448,7 +448,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xf301)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xf309)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -457,7 +457,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xf33b)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xf343)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes

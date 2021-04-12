@@ -72,6 +72,7 @@ type CosmosMsg struct {
 
 type BankMsg struct {
 	Send *SendMsg `json:"send,omitempty"`
+	Burn *BurnMsg `json:"burn,omitempty"`
 }
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
@@ -79,6 +80,13 @@ type BankMsg struct {
 type SendMsg struct {
 	ToAddress string `json:"to_address"`
 	Amount    Coins  `json:"amount"`
+}
+
+// BurnMsg will burn the given coins from the contract's account.
+// There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper.
+// Important if a contract controls significant token supply that must be retired.
+type BurnMsg struct {
+	Amount Coins `json:"amount"`
 }
 
 type IBCMsg struct {
