@@ -27,8 +27,8 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 pub extern "C" fn init_cache(
     data_dir: ByteSliceView,
     supported_features: ByteSliceView,
-    cache_size: u32,
-    instance_memory_limit: u32,
+    cache_size: u32,            // in MiB
+    instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| {
@@ -55,7 +55,7 @@ pub extern "C" fn init_cache(
 fn do_init_cache(
     data_dir: ByteSliceView,
     supported_features: ByteSliceView,
-    cache_size: u32,
+    cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = data_dir
