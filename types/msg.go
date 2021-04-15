@@ -62,12 +62,13 @@ type EventAttribute struct {
 // CosmosMsg is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type CosmosMsg struct {
-	Bank     *BankMsg        `json:"bank,omitempty"`
-	Custom   json.RawMessage `json:"custom,omitempty"`
-	IBC      *IBCMsg         `json:"ibc,omitempty"`
-	Staking  *StakingMsg     `json:"staking,omitempty"`
-	Stargate *StargateMsg    `json:"stargate,omitempty"`
-	Wasm     *WasmMsg        `json:"wasm,omitempty"`
+	Bank         *BankMsg         `json:"bank,omitempty"`
+	Custom       json.RawMessage  `json:"custom,omitempty"`
+	Distribution *DistributionMsg `json:"distribution,omitempty"`
+	IBC          *IBCMsg          `json:"ibc,omitempty"`
+	Staking      *StakingMsg      `json:"staking,omitempty"`
+	Stargate     *StargateMsg     `json:"stargate,omitempty"`
+	Wasm         *WasmMsg         `json:"wasm,omitempty"`
 }
 
 type BankMsg struct {
@@ -128,7 +129,6 @@ type StakingMsg struct {
 	Delegate   *DelegateMsg   `json:"delegate,omitempty"`
 	Undelegate *UndelegateMsg `json:"undelegate,omitempty"`
 	Redelegate *RedelegateMsg `json:"redelegate,omitempty"`
-	Withdraw   *WithdrawMsg   `json:"withdraw,omitempty"`
 }
 
 type DelegateMsg struct {
@@ -147,10 +147,23 @@ type RedelegateMsg struct {
 	Amount       Coin   `json:"amount"`
 }
 
-type WithdrawMsg struct {
+type DistributionMsg struct {
+	SetWithdrawAddress      *SetWithdrawAddressMsg      `json:"set_withdraw_address,omitempty"`
+	WithdrawDelegatorReward *WithdrawDelegatorRewardMsg `json:"withdraw_delegator_reward,omitempty"`
+}
+
+// SetWithdrawAddressMsg is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
+// `delegator_address` is automatically filled with the current contract's address.
+type SetWithdrawAddressMsg struct {
+	// Address contains the `delegator_address` of a MsgSetWithdrawAddress
+	Address string `json:"address"`
+}
+
+// WithdrawDelegatorRewardMsg is translated to a [MsgWithdrawDelegatorReward](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L42-L50).
+// `delegator_address` is automatically filled with the current contract's address.
+type WithdrawDelegatorRewardMsg struct {
+	// Validator contains `validator_address` of a MsgWithdrawDelegatorReward
 	Validator string `json:"validator"`
-	// this is optional
-	Recipient string `json:"recipient,omitempty"`
 }
 
 // StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
