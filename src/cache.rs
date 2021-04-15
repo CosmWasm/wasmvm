@@ -245,6 +245,82 @@ fn do_analyze_code(
     Ok(report.into())
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct Metrics {
+    pub hits_pinned_memory_cache: u32,
+    pub hits_memory_cache: u32,
+    pub hits_fs_cache: u32,
+    pub misses: u32,
+    pub elements_pinned_memory_cache: u64,
+    pub elements_memory_cache: u64,
+    pub size_pinned_memory_cache: u64,
+    pub size_memory_cache: u64,
+}
+
+impl From<cosmwasm_vm::Metrics> for Metrics {
+    fn from(report: cosmwasm_vm::Metrics) -> Self {
+        let cosmwasm_vm::Metrics {
+            stats:
+                cosmwasm_vm::Stats {
+                    hits_pinned_memory_cache,
+                    hits_memory_cache,
+                    hits_fs_cache,
+                    misses,
+                },
+            elements_pinned_memory_cache,
+            elements_memory_cache,
+            size_pinned_memory_cache,
+            size_memory_cache,
+        } = report;
+
+        Metrics {
+            hits_pinned_memory_cache,
+            hits_memory_cache,
+            hits_fs_cache,
+            misses,
+            elements_pinned_memory_cache: elements_pinned_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            elements_memory_cache: elements_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            size_pinned_memory_cache: size_pinned_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            size_memory_cache: size_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_metrics(
+    cache: *mut cache_t,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> Metrics {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_metrics(c)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    match r {
+        Ok(value) => {
+            clear_error();
+            value
+        }
+        Err(error) => {
+            set_error(error, error_msg);
+            Metrics::default()
+        }
+    }
+}
+
+fn do_get_metrics(cache: &mut Cache<GoApi, GoStorage, GoQuerier>) -> Result<Metrics, Error> {
+    Ok(cache.metrics().into())
+}
+
 /// frees a cache reference
 ///
 /// # Safety
@@ -539,6 +615,105 @@ mod tests {
             ibc_reflect_report,
             AnalysisReport {
                 has_ibc_entry_points: true
+            }
+        );
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn get_metrics_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let features: &[u8] = b"stargate";
+
+        // Init cache
+        let mut error_msg = UnmanagedVector::default();
+        let cache_ptr = init_cache(
+            ByteSliceView::new(dir.as_bytes()),
+            ByteSliceView::new(features),
+            512,
+            32,
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 1
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(metrics, Metrics::default());
+
+        // Save wasm
+        let mut error_msg = UnmanagedVector::default();
+        let checksum_hackatom = save_wasm(
+            cache_ptr,
+            ByteSliceView::new(HACKATOM),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+        let checksum = checksum_hackatom.consume().unwrap_or_default();
+
+        // Get metrics 2
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(metrics, Metrics::default());
+
+        // Pin
+        let mut error_msg = UnmanagedVector::default();
+        pin(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 3
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(
+            metrics,
+            Metrics {
+                hits_pinned_memory_cache: 0,
+                hits_memory_cache: 0,
+                hits_fs_cache: 1,
+                misses: 0,
+                elements_pinned_memory_cache: 1,
+                elements_memory_cache: 0,
+                size_pinned_memory_cache: 3492613,
+                size_memory_cache: 0,
+            }
+        );
+
+        // Unpin
+        let mut error_msg = UnmanagedVector::default();
+        unpin(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 4
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(
+            metrics,
+            Metrics {
+                hits_pinned_memory_cache: 0,
+                hits_memory_cache: 0,
+                hits_fs_cache: 1,
+                misses: 0,
+                elements_pinned_memory_cache: 0,
+                elements_memory_cache: 0,
+                size_pinned_memory_cache: 0,
+                size_memory_cache: 0,
             }
         );
 

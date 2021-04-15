@@ -190,6 +190,17 @@ typedef struct AnalysisReport {
   bool has_ibc_entry_points;
 } AnalysisReport;
 
+typedef struct Metrics {
+  uint32_t hits_pinned_memory_cache;
+  uint32_t hits_memory_cache;
+  uint32_t hits_fs_cache;
+  uint32_t misses;
+  uint64_t elements_pinned_memory_cache;
+  uint64_t elements_memory_cache;
+  uint64_t size_pinned_memory_cache;
+  uint64_t size_memory_cache;
+} Metrics;
+
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
@@ -291,6 +302,8 @@ void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct Unmanage
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct UnmanagedVector *error_msg);
+
+struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
 
 /**
  * frees a cache reference
