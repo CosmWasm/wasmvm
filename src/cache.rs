@@ -317,6 +317,7 @@ pub extern "C" fn get_metrics(
     }
 }
 
+#[allow(clippy::unnecessary_wraps)] // Keep unused Result for consistent boilerplate for all fn do_*
 fn do_get_metrics(cache: &mut Cache<GoApi, GoStorage, GoQuerier>) -> Result<Metrics, Error> {
     Ok(cache.metrics().into())
 }
