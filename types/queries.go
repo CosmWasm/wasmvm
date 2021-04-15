@@ -204,16 +204,17 @@ type ChannelResponse struct {
 }
 
 type StakingQuery struct {
-	Validators     *ValidatorsQuery     `json:"validators,omitempty"`
+	AllValidators  *AllValidatorsQuery  `json:"all_validators,omitempty"`
+	Validator      *ValidatorQuery      `json:"validator,omitempty"`
 	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
 	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
 	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
 }
 
-type ValidatorsQuery struct{}
+type AllValidatorsQuery struct{}
 
-// ValidatorsResponse is the expected response to ValidatorsQuery
-type ValidatorsResponse struct {
+// AllValidatorsResponse is the expected response to AllValidatorsQuery
+type AllValidatorsResponse struct {
 	Validators Validators `json:"validators"`
 }
 
@@ -241,6 +242,16 @@ func (v *Validators) UnmarshalJSON(data []byte) error {
 	}
 	*v = raw
 	return nil
+}
+
+type ValidatorQuery struct {
+	/// Address is the validator's address (e.g. cosmosvaloper1...)
+	Address string `json:"address"`
+}
+
+// ValidatorResponse is the expected response to ValidatorQuery
+type ValidatorResponse struct {
+	Validator *Validator `json:"validator"` // serializes to `null` when unset which matches Rust's Option::None serialization
 }
 
 type Validator struct {
