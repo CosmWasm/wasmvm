@@ -62,3 +62,16 @@ func (o OutOfGasError) Error() string {
 type AnalysisReport struct {
 	HasIBCEntryPoints bool
 }
+
+type Metrics struct {
+	HitsPinnedMemoryCache     uint32
+	HitsMemoryCache           uint32
+	HitsFsCache               uint32
+	Misses                    uint32
+	ElementsPinnedMemoryCache uint64
+	ElementsMemoryCache       uint64
+	// Cumulative size of all elements in pinned memory cache (in bytes)
+	SizePinnedMemoryCache uint64
+	// Cumulative size of all elements in memory cache (in bytes)
+	SizeMemoryCache uint64
+}

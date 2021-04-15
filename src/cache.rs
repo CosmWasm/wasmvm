@@ -27,8 +27,8 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 pub extern "C" fn init_cache(
     data_dir: ByteSliceView,
     supported_features: ByteSliceView,
-    cache_size: u32,
-    instance_memory_limit: u32,
+    cache_size: u32,            // in MiB
+    instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| {
@@ -55,7 +55,7 @@ pub extern "C" fn init_cache(
 fn do_init_cache(
     data_dir: ByteSliceView,
     supported_features: ByteSliceView,
-    cache_size: u32,
+    cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
     let dir = data_dir
@@ -200,8 +200,12 @@ pub struct AnalysisReport {
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
+        let cosmwasm_vm::AnalysisReport {
+            has_ibc_entry_points,
+        } = report;
+
         AnalysisReport {
-            has_ibc_entry_points: report.has_ibc_entry_points,
+            has_ibc_entry_points,
         }
     }
 }
@@ -241,6 +245,83 @@ fn do_analyze_code(
     Ok(report.into())
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct Metrics {
+    pub hits_pinned_memory_cache: u32,
+    pub hits_memory_cache: u32,
+    pub hits_fs_cache: u32,
+    pub misses: u32,
+    pub elements_pinned_memory_cache: u64,
+    pub elements_memory_cache: u64,
+    pub size_pinned_memory_cache: u64,
+    pub size_memory_cache: u64,
+}
+
+impl From<cosmwasm_vm::Metrics> for Metrics {
+    fn from(report: cosmwasm_vm::Metrics) -> Self {
+        let cosmwasm_vm::Metrics {
+            stats:
+                cosmwasm_vm::Stats {
+                    hits_pinned_memory_cache,
+                    hits_memory_cache,
+                    hits_fs_cache,
+                    misses,
+                },
+            elements_pinned_memory_cache,
+            elements_memory_cache,
+            size_pinned_memory_cache,
+            size_memory_cache,
+        } = report;
+
+        Metrics {
+            hits_pinned_memory_cache,
+            hits_memory_cache,
+            hits_fs_cache,
+            misses,
+            elements_pinned_memory_cache: elements_pinned_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            elements_memory_cache: elements_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            size_pinned_memory_cache: size_pinned_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+            size_memory_cache: size_memory_cache
+                .try_into()
+                .expect("usize is larger than 64 bit? Really?"),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_metrics(
+    cache: *mut cache_t,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> Metrics {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_metrics(c)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    match r {
+        Ok(value) => {
+            clear_error();
+            value
+        }
+        Err(error) => {
+            set_error(error, error_msg);
+            Metrics::default()
+        }
+    }
+}
+
+#[allow(clippy::unnecessary_wraps)] // Keep unused Result for consistent boilerplate for all fn do_*
+fn do_get_metrics(cache: &mut Cache<GoApi, GoStorage, GoQuerier>) -> Result<Metrics, Error> {
+    Ok(cache.metrics().into())
+}
+
 /// frees a cache reference
 ///
 /// # Safety
@@ -266,7 +347,7 @@ mod tests {
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -285,7 +366,7 @@ mod tests {
     #[test]
     fn init_cache_writes_error() {
         let dir: String = String::from("borken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -304,7 +385,7 @@ mod tests {
     #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -332,7 +413,7 @@ mod tests {
     #[test]
     fn load_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -372,7 +453,7 @@ mod tests {
     #[test]
     fn pin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -420,7 +501,7 @@ mod tests {
     #[test]
     fn unpin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -477,7 +558,7 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"stargate";
+        let features = b"staking, stargate";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -535,6 +616,105 @@ mod tests {
             ibc_reflect_report,
             AnalysisReport {
                 has_ibc_entry_points: true
+            }
+        );
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn get_metrics_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let features = b"staking";
+
+        // Init cache
+        let mut error_msg = UnmanagedVector::default();
+        let cache_ptr = init_cache(
+            ByteSliceView::new(dir.as_bytes()),
+            ByteSliceView::new(features),
+            512,
+            32,
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 1
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(metrics, Metrics::default());
+
+        // Save wasm
+        let mut error_msg = UnmanagedVector::default();
+        let checksum_hackatom = save_wasm(
+            cache_ptr,
+            ByteSliceView::new(HACKATOM),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+        let checksum = checksum_hackatom.consume().unwrap_or_default();
+
+        // Get metrics 2
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(metrics, Metrics::default());
+
+        // Pin
+        let mut error_msg = UnmanagedVector::default();
+        pin(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 3
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(
+            metrics,
+            Metrics {
+                hits_pinned_memory_cache: 0,
+                hits_memory_cache: 0,
+                hits_fs_cache: 1,
+                misses: 0,
+                elements_pinned_memory_cache: 1,
+                elements_memory_cache: 0,
+                size_pinned_memory_cache: 3417886,
+                size_memory_cache: 0,
+            }
+        );
+
+        // Unpin
+        let mut error_msg = UnmanagedVector::default();
+        unpin(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert_eq!(error_msg.is_none(), true);
+        let _ = error_msg.consume();
+
+        // Get metrics 4
+        let mut error_msg = UnmanagedVector::default();
+        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let _ = error_msg.consume();
+        assert_eq!(
+            metrics,
+            Metrics {
+                hits_pinned_memory_cache: 0,
+                hits_memory_cache: 0,
+                hits_fs_cache: 1,
+                misses: 0,
+                elements_pinned_memory_cache: 0,
+                elements_memory_cache: 0,
+                size_pinned_memory_cache: 0,
+                size_memory_cache: 0,
             }
         );
 
