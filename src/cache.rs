@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -365,7 +365,7 @@ mod tests {
     #[test]
     fn init_cache_writes_error() {
         let dir: String = String::from("borken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn load_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn pin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -500,7 +500,7 @@ mod tests {
     #[test]
     fn unpin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"staking";
+        let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -557,7 +557,7 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"stargate";
+        let features = b"staking, stargate";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -624,7 +624,7 @@ mod tests {
     #[test]
     fn get_metrics_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features: &[u8] = b"stargate";
+        let features = b"staking";
 
         // Init cache
         let mut error_msg = UnmanagedVector::default();
@@ -684,7 +684,7 @@ mod tests {
                 misses: 0,
                 elements_pinned_memory_cache: 1,
                 elements_memory_cache: 0,
-                size_pinned_memory_cache: 3492613,
+                size_pinned_memory_cache: 3417886,
                 size_memory_cache: 0,
             }
         );
