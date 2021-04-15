@@ -11,17 +11,6 @@ jobs:
           name: Install shellcheck
           command: sudo apt install shellcheck
       - run:
-          name: Install Go
-          command: |
-            cd /tmp
-            wget https://golang.org/dl/go1.15.8.linux-amd64.tar.gz
-            rm -rf /tmp/go
-            tar -C /tmp -xzf go*linux-amd64.tar.gz
-            export PATH=$PATH:/tmp/go/bin
-      - run:
-          name: Show Go version information
-          command: /tmp/go/bin/go version
-      - run:
           name: Show Rust version information
           command: rustc --version; cargo --version; rustup --version
       - run:
@@ -30,17 +19,6 @@ jobs:
       - restore_cache:
           keys:
             - cargocache-v2-sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
-      - run:
-          name: Check Go formatting
-          command: |
-            /tmp/go/bin/go fmt ./...
-
-            CHANGES_IN_REPO=$(git status --porcelain)
-            if [[ -n "$CHANGES_IN_REPO" ]]; then
-              echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
-              git status && git --no-pager diff
-              exit 1
-            fi
       - run:
           name: Check Rust formatting
           command: cargo fmt -- --check
@@ -71,6 +49,16 @@ jobs:
             - target/release/build
             - target/release/deps
           key: cargocache-v2-sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
+
+  format-go:
+    docker:
+      - image: cimg/go:1.15.11
+    steps:
+      - checkout
+      - run:
+          name: Check Go formatting
+          command: |
+            [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
 
   build_shared_library:
     docker:
@@ -214,6 +202,7 @@ workflows:
   build_and_test:
     jobs:
       - sanity
+      - format-go
       - build_shared_library:
           filters: # required since other jobs with tag filters require this one
             tags:
@@ -249,6 +238,7 @@ workflows:
       - deploy_to_git:
           requires:
             - sanity
+            - format-go
             - test
           filters:
             tags:
