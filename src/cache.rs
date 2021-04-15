@@ -200,8 +200,12 @@ pub struct AnalysisReport {
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
+        let cosmwasm_vm::AnalysisReport {
+            has_ibc_entry_points,
+        } = report;
+
         AnalysisReport {
-            has_ibc_entry_points: report.has_ibc_entry_points,
+            has_ibc_entry_points,
         }
     }
 }
