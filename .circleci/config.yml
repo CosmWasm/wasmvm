@@ -60,6 +60,18 @@ jobs:
           command: |
             [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
 
+  format-scripts:
+    docker:
+      - image: cimg/go:1.15.11
+    steps:
+      - run:
+          name: Install shfmt
+          command: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
+      - checkout
+      - run:
+          name: Run shfmt
+          command: shfmt -d .
+
   build_shared_library:
     docker:
       - image: circleci/rust:1.51.0-buster
@@ -203,6 +215,7 @@ workflows:
     jobs:
       - sanity
       - format-go
+      - format-scripts
       - build_shared_library:
           filters: # required since other jobs with tag filters require this one
             tags:
@@ -239,6 +252,7 @@ workflows:
           requires:
             - sanity
             - format-go
+            - format-scripts
             - test
           filters:
             tags:
