@@ -112,6 +112,25 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	return &res, nil
 }
 
+func GetMetrics(cache Cache) (*types.Metrics, error) {
+	errmsg := newUnmanagedVector(nil)
+	metrics, err := C.get_metrics(cache.ptr, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	return &types.Metrics{
+		HitsPinnedMemoryCache:     uint32(metrics.hits_pinned_memory_cache),
+		HitsMemoryCache:           uint32(metrics.hits_memory_cache),
+		HitsFsCache:               uint32(metrics.hits_fs_cache),
+		Misses:                    uint32(metrics.misses),
+		ElementsPinnedMemoryCache: uint64(metrics.elements_pinned_memory_cache),
+		ElementsMemoryCache:       uint64(metrics.elements_memory_cache),
+		SizePinnedMemoryCache:     uint64(metrics.size_pinned_memory_cache),
+		SizeMemoryCache:           uint64(metrics.size_memory_cache),
+	}, nil
+}
+
 func Instantiate(
 	cache Cache,
 	checksum []byte,
