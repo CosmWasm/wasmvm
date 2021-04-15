@@ -8,9 +8,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install shellcheck
-          command: sudo apt install shellcheck
-      - run:
           name: Show Rust version information
           command: rustc --version; cargo --version; rustup --version
       - run:
@@ -36,9 +33,6 @@ jobs:
           command: |
             sed -i  '/^crate-type = \["cdylib"\]/d' Cargo.toml
             cargo test --doc
-      - run:
-          name: Run shellcheck
-          command: find . -name "*.sh" -exec shellcheck {} +
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -71,6 +65,20 @@ jobs:
       - run:
           name: Run shfmt
           command: shfmt -d .
+
+  lint-scripts:
+    docker:
+      - image: ubuntu:20.04
+    steps:
+      - run:
+          name: Install packages
+          command: |
+            apt update
+            apt install -y git shellcheck
+      - checkout
+      - run:
+          name: Run shellcheck
+          command: find . -name "*.sh" -exec shellcheck {} +
 
   build_shared_library:
     docker:
@@ -216,6 +224,7 @@ workflows:
       - sanity
       - format-go
       - format-scripts
+      - lint-scripts
       - build_shared_library:
           filters: # required since other jobs with tag filters require this one
             tags:
@@ -253,6 +262,7 @@ workflows:
             - sanity
             - format-go
             - format-scripts
+            - lint-scripts
             - test
           filters:
             tags:
