@@ -209,6 +209,8 @@ type InstantiateMsg struct {
 	Send Coins `json:"send"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
+	// Admin (optional) may be set here to allow future migrations from this address
+	Admin OptionalString `json:"admin"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)
