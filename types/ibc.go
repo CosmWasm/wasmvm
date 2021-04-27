@@ -6,13 +6,12 @@ type IBCEndpoint struct {
 }
 
 type IBCChannel struct {
-	Endpoint             IBCEndpoint `json:"endpoint"`
-	CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
-	Order                IBCOrder    `json:"order"`
-	Version              string      `json:"version"`
-	// optional
-	CounterpartyVersion string `json:"counterparty_version,omitempty"`
-	ConnectionID        string `json:"connection_id"`
+	Endpoint             IBCEndpoint    `json:"endpoint"`
+	CounterpartyEndpoint IBCEndpoint    `json:"counterparty_endpoint"`
+	Order                IBCOrder       `json:"order"`
+	Version              string         `json:"version"`
+	CounterpartyVersion  OptionalString `json:"counterparty_version"`
+	ConnectionID         string         `json:"connection_id"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back

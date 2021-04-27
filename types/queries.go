@@ -132,8 +132,7 @@ type PortIDResponse struct {
 // Returns a `ListChannelsResponse`.
 // This is the counterpart of [IbcQuery::ListChannels](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L70-L73).
 type ListChannelsQuery struct {
-	// optional argument
-	PortID string `json:"port_id,omitempty"`
+	PortID OptionalString `json:"port_id"`
 }
 
 type ListChannelsResponse struct {
@@ -193,9 +192,8 @@ func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
 }
 
 type ChannelQuery struct {
-	// optional argument
-	PortID    string `json:"port_id,omitempty"`
-	ChannelID string `json:"channel_id"`
+	PortID    OptionalString `json:"port_id"`
+	ChannelID string         `json:"channel_id"`
 }
 
 type ChannelResponse struct {

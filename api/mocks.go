@@ -71,7 +71,7 @@ func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string
 		},
 		Order:               ordering,
 		Version:             ibcVersion,
-		CounterpartyVersion: ibcVersion,
+		CounterpartyVersion: types.NewOptionalStringSet(ibcVersion),
 		ConnectionID:        "connection-3",
 	}
 }

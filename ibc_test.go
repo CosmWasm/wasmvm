@@ -114,7 +114,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.Error(t, err)
 	// passes on good version
 	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	channel.CounterpartyVersion = ""
+	channel.CounterpartyVersion = types.NewOptionalStringUnset()
 	_, err = vm.IBCChannelOpen(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 
@@ -168,7 +168,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	channel := api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	channel.CounterpartyVersion = ""
+	channel.CounterpartyVersion = types.NewOptionalStringUnset()
 	_, err = vm.IBCChannelOpen(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 
