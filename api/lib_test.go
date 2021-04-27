@@ -208,7 +208,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3417886,
+		SizeMemoryCache:     3428923,
 	}, metrics)
 
 	// Instantiate 2
@@ -223,7 +223,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3417886,
+		SizeMemoryCache:     3428923,
 	}, metrics)
 
 	// Pin
@@ -238,8 +238,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3417886,
-		SizeMemoryCache:           3417886,
+		SizePinnedMemoryCache:     3428923,
+		SizeMemoryCache:           3428923,
 	}, metrics)
 
 	// Instantiate 3
@@ -256,8 +256,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3417886,
-		SizeMemoryCache:           3417886,
+		SizePinnedMemoryCache:     3428923,
+		SizeMemoryCache:           3428923,
 	}, metrics)
 
 	// Unpin
@@ -274,7 +274,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3417886,
+		SizeMemoryCache:           3428923,
 	}, metrics)
 
 	// Instantiate 4
@@ -292,7 +292,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3417886,
+		SizeMemoryCache:           3428923,
 	}, metrics)
 }
 
@@ -363,7 +363,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0xf363), cost)
+	assert.Equal(t, uint64(0xf364), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -574,7 +574,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xf2ef)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xf2f0)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -583,7 +583,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xf329)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xf32a)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes
