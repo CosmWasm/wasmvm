@@ -165,6 +165,8 @@ type WasmMsg struct {
 	Execute     *ExecuteMsg     `json:"execute,omitempty"`
 	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
 	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
+	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
+	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -212,4 +214,20 @@ type MigrateMsg struct {
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Migrate` on the above-defined contract
 	Msg []byte `json:"msg"`
+}
+
+// UpdateAdminMsg is the Go counterpart of WasmMsg::UpdateAdmin
+// (https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta5/packages/std/src/results/cosmos_msg.rs#L158-L160).
+type UpdateAdminMsg struct {
+	// ContractAddr is the sdk.AccAddress of the target contract.
+	ContractAddr string `json:"contract_addr"`
+	// Admin is the sdk.AccAddress of the new admin.
+	Admin string `json:"admin"`
+}
+
+// ClearAdminMsg is the Go counterpart of WasmMsg::ClearAdmin
+// (https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta5/packages/std/src/results/cosmos_msg.rs#L158-L160).
+type ClearAdminMsg struct {
+	// ContractAddr is the sdk.AccAddress of the target contract.
+	ContractAddr string `json:"contract_addr"`
 }
