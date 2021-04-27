@@ -97,28 +97,16 @@ type IBCMsg struct {
 }
 
 type TransferMsg struct {
-	ChannelID string `json:"channel_id"`
-	ToAddress string `json:"to_address"`
-	Amount    Coin   `json:"amount"`
-	// block after which the packet times out.
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
-	// Nanoseconds since UNIX epoch
-	// See https://golang.org/pkg/time/#Time.UnixNano
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+	ChannelID string     `json:"channel_id"`
+	ToAddress string     `json:"to_address"`
+	Amount    Coin       `json:"amount"`
+	Timeout   IBCTimeout `json:"timeout"`
 }
 
 type SendPacketMsg struct {
-	ChannelID string `json:"channel_id"`
-	Data      []byte `json:"data"`
-	// block after which the packet times out.
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
-	// Nanoseconds since UNIX epoch
-	// See https://golang.org/pkg/time/#Time.UnixNano
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+	ChannelID string     `json:"channel_id"`
+	Data      []byte     `json:"data"`
+	Timeout   IBCTimeout `json:"timeout"`
 }
 
 type CloseChannelMsg struct {
