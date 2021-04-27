@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 )
 
 // OptionalString is a type that is able to represent JSON's null or string.
@@ -56,14 +55,10 @@ func (out *OptionalString) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	if data[0] == '"' {
-		var value string
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		*out = NewOptionalStringSet(value)
-		return nil
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
 	}
-
-	return errors.New("Unexpted JSON type found. Must be null or string.")
+	*out = NewOptionalStringSet(value)
+	return nil
 }

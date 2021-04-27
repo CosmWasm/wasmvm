@@ -69,5 +69,20 @@ func TestOptionalStringUnmarshalJSON(t *testing.T) {
 	err = json.Unmarshal([]byte("123"), &os)
 	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Unexpted JSON type")
+	require.Contains(t, err.Error(), "cannot unmarshal number into Go value of type string")
+
+	err = json.Unmarshal([]byte("[]"), &os)
+	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot unmarshal array into Go value of type string")
+
+	err = json.Unmarshal([]byte("false"), &os)
+	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot unmarshal bool into Go value of type string")
+
+	err = json.Unmarshal([]byte(""), &os)
+	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unexpected end of JSON input")
 }
