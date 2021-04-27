@@ -97,28 +97,16 @@ type IBCMsg struct {
 }
 
 type TransferMsg struct {
-	ChannelID string `json:"channel_id"`
-	ToAddress string `json:"to_address"`
-	Amount    Coin   `json:"amount"`
-	// block after which the packet times out.
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
-	// Nanoseconds since UNIX epoch
-	// See https://golang.org/pkg/time/#Time.UnixNano
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+	ChannelID string     `json:"channel_id"`
+	ToAddress string     `json:"to_address"`
+	Amount    Coin       `json:"amount"`
+	Timeout   IBCTimeout `json:"timeout"`
 }
 
 type SendPacketMsg struct {
-	ChannelID string `json:"channel_id"`
-	Data      []byte `json:"data"`
-	// block after which the packet times out.
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutBlock *IBCTimeoutBlock `json:"timeout_block,omitempty"`
-	// Nanoseconds since UNIX epoch
-	// See https://golang.org/pkg/time/#Time.UnixNano
-	// at least one of timeout_block, timeout_timestamp is required
-	TimeoutTimestamp *uint64 `json:"timeout_timestamp,omitempty"`
+	ChannelID string     `json:"channel_id"`
+	Data      []byte     `json:"data"`
+	Timeout   IBCTimeout `json:"timeout"`
 }
 
 type CloseChannelMsg struct {
@@ -177,6 +165,8 @@ type WasmMsg struct {
 	Execute     *ExecuteMsg     `json:"execute,omitempty"`
 	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
 	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
+	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
+	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -209,6 +199,8 @@ type InstantiateMsg struct {
 	Send Coins `json:"send"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
+	// Admin (optional) may be set here to allow future migrations from this address
+	Admin string `json:"admin,omitempty"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)
@@ -222,4 +214,20 @@ type MigrateMsg struct {
 	// Msg is assumed to be a json-encoded message, which will be passed directly
 	// as `userMsg` when calling `Migrate` on the above-defined contract
 	Msg []byte `json:"msg"`
+}
+
+// UpdateAdminMsg is the Go counterpart of WasmMsg::UpdateAdmin
+// (https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta5/packages/std/src/results/cosmos_msg.rs#L158-L160).
+type UpdateAdminMsg struct {
+	// ContractAddr is the sdk.AccAddress of the target contract.
+	ContractAddr string `json:"contract_addr"`
+	// Admin is the sdk.AccAddress of the new admin.
+	Admin string `json:"admin"`
+}
+
+// ClearAdminMsg is the Go counterpart of WasmMsg::ClearAdmin
+// (https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta5/packages/std/src/results/cosmos_msg.rs#L158-L160).
+type ClearAdminMsg struct {
+	// ContractAddr is the sdk.AccAddress of the target contract.
+	ContractAddr string `json:"contract_addr"`
 }
