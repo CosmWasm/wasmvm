@@ -92,3 +92,131 @@ func TestHappyPath(t *testing.T) {
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
 	assert.Equal(t, expectedData, hres.Data)
 }
+
+func TestGetMetrics(t *testing.T) {
+	vm := withVM(t)
+
+	// GetMetrics 1
+	metrics, err := vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{}, metrics)
+
+	// Create contract
+	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
+
+	// GetMetrics 2
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{}, metrics)
+
+	// Instantiate 1
+	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	// instantiate it with this store
+	store := api.NewLookup(gasMeter1)
+	goapi := api.NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+
+	env := api.MockEnv()
+	info := api.MockInfo("creator", nil)
+	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	ires, _, err := vm.Instantiate(checksum, env, info, msg1, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(ires.Messages))
+
+	// GetMetrics 3
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsFsCache:         1,
+		ElementsMemoryCache: 1,
+		SizeMemoryCache:     3428923,
+	}, metrics)
+
+	// Instantiate 2
+	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg2, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(ires.Messages))
+
+	// GetMetrics 4
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsMemoryCache:     1,
+		HitsFsCache:         1,
+		ElementsMemoryCache: 1,
+		SizeMemoryCache:     3428923,
+	}, metrics)
+
+	// Pin
+	err = vm.Pin(checksum)
+	require.NoError(t, err)
+
+	// GetMetrics 5
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsMemoryCache:           2,
+		HitsFsCache:               1,
+		ElementsPinnedMemoryCache: 1,
+		ElementsMemoryCache:       1,
+		SizePinnedMemoryCache:     3428923,
+		SizeMemoryCache:           3428923,
+	}, metrics)
+
+	// Instantiate 3
+	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg3, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(ires.Messages))
+
+	// GetMetrics 6
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsPinnedMemoryCache:     1,
+		HitsMemoryCache:           2,
+		HitsFsCache:               1,
+		ElementsPinnedMemoryCache: 1,
+		ElementsMemoryCache:       1,
+		SizePinnedMemoryCache:     3428923,
+		SizeMemoryCache:           3428923,
+	}, metrics)
+
+	// Unpin
+	err = vm.Unpin(checksum)
+	require.NoError(t, err)
+
+	// GetMetrics 7
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsPinnedMemoryCache:     1,
+		HitsMemoryCache:           2,
+		HitsFsCache:               1,
+		ElementsPinnedMemoryCache: 0,
+		ElementsMemoryCache:       1,
+		SizePinnedMemoryCache:     0,
+		SizeMemoryCache:           3428923,
+	}, metrics)
+
+	// Instantiate 4
+	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg4, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(ires.Messages))
+
+	// GetMetrics 8
+	metrics, err = vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.Metrics{
+		HitsPinnedMemoryCache:     1,
+		HitsMemoryCache:           3,
+		HitsFsCache:               1,
+		ElementsPinnedMemoryCache: 0,
+		ElementsMemoryCache:       1,
+		SizePinnedMemoryCache:     0,
+		SizeMemoryCache:           3428923,
+	}, metrics)
+}

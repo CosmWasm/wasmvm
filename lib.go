@@ -101,6 +101,11 @@ func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
 	return api.AnalyzeCode(vm.cache, checksum)
 }
 
+// GetMetrics some internal metrics for monitoring purposes.
+func (vm *VM) GetMetrics() (*types.Metrics, error) {
+	return api.GetMetrics(vm.cache)
+}
+
 // Instantiate will create a new contract based on the given Checksum.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.
