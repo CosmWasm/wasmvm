@@ -43,7 +43,7 @@ func (t IBCTimeoutBlock) IsZero() bool {
 
 // IBCTimeout is the timeout for an IBC packet. At least one of block and timestamp is required.
 type IBCTimeout struct {
-	Block *IBCTimeoutBlock `json:"block,omitempty"`
+	Block *IBCTimeoutBlock `json:"block"`
 	// Nanoseconds since UNIX epoch
 	Timestamp uint64 `json:"timestamp,string,omitempty"`
 }

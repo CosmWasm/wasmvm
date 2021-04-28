@@ -22,17 +22,17 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 	assert.Equal(t, `{"block":{"revision":17,"height":42},"timestamp":"1578939743987654321"}`, string(bz))
 
 	// Null block
-	// This should be `"block":null`, but we are lacking this feature: https://github.com/golang/go/issues/37711
 	timeout = IBCTimeout{
 		Block:     nil,
 		Timestamp: 1578939743_987654321,
 	}
 	bz, err = json.Marshal(timeout)
 	require.NoError(t, err)
-	assert.Equal(t, `{"timestamp":"1578939743987654321"}`, string(bz))
+	assert.Equal(t, `{"block":null,"timestamp":"1578939743987654321"}`, string(bz))
 
 	// Null timestamp
 	// This should be `"timestamp":null`, but we are lacking this feature: https://github.com/golang/go/issues/37711
+	// However, this is good enough right now because in Rust a missing field is deserialized as `None` into `Option<Timestamp>`
 	timeout = IBCTimeout{
 		Block: &IBCTimeoutBlock{
 			Revision: 17,
