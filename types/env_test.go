@@ -45,7 +45,7 @@ func TestMessageInfoHandlesMissingCoins(t *testing.T) {
 	require.NoError(t, err)
 	funds, ok := raw["funds"]
 	require.True(t, ok)
-	assert.Equal(t, string(funds), "[]")
+	assert.Equal(t, "[]", string(funds))
 }
 
 func TestBlockInfoSerialization(t *testing.T) {
@@ -56,7 +56,7 @@ func TestBlockInfoSerialization(t *testing.T) {
 	}
 	bz, err := json.Marshal(block)
 	require.NoError(t, err)
-	assert.Equal(t, []byte(`{"height":123,"time":"1578939743987654321","chain_id":"foobar"}`), bz)
+	assert.Equal(t, `{"height":123,"time":"1578939743987654321","chain_id":"foobar"}`, string(bz))
 
 	block = BlockInfo{
 		Height:  0,
@@ -65,7 +65,7 @@ func TestBlockInfoSerialization(t *testing.T) {
 	}
 	bz, err = json.Marshal(block)
 	require.NoError(t, err)
-	assert.Equal(t, []byte(`{"height":0,"time":"0","chain_id":""}`), bz)
+	assert.Equal(t, `{"height":0,"time":"0","chain_id":""}`, string(bz))
 }
 
 func TestBlockInfoDeserialization(t *testing.T) {
