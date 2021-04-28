@@ -15,11 +15,9 @@ type Env struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
-	// time in seconds since unix epoch (since CosmWasm 0.3)
-	Time uint64 `json:"time"`
-	// Nanoseconds of the block time (since CosmWasm 0.11)
-	TimeNanos uint64 `json:"time_nanos"`
-	ChainID   string `json:"chain_id"`
+	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
+	Time    uint64 `json:"time,string"`
+	ChainID string `json:"chain_id"`
 }
 
 type MessageInfo struct {
