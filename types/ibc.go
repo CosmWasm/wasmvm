@@ -41,22 +41,11 @@ func (t IBCTimeoutBlock) IsZero() bool {
 	return t.Revision == 0 && t.Height == 0
 }
 
-type IBCTimeoutBoth struct {
-	Block     IBCTimeoutBlock `json:"block"`
-	Timestamp uint64          `json:"timestamp_nanos"` // TODO: simplify to just "timestamp" in Rust
-}
-
 // IBCTimeout is the timeout for an IBC packet. At least one of block and timestamp is required.
-//
-// This is an enum, i.e. only one of the three fields must be set.
 type IBCTimeout struct {
+	Block *IBCTimeoutBlock `json:"block"`
 	// Nanoseconds since UNIX epoch
-	// See https://golang.org/pkg/time/#Time.UnixNano
-	Timestamp *uint64 `json:"timestamp_nanos,omitempty"` // TODO: simplify to just "timestamp" in Rust
-	// Block after which the packet times out.
-	Block *IBCTimeoutBlock `json:"block,omitempty"`
-	// Block and time after which the packet times out.
-	Both *IBCTimeoutBoth `json:"both,omitempty"`
+	Timestamp uint64 `json:"timestamp,string,omitempty"`
 }
 
 type IBCPacket struct {

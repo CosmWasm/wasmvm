@@ -22,10 +22,9 @@ const MOCK_CONTRACT_ADDR = "contract"
 func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
-			Height:    123,
-			Time:      1578939743,
-			TimeNanos: 987654321,
-			ChainID:   "foobar",
+			Height:  123,
+			Time:    1578939743_987654321,
+			ChainID: "foobar",
 		},
 		Contract: types.ContractInfo{
 			Address: MOCK_CONTRACT_ADDR,

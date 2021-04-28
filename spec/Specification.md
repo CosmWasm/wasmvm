@@ -11,26 +11,26 @@ implementation details, function signatures, naming choices, etc.
 
 Example: we could upload a generic "ERC20 mintable" contract, and many people could create independent instances of the same bytecode, where the local data defines the token name, the issuer, the max issuance, etc.
 
-* First you **create** a *contract*
-* Then you **instantiate** an *instance*
-* Finally users **invoke** the *instance*
+- First you **create** a _contract_
+- Then you **instantiate** an _instance_
+- Finally users **invoke** the _instance_
 
-*Contracts* are immutible (code/logic is fixed), but *instances* are mutible (state changes)
+_Contracts_ are immutible (code/logic is fixed), but _instances_ are mutible (state changes)
 
 ## Serialization Format
 
 There are two pieces of data that must be considered here. **Message Data**, which is arbitrary binary data passed in the transaction by the end user signing it, and **Context Data**, which is passed in by the cosmos sdk runtime, providing some guaranteed context. Context data may include the signer's address, the instance's address, number of tokens sent, block height, and any other information a contract may need to control the internal logic.
 
-**Message Data** comes from a binary transaction and must be serialized. The most standard and flexible codec is (unfortunately) JSON. This allows the contract to define any schema it wants, and the client can easily provide the proper data. We recommend using a `string` field in the `InvokeMsg`, to contain the user-defined *message data*.
+**Message Data** comes from a binary transaction and must be serialized. The most standard and flexible codec is (unfortunately) JSON. This allows the contract to define any schema it wants, and the client can easily provide the proper data. We recommend using a `string` field in the `InvokeMsg`, to contain the user-defined _message data_.
 
-**Contact Data** comes from the go runtime and can either be serialized by sdk and deserialized by the contract, or we can try to do some ffi magic and use the same memory layout for the struct in Go and Wasm and avoid any serialization overhead. Note that the context data struct will be well-defined at compile time and guaranteed not to change between invocations (the same cannot be said for *message data*).
+**Contact Data** comes from the go runtime and can either be serialized by sdk and deserialized by the contract, or we can try to do some ffi magic and use the same memory layout for the struct in Go and Wasm and avoid any serialization overhead. Note that the context data struct will be well-defined at compile time and guaranteed not to change between invocations (the same cannot be said for _message data_).
 
 In spite of possible performance gains or compiler guarantees with C-types, I would recommend using JSON for this as well. Or another well-defined binary format, like protobuf. However, I will document some links below for those who would like to research the shared struct approach.
 
-* [repr( c )](https://doc.rust-lang.org/nomicon/other-reprs.html) is a rust directive to produce cannonical C-style memory layouts. This is typically used in FFI (which wasm calls are).
-* [wasm-ffi](https://github.com/DeMille/wasm-ffi) demos how to pass structs between wasm/rust and javascript painlessly. Not into golang, but it provides a nice explanation and design overview.
-* [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen/) also tries to convert types and you can [read some success and limitations of the approach](https://github.com/rustwasm/wasm-bindgen/issues/111)
-* [cgo](https://golang.org/cmd/cgo/#hdr-Go_references_to_C) has some documentation about accessing C structs from Go (which is what we get with the repr( c ) directive)
+- [repr( c )](https://doc.rust-lang.org/nomicon/other-reprs.html) is a rust directive to produce cannonical C-style memory layouts. This is typically used in FFI (which wasm calls are).
+- [wasm-ffi](https://github.com/DeMille/wasm-ffi) demos how to pass structs between wasm/rust and javascript painlessly. Not into golang, but it provides a nice explanation and design overview.
+- [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen/) also tries to convert types and you can [read some success and limitations of the approach](https://github.com/rustwasm/wasm-bindgen/issues/111)
+- [cgo](https://golang.org/cmd/cgo/#hdr-Go_references_to_C) has some documentation about accessing C structs from Go (which is what we get with the repr( c ) directive)
 
 In short, go/cgo doesn't handle c-types very transparently, and these also don't support references to heap allocated data (eg. strings). All we get is a small performance gain for a lot of headaches... let's stick with json.
 
@@ -38,7 +38,7 @@ In short, go/cgo doesn't handle c-types very transparently, and these also don't
 
 **Instance State** is accessible only by one instance of the contract, with full read-write access. This can contain either a singleton (one key - simple contract or config) or a kvstore (subspace with many keys that can be accessed - like erc20 instance holding balances for many accounts). Sometimes the contract may want one or the other or even both (config + much data) access modes.
 
-We can set the instance state upon *instantiation*. We can read and modify it upon *invocation*. This is a unique "prefixed db"  subspace that can only be accessed by this instance. The read-only contract state should suffice for shared data between all instances. (Discuss this design in light of all use cases)
+We can set the instance state upon _instantiation_. We can read and modify it upon _invocation_. This is a unique "prefixed db" subspace that can only be accessed by this instance. The read-only contract state should suffice for shared data between all instances. (Discuss this design in light of all use cases)
 
 **Instance Account** is the sdk account controlled by this isntance. We pass in the address of the account, as well as it's current balance along with every invocation of the contract. This allows the contract to be somewhat self-aware of the external environment for the most common cases (eg. if it needs to release funds).
 
@@ -51,12 +51,12 @@ The actual call to create a new contract (upload code) is quite simple, and retu
 
 Both Instantiating a contract, as well as invoking a contract (`Execute` method) have similar interfaces. The difference is that `Instantiate` requires the `store` to be empty, while `Execute` requires it to be non-empty:
 
-* `Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
-* `Execute(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
+- `Instantiate(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
+- `Execute(contract ContractID, params Params, userMsg []byte, store KVStore, gasLimit int64) (res *Result, err error)`
 
 We also expose a Query method to respond to abci.QueryRequests:
 
-* `Query(contract ContractID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error)`
+- `Query(contract ContractID, path []byte, data []byte, store KVStore, gasLimit int64) ([]byte, error)`
 
 Here we pass in the remainder of the path (after directing to the contract) as well as a user-defined (json?) data from the query. We pass in the instances KVStore as above, and a gasLimit, as the computation takes some time. There is no gas for queries, but we should define some reasonable limit here to avoid any DoS vectors, such as a uploading a contract with an infinite loop in the query handler. QueryResult is JSON-encoded data in whatever format the contract decides.
 
@@ -81,11 +81,9 @@ type Params struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
-	// time in seconds since unix epoch (since CosmWasm 0.3)
-	Time uint64 `json:"time"`
-	// Nanoseconds of the block time (since CosmWasm 0.11)
-	TimeNanos uint64 `json:"time_nanos"`
-	ChainID   string `json:"chain_id"`
+	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
+	Time    uint64 `json:"time,string"`
+	ChainID string `json:"chain_id"`
 }
 
 type MessageInfo struct {
@@ -130,7 +128,6 @@ type Result struct {
 Note: I intentionally redefine a number of core types, rather than importing them from sdk/types. This is to guarantee immutibility. These types will be passed to and from the contract, and the contract adapter code (in go) can convert them to the go types used in the rest of the app. But these are decoupled, so they can remain constant while other parts of the sdk evolve.
 
 I also consider adding Events to the return Result, but will delay that until there is a clear spec for how to use them
-
 
 ## Dispatched Messages
 
@@ -253,4 +250,3 @@ type AccountModel struct {
 	} `json:"pub_key"`
 }
 ```
-

@@ -126,10 +126,11 @@ func TestIBCHandshake(t *testing.T) {
 	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	res, _, err := vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(res.Messages))
+	require.Equal(t, 0, len(res.Messages))
+	require.Equal(t, 1, len(res.Submessages))
 
 	// make sure it read the balance properly and we got 250 atoms
-	dispatch := res.Messages[0]
+	dispatch := res.Submessages[0].Msg
 	require.NotNil(t, dispatch.Wasm, "%#v", dispatch)
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
 	init := dispatch.Wasm.Instantiate
@@ -177,20 +178,37 @@ func TestIBCPacketDispatch(t *testing.T) {
 	store.SetGasMeter(gasMeter3)
 	// completes and dispatches message to create reflect contract
 	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	_, _, err = vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT)
+	res, _, err := vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
+	require.Equal(t, 0, len(res.Messages))
+	require.Equal(t, 1, len(res.Submessages))
+	id := res.Submessages[0].ID
 
 	// mock reflect init callback (to store address)
 	gasMeter4 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter4)
-	handleMsg := IBCExecuteMsg{
-		InitCallback: InitCallback{
-			ID:           CHANNEL_ID,
-			ContractAddr: REFLECT_ADDR,
+	reply := types.Reply{
+		ID: id,
+		Result: types.SubcallResult{
+			Ok: &types.SubcallResponse{
+				Events: types.Events{{
+					Type: "message",
+					Attributes: types.EventAttributes{
+						{
+							Key:   "module",
+							Value: "wasm",
+						},
+						{
+							Key:   "contract_address",
+							Value: REFLECT_ADDR,
+						},
+					},
+				}},
+				Data: nil,
+			},
 		},
 	}
-	info = api.MockInfo(REFLECT_ADDR, nil)
-	_, _, err = vm.Execute(checksum, env, info, toBytes(t, handleMsg), store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT)
+	_, _, err = vm.Reply(checksum, env, reply, store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
 
 	// ensure the channel is registered
