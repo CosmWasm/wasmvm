@@ -50,6 +50,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install OpenSSL
+          command: |
+            sudo apt update
+            sudo apt install libssl-dev
+      - run:
           name: Show Rust version information
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
