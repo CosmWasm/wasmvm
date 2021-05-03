@@ -44,6 +44,28 @@ jobs:
             - target/release/deps
           key: cargocache-v3-libwasmvm_sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
 
+  libwasmvm_audit:
+    docker:
+      - image: cimg/rust:1.51.0
+    steps:
+      - checkout
+      - run:
+          name: Show Rust version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cargocache-v3-libwasmvm_audit-rust:1.51.0-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Install cargo-audit
+          command: cargo install --debug cargo-audit --version 0.14.1
+      - run:
+          name: Run cargo-audit
+          command: cargo audit
+      - save_cache:
+          paths:
+            - ~/.cargo/registry
+          key: cargocache-v3-libwasmvm_audit-rust:1.51.0-{{ checksum "Cargo.lock" }}
+
   format-go:
     docker:
       - image: cimg/go:1.15.11
@@ -222,6 +244,7 @@ workflows:
   build_and_test:
     jobs:
       - libwasmvm_sanity
+      - libwasmvm_audit
       - format-go
       - format-scripts
       - lint-scripts
@@ -260,6 +283,7 @@ workflows:
       - deploy_to_git:
           requires:
             - libwasmvm_sanity
+            - libwasmvm_audit
             - format-go
             - format-scripts
             - lint-scripts
