@@ -2,7 +2,7 @@ version: 2.1
 
 jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
-  sanity:
+  libwasmvm_sanity:
     docker:
       - image: cimg/rust:1.51.0
     steps:
@@ -15,7 +15,7 @@ jobs:
           command: rustup component add clippy rustfmt
       - restore_cache:
           keys:
-            - cargocache-v3-sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
+            - cargocache-v3-libwasmvm_sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Check Rust formatting
           command: cargo fmt -- --check
@@ -42,7 +42,7 @@ jobs:
             - target/release/.fingerprint
             - target/release/build
             - target/release/deps
-          key: cargocache-v3-sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-v3-libwasmvm_sanity-rust:1.51.0-{{ checksum "Cargo.lock" }}
 
   format-go:
     docker:
@@ -221,7 +221,7 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - sanity
+      - libwasmvm_sanity
       - format-go
       - format-scripts
       - lint-scripts
@@ -259,7 +259,7 @@ workflows:
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
-            - sanity
+            - libwasmvm_sanity
             - format-go
             - format-scripts
             - lint-scripts
