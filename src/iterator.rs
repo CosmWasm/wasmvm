@@ -78,6 +78,10 @@ impl GoIter {
             }
         }
 
+        // In thise block, we use Buffer::read() for both `key_buf` and `value_buf`
+        // in order to preserve the behaviour for optional values. Buffer::consume()
+        // does not return an Option. Since we `return` in none of the cases, we can
+        // cleanup afterwards. With CosmWasm 0.14 this code is completely refactored.
         let okey = unsafe { key_buf.read() };
         let result = match okey {
             Some(key) => {
@@ -92,6 +96,11 @@ impl GoIter {
             }
             None => Ok(None),
         };
+
+        // Clean up memory allocations created by us
+        let _key = unsafe { key_buf.consume() };
+        let _value = unsafe { value_buf.consume() };
+
         (result, gas_info)
     }
 }
