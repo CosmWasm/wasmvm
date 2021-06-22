@@ -294,7 +294,6 @@ workflows:
       - deploy_to_git:
           requires:
             - libwasmvm_sanity
-            - libwasmvm_audit
             - format-go
             - format-scripts
             - lint-scripts
