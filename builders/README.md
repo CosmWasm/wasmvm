@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0007:**
+
+- Do not copy output from the target folder to final destination. The caller should do that.
+
 **Version 0006:**
 
 - Update Rust to 1.51.0.

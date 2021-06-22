@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test
 
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0006
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0007
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -60,6 +60,7 @@ release-build-alpine:
 	rm -rf libwasmvm/target/release
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
+	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc .
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code -w /code $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
@@ -68,11 +69,13 @@ release-build-alpine:
 release-build-linux:
 	rm -rf libwasmvm/target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7
+	cp libwasmvm/target/release/deps/libwasmvm.so api
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
 	rm -rf libwasmvm/target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross
+	cp libwasmvm/target/x86_64-apple-darwin/release/deps/libwasmvm.dylib api
 
 release-build:
 	# Write like this because those must not run in parallal
