@@ -50,7 +50,7 @@ We can only move on these wasmvm issues when the upstream has support.
 
 ## Docs
 
-Run `cargo doc --no-deps --open`.
+Run `(cd libwasmvm && cargo doc --no-deps --open)`.
 
 ## Design
 
