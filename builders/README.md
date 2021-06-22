@@ -17,6 +17,7 @@ can do the cross-compilation.
 **Version 0007:**
 
 - Do not copy output from the target folder to final destination. The caller should do that.
+- Update Rust to 1.53.0.
 
 **Version 0006:**
 
