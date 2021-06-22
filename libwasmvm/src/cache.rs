@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn init_cache_writes_error() {
-        let dir: String = String::from("borken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
+        let dir: String = String::from("broken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
         let features = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
@@ -379,7 +379,7 @@ mod tests {
         assert!(cache_ptr.is_null());
         assert_eq!(error_msg.is_some(), true);
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
-        assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory borken\u{0}dir/state: data provided contains a nul byte");
+        assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: data provided contains a nul byte");
     }
 
     #[test]
