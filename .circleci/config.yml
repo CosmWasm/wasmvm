@@ -15,7 +15,7 @@ jobs:
           command: rustup component add clippy rustfmt
       - restore_cache:
           keys:
-            - cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "Cargo.lock" }}
+            - cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
           name: Check Rust formatting
           working_directory: libwasmvm
@@ -47,7 +47,7 @@ jobs:
             - libwasmvm/target/release/.fingerprint
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
-          key: cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   libwasmvm_audit:
     docker:
@@ -64,17 +64,18 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-v3-libwasmvm_audit-rust:1.53.0-{{ checksum "Cargo.lock" }}
+            - cargocache-v3-libwasmvm_audit-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
           name: Install cargo-audit
           command: cargo install --debug cargo-audit --version 0.14.1
       - run:
           name: Run cargo-audit
+          working_directory: libwasmvm
           command: cargo audit
       - save_cache:
           paths:
             - ~/.cargo/registry
-          key: cargocache-v3-libwasmvm_audit-rust:1.53.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-v3-libwasmvm_audit-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   format-go:
     docker:
@@ -122,7 +123,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "Cargo.lock" }}
+            - cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
           name: Create release build of libwasmvm
           command: make build-rust
@@ -139,7 +140,7 @@ jobs:
             - libwasmvm/target/release/.fingerprint
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
-          key: cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   test:
     working_directory: /go/src/github.com/CosmWasm/wasmvm
