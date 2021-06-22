@@ -25,6 +25,9 @@ type Response struct {
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
+	// custom events (separate from the main one that contains the attributes
+	// above)
+	Events []Event `json:"events"`
 }
 
 // EventAttributes must encode empty array as []
