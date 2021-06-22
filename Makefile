@@ -87,8 +87,9 @@ test-alpine: release-build-alpine
 	# build a go binary
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
 	# run static binary in an alpine machines (not dlls)
+	docker run --rm --read-only -v $(shell pwd)/libwasmvm:/code -w /code alpine:3.14 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd)/libwasmvm:/code -w /code alpine:3.13 ./muslc.exe ./api/testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd)/libwasmvm:/code -w /code alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd)/libwasmvm:/code -w /code alpine:3.11 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd)/libwasmvm:/code -w /code alpine:3.10 ./muslc.exe ./api/testdata/hackatom.wasm
 	# run static binary locally if you are on Linux
 	# ./muslc.exe ./api/testdata/hackatom.wasm
