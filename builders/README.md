@@ -55,5 +55,5 @@ copy the generated `{so,dylib}` files into `api` directory to be linked.
 
 ## Future Work
 
-* Add support for cross-compiling to Windows as well.
-* Publish docker images when they are stable
+- Add support for cross-compiling to Windows as well.
+- Publish docker images when they are stable
