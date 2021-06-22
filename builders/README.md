@@ -14,6 +14,11 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0007:**
+
+- Do not copy output from the target folder to final destination. The caller should do that.
+- Update Rust to 1.53.0.
+
 **Version 0006:**
 
 - Update Rust to 1.51.0.
@@ -55,5 +60,5 @@ copy the generated `{so,dylib}` files into `api` directory to be linked.
 
 ## Future Work
 
-* Add support for cross-compiling to Windows as well.
-* Publish docker images when they are stable
+- Add support for cross-compiling to Windows as well.
+- Publish docker images when they are stable

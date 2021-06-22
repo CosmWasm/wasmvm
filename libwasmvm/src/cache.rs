@@ -341,8 +341,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    static HACKATOM: &[u8] = include_bytes!("../api/testdata/hackatom.wasm");
-    static IBC_REFLECT: &[u8] = include_bytes!("../api/testdata/ibc_reflect.wasm");
+    static HACKATOM: &[u8] = include_bytes!("../../api/testdata/hackatom.wasm");
+    static IBC_REFLECT: &[u8] = include_bytes!("../../api/testdata/ibc_reflect.wasm");
 
     #[test]
     fn init_cache_and_release_cache_work() {

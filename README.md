@@ -14,7 +14,7 @@ link with, and Go developers should just be able to import this directly.
 
 ## Supported Platforms
 
-Requires Rust 1.50+, Requires Go 1.15+
+Requires Rust 1.51+, Requires Go 1.15+
 
 Since this package includes a rust prebuilt dll, you cannot just import the go code,
 but need to be on a system that works with an existing dll. Currently this is Linux
@@ -50,7 +50,7 @@ We can only move on these wasmvm issues when the upstream has support.
 
 ## Docs
 
-Run `cargo doc --no-deps --open`.
+Run `(cd libwasmvm && cargo doc --no-deps --open)`.
 
 ## Design
 

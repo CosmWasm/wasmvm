@@ -1,6 +1,6 @@
 .PHONY: all build build-rust build-go test
 
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0006
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0007
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -28,13 +28,13 @@ build-rust: build-rust-release
 # Use debug build for quick testing.
 # In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
 build-rust-debug:
-	cargo build
-	cp target/debug/libwasmvm.$(DLL_EXT) api
+	(cd libwasmvm && cargo build)
+	cp libwasmvm/target/debug/libwasmvm.$(DLL_EXT) api
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
-	cargo build --release
-	cp target/release/libwasmvm.$(DLL_EXT) api
+	(cd libwasmvm && cargo build --release)
+	cp libwasmvm/target/release/libwasmvm.$(DLL_EXT) api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 # implement stripping based on os
@@ -57,22 +57,25 @@ test-safety:
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
-	rm -rf target/release
+	rm -rf libwasmvm/target/release
 	# build the muslc *.a file
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-alpine
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
+	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
 	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc .
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
-	rm -rf target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-centos7
+	rm -rf libwasmvm/target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7
+	cp libwasmvm/target/release/deps/libwasmvm.so api
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
-	rm -rf target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code $(BUILDERS_PREFIX)-cross
+	rm -rf libwasmvm/target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross
+	cp libwasmvm/target/x86_64-apple-darwin/release/deps/libwasmvm.dylib api
 
 release-build:
 	# Write like this because those must not run in parallal
@@ -82,10 +85,11 @@ release-build:
 
 test-alpine: release-build-alpine
 	# build a go binary
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/code -w /code $(BUILDERS_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
 	# run static binary in an alpine machines (not dlls)
-	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.11 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/code -w /code alpine:3.10 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.14 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.13 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.11 ./muslc.exe ./api/testdata/hackatom.wasm
 	# run static binary locally if you are on Linux
 	# ./muslc.exe ./api/testdata/hackatom.wasm
