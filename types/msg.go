@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"encoding/json"
 )
 
@@ -132,8 +133,12 @@ func (s *VoteOption) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	// Note that if the string cannot be found then it will be set to the zero value, 'Created' in this case.
-	*s = toVoteOption[j]
+
+	voteOption, ok := toVoteOption[j]
+	if !ok {
+		return fmt.Errorf("invalid vote option %v", j)
+	}
+	*s = voteOption
 	return nil
 }
 
