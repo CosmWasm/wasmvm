@@ -136,7 +136,7 @@ func (s *VoteOption) UnmarshalJSON(b []byte) error {
 
 	voteOption, ok := toVoteOption[j]
 	if !ok {
-		return fmt.Errorf("invalid vote option %v", j)
+		return fmt.Errorf("invalid vote option '%v'", j)
 	}
 	*s = voteOption
 	return nil
