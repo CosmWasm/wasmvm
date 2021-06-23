@@ -208,7 +208,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3254696,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Instantiate 2
@@ -223,7 +223,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3254696,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Pin
@@ -238,8 +238,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3254696,
-		SizeMemoryCache:           3254696,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 3
@@ -256,8 +256,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3254696,
-		SizeMemoryCache:           3254696,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Unpin
@@ -274,7 +274,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3254696,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 4
@@ -292,7 +292,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3254696,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 }
 
@@ -372,7 +372,7 @@ func TestExecute(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, 1, len(result.Ok.Messages))
-	dispatch := result.Ok.Messages[0]
+	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -627,7 +627,7 @@ func TestSudo(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, 1, len(result.Ok.Messages))
-	dispatch := result.Ok.Messages[0]
+	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -681,9 +681,8 @@ func TestDispatchSubmessage(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 0, len(result.Ok.Messages))
-	require.Equal(t, 1, len(result.Ok.Submessages))
-	dispatch := result.Ok.Submessages[0]
+	require.Equal(t, 1, len(result.Ok.Messages))
+	dispatch := result.Ok.Messages[0]
 	assert.Equal(t, id, dispatch.ID)
 	assert.Equal(t, payload.Msg, dispatch.Msg)
 	assert.Nil(t, dispatch.GasLimit)
