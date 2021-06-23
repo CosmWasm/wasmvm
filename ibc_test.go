@@ -135,7 +135,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
 	init := dispatch.Wasm.Instantiate
 	assert.Equal(t, REFLECT_ID, init.CodeID)
-	assert.Empty(t, init.Send)
+	assert.Empty(t, init.Funds)
 }
 
 func TestIBCPacketDispatch(t *testing.T) {
