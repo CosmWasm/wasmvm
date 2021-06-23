@@ -372,6 +372,15 @@ func TestExecute(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, 1, len(result.Ok.Messages))
+
+	// Ensure we got our custom event
+	assert.Equal(t, len(result.Ok.Events), 1)
+	ev := result.Ok.Events[0]
+	assert.Equal(t, ev.Type, "hackatom")
+	assert.Equal(t, len(ev.Attributes), 1)
+	assert.Equal(t, ev.Attributes[0].Key, "action")
+	assert.Equal(t, ev.Attributes[0].Value, "release")
+
 	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
