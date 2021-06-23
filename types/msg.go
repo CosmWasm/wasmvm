@@ -108,8 +108,8 @@ type GovMsg struct {
 type VoteOption int
 
 type VoteMsg struct {
-	ProposalId uint64 `json:"proposal_id"`
-	Vote VoteOption `json:"vote"`
+	ProposalId uint64     `json:"proposal_id"`
+	Vote       VoteOption `json:"vote"`
 }
 
 const (
