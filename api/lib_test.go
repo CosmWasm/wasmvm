@@ -667,7 +667,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
-	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_call":{"msgs":[%s]}}`, string(payloadBin)))
+	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := GasMeter(gasMeter2)
@@ -738,12 +738,12 @@ func TestReplyAndQuery(t *testing.T) {
 	requireOkResponse(t, res, 0)
 
 	// now query the state to see if it stored the data properly
-	badQuery := []byte(`{"sub_call_result":{"id":7777}}`)
+	badQuery := []byte(`{"sub_msg_result":{"id":7777}}`)
 	res, _, err = Query(cache, checksum, env, badQuery, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireQueryError(t, res)
 
-	query := []byte(`{"sub_call_result":{"id":1234}}`)
+	query := []byte(`{"sub_msg_result":{"id":1234}}`)
 	res, _, err = Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	qres := requireQueryOk(t, res)
