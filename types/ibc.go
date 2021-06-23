@@ -48,6 +48,10 @@ type IBCTimeout struct {
 	Timestamp uint64 `json:"timestamp,string,omitempty"`
 }
 
+type IBCAcknowledgement struct {
+	Data []byte `json:"data"`
+}
+
 type IBCPacket struct {
 	Data     []byte      `json:"data"`
 	Src      IBCEndpoint `json:"src"`
@@ -56,9 +60,9 @@ type IBCPacket struct {
 	Timeout  IBCTimeout  `json:"timeout"`
 }
 
-type IBCAcknowledgement struct {
-	Acknowledgement []byte    `json:"acknowledgement"`
-	OriginalPacket  IBCPacket `json:"original_packet"`
+type IBCAcknowledgementWithPacket struct {
+	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
+	OriginalPacket  IBCPacket          `json:"original_packet"`
 }
 
 // IBCChannelOpenResult is the raw response from the ibc_channel_open call.

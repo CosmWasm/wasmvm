@@ -483,7 +483,7 @@ func (vm *VM) IBCPacketReceive(
 func (vm *VM) IBCPacketAck(
 	checksum Checksum,
 	env types.Env,
-	ack types.IBCAcknowledgement,
+	ack types.IBCAcknowledgementWithPacket,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
