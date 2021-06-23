@@ -187,7 +187,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Funds Coins `json:"funds"`
 }
 
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
@@ -199,7 +199,7 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Funds Coins `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
