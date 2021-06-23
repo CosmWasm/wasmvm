@@ -1,8 +1,8 @@
 package types
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 )
 
 //------- Results / Msgs -------------
