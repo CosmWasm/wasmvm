@@ -68,6 +68,7 @@ type CosmosMsg struct {
 	Bank         *BankMsg         `json:"bank,omitempty"`
 	Custom       json.RawMessage  `json:"custom,omitempty"`
 	Distribution *DistributionMsg `json:"distribution,omitempty"`
+	Gov          *GovMsg          `json:"gov,omitempty"`
 	IBC          *IBCMsg          `json:"ibc,omitempty"`
 	Staking      *StakingMsg      `json:"staking,omitempty"`
 	Stargate     *StargateMsg     `json:"stargate,omitempty"`
@@ -97,6 +98,43 @@ type IBCMsg struct {
 	Transfer     *TransferMsg     `json:"transfer,omitempty"`
 	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
 	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
+}
+
+type GovMsg struct {
+	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
+	Vote VoteMsg `json:"vote,omitempty"`
+}
+
+type VoteOption int
+
+type VoteMsg struct {
+	ProposalId uint64 `json:"proposal_id"`
+	Vote VoteOption `json:"vote"`
+}
+
+const (
+	Yes VoteOption = iota
+	No
+	Abstain
+	NoWithVeto
+)
+
+var toVoteOption = map[string]VoteOption{
+	"yes":          Yes,
+	"no":           No,
+	"abstain":      Abstain,
+	"no_with_veto": NoWithVeto,
+}
+
+func (s *VoteOption) UnmarshalJSON(b []byte) error {
+	var j string
+	err := json.Unmarshal(b, &j)
+	if err != nil {
+		return err
+	}
+	// Note that if the string cannot be found then it will be set to the zero value, 'Created' in this case.
+	*s = toVoteOption[j]
+	return nil
 }
 
 type TransferMsg struct {
