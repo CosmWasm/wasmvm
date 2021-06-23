@@ -16,7 +16,7 @@ type ContractResult struct {
 // Response defines the return value on a successful instantiate/execute/migrate.
 // This is the counterpart of [Response](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/results/response.rs#L73-L88)
 type Response struct {
-	// Messages comes directly from the contract and is it's request for action.
+	// Messages comes directly from the contract and is its request for action.
 	// If the ReplyOn value matches the result, the runtime will invoke this
 	// contract's `reply` entry point after execution. Otherwise, this is all
 	// "fire and forget".
