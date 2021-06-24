@@ -106,43 +106,43 @@ type GovMsg struct {
 	Vote VoteMsg `json:"vote,omitempty"`
 }
 
-type VoteOption int
+type voteOption int
 
 type VoteMsg struct {
 	ProposalId uint64     `json:"proposal_id"`
-	Vote       VoteOption `json:"vote"`
+	Vote       voteOption `json:"vote"`
 }
 
 const (
-	Yes VoteOption = iota
+	Yes voteOption = iota
 	No
 	Abstain
 	NoWithVeto
 )
 
-var fromVoteOption = map[VoteOption]string{
+var fromVoteOption = map[voteOption]string{
 	Yes:        "yes",
 	No:         "no",
 	Abstain:    "abstain",
 	NoWithVeto: "no_with_veto",
 }
 
-var toVoteOption = map[string]VoteOption{
+var toVoteOption = map[string]voteOption{
 	"yes":          Yes,
 	"no":           No,
 	"abstain":      Abstain,
 	"no_with_veto": NoWithVeto,
 }
 
-func (v VoteOption) String() string {
+func (v voteOption) String() string {
 	return fromVoteOption[v]
 }
 
-func (v VoteOption) MarshalJSON() ([]byte, error) {
+func (v voteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *VoteOption) UnmarshalJSON(b []byte) error {
+func (s *voteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
