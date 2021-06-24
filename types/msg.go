@@ -120,11 +120,26 @@ const (
 	NoWithVeto
 )
 
+var fromVoteOption = map[VoteOption]string{
+	Yes:        "yes",
+	No:         "no",
+	Abstain:    "abstain",
+	NoWithVeto: "no_with_veto",
+}
+
 var toVoteOption = map[string]VoteOption{
 	"yes":          Yes,
 	"no":           No,
 	"abstain":      Abstain,
 	"no_with_veto": NoWithVeto,
+}
+
+func (v VoteOption) String() string {
+	return fromVoteOption[v]
+}
+
+func (v VoteOption) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.String())
 }
 
 func (s *VoteOption) UnmarshalJSON(b []byte) error {
