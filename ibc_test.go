@@ -88,7 +88,7 @@ func TestIBCHandshake(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	deserCost := types.Fraction{1, 1}
+	deserCost := types.UFraction{1, 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -150,7 +150,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	deserCost := types.Fraction{1, 1}
+	deserCost := types.UFraction{1, 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()

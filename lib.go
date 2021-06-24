@@ -125,7 +125,7 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -140,8 +140,7 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	// gasUsed += uint64(deserCost.Mul(len(data)).Int())
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -174,7 +173,7 @@ func (vm *VM) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -189,7 +188,7 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -218,7 +217,7 @@ func (vm *VM) Query(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -229,7 +228,7 @@ func (vm *VM) Query(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -261,7 +260,7 @@ func (vm *VM) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -272,7 +271,7 @@ func (vm *VM) Migrate(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -304,7 +303,7 @@ func (vm *VM) Sudo(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -315,7 +314,7 @@ func (vm *VM) Sudo(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -345,7 +344,7 @@ func (vm *VM) Reply(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -360,7 +359,7 @@ func (vm *VM) Reply(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -388,7 +387,7 @@ func (vm *VM) IBCChannelOpen(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -403,7 +402,7 @@ func (vm *VM) IBCChannelOpen(
 		return gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -431,7 +430,7 @@ func (vm *VM) IBCChannelConnect(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -446,7 +445,7 @@ func (vm *VM) IBCChannelConnect(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -474,7 +473,7 @@ func (vm *VM) IBCChannelClose(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -489,7 +488,7 @@ func (vm *VM) IBCChannelClose(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -517,7 +516,7 @@ func (vm *VM) IBCPacketReceive(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.IBCReceiveResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -532,7 +531,7 @@ func (vm *VM) IBCPacketReceive(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -561,7 +560,7 @@ func (vm *VM) IBCPacketAck(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -576,7 +575,7 @@ func (vm *VM) IBCPacketAck(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
@@ -605,7 +604,7 @@ func (vm *VM) IBCPacketTimeout(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost types.Fraction,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -620,7 +619,7 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Int())
 	if gasLimit < gasForDeserialization+gasUsed {
 		return nil, gasUsed, fmt.Errorf("gas depletion")
 	}
