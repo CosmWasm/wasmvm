@@ -29,11 +29,7 @@ var toReplyOn = map[string]replyOn{
 }
 
 func (s replyOn) MarshalJSON() ([]byte, error) {
-	bytes, err := json.Marshal(fromReplyOn[s])
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
+	return json.Marshal(fromReplyOn[s])
 }
 
 func (s *replyOn) UnmarshalJSON(b []byte) error {
