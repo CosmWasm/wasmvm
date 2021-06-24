@@ -140,7 +140,13 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	// gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
@@ -183,7 +189,12 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+
+	gasUsed += gasForDeserialization
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
@@ -218,7 +229,12 @@ func (vm *VM) Query(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.QueryResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -256,7 +272,12 @@ func (vm *VM) Migrate(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -294,7 +315,12 @@ func (vm *VM) Sudo(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -334,7 +360,12 @@ func (vm *VM) Reply(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -372,7 +403,12 @@ func (vm *VM) IBCChannelOpen(
 		return gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCChannelOpenResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -410,7 +446,12 @@ func (vm *VM) IBCChannelConnect(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -448,7 +489,12 @@ func (vm *VM) IBCChannelClose(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -486,7 +532,12 @@ func (vm *VM) IBCPacketReceive(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCReceiveResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -525,7 +576,12 @@ func (vm *VM) IBCPacketAck(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -564,7 +620,12 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasUsed, err
 	}
 
-	gasUsed += uint64(deserCost.Mul(len(data)).Int())
+	gasForDeserialization := uint64(deserCost.Mul(len(data)).Int())
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("gas depletion")
+	}
+	gasUsed += gasForDeserialization
+
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
