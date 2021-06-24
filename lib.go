@@ -125,7 +125,7 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -168,7 +168,7 @@ func (vm *VM) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -207,7 +207,7 @@ func (vm *VM) Query(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -245,7 +245,7 @@ func (vm *VM) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -283,7 +283,7 @@ func (vm *VM) Sudo(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -319,7 +319,7 @@ func (vm *VM) Reply(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -357,7 +357,7 @@ func (vm *VM) IBCChannelOpen(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -395,7 +395,7 @@ func (vm *VM) IBCChannelConnect(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -433,7 +433,7 @@ func (vm *VM) IBCChannelClose(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -471,7 +471,7 @@ func (vm *VM) IBCPacketReceive(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.IBCReceiveResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -510,7 +510,7 @@ func (vm *VM) IBCPacketAck(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -549,7 +549,7 @@ func (vm *VM) IBCPacketTimeout(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
-	deserCost *types.Fraction,
+	deserCost types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
