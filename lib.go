@@ -140,9 +140,9 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -188,9 +188,9 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 
 	gasUsed += gasForDeserialization
@@ -228,9 +228,9 @@ func (vm *VM) Query(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -271,9 +271,9 @@ func (vm *VM) Migrate(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -314,9 +314,9 @@ func (vm *VM) Sudo(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -359,9 +359,9 @@ func (vm *VM) Reply(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -402,9 +402,9 @@ func (vm *VM) IBCChannelOpen(
 		return gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return gasUsed, fmt.Errorf("gas depletion")
+		return gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -445,9 +445,9 @@ func (vm *VM) IBCChannelConnect(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -488,9 +488,9 @@ func (vm *VM) IBCChannelClose(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -531,9 +531,9 @@ func (vm *VM) IBCPacketReceive(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -575,9 +575,9 @@ func (vm *VM) IBCPacketAck(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -619,9 +619,9 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasUsed, err
 	}
 
-	gasForDeserialization := uint64(deserCost.Mul(uint64(len(data))).Floor())
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("gas depletion")
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
