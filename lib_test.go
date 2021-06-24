@@ -57,6 +57,7 @@ func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
+	deserCost := types.Fraction{1, 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
@@ -68,7 +69,7 @@ func TestHappyPath(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	ires, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
@@ -77,7 +78,7 @@ func TestHappyPath(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	info = api.MockInfo("fred", nil)
-	hres, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
+	hres, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(hres.Messages))
 
@@ -104,6 +105,8 @@ func TestGetMetrics(t *testing.T) {
 	// Create contract
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
+	deserCost := types.Fraction{1, 1}
+
 	// GetMetrics 2
 	metrics, err = vm.GetMetrics()
 	require.NoError(t, err)
@@ -120,7 +123,7 @@ func TestGetMetrics(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	ires, _, err := vm.Instantiate(checksum, env, info, msg1, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err := vm.Instantiate(checksum, env, info, msg1, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
@@ -135,7 +138,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
-	ires, _, err = vm.Instantiate(checksum, env, info, msg2, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg2, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
@@ -167,7 +170,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
-	ires, _, err = vm.Instantiate(checksum, env, info, msg3, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg3, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
@@ -203,7 +206,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
-	ires, _, err = vm.Instantiate(checksum, env, info, msg4, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT)
+	ires, _, err = vm.Instantiate(checksum, env, info, msg4, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, &deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 

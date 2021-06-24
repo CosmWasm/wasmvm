@@ -41,6 +41,7 @@ type VM struct {
 // `memoryLimit` is the memory limit of each contract execution (in MiB)
 // `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
+// `deserCost` sets the gas cost of deserializing one kB of data.
 func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
 	if err != nil {
@@ -124,6 +125,7 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -138,7 +140,7 @@ func (vm *VM) Instantiate(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
@@ -166,6 +168,7 @@ func (vm *VM) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -180,7 +183,7 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
@@ -204,6 +207,7 @@ func (vm *VM) Query(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -214,7 +218,7 @@ func (vm *VM) Query(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.QueryResponse
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -241,6 +245,7 @@ func (vm *VM) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -251,7 +256,7 @@ func (vm *VM) Migrate(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -278,6 +283,7 @@ func (vm *VM) Sudo(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -288,7 +294,7 @@ func (vm *VM) Sudo(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -313,6 +319,7 @@ func (vm *VM) Reply(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -327,7 +334,7 @@ func (vm *VM) Reply(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -350,6 +357,7 @@ func (vm *VM) IBCChannelOpen(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -364,7 +372,7 @@ func (vm *VM) IBCChannelOpen(
 		return gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCChannelOpenResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -387,6 +395,7 @@ func (vm *VM) IBCChannelConnect(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -401,7 +410,7 @@ func (vm *VM) IBCChannelConnect(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -424,6 +433,7 @@ func (vm *VM) IBCChannelClose(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -438,7 +448,7 @@ func (vm *VM) IBCChannelClose(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -461,6 +471,7 @@ func (vm *VM) IBCPacketReceive(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.IBCReceiveResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -475,7 +486,7 @@ func (vm *VM) IBCPacketReceive(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCReceiveResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -499,6 +510,7 @@ func (vm *VM) IBCPacketAck(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -513,7 +525,7 @@ func (vm *VM) IBCPacketAck(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
@@ -537,6 +549,7 @@ func (vm *VM) IBCPacketTimeout(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost *types.Fraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -551,7 +564,7 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasUsed, err
 	}
 
-	// TODO: Charge gas for JSON deserialization of `data` here
+	gasUsed += uint64(deserCost.Mul(len(data)).Int())
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
