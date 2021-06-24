@@ -1,7 +1,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -30,10 +29,11 @@ var toReplyOn = map[string]replyOn{
 }
 
 func (s replyOn) MarshalJSON() ([]byte, error) {
-	buffer := bytes.NewBufferString(`"`)
-	buffer.WriteString(fromReplyOn[s])
-	buffer.WriteString(`"`)
-	return buffer.Bytes(), nil
+	bytes, err := json.Marshal(fromReplyOn[s])
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
 }
 
 func (s *replyOn) UnmarshalJSON(b []byte) error {
