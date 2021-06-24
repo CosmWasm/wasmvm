@@ -1,14 +1,55 @@
 package types
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
 
-type replyOn string
+type replyOn int
 
 const (
-	ReplyAlways  replyOn = "always"
-	ReplySuccess replyOn = "success"
-	ReplyError   replyOn = "error"
+	ReplyAlways replyOn = iota
+	ReplySuccess
+	ReplyError
+	ReplyNever
 )
+
+var fromReplyOn = map[replyOn]string{
+	ReplyAlways:  "always",
+	ReplySuccess: "success",
+	ReplyError:   "error",
+	ReplyNever:   "never",
+}
+
+var toReplyOn = map[string]replyOn{
+	"always":  ReplyAlways,
+	"success": ReplySuccess,
+	"error":   ReplyError,
+	"never":   ReplyNever,
+}
+
+func (s replyOn) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBufferString(`"`)
+	buffer.WriteString(fromReplyOn[s])
+	buffer.WriteString(`"`)
+	return buffer.Bytes(), nil
+}
+
+func (s *replyOn) UnmarshalJSON(b []byte) error {
+	var j string
+	err := json.Unmarshal(b, &j)
+	if err != nil {
+		return err
+	}
+
+	voteOption, ok := toReplyOn[j]
+	if !ok {
+		return fmt.Errorf("invalid reply_on value '%v'", j)
+	}
+	*s = voteOption
+	return nil
+}
 
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
 // limiting the gas usage (GasLimit)
