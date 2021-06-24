@@ -28,6 +28,10 @@ var toReplyOn = map[string]replyOn{
 	"never":   ReplyNever,
 }
 
+func (r replyOn) String() string {
+	return fromReplyOn[r]
+}
+
 func (s replyOn) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fromReplyOn[s])
 }
