@@ -41,6 +41,7 @@ type VM struct {
 // `memoryLimit` is the memory limit of each contract execution (in MiB)
 // `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
+// `deserCost` sets the gas cost of deserializing one byte of data.
 func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
 	if err != nil {
@@ -124,6 +125,7 @@ func (vm *VM) Instantiate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -137,6 +139,12 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
@@ -165,6 +173,7 @@ func (vm *VM) Execute(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -179,6 +188,12 @@ func (vm *VM) Execute(
 		return nil, gasUsed, err
 	}
 
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+
+	gasUsed += gasForDeserialization
 	var result types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
@@ -202,6 +217,7 @@ func (vm *VM) Query(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) ([]byte, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -211,6 +227,12 @@ func (vm *VM) Query(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.QueryResponse
 	err = json.Unmarshal(data, &resp)
@@ -238,6 +260,7 @@ func (vm *VM) Migrate(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -247,6 +270,12 @@ func (vm *VM) Migrate(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
@@ -274,6 +303,7 @@ func (vm *VM) Sudo(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -283,6 +313,12 @@ func (vm *VM) Sudo(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
@@ -308,6 +344,7 @@ func (vm *VM) Reply(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.Response, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -321,6 +358,12 @@ func (vm *VM) Reply(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.ContractResult
 	err = json.Unmarshal(data, &resp)
@@ -344,6 +387,7 @@ func (vm *VM) IBCChannelOpen(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -357,6 +401,12 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCChannelOpenResult
 	err = json.Unmarshal(data, &resp)
@@ -380,6 +430,7 @@ func (vm *VM) IBCChannelConnect(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -393,6 +444,12 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
@@ -416,6 +473,7 @@ func (vm *VM) IBCChannelClose(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -429,6 +487,12 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
@@ -452,6 +516,7 @@ func (vm *VM) IBCPacketReceive(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.IBCReceiveResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -465,6 +530,12 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCReceiveResult
 	err = json.Unmarshal(data, &resp)
@@ -489,6 +560,7 @@ func (vm *VM) IBCPacketAck(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -502,6 +574,12 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
@@ -526,6 +604,7 @@ func (vm *VM) IBCPacketTimeout(
 	querier Querier,
 	gasMeter GasMeter,
 	gasLimit uint64,
+	deserCost types.UFraction,
 ) (*types.IBCBasicResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
@@ -539,6 +618,12 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, gasUsed, err
 	}
+
+	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
+	if gasLimit < gasForDeserialization+gasUsed {
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+	}
+	gasUsed += gasForDeserialization
 
 	var resp types.IBCBasicResult
 	err = json.Unmarshal(data, &resp)
