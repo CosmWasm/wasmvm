@@ -33,7 +33,7 @@ func (r replyOn) String() string {
 }
 
 func (s replyOn) MarshalJSON() ([]byte, error) {
-	return json.Marshal(fromReplyOn[s])
+	return json.Marshal(s.String())
 }
 
 func (s *replyOn) UnmarshalJSON(b []byte) error {
