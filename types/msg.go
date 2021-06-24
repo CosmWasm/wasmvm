@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 //------- Results / Msgs -------------
@@ -16,15 +17,18 @@ type ContractResult struct {
 // Response defines the return value on a successful instantiate/execute/migrate.
 // This is the counterpart of [Response](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/results/response.rs#L73-L88)
 type Response struct {
-	// Submessages are like Messages, but they guarantee a reply to the calling contract
-	// after their execution, and return both success and error rather than auto-failing on error
-	Submessages []SubMsg `json:"submessages"`
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
+	// Messages comes directly from the contract and is its request for action.
+	// If the ReplyOn value matches the result, the runtime will invoke this
+	// contract's `reply` entry point after execution. Otherwise, this is all
+	// "fire and forget".
+	Messages []SubMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
+	// custom events (separate from the main one that contains the attributes
+	// above)
+	Events []Event `json:"events"`
 }
 
 // EventAttributes must encode empty array as []
@@ -65,6 +69,7 @@ type CosmosMsg struct {
 	Bank         *BankMsg         `json:"bank,omitempty"`
 	Custom       json.RawMessage  `json:"custom,omitempty"`
 	Distribution *DistributionMsg `json:"distribution,omitempty"`
+	Gov          *GovMsg          `json:"gov,omitempty"`
 	IBC          *IBCMsg          `json:"ibc,omitempty"`
 	Staking      *StakingMsg      `json:"staking,omitempty"`
 	Stargate     *StargateMsg     `json:"stargate,omitempty"`
@@ -94,6 +99,47 @@ type IBCMsg struct {
 	Transfer     *TransferMsg     `json:"transfer,omitempty"`
 	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
 	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
+}
+
+type GovMsg struct {
+	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
+	Vote VoteMsg `json:"vote,omitempty"`
+}
+
+type VoteOption int
+
+type VoteMsg struct {
+	ProposalId uint64     `json:"proposal_id"`
+	Vote       VoteOption `json:"vote"`
+}
+
+const (
+	Yes VoteOption = iota
+	No
+	Abstain
+	NoWithVeto
+)
+
+var toVoteOption = map[string]VoteOption{
+	"yes":          Yes,
+	"no":           No,
+	"abstain":      Abstain,
+	"no_with_veto": NoWithVeto,
+}
+
+func (s *VoteOption) UnmarshalJSON(b []byte) error {
+	var j string
+	err := json.Unmarshal(b, &j)
+	if err != nil {
+		return err
+	}
+
+	voteOption, ok := toVoteOption[j]
+	if !ok {
+		return fmt.Errorf("invalid vote option '%v'", j)
+	}
+	*s = voteOption
+	return nil
 }
 
 type TransferMsg struct {
@@ -184,7 +230,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Funds Coins `json:"funds"`
 }
 
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
@@ -196,7 +242,7 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Send Coins `json:"send"`
+	Funds Coins `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address

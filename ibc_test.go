@@ -126,16 +126,15 @@ func TestIBCHandshake(t *testing.T) {
 	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	res, _, err := vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(res.Messages))
-	require.Equal(t, 1, len(res.Submessages))
+	require.Equal(t, 1, len(res.Messages))
 
 	// make sure it read the balance properly and we got 250 atoms
-	dispatch := res.Submessages[0].Msg
+	dispatch := res.Messages[0].Msg
 	require.NotNil(t, dispatch.Wasm, "%#v", dispatch)
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
 	init := dispatch.Wasm.Instantiate
 	assert.Equal(t, REFLECT_ID, init.CodeID)
-	assert.Empty(t, init.Send)
+	assert.Empty(t, init.Funds)
 }
 
 func TestIBCPacketDispatch(t *testing.T) {
@@ -180,9 +179,8 @@ func TestIBCPacketDispatch(t *testing.T) {
 	channel = api.MockIBCChannel(CHANNEL_ID, types.Ordered, IBC_VERSION)
 	res, _, err := vm.IBCChannelConnect(checksum, env, channel, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(res.Messages))
-	require.Equal(t, 1, len(res.Submessages))
-	id := res.Submessages[0].ID
+	require.Equal(t, 1, len(res.Messages))
+	id := res.Messages[0].ID
 
 	// mock reflect init callback (to store address)
 	gasMeter4 := api.NewMockGasMeter(TESTING_GAS_LIMIT)

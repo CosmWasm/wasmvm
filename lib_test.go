@@ -82,7 +82,7 @@ func TestHappyPath(t *testing.T) {
 	require.Equal(t, 1, len(hres.Messages))
 
 	// make sure it read the balance properly and we got 250 atoms
-	dispatch := hres.Messages[0]
+	dispatch := hres.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -130,7 +130,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3432787,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Instantiate 2
@@ -146,7 +146,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3432787,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Pin
@@ -161,8 +161,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3432787,
-		SizeMemoryCache:           3432787,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 3
@@ -180,8 +180,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3432787,
-		SizeMemoryCache:           3432787,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Unpin
@@ -198,7 +198,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3432787,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 4
@@ -217,6 +217,6 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3432787,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 }

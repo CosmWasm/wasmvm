@@ -208,7 +208,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3432787,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Instantiate 2
@@ -223,7 +223,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     3432787,
+		SizeMemoryCache:     2953616,
 	}, metrics)
 
 	// Pin
@@ -238,8 +238,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3432787,
-		SizeMemoryCache:           3432787,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 3
@@ -256,8 +256,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     3432787,
-		SizeMemoryCache:           3432787,
+		SizePinnedMemoryCache:     2953616,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Unpin
@@ -274,7 +274,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3432787,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 
 	// Instantiate 4
@@ -292,7 +292,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           3432787,
+		SizeMemoryCache:           2953616,
 	}, metrics)
 }
 
@@ -319,7 +319,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x8e99), cost)
+	assert.Equal(t, uint64(0x85b0), cost)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
@@ -350,7 +350,7 @@ func TestExecute(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x8e99), cost)
+	assert.Equal(t, uint64(0x85b0), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute with the same store
@@ -363,7 +363,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0xef2c), cost)
+	assert.Equal(t, uint64(0xf043), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -372,7 +372,16 @@ func TestExecute(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, 1, len(result.Ok.Messages))
-	dispatch := result.Ok.Messages[0]
+
+	// Ensure we got our custom event
+	assert.Equal(t, len(result.Ok.Events), 1)
+	ev := result.Ok.Events[0]
+	assert.Equal(t, ev.Type, "hackatom")
+	assert.Equal(t, len(ev.Attributes), 1)
+	assert.Equal(t, ev.Attributes[0].Key, "action")
+	assert.Equal(t, ev.Attributes[0].Value, "release")
+
+	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -405,7 +414,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x8e99), cost)
+	assert.Equal(t, uint64(0x85b0), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute a cpu loop
@@ -556,7 +565,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x8d78), cost)
+	assert.Equal(t, uint64(0x84ad), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -567,14 +576,14 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x8e1d), cost)
+	assert.Equal(t, uint64(0x8541), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x79ee)
+	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x75ab)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xeeb8)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0xefcf)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -583,7 +592,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xeef2)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0xf009)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes
@@ -627,7 +636,7 @@ func TestSudo(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
 	require.Equal(t, 1, len(result.Ok.Messages))
-	dispatch := result.Ok.Messages[0]
+	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
@@ -667,7 +676,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
-	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_call":{"msgs":[%s]}}`, string(payloadBin)))
+	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := GasMeter(gasMeter2)
@@ -681,9 +690,8 @@ func TestDispatchSubmessage(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 0, len(result.Ok.Messages))
-	require.Equal(t, 1, len(result.Ok.Submessages))
-	dispatch := result.Ok.Submessages[0]
+	require.Equal(t, 1, len(result.Ok.Messages))
+	dispatch := result.Ok.Messages[0]
 	assert.Equal(t, id, dispatch.ID)
 	assert.Equal(t, payload.Msg, dispatch.Msg)
 	assert.Nil(t, dispatch.GasLimit)
@@ -739,12 +747,12 @@ func TestReplyAndQuery(t *testing.T) {
 	requireOkResponse(t, res, 0)
 
 	// now query the state to see if it stored the data properly
-	badQuery := []byte(`{"sub_call_result":{"id":7777}}`)
+	badQuery := []byte(`{"sub_msg_result":{"id":7777}}`)
 	res, _, err = Query(cache, checksum, env, badQuery, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireQueryError(t, res)
 
-	query := []byte(`{"sub_call_result":{"id":1234}}`)
+	query := []byte(`{"sub_msg_result":{"id":1234}}`)
 	res, _, err = Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	qres := requireQueryOk(t, res)

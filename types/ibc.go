@@ -48,6 +48,10 @@ type IBCTimeout struct {
 	Timestamp uint64 `json:"timestamp,string,omitempty"`
 }
 
+type IBCAcknowledgement struct {
+	Data []byte `json:"data"`
+}
+
 type IBCPacket struct {
 	Data     []byte      `json:"data"`
 	Src      IBCEndpoint `json:"src"`
@@ -56,9 +60,9 @@ type IBCPacket struct {
 	Timeout  IBCTimeout  `json:"timeout"`
 }
 
-type IBCAcknowledgement struct {
-	Acknowledgement []byte    `json:"acknowledgement"`
-	OriginalPacket  IBCPacket `json:"original_packet"`
+type IBCAcknowledgementWithPacket struct {
+	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
+	OriginalPacket  IBCPacket          `json:"original_packet"`
 }
 
 // IBCChannelOpenResult is the raw response from the ibc_channel_open call.
@@ -84,11 +88,11 @@ type IBCBasicResult struct {
 // IBCBasicResponse defines the return value on a successful processing.
 // This is the counterpart of [IbcBasicResponse](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L194-L216).
 type IBCBasicResponse struct {
-	// Submessages are like Messages, but they guarantee a reply to the calling contract
-	// after their execution, and return both success and error rather than auto-failing on error
-	Submessages []SubMsg `json:"submessages"`
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
+	// Messages comes directly from the contract and is its request for action.
+	// If the ReplyOn value matches the result, the runtime will invoke this
+	// contract's `reply` entry point after execution. Otherwise, this is all
+	// "fire and forget".
+	Messages []SubMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
 }
