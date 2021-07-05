@@ -35,6 +35,7 @@ build-rust-debug:
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
 	cp libwasmvm/target/release/libwasmvm.$(DLL_EXT) api
+	cp libwasmvm/bindings.h api/bindings.h
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 # implement stripping based on os
