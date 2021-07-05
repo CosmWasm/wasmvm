@@ -30,12 +30,13 @@ build-rust: build-rust-release
 build-rust-debug:
 	(cd libwasmvm && cargo build)
 	cp libwasmvm/target/debug/libwasmvm.$(DLL_EXT) api
+	cp libwasmvm/bindings.h api
 
 # use release build to actually ship - smaller and much faster
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
 	cp libwasmvm/target/release/libwasmvm.$(DLL_EXT) api
-	cp libwasmvm/bindings.h api/bindings.h
+	cp libwasmvm/bindings.h api
 	@ #this pulls out ELF symbols, 80% size reduction!
 
 # implement stripping based on os
@@ -62,6 +63,7 @@ release-build-alpine:
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
 	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
+	cp libwasmvm/bindings.h api
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go build -tags muslc .
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
@@ -71,12 +73,14 @@ release-build-linux:
 	rm -rf libwasmvm/target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7
 	cp libwasmvm/target/release/deps/libwasmvm.so api
+	cp libwasmvm/bindings.h api
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
 	rm -rf libwasmvm/target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross
 	cp libwasmvm/target/x86_64-apple-darwin/release/deps/libwasmvm.dylib api
+	cp libwasmvm/bindings.h api
 
 release-build:
 	# Write like this because those must not run in parallal
