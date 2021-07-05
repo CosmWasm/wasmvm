@@ -84,7 +84,8 @@ release-build-macos:
 	make update-bindings
 
 update-bindings:
-	# After we build libwasmvm, we have to copy the generated bindings for Go code to use
+	# After we build libwasmvm, we have to copy the generated bindings for Go code to use.
+	# We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
 	cp libwasmvm/bindings.h api
 
 release-build:
