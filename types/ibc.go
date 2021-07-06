@@ -114,7 +114,7 @@ type IBCReceiveResult struct {
 // Where the Acknowledgement bytes contain an encoded error message to be returned to
 // the calling chain. (Returning IBCReceiveResult::Err will abort processing of this packet
 // and not inform the calling chain).
-// This is the counterpart of (IbcReceiveResponse)(https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L231-L254).
+// This is the counterpart of (IbcReceiveResponse)(https://github.com/CosmWasm/cosmwasm/blob/v0.15.0/packages/std/src/ibc.rs#L247-L267).
 type IBCReceiveResponse struct {
 	// binary encoded data to be returned to calling chain as the acknowledgement
 	Acknowledgement []byte `json:"acknowledgement"`
