@@ -124,7 +124,4 @@ type IBCReceiveResponse struct {
 	// "fire and forget".
 	Messages   []SubMsg         `json:"messages"`
 	Attributes []EventAttribute `json:"attributes"`
-	// custom events (separate from the main one that contains the attributes
-	// above)
-	Events []Event `json:"events"`
 }
