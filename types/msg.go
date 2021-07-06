@@ -103,7 +103,7 @@ type IBCMsg struct {
 
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
-	Vote VoteMsg `json:"vote,omitempty"`
+	Vote *VoteMsg `json:"vote,omitempty"`
 }
 
 type voteOption int
