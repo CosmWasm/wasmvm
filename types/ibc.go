@@ -118,11 +118,13 @@ type IBCReceiveResult struct {
 type IBCReceiveResponse struct {
 	// binary encoded data to be returned to calling chain as the acknowledgement
 	Acknowledgement []byte `json:"acknowledgement"`
-	// Submessages are like Messages, but they guarantee a reply to the calling contract
-	// after their execution, and return both success and error rather than auto-failing on error
-	Submessages []SubMsg `json:"submessages"`
-	// Messages comes directly from the contract and is it's request for action
-	Messages []CosmosMsg `json:"messages"`
-	// attributes for a log event to return over abci interface
+	// Messages comes directly from the contract and is it's request for action.
+	// If the ReplyOn value matches the result, the runtime will invoke this
+	// contract's `reply` entry point after execution. Otherwise, this is all
+	// "fire and forget".
+	Messages []SubMsg `json:"messages"`
 	Attributes []EventAttribute `json:"attributes"`
+	// custom events (separate from the main one that contains the attributes
+	// above)
+	Events []Event `json:"events"`
 }
