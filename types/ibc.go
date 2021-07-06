@@ -122,7 +122,7 @@ type IBCReceiveResponse struct {
 	// If the ReplyOn value matches the result, the runtime will invoke this
 	// contract's `reply` entry point after execution. Otherwise, this is all
 	// "fire and forget".
-	Messages []SubMsg `json:"messages"`
+	Messages   []SubMsg         `json:"messages"`
 	Attributes []EventAttribute `json:"attributes"`
 	// custom events (separate from the main one that contains the attributes
 	// above)
