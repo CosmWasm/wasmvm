@@ -96,11 +96,11 @@ release-build:
 
 test-alpine: release-build-alpine
 	# build a go binary
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go build -tags muslc -o muslc.exe ./cmd
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/testing -w /testing $(BUILDERS_PREFIX)-alpine go build -tags muslc -o demo ./cmd
 	# run static binary in an alpine machines (not dlls)
-	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.14 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.13 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.12 ./muslc.exe ./api/testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.11 ./muslc.exe ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.14 ./demo ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.13 ./demo ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.12 ./demo ./api/testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/testing -w /testing alpine:3.11 ./demo ./api/testdata/hackatom.wasm
 	# run static binary locally if you are on Linux
 	# ./muslc.exe ./api/testdata/hackatom.wasm

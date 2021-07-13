@@ -8,6 +8,6 @@ lib*.a
 
 # artifacts from compile tests
 artifacts/
-muslc.exe
+/demo
 tmp
 a.out
