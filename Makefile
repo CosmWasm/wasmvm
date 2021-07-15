@@ -4,16 +4,16 @@ BUILDERS_PREFIX := cosmwasm/go-ext-builder:0007
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
-DLL_EXT = ""
+SHARED_LIB_EXT = "" # File extension of the shared library
 ifeq ($(OS),Windows_NT)
-	DLL_EXT = dll
+	SHARED_LIB_EXT = dll
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
-		DLL_EXT = so
+		SHARED_LIB_EXT = so
 	endif
 	ifeq ($(UNAME_S),Darwin)
-		DLL_EXT = dylib
+		SHARED_LIB_EXT = dylib
 	endif
 endif
 
@@ -21,32 +21,24 @@ all: build test
 
 build: build-rust build-go
 
-# don't strip for now, for better error reporting
-# build-rust: build-rust-release strip
 build-rust: build-rust-release
 
 # Use debug build for quick testing.
 # In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
 build-rust-debug:
 	(cd libwasmvm && cargo build)
-	cp libwasmvm/target/debug/libwasmvm.$(DLL_EXT) api
+	cp libwasmvm/target/debug/libwasmvm.$(SHARED_LIB_EXT) api
 	make update-bindings
 
 # use release build to actually ship - smaller and much faster
+#
+# See https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-880616953 for two approaches to
+# enable stripping through cargo (if that is desired).
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
-	cp libwasmvm/target/release/libwasmvm.$(DLL_EXT) api
+	cp libwasmvm/target/release/libwasmvm.$(SHARED_LIB_EXT) api
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
-
-# implement stripping based on os
-ifeq ($(DLL_EXT),so)
-strip:
-	strip api/libwasmvm.so
-else
-# TODO: add for windows and osx
-strip:
-endif
 
 build-go:
 	go build ./...
