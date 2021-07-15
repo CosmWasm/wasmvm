@@ -21,8 +21,6 @@ all: build test
 
 build: build-rust build-go
 
-# don't strip for now, for better error reporting
-# build-rust: build-rust-release strip
 build-rust: build-rust-release
 
 # Use debug build for quick testing.
@@ -33,20 +31,14 @@ build-rust-debug:
 	make update-bindings
 
 # use release build to actually ship - smaller and much faster
+#
+# See https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-880616953 for two approaches to
+# enable stripping through cargo (if that is desired).
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
 	cp libwasmvm/target/release/libwasmvm.$(DLL_EXT) api
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
-
-# implement stripping based on os
-ifeq ($(DLL_EXT),so)
-strip:
-	strip api/libwasmvm.so
-else
-# TODO: add for windows and osx
-strip:
-endif
 
 build-go:
 	go build ./...
