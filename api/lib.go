@@ -369,7 +369,7 @@ func IBCChannelOpen(
 	cache Cache,
 	checksum []byte,
 	env []byte,
-	channel []byte,
+	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
 	api *GoAPI,
@@ -381,8 +381,8 @@ func IBCChannelOpen(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	ch := makeView(channel)
-	defer runtime.KeepAlive(channel)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -395,7 +395,7 @@ func IBCChannelOpen(
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.ibc_channel_open(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -407,7 +407,7 @@ func IBCChannelConnect(
 	cache Cache,
 	checksum []byte,
 	env []byte,
-	channel []byte,
+	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
 	api *GoAPI,
@@ -419,8 +419,8 @@ func IBCChannelConnect(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	ch := makeView(channel)
-	defer runtime.KeepAlive(channel)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -433,7 +433,7 @@ func IBCChannelConnect(
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.ibc_channel_connect(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
@@ -445,7 +445,7 @@ func IBCChannelClose(
 	cache Cache,
 	checksum []byte,
 	env []byte,
-	channel []byte,
+	msg []byte,
 	gasMeter *GasMeter,
 	store KVStore,
 	api *GoAPI,
@@ -457,8 +457,8 @@ func IBCChannelClose(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	ch := makeView(channel)
-	defer runtime.KeepAlive(channel)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
 
 	// set up a new stack frame to handle iterators
 	counter := startContract()
@@ -471,7 +471,7 @@ func IBCChannelClose(
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
 
-	res, err := C.ibc_channel_close(cache.ptr, cs, e, ch, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)

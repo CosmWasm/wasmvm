@@ -68,10 +68,65 @@ func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string
 			PortID:    "their_port",
 			ChannelID: "channel-7",
 		},
-		Order:               ordering,
-		Version:             ibcVersion,
-		CounterpartyVersion: ibcVersion,
-		ConnectionID:        "connection-3",
+		Order:        ordering,
+		Version:      ibcVersion,
+		ConnectionID: "connection-3",
+	}
+}
+
+func MockIBCChannelOpenInit(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelOpenMsg {
+	return types.IBCChannelOpenMsg{
+		OpenInit: &types.IBCOpenInit{
+			Channel: MockIBCChannel(channelID, ordering, ibcVersion),
+		},
+		OpenTry: nil,
+	}
+}
+
+func MockIBCChannelOpenTry(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelOpenMsg {
+	return types.IBCChannelOpenMsg{
+		OpenInit: nil,
+		OpenTry: &types.IBCOpenTry{
+			Channel:             MockIBCChannel(channelID, ordering, ibcVersion),
+			CounterpartyVersion: ibcVersion,
+		},
+	}
+}
+
+func MockIBCChannelConnectAck(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelConnectMsg {
+	return types.IBCChannelConnectMsg{
+		OpenAck: &types.IBCOpenAck{
+			Channel:             MockIBCChannel(channelID, ordering, ibcVersion),
+			CounterpartyVersion: ibcVersion,
+		},
+		OpenConfirm: nil,
+	}
+}
+
+func MockIBCChannelConnectConfirm(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelConnectMsg {
+	return types.IBCChannelConnectMsg{
+		OpenAck: nil,
+		OpenConfirm: &types.IBCOpenConfirm{
+			Channel: MockIBCChannel(channelID, ordering, ibcVersion),
+		},
+	}
+}
+
+func MockIBCChannelCloseInit(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelCloseMsg {
+	return types.IBCChannelCloseMsg{
+		CloseInit: &types.IBCCloseInit{
+			Channel: MockIBCChannel(channelID, ordering, ibcVersion),
+		},
+		CloseConfirm: nil,
+	}
+}
+
+func MockIBCChannelCloseConfirm(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelCloseMsg {
+	return types.IBCChannelCloseMsg{
+		CloseInit: nil,
+		CloseConfirm: &types.IBCCloseConfirm{
+			Channel: MockIBCChannel(channelID, ordering, ibcVersion),
+		},
 	}
 }
 
@@ -93,6 +148,31 @@ func MockIBCPacket(myChannel string, data []byte) types.IBCPacket {
 				Height:   123456,
 			},
 		},
+	}
+}
+
+func MockIBCPacketReceive(myChannel string, data []byte) types.IBCPacketReceiveMsg {
+	return types.IBCPacketReceiveMsg{
+		Packet: MockIBCPacket(myChannel, data),
+	}
+}
+
+func MockIBCPacketAck(myChannel string, data []byte, ack types.IBCAcknowledgement) types.IBCPacketAckMsg {
+	packet := MockIBCPacket(myChannel, data)
+
+	return types.IBCPacketAckMsg{
+		Ack: types.IBCAcknowledgementWithPacket{
+			Acknowledgement: ack,
+			OriginalPacket:  packet,
+		},
+	}
+}
+
+func MockIBCPacketTimeout(myChannel string, data []byte) types.IBCPacketTimeoutMsg {
+	packet := MockIBCPacket(myChannel, data)
+
+	return types.IBCPacketTimeoutMsg{
+		Packet: packet,
 	}
 }
 

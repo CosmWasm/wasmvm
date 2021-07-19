@@ -10,9 +10,60 @@ type IBCChannel struct {
 	CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
 	Order                IBCOrder    `json:"order"`
 	Version              string      `json:"version"`
-	// optional
-	CounterpartyVersion string `json:"counterparty_version,omitempty"`
-	ConnectionID        string `json:"connection_id"`
+	ConnectionID         string      `json:"connection_id"`
+}
+
+type IBCChannelOpenMsg struct {
+	OpenInit *IBCOpenInit `json:",omitempty"`
+	OpenTry  *IBCOpenTry  `json:",omitempty"`
+}
+
+type IBCOpenInit struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCOpenTry struct {
+	Channel             IBCChannel `json:"channel"`
+	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+type IBCChannelConnectMsg struct {
+	OpenAck     *IBCOpenAck     `json:",omitempty"`
+	OpenConfirm *IBCOpenConfirm `json:",omitempty"`
+}
+
+type IBCOpenAck struct {
+	Channel             IBCChannel `json:"channel"`
+	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+type IBCOpenConfirm struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCChannelCloseMsg struct {
+	CloseInit    *IBCCloseInit    `json:",omitempty"`
+	CloseConfirm *IBCCloseConfirm `json:",omitempty"`
+}
+
+type IBCCloseInit struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCCloseConfirm struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCPacketReceiveMsg struct {
+	Packet IBCPacket `json:"packet"`
+}
+
+type IBCPacketAckMsg struct {
+	Ack IBCAcknowledgementWithPacket `json:"ack"`
+}
+
+type IBCPacketTimeoutMsg struct {
+	Packet IBCPacket `json:"packet"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
