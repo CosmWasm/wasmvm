@@ -127,6 +127,13 @@ func TestIBCHandshake(t *testing.T) {
 	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(res.Messages))
+	require.Equal(t, 1, len(res.Events))
+	event := res.Events[0]
+	require.Equal(t, "ibc", event.Type)
+	require.Equal(t, 1, len(event.Attributes))
+	attr := event.Attributes[0]
+	require.Equal(t, "channel", attr.Key)
+	require.Equal(t, "connect", attr.Value)
 
 	// make sure it read the balance properly and we got 250 atoms
 	dispatch := res.Messages[0].Msg
@@ -251,6 +258,15 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
+
+	// check for the emitted custom event
+	require.Equal(t, 1, len(pres2.Events))
+	event := pres2.Events[0]
+	require.Equal(t, "ibc", event.Type)
+	require.Equal(t, 1, len(event.Attributes))
+	attr := event.Attributes[0]
+	require.Equal(t, "packet", attr.Key)
+	require.Equal(t, "receive", attr.Value)
 }
 
 func TestAnalyzeCode(t *testing.T) {
