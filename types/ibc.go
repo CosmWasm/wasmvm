@@ -14,8 +14,8 @@ type IBCChannel struct {
 }
 
 type IBCChannelOpenMsg struct {
-	OpenInit *IBCOpenInit `json:",omitempty"`
-	OpenTry  *IBCOpenTry  `json:",omitempty"`
+	OpenInit *IBCOpenInit `json:"open_init,omitempty"`
+	OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
 }
 
 type IBCOpenInit struct {
@@ -28,8 +28,8 @@ type IBCOpenTry struct {
 }
 
 type IBCChannelConnectMsg struct {
-	OpenAck     *IBCOpenAck     `json:",omitempty"`
-	OpenConfirm *IBCOpenConfirm `json:",omitempty"`
+	OpenAck     *IBCOpenAck     `json:"open_ack,omitempty"`
+	OpenConfirm *IBCOpenConfirm `json:"open_confirm,omitempty"`
 }
 
 type IBCOpenAck struct {
@@ -42,8 +42,8 @@ type IBCOpenConfirm struct {
 }
 
 type IBCChannelCloseMsg struct {
-	CloseInit    *IBCCloseInit    `json:",omitempty"`
-	CloseConfirm *IBCCloseConfirm `json:",omitempty"`
+	CloseInit    *IBCCloseInit    `json:"close_init,omitempty"`
+	CloseConfirm *IBCCloseConfirm `json:"close_confirm,omitempty"`
 }
 
 type IBCCloseInit struct {
