@@ -381,7 +381,7 @@ func (vm *VM) Reply(
 func (vm *VM) IBCChannelOpen(
 	checksum Checksum,
 	env types.Env,
-	channel types.IBCChannel,
+	msg types.IBCChannelOpenMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -393,11 +393,11 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return 0, err
 	}
-	chanBin, err := json.Marshal(channel)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return 0, err
 	}
-	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return gasUsed, err
 	}
@@ -424,7 +424,7 @@ func (vm *VM) IBCChannelOpen(
 func (vm *VM) IBCChannelConnect(
 	checksum Checksum,
 	env types.Env,
-	channel types.IBCChannel,
+	msg types.IBCChannelConnectMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -436,11 +436,11 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, 0, err
 	}
-	chanBin, err := json.Marshal(channel)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -467,7 +467,7 @@ func (vm *VM) IBCChannelConnect(
 func (vm *VM) IBCChannelClose(
 	checksum Checksum,
 	env types.Env,
-	channel types.IBCChannel,
+	msg types.IBCChannelCloseMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -479,11 +479,11 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, 0, err
 	}
-	chanBin, err := json.Marshal(channel)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, chanBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -510,7 +510,7 @@ func (vm *VM) IBCChannelClose(
 func (vm *VM) IBCPacketReceive(
 	checksum Checksum,
 	env types.Env,
-	packet types.IBCPacket,
+	msg types.IBCPacketReceiveMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -522,11 +522,11 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, 0, err
 	}
-	packetBin, err := json.Marshal(packet)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -554,7 +554,7 @@ func (vm *VM) IBCPacketReceive(
 func (vm *VM) IBCPacketAck(
 	checksum Checksum,
 	env types.Env,
-	ack types.IBCAcknowledgementWithPacket,
+	msg types.IBCPacketAckMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -566,11 +566,11 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, 0, err
 	}
-	ackBin, err := json.Marshal(ack)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, ackBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}
@@ -598,7 +598,7 @@ func (vm *VM) IBCPacketAck(
 func (vm *VM) IBCPacketTimeout(
 	checksum Checksum,
 	env types.Env,
-	packet types.IBCPacket,
+	msg types.IBCPacketTimeoutMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -610,11 +610,11 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, 0, err
 	}
-	packetBin, err := json.Marshal(packet)
+	msgBin, err := json.Marshal(msg)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, packetBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasUsed, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasUsed, err
 	}

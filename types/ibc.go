@@ -10,9 +10,60 @@ type IBCChannel struct {
 	CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
 	Order                IBCOrder    `json:"order"`
 	Version              string      `json:"version"`
-	// optional
-	CounterpartyVersion string `json:"counterparty_version,omitempty"`
-	ConnectionID        string `json:"connection_id"`
+	ConnectionID         string      `json:"connection_id"`
+}
+
+type IBCChannelOpenMsg struct {
+	OpenInit *IBCOpenInit `json:"open_init,omitempty"`
+	OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
+}
+
+type IBCOpenInit struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCOpenTry struct {
+	Channel             IBCChannel `json:"channel"`
+	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+type IBCChannelConnectMsg struct {
+	OpenAck     *IBCOpenAck     `json:"open_ack,omitempty"`
+	OpenConfirm *IBCOpenConfirm `json:"open_confirm,omitempty"`
+}
+
+type IBCOpenAck struct {
+	Channel             IBCChannel `json:"channel"`
+	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+type IBCOpenConfirm struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCChannelCloseMsg struct {
+	CloseInit    *IBCCloseInit    `json:"close_init,omitempty"`
+	CloseConfirm *IBCCloseConfirm `json:"close_confirm,omitempty"`
+}
+
+type IBCCloseInit struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCCloseConfirm struct {
+	Channel IBCChannel `json:"channel"`
+}
+
+type IBCPacketReceiveMsg struct {
+	Packet IBCPacket `json:"packet"`
+}
+
+type IBCPacketAckMsg struct {
+	Ack IBCAcknowledgementWithPacket `json:"ack"`
+}
+
+type IBCPacketTimeoutMsg struct {
+	Packet IBCPacket `json:"packet"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
@@ -95,6 +146,9 @@ type IBCBasicResponse struct {
 	Messages []SubMsg `json:"messages"`
 	// attributes for a log event to return over abci interface
 	Attributes []EventAttribute `json:"attributes"`
+	// custom events (separate from the main one that contains the attributes
+	// above)
+	Events []Event `json:"events"`
 }
 
 // This is the return value for the majority of the ibc handlers.
@@ -124,4 +178,7 @@ type IBCReceiveResponse struct {
 	// "fire and forget".
 	Messages   []SubMsg         `json:"messages"`
 	Attributes []EventAttribute `json:"attributes"`
+	// custom events (separate from the main one that contains the attributes
+	// above)
+	Events []Event `json:"events"`
 }
