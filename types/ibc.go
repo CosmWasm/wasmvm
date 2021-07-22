@@ -18,14 +18,14 @@ type IBCChannelOpenMsg struct {
 	OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
 }
 
-func (msg IBCChannelOpenMsg)GetChannel() IBCChannel {
+func (msg IBCChannelOpenMsg) GetChannel() IBCChannel {
 	if msg.OpenInit != nil {
 		return msg.OpenInit.Channel
 	}
 	return msg.OpenTry.Channel
 }
 
-func (msg IBCChannelOpenMsg)GetCounterVersion() (string, bool) {
+func (msg IBCChannelOpenMsg) GetCounterVersion() (string, bool) {
 	if msg.OpenTry != nil {
 		return msg.OpenTry.CounterpartyVersion, true
 	}
@@ -46,14 +46,14 @@ type IBCChannelConnectMsg struct {
 	OpenConfirm *IBCOpenConfirm `json:"open_confirm,omitempty"`
 }
 
-func (msg IBCChannelConnectMsg)GetChannel() IBCChannel {
+func (msg IBCChannelConnectMsg) GetChannel() IBCChannel {
 	if msg.OpenAck != nil {
 		return msg.OpenAck.Channel
 	}
 	return msg.OpenConfirm.Channel
 }
 
-func (msg IBCChannelConnectMsg)GetCounterVersion() (string, bool) {
+func (msg IBCChannelConnectMsg) GetCounterVersion() (string, bool) {
 	if msg.OpenAck != nil {
 		return msg.OpenAck.CounterpartyVersion, true
 	}
@@ -74,7 +74,7 @@ type IBCChannelCloseMsg struct {
 	CloseConfirm *IBCCloseConfirm `json:"close_confirm,omitempty"`
 }
 
-func (msg IBCChannelCloseMsg)GetChannel() IBCChannel {
+func (msg IBCChannelCloseMsg) GetChannel() IBCChannel {
 	if msg.CloseInit != nil {
 		return msg.CloseInit.Channel
 	}
