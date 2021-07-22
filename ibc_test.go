@@ -322,14 +322,17 @@ func TestIBCMsgGetCounterVersion(t *testing.T) {
 	msg1 := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, VERSION)
 	v, ok := msg1.GetCounterVersion()
 	require.False(t, ok)
+
 	msg2 := api.MockIBCChannelOpenTry(CHANNEL_ID, types.Ordered, VERSION)
 	v, ok = msg2.GetCounterVersion()
 	require.True(t, ok)
 	require.Equal(t, VERSION, v)
+
 	msg3 := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, VERSION)
 	v, ok = msg3.GetCounterVersion()
 	require.True(t, ok)
 	require.Equal(t, VERSION, v)
+
 	msg4 := api.MockIBCChannelConnectConfirm(CHANNEL_ID, types.Ordered, VERSION)
 	v, ok = msg4.GetCounterVersion()
 	require.False(t, ok)
