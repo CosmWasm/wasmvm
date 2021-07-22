@@ -59,7 +59,8 @@ type IBCPacketReceiveMsg struct {
 }
 
 type IBCPacketAckMsg struct {
-	Ack IBCAcknowledgementWithPacket `json:"ack"`
+	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
+	OriginalPacket  IBCPacket          `json:"original_packet"`
 }
 
 type IBCPacketTimeoutMsg struct {
@@ -109,11 +110,6 @@ type IBCPacket struct {
 	Dest     IBCEndpoint `json:"dest"`
 	Sequence uint64      `json:"sequence"`
 	Timeout  IBCTimeout  `json:"timeout"`
-}
-
-type IBCAcknowledgementWithPacket struct {
-	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
-	OriginalPacket  IBCPacket          `json:"original_packet"`
 }
 
 // IBCChannelOpenResult is the raw response from the ibc_channel_open call.
