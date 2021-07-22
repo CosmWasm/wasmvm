@@ -296,3 +296,15 @@ func TestAnalyzeCode(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
 }
+
+func TestIBCMsgHelpers(t *testing.T) {
+	const CHANNEL_ID = "channel-432"
+
+	msg1 := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, "random-garbage")
+	msg2 := api.MockIBCChannelOpenTry(CHANNEL_ID, types.Ordered, "random-garbage")
+	msg3 := api.MockIBCChannelConnectConfirm(CHANNEL_ID, types.Ordered, "random-garbage")
+
+	require.Equal(t, msg1.GetChannel(), msg2.GetChannel())
+	require.Equal(t, msg1.GetChannel(), msg3.GetChannel())
+	require.Equal(t, msg1.GetChannel().Endpoint.ChannelID, CHANNEL_ID)
+}
