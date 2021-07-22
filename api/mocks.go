@@ -161,10 +161,8 @@ func MockIBCPacketAck(myChannel string, data []byte, ack types.IBCAcknowledgemen
 	packet := MockIBCPacket(myChannel, data)
 
 	return types.IBCPacketAckMsg{
-		Ack: types.IBCAcknowledgementWithPacket{
-			Acknowledgement: ack,
-			OriginalPacket:  packet,
-		},
+		Acknowledgement: ack,
+		OriginalPacket:  packet,
 	}
 }
 

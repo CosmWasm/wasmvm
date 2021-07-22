@@ -207,7 +207,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 							Value: "wasm",
 						},
 						{
-							Key:   "contract_address",
+							Key:   "_contract_address",
 							Value: REFLECT_ADDR,
 						},
 					},
