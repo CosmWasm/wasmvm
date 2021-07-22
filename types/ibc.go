@@ -25,6 +25,13 @@ func (msg IBCChannelOpenMsg)GetChannel() IBCChannel {
 	return msg.OpenTry.Channel
 }
 
+func (msg IBCChannelOpenMsg)GetCounterVersion() (string, bool) {
+	if msg.OpenTry != nil {
+		return msg.OpenTry.CounterpartyVersion, true
+	}
+	return "", false
+}
+
 type IBCOpenInit struct {
 	Channel IBCChannel `json:"channel"`
 }
@@ -44,6 +51,13 @@ func (msg IBCChannelConnectMsg)GetChannel() IBCChannel {
 		return msg.OpenAck.Channel
 	}
 	return msg.OpenConfirm.Channel
+}
+
+func (msg IBCChannelConnectMsg)GetCounterVersion() (string, bool) {
+	if msg.OpenAck != nil {
+		return msg.OpenAck.CounterpartyVersion, true
+	}
+	return "", false
 }
 
 type IBCOpenAck struct {
