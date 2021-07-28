@@ -39,9 +39,21 @@ type IBCOpenInit struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+func (m *IBCOpenInit) ToMsg() IBCChannelOpenMsg {
+	return IBCChannelOpenMsg{
+		OpenInit: m,
+	}
+}
+
 type IBCOpenTry struct {
 	Channel             IBCChannel `json:"channel"`
 	CounterpartyVersion string     `json:"counterparty_version"`
+}
+
+func (m *IBCOpenTry) ToMsg() IBCChannelOpenMsg {
+	return IBCChannelOpenMsg{
+		OpenTry: m,
+	}
 }
 
 type IBCChannelConnectMsg struct {
@@ -71,8 +83,20 @@ type IBCOpenAck struct {
 	CounterpartyVersion string     `json:"counterparty_version"`
 }
 
+func (m *IBCOpenAck) ToMsg() IBCChannelConnectMsg {
+	return IBCChannelConnectMsg{
+		OpenAck: m,
+	}
+}
+
 type IBCOpenConfirm struct {
 	Channel IBCChannel `json:"channel"`
+}
+
+func (m *IBCOpenConfirm) ToMsg() IBCChannelConnectMsg {
+	return IBCChannelConnectMsg{
+		OpenConfirm: m,
+	}
 }
 
 type IBCChannelCloseMsg struct {
@@ -92,8 +116,20 @@ type IBCCloseInit struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+func (m *IBCCloseInit) ToMsg() IBCChannelCloseMsg {
+	return IBCChannelCloseMsg{
+		CloseInit: m,
+	}
+}
+
 type IBCCloseConfirm struct {
 	Channel IBCChannel `json:"channel"`
+}
+
+func (m *IBCCloseConfirm) ToMsg() IBCChannelCloseMsg {
+	return IBCChannelCloseMsg{
+		CloseConfirm: m,
+	}
 }
 
 type IBCPacketReceiveMsg struct {
