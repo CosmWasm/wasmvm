@@ -133,7 +133,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     2953668,
+		SizeMemoryCache:     4977784,
 	}, metrics)
 
 	// Instantiate 2
@@ -149,7 +149,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     2953668,
+		SizeMemoryCache:     4977784,
 	}, metrics)
 
 	// Pin
@@ -164,8 +164,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     2953668,
-		SizeMemoryCache:           2953668,
+		SizePinnedMemoryCache:     4977784,
+		SizeMemoryCache:           4977784,
 	}, metrics)
 
 	// Instantiate 3
@@ -183,8 +183,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     2953668,
-		SizeMemoryCache:           2953668,
+		SizePinnedMemoryCache:     4977784,
+		SizeMemoryCache:           4977784,
 	}, metrics)
 
 	// Unpin
@@ -201,7 +201,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           2953668,
+		SizeMemoryCache:           4977784,
 	}, metrics)
 
 	// Instantiate 4
@@ -220,6 +220,6 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           2953668,
+		SizeMemoryCache:           4977784,
 	}, metrics)
 }
