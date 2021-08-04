@@ -189,7 +189,7 @@ typedef struct UnmanagedVector {
 /**
  * The result type of the FFI function analyze_code.
  *
- * Please note that the unmanages vector in `required_features`
+ * Please note that the unmanaged vector in `required_features`
  * has to be destroyed exactly once. When calling `analyze_code`
  * from Go this is done via `C.destroy_unmanaged_vector`.
  */
