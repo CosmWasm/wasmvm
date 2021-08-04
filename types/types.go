@@ -58,9 +58,11 @@ func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
-// Returns info on the contract
+// Contains static analysis info of the contract (the Wasm code to be precise).
+// This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
 	HasIBCEntryPoints bool
+	RequiredFeatures  string
 }
 
 type Metrics struct {

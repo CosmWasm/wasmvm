@@ -21,7 +21,7 @@ func TestMakeView(t *testing.T) {
 	require.Equal(t, cbool(true), nilView.is_nil)
 }
 
-func TestCreateAndDestroyUnmanagesVector(t *testing.T) {
+func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 	// non-empty
 	{
 		original := []byte{0xaa, 0xbb, 0x64}
