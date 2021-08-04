@@ -276,7 +276,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 func TestAnalyzeCode(t *testing.T) {
 	vm := withVM(t)
 
-	// instantiate non-ibc contract
+	// Store non-IBC contract
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 	checksum, err := vm.Create(wasm)
@@ -285,8 +285,9 @@ func TestAnalyzeCode(t *testing.T) {
 	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
+	require.Equal(t, "", report.RequiredFeatures)
 
-	// instantiate ibc contract
+	// Store IBC contract
 	wasm2, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
 	checksum2, err := vm.Create(wasm2)
@@ -295,6 +296,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
+	require.Equal(t, "staking,stargate", report2.RequiredFeatures)
 }
 
 func TestIBCMsgGetChannel(t *testing.T) {

@@ -186,8 +186,20 @@ typedef struct UnmanagedVector {
   uintptr_t cap;
 } UnmanagedVector;
 
+/**
+ * The result type of the FFI function analyze_code.
+ *
+ * Please note that the unmanages vector in `required_features`
+ * has to be destroyed exactly once. When calling `analyze_code`
+ * from Go this is done via `C.destroy_unmanaged_vector`.
+ */
 typedef struct AnalysisReport {
   bool has_ibc_entry_points;
+  /**
+   * An UTF-8 encoded comma separated list of reqired features.
+   * This is never None/nil.
+   */
+  struct UnmanagedVector required_features;
 } AnalysisReport;
 
 typedef struct Metrics {

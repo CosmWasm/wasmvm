@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
@@ -192,22 +193,39 @@ fn do_unpin(
     Ok(())
 }
 
+/// The result type of the FFI function analyze_code.
+///
+/// Please note that the unmanages vector in `required_features`
+/// has to be destroyed exactly once. When calling `analyze_code`
+/// from Go this is done via `C.destroy_unmanaged_vector`.
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct AnalysisReport {
     pub has_ibc_entry_points: bool,
+    /// An UTF-8 encoded comma separated list of reqired features.
+    /// This is never None/nil.
+    pub required_features: UnmanagedVector,
 }
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
         let cosmwasm_vm::AnalysisReport {
             has_ibc_entry_points,
+            required_features,
         } = report;
 
+        let required_features_utf8 = set_to_csv(required_features).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
+            required_features: UnmanagedVector::new(Some(required_features_utf8)),
         }
     }
+}
+
+fn set_to_csv(set: HashSet<String>) -> String {
+    let mut list: Vec<String> = set.into_iter().collect();
+    list.sort_unstable();
+    list.join(",")
 }
 
 #[no_mangle]
@@ -339,6 +357,7 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::FromIterator;
     use tempfile::TempDir;
 
     static HACKATOM: &[u8] = include_bytes!("../../api/testdata/hackatom.wasm");
@@ -598,12 +617,8 @@ mod tests {
             Some(&mut error_msg),
         );
         let _ = error_msg.consume();
-        assert_eq!(
-            hackatom_report,
-            AnalysisReport {
-                has_ibc_entry_points: false
-            }
-        );
+        assert_eq!(hackatom_report.has_ibc_entry_points, false);
+        assert_eq!(hackatom_report.required_features.consume().unwrap(), b"");
 
         let mut error_msg = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
@@ -612,14 +627,43 @@ mod tests {
             Some(&mut error_msg),
         );
         let _ = error_msg.consume();
+        assert_eq!(ibc_reflect_report.has_ibc_entry_points, true);
         assert_eq!(
-            ibc_reflect_report,
-            AnalysisReport {
-                has_ibc_entry_points: true
-            }
+            ibc_reflect_report.required_features.consume().unwrap(),
+            b"staking,stargate"
         );
 
         release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn set_to_csv_works() {
+        assert_eq!(set_to_csv(HashSet::new()), "");
+        assert_eq!(
+            set_to_csv(HashSet::from_iter(vec!["foo".to_string()])),
+            "foo",
+        );
+        assert_eq!(
+            set_to_csv(HashSet::from_iter(vec![
+                "foo".to_string(),
+                "bar".to_string(),
+                "baz".to_string(),
+            ])),
+            "bar,baz,foo",
+        );
+        assert_eq!(
+            set_to_csv(HashSet::from_iter(vec![
+                "a".to_string(),
+                "aa".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "A".to_string(),
+                "AA".to_string(),
+                "B".to_string(),
+                "C".to_string(),
+            ])),
+            "A,AA,B,C,a,aa,b,c",
+        );
     }
 
     #[test]
