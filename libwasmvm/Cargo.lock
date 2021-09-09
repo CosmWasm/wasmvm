@@ -145,8 +145,8 @@ checksum = "44c32f031ea41b4291d695026c023b95d59db2d8a2c7640800ed56bc8f510f22"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.16.0"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.0#c14937849cedf7c70f85c15b90053bdcf01e8a1c"
+version = "0.16.2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.2#93ea53e56b152f552df73db7104dfeef3f1fe904"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -157,16 +157,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.16.0"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.0#c14937849cedf7c70f85c15b90053bdcf01e8a1c"
+version = "0.16.2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.2#93ea53e56b152f552df73db7104dfeef3f1fe904"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.16.0"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.0#c14937849cedf7c70f85c15b90053bdcf01e8a1c"
+version = "0.16.2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.2#93ea53e56b152f552df73db7104dfeef3f1fe904"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -180,8 +180,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.16.0"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.0#c14937849cedf7c70f85c15b90053bdcf01e8a1c"
+version = "0.16.2"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.2#93ea53e56b152f552df73db7104dfeef3f1fe904"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -288,9 +288,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-deque"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94af6efb46fef72616855b036a624cf27ba656ffc9be1b9a3c931cfc7749a9a9"
+checksum = "6455c0ca19f0d2fbf751b908d5c55c1f5cbc65e03c4225427254b46890bdde1e"
 dependencies = [
  "cfg-if",
  "crossbeam-epoch",
@@ -328,9 +328,9 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
 name = "crypto-bigint"
-version = "0.2.2"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b32a398eb1ccfbe7e4f452bc749c44d38dd732e9a253f19da224c416f00ee7f4"
+checksum = "e49339137316df1914fdb54a5eae75a73f45068fd0d2178fe235b11d93238a6e"
 dependencies = [
  "generic-array",
  "rand_core 0.6.3",
@@ -480,9 +480,9 @@ checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
 name = "elliptic-curve"
-version = "0.10.4"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83e5c176479da93a0983f0a6fdc3c1b8e7d5be0d7fe3fe05a99f15b96582b9a8"
+checksum = "beca177dcb8eb540133e7680baff45e7cc4d93bf22002676cec549f82343721b"
 dependencies = [
  "crypto-bigint",
  "ff",
@@ -683,9 +683,9 @@ checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 
 [[package]]
 name = "k256"
-version = "0.9.5"
+version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "008b0281ca8032567c9711cd48631781c15228301860a39b32deb28d63125e46"
+checksum = "903ae2481bcdfdb7b68e0a9baa4b7c9aff600b9ae2e8e5bb5833b8c91ab851ea"
 dependencies = [
  "cfg-if",
  "ecdsa",
