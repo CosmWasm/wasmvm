@@ -51,12 +51,11 @@ import (
 // or get odd cgo build errors about duplicate definitions
 
 func recoverPanic(ret *C.GoResult) {
-	rec := recover()
-	// we don't want to import cosmos-sdk
-	// we also cannot use interfaces to detect these error types (as they have no methods)
-	// so, let's just rely on the descriptive names
-	// this is used to detect "out of gas panics"
-	if rec != nil {
+	if rec := recover(); rec != nil {
+		// we don't want to import cosmos-sdk
+		// we also cannot use interfaces to detect these error types (as they have no methods)
+		// so, let's just rely on the descriptive names
+		// this is used to detect "out of gas panics"
 		name := reflect.TypeOf(rec).Name()
 		switch name {
 		// These two cases are for types thrown in panics from this module:
