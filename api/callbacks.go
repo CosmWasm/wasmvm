@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"runtime/debug"
 	"unsafe"
 
 	dbm "github.com/tendermint/tm-db"
@@ -72,6 +73,7 @@ func recoverPanic(ret *C.GoResult) {
 		// 	case "ErrorGasOverflow":
 		default:
 			log.Printf("Panic in Go callback: %#v\n", rec)
+			debug.PrintStack()
 			*ret = C.GoResult_Panic
 		}
 	}
