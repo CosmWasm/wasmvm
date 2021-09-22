@@ -200,12 +200,8 @@ func TestIBCPacketDispatch(t *testing.T) {
 		Result: types.SubcallResult{
 			Ok: &types.SubcallResponse{
 				Events: types.Events{{
-					Type: "message",
+					Type: "instantiate",
 					Attributes: types.EventAttributes{
-						{
-							Key:   "module",
-							Value: "wasm",
-						},
 						{
 							Key:   "_contract_address",
 							Value: REFLECT_ADDR,
@@ -296,7 +292,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
-	require.Equal(t, "staking,stargate", report2.RequiredFeatures)
+	require.Equal(t, "iterator,staking,stargate", report2.RequiredFeatures)
 }
 
 func TestIBCMsgGetChannel(t *testing.T) {

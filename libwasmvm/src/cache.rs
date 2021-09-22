@@ -577,7 +577,7 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking, stargate";
+        let features = b"staking,stargate,iterator";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
@@ -630,7 +630,7 @@ mod tests {
         assert_eq!(ibc_reflect_report.has_ibc_entry_points, true);
         assert_eq!(
             ibc_reflect_report.required_features.consume().unwrap(),
-            b"staking,stargate"
+            b"iterator,staking,stargate"
         );
 
         release_cache(cache_ptr);
@@ -729,7 +729,7 @@ mod tests {
                 misses: 0,
                 elements_pinned_memory_cache: 1,
                 elements_memory_cache: 0,
-                size_pinned_memory_cache: 4955952,
+                size_pinned_memory_cache: 4755566,
                 size_memory_cache: 0,
             }
         );

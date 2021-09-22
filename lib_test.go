@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const TESTING_FEATURES = "staking,stargate"
+const TESTING_FEATURES = "staking,stargate,iterator"
 const TESTING_PRINT_DEBUG = false
 const TESTING_GAS_LIMIT = 100_000_000
 const TESTING_MEMORY_LIMIT = 32 // MiB
@@ -133,7 +133,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     4977784,
+		SizeMemoryCache:     4777334,
 	}, metrics)
 
 	// Instantiate 2
@@ -149,7 +149,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     4977784,
+		SizeMemoryCache:     4777334,
 	}, metrics)
 
 	// Pin
@@ -164,8 +164,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     4977784,
-		SizeMemoryCache:           4977784,
+		SizePinnedMemoryCache:     4777334,
+		SizeMemoryCache:           4777334,
 	}, metrics)
 
 	// Instantiate 3
@@ -183,8 +183,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     4977784,
-		SizeMemoryCache:           4977784,
+		SizePinnedMemoryCache:     4777334,
+		SizeMemoryCache:           4777334,
 	}, metrics)
 
 	// Unpin
@@ -201,7 +201,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           4977784,
+		SizeMemoryCache:           4777334,
 	}, metrics)
 
 	// Instantiate 4
@@ -220,6 +220,6 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           4977784,
+		SizeMemoryCache:           4777334,
 	}, metrics)
 }
