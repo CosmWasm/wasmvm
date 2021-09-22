@@ -296,7 +296,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
-	require.Equal(t, "staking,stargate", report2.RequiredFeatures)
+	require.Equal(t, "iterator,staking,stargate", report2.RequiredFeatures)
 }
 
 func TestIBCMsgGetChannel(t *testing.T) {
