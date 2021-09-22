@@ -22,7 +22,7 @@ type BlockInfo struct {
 }
 
 type ContractInfo struct {
-	// binary encoding of sdk.AccAddress of the contract, to be used when sending messages
+	// Bech32 encoded sdk.AccAddress of the contract, to be used when sending messages
 	Address HumanAddress `json:"address"`
 }
 
@@ -36,8 +36,8 @@ type TransactionInfo struct {
 }
 
 type MessageInfo struct {
-	// binary encoding of sdk.AccAddress executing the contract
+	// Bech32 encoded sdk.AccAddress executing the contract
 	Sender HumanAddress `json:"sender"`
-	// amount of funds send to the contract along with this message
+	// Amount of funds send to the contract along with this message
 	Funds Coins `json:"funds"`
 }
