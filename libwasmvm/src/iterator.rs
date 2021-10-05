@@ -1,4 +1,4 @@
-use cosmwasm_std::Pair;
+use cosmwasm_std::Record;
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 
 use crate::error::GoResult;
@@ -46,7 +46,7 @@ impl GoIter {
         }
     }
 
-    pub fn next(&mut self) -> BackendResult<Option<Pair>> {
+    pub fn next(&mut self) -> BackendResult<Option<Record>> {
         let next_db = match self.vtable.next_db {
             Some(f) => f,
             None => {
