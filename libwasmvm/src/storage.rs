@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use cosmwasm_std::{Order, Pair};
+use cosmwasm_std::{Order, Record};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
 use crate::db::Db;
@@ -101,7 +101,7 @@ impl Storage for GoStorage {
         (Ok(next_id), gas_info)
     }
 
-    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Pair>> {
+    fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
         let iterator = match self.iterators.get_mut(&iterator_id) {
             Some(i) => i,
             None => {
