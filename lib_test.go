@@ -12,9 +12,9 @@ import (
 
 const TESTING_FEATURES = "staking,stargate,iterator"
 const TESTING_PRINT_DEBUG = false
-const TESTING_GAS_LIMIT = 100_000_000
-const TESTING_MEMORY_LIMIT = 32 // MiB
-const TESTING_CACHE_SIZE = 100  // MiB
+const TESTING_GAS_LIMIT = uint64(500_000_000_000) // ~0.5ms
+const TESTING_MEMORY_LIMIT = 32                   // MiB
+const TESTING_CACHE_SIZE = 100                    // MiB
 
 const HACKATOM_TEST_CONTRACT = "./api/testdata/hackatom.wasm"
 
@@ -133,7 +133,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     4777334,
+		SizeMemoryCache:     5558358,
 	}, metrics)
 
 	// Instantiate 2
@@ -149,7 +149,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     4777334,
+		SizeMemoryCache:     5558358,
 	}, metrics)
 
 	// Pin
@@ -164,8 +164,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     4777334,
-		SizeMemoryCache:           4777334,
+		SizePinnedMemoryCache:     5558358,
+		SizeMemoryCache:           5558358,
 	}, metrics)
 
 	// Instantiate 3
@@ -183,8 +183,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     4777334,
-		SizeMemoryCache:           4777334,
+		SizePinnedMemoryCache:     5558358,
+		SizeMemoryCache:           5558358,
 	}, metrics)
 
 	// Unpin
@@ -201,7 +201,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           4777334,
+		SizeMemoryCache:           5558358,
 	}, metrics)
 
 	// Instantiate 4
@@ -220,6 +220,6 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           4777334,
+		SizeMemoryCache:           5558358,
 	}, metrics)
 }
