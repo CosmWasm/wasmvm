@@ -5,7 +5,10 @@ package api
 */
 import "C"
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 // makeView creates a view into the given byte slice what allows Rust code to read it.
 // The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
@@ -54,6 +57,9 @@ func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 		// below with `&data[0]`. https://play.golang.org/p/xvDY3g9OqUk
 		out = []byte{}
 	} else {
+		if unsafe.Pointer(v.ptr) == unsafe.Pointer(uintptr(0x01)) {
+			fmt.Printf("Debug UnmanagedVector: %#v\n", v)
+		}
 		// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 		out = C.GoBytes(unsafe.Pointer(v.ptr), cint(v.len))
 	}
