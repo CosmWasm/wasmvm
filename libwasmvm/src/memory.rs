@@ -205,12 +205,17 @@ impl UnmanagedVector {
     pub fn new(source: Option<Vec<u8>>) -> Self {
         match source {
             Some(data) => {
-                let mut data = mem::ManuallyDrop::new(data);
+                let (ptr, len, cap) = {
+                    // Can be replaced with Vec::into_raw_parts when stable
+                    // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.into_raw_parts
+                    let mut data = mem::ManuallyDrop::new(data);
+                    (data.as_mut_ptr(), data.len(), data.capacity())
+                };
                 Self {
                     is_none: false,
-                    ptr: data.as_mut_ptr(),
-                    len: data.len(),
-                    cap: data.capacity(),
+                    ptr,
+                    len,
+                    cap,
                 }
             }
             None => Self {
