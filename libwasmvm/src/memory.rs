@@ -248,12 +248,7 @@ impl UnmanagedVector {
 
 impl Default for UnmanagedVector {
     fn default() -> Self {
-        Self {
-            is_none: true,
-            ptr: std::ptr::null_mut::<u8>(),
-            len: 0,
-            cap: 0,
-        }
+        Self::new(None)
     }
 }
 
