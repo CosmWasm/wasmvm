@@ -7,7 +7,7 @@ use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
-use crate::error::{clear_error, handle_c_error_binary, handle_c_error_default, set_error, Error};
+use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -41,16 +41,7 @@ pub extern "C" fn init_cache(
         )
     })
     .unwrap_or_else(|_| Err(Error::panic()));
-    match r {
-        Ok(t) => {
-            clear_error();
-            t as *mut cache_t
-        }
-        Err(e) => {
-            set_error(e, error_msg);
-            std::ptr::null_mut()
-        }
-    }
+    handle_c_error_ptr(r, error_msg) as *mut cache_t
 }
 
 fn do_init_cache(
@@ -152,7 +143,7 @@ pub extern "C" fn pin(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    handle_c_error_default(r, error_msg);
+    handle_c_error_default(r, error_msg)
 }
 
 fn do_pin(
@@ -178,7 +169,7 @@ pub extern "C" fn unpin(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    handle_c_error_default(r, error_msg);
+    handle_c_error_default(r, error_msg)
 }
 
 fn do_unpin(
@@ -239,16 +230,7 @@ pub extern "C" fn analyze_code(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    match r {
-        Ok(value) => {
-            clear_error();
-            value
-        }
-        Err(error) => {
-            set_error(error, error_msg);
-            AnalysisReport::default()
-        }
-    }
+    handle_c_error_default(r, error_msg)
 }
 
 fn do_analyze_code(
@@ -323,16 +305,7 @@ pub extern "C" fn get_metrics(
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    match r {
-        Ok(value) => {
-            clear_error();
-            value
-        }
-        Err(error) => {
-            set_error(error, error_msg);
-            Metrics::default()
-        }
-    }
+    handle_c_error_default(r, error_msg)
 }
 
 #[allow(clippy::unnecessary_wraps)] // Keep unused Result for consistent boilerplate for all fn do_*
