@@ -89,11 +89,11 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.15.11
+      - image: cimg/go:1.17.1
     steps:
       - run:
           name: Install shfmt
-          command: GO111MODULE=on go get mvdan.cc/sh/v3/cmd/shfmt
+          command: GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@v3.4.0
       - checkout
       - run:
           name: Run shfmt
