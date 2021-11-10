@@ -305,3 +305,4 @@ workflows:
             branches:
               only:
                 - main
+                - "0.16"
