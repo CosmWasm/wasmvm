@@ -5,6 +5,8 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- bump tm-db to 0.6.4
+- bring go to 1.17
 
 ### Added
 
