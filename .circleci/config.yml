@@ -79,7 +79,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.15.11
+      - image: cimg/go:1.17.4
     steps:
       - checkout
       - run:
@@ -107,7 +107,7 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.17.1
+      - image: cimg/go:1.17.4
     steps:
       - run:
           name: Install shfmt
