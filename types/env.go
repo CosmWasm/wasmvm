@@ -10,7 +10,7 @@ package types
 type Env struct {
 	Block       BlockInfo        `json:"block"`
 	Contract    ContractInfo     `json:"contract"`
-	Transaction *TransactionInfo `json:"transaction_info,omit_empty"`
+	Transaction *TransactionInfo `json:"transaction_info,omitempty"`
 }
 
 type BlockInfo struct {
