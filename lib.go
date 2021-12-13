@@ -517,7 +517,7 @@ func (vm *VM) IBCPacketReceive(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCReceiveResponse, uint64, error) {
+) (*types.IBCReceiveResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -542,10 +542,7 @@ func (vm *VM) IBCPacketReceive(
 	if err != nil {
 		return nil, gasUsed, err
 	}
-	if resp.Err != "" {
-		return nil, gasUsed, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasUsed, nil
+	return &resp, gasUsed, nil
 }
 
 // IBCPacketAck is available on IBC-enabled contracts and is called when an
