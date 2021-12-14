@@ -1,6 +1,10 @@
 .PHONY: all build build-rust build-go test
 
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0008
+# Builds the Rust library libwasmvm
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0007
+# Contains a full Go dev environment in order to run Go tests on the built library
+ALPINE_TESTER := cosmwasm/go-ext-builder:0008-alpine
+
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -57,8 +61,8 @@ release-build-alpine:
 	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
 	make update-bindings
 	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(BUILDERS_PREFIX)-alpine go build -tags muslc .
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(BUILDERS_PREFIX)-alpine go test -tags muslc ./api ./types
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc .
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go test -tags muslc ./api ./types
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
