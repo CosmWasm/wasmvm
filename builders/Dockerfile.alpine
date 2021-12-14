@@ -1,5 +1,8 @@
-# we build with go and rust
-FROM golang:1.15-alpine3.12
+# This image is used for two things (which is not ideal, but yeah):
+# 1. Build the static Rust library
+# 2. Execute Go tests that use and test this library
+# For 2. we define the Go image here. For 1. we install Rust below.
+FROM golang:1.17.5-alpine
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
