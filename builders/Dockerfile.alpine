@@ -1,5 +1,8 @@
-# we build with go and rust
-FROM golang:1.15-alpine3.12
+# This image is used for two things (which is not ideal, but yeah):
+# 1. Build the static Rust library
+# 2. Execute Go tests that use and test this library
+# For 2. we define the Go image here. For 1. we install Rust below.
+FROM golang:1.17.5-alpine
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -15,12 +18,12 @@ RUN set -eux; \
 
 RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-musl/rustup-init"
 RUN chmod +x rustup-init
-RUN ./rustup-init -y --no-modify-path --default-toolchain 1.53.0; rm rustup-init
+RUN ./rustup-init -y --no-modify-path --default-toolchain 1.55.0; rm rustup-init
 RUN chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 
 # needed for
 # /usr/lib/gcc/x86_64-alpine-linux-musl/9.3.0/../../../../x86_64-alpine-linux-musl/bin/ld: cannot find crti.o: No such file or directory
-ENV LIBRARY_PATH=/usr/local/rustup/toolchains/1.53.0-x86_64-unknown-linux-musl/lib/rustlib/x86_64-unknown-linux-musl/lib:$LIBRARY_PATH
+ENV LIBRARY_PATH=/usr/local/rustup/toolchains/1.55.0-x86_64-unknown-linux-musl/lib/rustlib/x86_64-unknown-linux-musl/lib:$LIBRARY_PATH
 
 # prepare go cache dirs
 RUN mkdir -p /.cache/go-build

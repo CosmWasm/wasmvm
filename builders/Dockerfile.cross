@@ -1,4 +1,4 @@
-FROM rust:1.53.0-buster
+FROM rust:1.55.0-buster
 
 # Install build dependencies
 RUN apt-get update

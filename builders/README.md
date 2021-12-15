@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0008:**
+
+- Update Rust to 1.55.0 and Go (for testing only) to 1.17.5.
+
 **Version 0007:**
 
 - Do not copy output from the target folder to final destination. The caller should do that.
