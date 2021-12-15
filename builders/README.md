@@ -16,7 +16,7 @@ can do the cross-compilation.
 
 **Version 0008:**
 
-- Update Rust to 1.57.0 and Go (for testing only) to 1.17.5.
+- Update Rust to 1.55.0 and Go (for testing only) to 1.17.5.
 
 **Version 0007:**
 
