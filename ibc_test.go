@@ -2,12 +2,13 @@ package cosmwasm
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"testing"
+
 	"github.com/CosmWasm/wasmvm/api"
 	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"testing"
 )
 
 const IBC_TEST_CONTRACT = "./api/testdata/ibc_reflect.wasm"
@@ -241,8 +242,10 @@ func TestIBCPacketDispatch(t *testing.T) {
 		},
 	}
 	msg := api.MockIBCPacketReceive(CHANNEL_ID, toBytes(t, ibcMsg))
-	pres, _, err := vm.IBCPacketReceive(checksum, env, msg, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
+	pr, _, err := vm.IBCPacketReceive(checksum, env, msg, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	assert.NotNil(t, pr.Ok)
+	pres := pr.Ok
 
 	// assert app-level success
 	var ack AcknowledgeDispatch
@@ -251,8 +254,10 @@ func TestIBCPacketDispatch(t *testing.T) {
 
 	// error on message from another channel
 	msg2 := api.MockIBCPacketReceive("no-such-channel", toBytes(t, ibcMsg))
-	pres2, _, err := vm.IBCPacketReceive(checksum, env, msg2, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
+	pr2, _, err := vm.IBCPacketReceive(checksum, env, msg2, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	assert.NotNil(t, pr.Ok)
+	pres2 := pr2.Ok
 	// assert app-level failure
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
