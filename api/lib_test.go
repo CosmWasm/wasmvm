@@ -208,7 +208,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     5532497,
+		SizeMemoryCache:     5576140,
 	}, metrics)
 
 	// Instantiate 2
@@ -223,7 +223,7 @@ func TestGetMetrics(t *testing.T) {
 		HitsMemoryCache:     1,
 		HitsFsCache:         1,
 		ElementsMemoryCache: 1,
-		SizeMemoryCache:     5532497,
+		SizeMemoryCache:     5576140,
 	}, metrics)
 
 	// Pin
@@ -238,8 +238,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     5532497,
-		SizeMemoryCache:           5532497,
+		SizePinnedMemoryCache:     5576140,
+		SizeMemoryCache:           5576140,
 	}, metrics)
 
 	// Instantiate 3
@@ -256,8 +256,8 @@ func TestGetMetrics(t *testing.T) {
 		HitsFsCache:               1,
 		ElementsPinnedMemoryCache: 1,
 		ElementsMemoryCache:       1,
-		SizePinnedMemoryCache:     5532497,
-		SizeMemoryCache:           5532497,
+		SizePinnedMemoryCache:     5576140,
+		SizeMemoryCache:           5576140,
 	}, metrics)
 
 	// Unpin
@@ -274,7 +274,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           5532497,
+		SizeMemoryCache:           5576140,
 	}, metrics)
 
 	// Instantiate 4
@@ -292,7 +292,7 @@ func TestGetMetrics(t *testing.T) {
 		ElementsPinnedMemoryCache: 0,
 		ElementsMemoryCache:       1,
 		SizePinnedMemoryCache:     0,
-		SizeMemoryCache:           5532497,
+		SizeMemoryCache:           5576140,
 	}, metrics)
 }
 
@@ -855,7 +855,7 @@ func TestQuery(t *testing.T) {
 	var badResp types.QueryResponse
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
-	require.Equal(t, "Error parsing into type hackatom::msg::QueryMsg: unknown variant `Raw`, expected one of `verifier`, `other_balance`, `recurse`", badResp.Err)
+	require.Contains(t, badResp.Err, "Error parsing into type hackatom::msg::QueryMsg: unknown variant `Raw`, expected one of")
 
 	// make a valid query
 	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
