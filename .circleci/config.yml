@@ -193,6 +193,7 @@ jobs:
   deploy_to_git:
     machine:
       image: ubuntu-2004:202101-01
+    resource_class: xlarge
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -227,6 +228,7 @@ jobs:
   build_static_lib:
     machine:
       image: ubuntu-2004:202101-01
+    resource_class: xlarge
     steps:
       - checkout
       - run:
