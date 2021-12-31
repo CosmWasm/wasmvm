@@ -79,7 +79,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.15.11
+      - image: cimg/go:1.17.4
     steps:
       - checkout
       - run:
@@ -161,9 +161,8 @@ jobs:
           key: cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   test:
-    working_directory: /go/src/github.com/CosmWasm/wasmvm
     docker:
-      - image: circleci/golang:1.15
+      - image: cimg/go:1.17.4
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
@@ -298,7 +297,7 @@ workflows:
               only:
                 # long living branches
                 - main
-                - 0.14-dev
+                - upgrade-0.16-to-go1.17
       # This is long running, so only double-check on merge commits
       # ensures that all code works on alpine linux
       - test_alpine_build:
@@ -310,7 +309,7 @@ workflows:
               only:
                 # long living branches
                 - main
-                - 0.14-dev
+                - upgrade-0.16-to-go1.17
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
