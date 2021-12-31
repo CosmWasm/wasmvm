@@ -79,7 +79,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.15.11
+      - image: cimg/go:1.17.4
     steps:
       - checkout
       - run:
