@@ -161,7 +161,6 @@ jobs:
           key: cargocache-v3-build_shared_library-rust:1.55.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   test:
-    working_directory: /go/src/github.com/CosmWasm/wasmvm
     docker:
       - image: cimg/go:1.17.4
     environment:
