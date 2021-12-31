@@ -87,6 +87,24 @@ jobs:
           command: |
             [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
 
+  tidy-go:
+    docker:
+      - image: cimg/go:1.17.4
+    steps:
+      - checkout
+      - run:
+          name: Check go mod tidy
+          # Use --check or --exit-code when available (Go 1.19?)
+          # https://github.com/golang/go/issues/27005
+          command: |
+            go mod tidy
+            CHANGES_IN_REPO=$(git status --porcelain)
+            if [[ -n "$CHANGES_IN_REPO" ]]; then
+              echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+              git status && git --no-pager diff
+              exit 1
+            fi
+
   format-scripts:
     docker:
       - image: cimg/go:1.17.1
@@ -259,6 +277,7 @@ workflows:
       - libwasmvm_sanity
       - libwasmvm_audit
       - format-go
+      - tidy-go
       - format-scripts
       - lint-scripts
       - build_shared_library:
@@ -297,6 +316,7 @@ workflows:
           requires:
             - libwasmvm_sanity
             - format-go
+            - tidy-go
             - format-scripts
             - lint-scripts
             - test
