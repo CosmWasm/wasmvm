@@ -161,9 +161,8 @@ jobs:
           key: cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   test:
-    working_directory: /go/src/github.com/CosmWasm/wasmvm
     docker:
-      - image: circleci/golang:1.15
+      - image: cimg/go:1.17.4
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
