@@ -298,7 +298,7 @@ workflows:
               only:
                 # long living branches
                 - main
-                - 0.14-dev
+                - upgrade-0.16-to-go1.17
       # This is long running, so only double-check on merge commits
       # ensures that all code works on alpine linux
       - test_alpine_build:
@@ -310,7 +310,7 @@ workflows:
               only:
                 # long living branches
                 - main
-                - 0.14-dev
+                - upgrade-0.16-to-go1.17
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
