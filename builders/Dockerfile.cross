@@ -1,9 +1,11 @@
 FROM rust:1.55.0-buster
 
 # Install build dependencies
-RUN apt-get update
-RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
-RUN apt install -y build-essential cmake
+RUN apt-get update && apt install -y \
+  clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev \
+  build-essential cmake \
+  # Support for Windows cross-compile
+  mingw-w64
 
 # add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
 RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
@@ -15,15 +17,17 @@ ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
 
 WORKDIR /opt
 
-# Add macOS Rust target
-RUN rustup target add x86_64-apple-darwin
+# Add macOS and Windows Rust targets
+RUN rustup target add x86_64-apple-darwin x86_64-pc-windows-gnu
 
 # Build osxcross
-RUN git clone https://github.com/tpoechtrager/osxcross
-RUN cd osxcross && \
-	wget -nc https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz && \
-    mv MacOSX10.10.sdk.tar.xz tarballs/ && \
-    UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
+RUN git clone https://github.com/tpoechtrager/osxcross \
+  && cd osxcross \
+  && wget -nc https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz \
+  && mv MacOSX10.10.sdk.tar.xz tarballs/ \
+  && UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh \
+  # Cleanups before Docker layer is finalized
+  && rm -r tarballs/
 RUN chmod +rx /opt/osxcross
 RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
@@ -35,11 +39,11 @@ RUN chmod -R 777 /usr/local/cargo
 
 WORKDIR /code
 
-COPY guest/*.sh /opt/
-RUN chmod +x /opt/*.sh
+COPY guest/*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY guest/cargo-config /.cargo/config
 
-CMD ["/opt/build_macos.sh"]
+CMD ["bash", "-c", "echo 'Argument missing. Pass one of build_macos.sh or build_windows.sh to docker run' && exit 1"]

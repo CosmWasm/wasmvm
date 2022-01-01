@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0009:**
+
+- Add Windows support to cosmwasm/go-ext-builder:0009-cross. This image builds for macOS and Windows now.
+
 **Version 0008:**
 
 - Update Rust to 1.55.0 and Go (for testing only) to 1.17.5.
