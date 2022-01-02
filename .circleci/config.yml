@@ -182,6 +182,28 @@ jobs:
           command: make test-safety
       - run: make build-go
 
+  rust-unit-tests-windows:
+    executor:
+      name: win/default
+      shell: powershell.exe
+    environment:
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+    steps:
+      - checkout
+      - run:
+          name: Install Rustup
+          command: choco install rustup.install
+      - run:
+          name: Install Rust
+          command: rustup default 1.55.0
+      - run:
+          name: Show Rust version information
+          command: rustc --version; cargo --version; rustup --version
+      - run:
+          name: Run unit tests
+          working_directory: libwasmvm
+          command: cargo test
+
   # Note: this is pretty limited right now because it only tests the checked-in
   # wasmvm.dll without rebuilding it.
   test-windows:
@@ -301,6 +323,7 @@ workflows:
       - tidy-go
       - format-scripts
       - lint-scripts
+      - rust-unit-tests-windows
       - test-windows
       - build_shared_library:
           filters: # required since other jobs with tag filters require this one
