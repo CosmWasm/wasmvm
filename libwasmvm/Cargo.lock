@@ -183,8 +183,8 @@ checksum = "44c32f031ea41b4291d695026c023b95d59db2d8a2c7640800ed56bc8f510f22"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.16.3"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=d9ea506c7#d9ea506c7daf41581d990078eb4937f7c3e794ac"
+version = "0.16.4"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.4#54fd2b1027860a4628b25daa2682b7d9b3bcbc7f"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -195,16 +195,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.16.3"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=d9ea506c7#d9ea506c7daf41581d990078eb4937f7c3e794ac"
+version = "0.16.4"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.4#54fd2b1027860a4628b25daa2682b7d9b3bcbc7f"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.16.3"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=d9ea506c7#d9ea506c7daf41581d990078eb4937f7c3e794ac"
+version = "0.16.4"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.4#54fd2b1027860a4628b25daa2682b7d9b3bcbc7f"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -218,8 +218,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.16.3"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=d9ea506c7#d9ea506c7daf41581d990078eb4937f7c3e794ac"
+version = "0.16.4"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.4#54fd2b1027860a4628b25daa2682b7d9b3bcbc7f"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
