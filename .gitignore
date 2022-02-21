@@ -1,4 +1,5 @@
-target/
+# Please also see libwasmvm/.gitignore for the Rust-specific ignored files.
+
 **/*.rs.bk
 *.iml
 .idea
@@ -7,7 +8,6 @@ target/
 lib*.a
 
 # artifacts from compile tests
-artifacts/
 /demo
 tmp
 a.out
