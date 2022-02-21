@@ -11,3 +11,4 @@ export CXX=o64-clang++
 # enable stripping through cargo (if that is desired).
 
 cargo build --release --target x86_64-apple-darwin
+cargo build --release --target aarch64-apple-darwin
