@@ -74,7 +74,7 @@ release-build-linux:
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
 	rm -rf libwasmvm/target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
 	cp libwasmvm/target/x86_64-apple-darwin/release/deps/libwasmvm.dylib api
 	cp libwasmvm/bindings.h api
 	make update-bindings

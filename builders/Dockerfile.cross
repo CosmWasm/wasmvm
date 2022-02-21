@@ -34,11 +34,11 @@ RUN chmod -R 777 /usr/local/cargo
 
 WORKDIR /code
 
-COPY guest/*.sh /opt/
-RUN chmod +x /opt/*.sh
+COPY guest/*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY guest/cargo-config /.cargo/config
 
-CMD ["/opt/build_macos.sh"]
+CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_macos.sh) to docker run' && exit 1"]
