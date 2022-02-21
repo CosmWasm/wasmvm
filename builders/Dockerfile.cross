@@ -1,9 +1,8 @@
 FROM rust:1.55.0-buster
 
 # Install build dependencies
-RUN apt-get update
-RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
-RUN apt install -y build-essential cmake
+RUN apt-get update \
+  && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake
 
 # add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
 RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
