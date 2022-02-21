@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o errexit -o nounset -o pipefail
 
 # ref: https://wapl.es/rust/2019/02/17/rust-cross-compile-linux-to-macos.html
 export PATH="/opt/osxcross/target/bin:$PATH"
