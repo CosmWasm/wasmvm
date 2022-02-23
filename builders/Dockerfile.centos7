@@ -1,23 +1,21 @@
 FROM centos:centos7
 
-RUN yum -y update
-RUN yum -y install clang gcc gcc-c++ make wget
+RUN yum -y update \
+  && yum -y install clang gcc gcc-c++ make wget
 
 # GET FROM https://github.com/rust-lang/docker-rust-nightly
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
-
-RUN url="https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
-    wget "$url"; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain 1.55.0; \
-    rm rustup-init; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version;
+RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" \
+  && chmod +x rustup-init \
+  && ./rustup-init -y --no-modify-path --default-toolchain 1.55.0 \
+  && rm rustup-init \
+  && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+  && rustup --version \
+  && cargo --version \
+  && rustc --version
 
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo
