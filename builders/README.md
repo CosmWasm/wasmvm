@@ -16,6 +16,7 @@ can do the cross-compilation.
 
 **Version 0009:**
 
+- Let macOS build dylib files with both aarch64 and x86_64 code.
 - Update Go (for testing only) to 1.17.7.
 
 **Version 0008:**
