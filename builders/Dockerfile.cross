@@ -1,32 +1,39 @@
-FROM rust:1.55.0-buster
+FROM rust:1.55.0-bullseye
 
 # Install build dependencies
-RUN apt-get update
-RUN apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev
-RUN apt install -y build-essential cmake
-
-# add some llvm configs for later - how to cross-compile this in wasmer-llvm-backend???
-RUN echo deb http://deb.debian.org/debian buster-backports main >> /etc/apt/sources.list
-RUN apt-get update
-RUN apt install -y libllvm8 llvm-8 llvm-8-dev llvm-8-runtime
-ENV LLVM_SYS_80_PREFIX=/usr/lib/llvm-8
+RUN apt-get update \
+  && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake
 
 ## ADD MACOS SUPPORT
 
 WORKDIR /opt
 
-# Add macOS Rust target
-RUN rustup target add x86_64-apple-darwin
+# Add macOS Rust targets
+RUN rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
 # Build osxcross
-RUN git clone https://github.com/tpoechtrager/osxcross
-RUN cd osxcross && \
-	wget -nc https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz && \
-    mv MacOSX10.10.sdk.tar.xz tarballs/ && \
-    UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh
+# See https://github.com/tpoechtrager/osxcross/blob/master/build.sh#L31-L49 for SDK overview.
+#
+# SDK availability is tricky. There is 10.10 and 10.11. at
+#   - https://s3.dockerproject.org/darwin/v2/MacOSX10.10.sdk.tar.xz
+#   - https://s3.dockerproject.org/darwin/v2/MacOSX10.11.sdk.tar.xz
+# and we have https://github.com/phracker/MacOSX-SDKs/releases.
+# At some point we might want to use our own package.
+RUN git clone https://github.com/tpoechtrager/osxcross \
+  && cd osxcross \
+  # Don't change file name when downloading because osxcross auto-detects the version from the name
+  && wget -nc https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz \
+  && mv MacOSX11.3.sdk.tar.xz tarballs/ \
+  && UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh \
+  # Cleanups before Docker layer is finalized
+  && rm -r tarballs/
 RUN chmod +rx /opt/osxcross
 RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
+
+# RUN ls -l /opt/osxcross/target/bin
+RUN /opt/osxcross/target/bin/x86_64-apple-darwin20.4-clang --version
+RUN /opt/osxcross/target/bin/aarch64-apple-darwin20.4-clang --version
 
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo
@@ -35,11 +42,11 @@ RUN chmod -R 777 /usr/local/cargo
 
 WORKDIR /code
 
-COPY guest/*.sh /opt/
-RUN chmod +x /opt/*.sh
+COPY guest/*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
 COPY guest/cargo-config /.cargo/config
 
-CMD ["/opt/build_macos.sh"]
+CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_macos.sh) to docker run' && exit 1"]

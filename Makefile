@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0008
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0008-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0009-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -73,10 +73,10 @@ release-build-linux:
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
-	rm -rf libwasmvm/target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross
-	cp libwasmvm/target/x86_64-apple-darwin/release/deps/libwasmvm.dylib api
-	cp libwasmvm/bindings.h api
+	rm -rf libwasmvm/target/x86_64-apple-darwin/release
+	rm -rf libwasmvm/target/aarch64-apple-darwin/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
+	cp libwasmvm/artifacts/libwasmvm.dylib api
 	make update-bindings
 
 update-bindings:
