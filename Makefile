@@ -48,10 +48,10 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACE=1 go test -v ./api ./types .
+	RUST_BACKTRACE=1 go test -v
 
 test-safety:
-	GODEBUG=cgocheck=2 go test -race -v -count 1 ./api
+	GODEBUG=cgocheck=2 go test -race -v -count 1
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
