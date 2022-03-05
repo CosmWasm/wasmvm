@@ -209,6 +209,63 @@ type StakingQuery struct {
 	AllDelegations *AllDelegationsQuery `json:"all_delegations,omitempty"`
 	Delegation     *DelegationQuery     `json:"delegation,omitempty"`
 	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
+
+	TokenizeShareRecordByID    TokenizeShareRecordByIDQuery    `json:"tokenize_share_record_by_id,omitempty"`
+	TokenizeShareRecordByDenom TokenizeShareRecordByDenomQuery `json:"tokenize_share_record_by_denom,omitempty"`
+	TokenizeShareRecordsOwned  TokenizeShareRecordsOwnedQuery  `json:"tokenize_share_records_owned,omitempty"`
+	AllTokenizeShareRecords    AllTokenizeShareRecordsQuery    `json:"all_tokenize_share_records,omitempty"`
+	LastTokenizeShareRecordID  LastTokenizeShareRecordIDQuery  `json:"last_tokenize_share_record_id,omitempty"`
+	TotalTokenizeSharedAssets  TotalTokenizeSharedAssetsQuery  `json:"total_tokenize_shared_assets,omitempty"`
+}
+
+type TokenizeShareRecord struct {
+	ID              uint64 `json:"id"`
+	Owner           string `json:"owner"`
+	ShareTokenDenom string `json:"share_token_denom"`
+	ModuleAccount   string `json:"module_account"`
+	Validator       string `json:"validator"`
+}
+
+type TokenizeShareRecordByIDQuery struct {
+	ID uint64 `json:"id"`
+}
+
+type TokenizeShareRecordByIDResponse struct {
+	Record *TokenizeShareRecord `json:"record"`
+}
+
+type TokenizeShareRecordByDenomQuery struct {
+	Denom string `json:"denom"`
+}
+
+type TokenizeShareRecordByDenomResponse struct {
+	Record *TokenizeShareRecord `json:"record"`
+}
+
+type TokenizeShareRecordsOwnedQuery struct {
+	Address string `json:"address"`
+}
+
+type TokenizeShareRecordsOwnedResponse struct {
+	Records []TokenizeShareRecord `json:"records"`
+}
+
+type AllTokenizeShareRecordsQuery struct{}
+
+type AllTokenizeShareRecordsResponse struct {
+	Records []TokenizeShareRecord `json:"records"`
+}
+
+type LastTokenizeShareRecordIDQuery struct{}
+
+type LastTokenizeShareRecordIDResponse struct {
+	ID uint64 `json:"id"`
+}
+
+type TotalTokenizeSharedAssetsQuery struct{}
+
+type TotalTokenizeSharedAssetsResponse struct {
+	Value Coin `json:"value"`
 }
 
 type AllValidatorsQuery struct{}
