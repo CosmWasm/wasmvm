@@ -200,7 +200,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 		Result: types.SubcallResult{
 			Ok: &types.SubcallResponse{
 				Events: types.Events{{
-					Type: "message",
+					Type: "instantiate",
 					Attributes: types.EventAttributes{
 						{
 							Key:   "module",
