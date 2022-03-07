@@ -4,7 +4,7 @@ jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
   libwasmvm_sanity:
     docker:
-      - image: cimg/rust:1.53.0
+      - image: cimg/rust:1.55.0
     steps:
       - checkout
       - run:
@@ -15,7 +15,7 @@ jobs:
           command: rustup component add clippy rustfmt
       - restore_cache:
           keys:
-            - cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cargocache-v3-libwasmvm_sanity-rust:1.55.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
           name: Check Rust formatting
           working_directory: libwasmvm
@@ -47,7 +47,7 @@ jobs:
             - libwasmvm/target/release/.fingerprint
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
-          key: cargocache-v3-libwasmvm_sanity-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
+          key: cargocache-v3-libwasmvm_sanity-rust:1.55.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   libwasmvm_audit:
     docker:
@@ -134,7 +134,7 @@ jobs:
 
   build_shared_library:
     docker:
-      - image: cimg/rust:1.53.0
+      - image: cimg/rust:1.55.0
     steps:
       - checkout
       - run:
@@ -142,7 +142,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cargocache-v3-build_shared_library-rust:1.55.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
           name: Create release build of libwasmvm
           command: make build-rust
@@ -159,7 +159,7 @@ jobs:
             - libwasmvm/target/release/.fingerprint
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
-          key: cargocache-v3-build_shared_library-rust:1.53.0-{{ checksum "libwasmvm/Cargo.lock" }}
+          key: cargocache-v3-build_shared_library-rust:1.55.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   test:
     docker:
