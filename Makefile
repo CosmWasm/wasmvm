@@ -48,10 +48,12 @@ build-go:
 	go build ./...
 
 test:
-	RUST_BACKTRACE=1 go test -v
+	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
+	RUST_BACKTRACE=1 go test -v -count=1 ./...
 
 test-safety:
-	GODEBUG=cgocheck=2 go test -race -v -count 1
+	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
+	GODEBUG=cgocheck=2 go test -race -v -count=1 ./...
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
@@ -61,8 +63,9 @@ release-build-alpine:
 	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
 	make update-bindings
 	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc .
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go test -tags muslc ./api ./types
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
+	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go test -tags muslc -count=1 ./...
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
