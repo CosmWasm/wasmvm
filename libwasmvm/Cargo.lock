@@ -183,8 +183,8 @@ checksum = "9d6f2aa4d0537bcc1c74df8755072bd31c1ef1a3a1b85a68e8404a8c353b7b8b"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.0.0-beta5"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=ec8b568e8#ec8b568e8df43a6934dbc1053da2a092ff5eb284"
+version = "1.0.0-beta6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta6#9a70518560dc1ac5d1091a176d9b219839bc616c"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -195,20 +195,21 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.0.0-beta5"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=ec8b568e8#ec8b568e8df43a6934dbc1053da2a092ff5eb284"
+version = "1.0.0-beta6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta6#9a70518560dc1ac5d1091a176d9b219839bc616c"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.0.0-beta5"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=ec8b568e8#ec8b568e8df43a6934dbc1053da2a092ff5eb284"
+version = "1.0.0-beta6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta6#9a70518560dc1ac5d1091a176d9b219839bc616c"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
  "cosmwasm-derive",
+ "forward_ref",
  "schemars",
  "serde",
  "serde-json-wasm",
@@ -218,8 +219,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.0.0-beta5"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=ec8b568e8#ec8b568e8df43a6934dbc1053da2a092ff5eb284"
+version = "1.0.0-beta6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta6#9a70518560dc1ac5d1091a176d9b219839bc616c"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -615,6 +616,12 @@ name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+
+[[package]]
+name = "forward_ref"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
 
 [[package]]
 name = "generic-array"
