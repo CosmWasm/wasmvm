@@ -702,7 +702,7 @@ mod tests {
                 misses: 0,
                 elements_pinned_memory_cache: 1,
                 elements_memory_cache: 0,
-                size_pinned_memory_cache: 5549819,
+                size_pinned_memory_cache: 5622877,
                 size_memory_cache: 0,
             }
         );
