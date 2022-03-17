@@ -14,6 +14,9 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0009b**
+- Added ARM64 flag to enable/disable building of arrch64 for centos. ARM64=1
+
 **Version 0009:**
 
 - Let macOS build dylib files with both aarch64 and x86_64 code.

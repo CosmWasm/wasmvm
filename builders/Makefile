@@ -4,7 +4,11 @@ BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
 
 .PHONY: docker-image-centos7
 docker-image-centos7:
+ifdef ARM64
+	docker build --platform linux/arm64 . -t $(BUILDERS_PREFIX)-centos7 -f ./Dockerfile.centos7 --build-arg arch=aarch64
+else
 	docker build . -t $(BUILDERS_PREFIX)-centos7 -f ./Dockerfile.centos7
+endif
 
 .PHONY: docker-image-cross
 docker-image-cross:

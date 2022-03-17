@@ -1,4 +1,5 @@
 FROM centos:centos7
+ARG arch=x86_64
 
 RUN yum -y update \
   && yum -y install clang gcc gcc-c++ make wget
@@ -8,7 +9,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
-RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" \
+RUN wget "https://static.rust-lang.org/rustup/dist/${arch}-unknown-linux-gnu/rustup-init" \
   && chmod +x rustup-init \
   && ./rustup-init -y --no-modify-path --default-toolchain 1.55.0 \
   && rm rustup-init \
