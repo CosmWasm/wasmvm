@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0010
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0009-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0010-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -60,7 +60,8 @@ release-build-alpine:
 	rm -rf libwasmvm/target/release
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
-	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
+	cp libwasmvm/artifacts/libwasmvm_muslc.a api
+	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a api
 	make update-bindings
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...

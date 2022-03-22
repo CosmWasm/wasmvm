@@ -1,6 +1,6 @@
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
 # See builders/README.md
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0010
 
 .PHONY: docker-image-centos7
 docker-image-centos7:
@@ -22,3 +22,9 @@ docker-publish: docker-images
 	docker push $(BUILDERS_PREFIX)-cross
 	docker push $(BUILDERS_PREFIX)-centos7
 	docker push $(BUILDERS_PREFIX)-alpine
+
+.PHONY: pull-base-images
+pull-base-images:
+	docker pull golang:1.17.7-alpine
+	docker pull centos:centos7
+	docker pull rust:1.55.0-bullseye
