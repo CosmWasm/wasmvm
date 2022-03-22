@@ -60,7 +60,8 @@ release-build-alpine:
 	rm -rf libwasmvm/target/release
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
-	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
+	cp libwasmvm/artifacts/libwasmvm_muslc.a api
+	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a api
 	make update-bindings
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
