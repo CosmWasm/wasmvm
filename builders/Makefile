@@ -22,3 +22,9 @@ docker-publish: docker-images
 	docker push $(BUILDERS_PREFIX)-cross
 	docker push $(BUILDERS_PREFIX)-centos7
 	docker push $(BUILDERS_PREFIX)-alpine
+
+.PHONY: pull-base-images
+pull-base-images:
+	docker pull golang:1.17.7-alpine
+	docker pull centos:centos7
+	docker pull rust:1.55.0-bullseye
