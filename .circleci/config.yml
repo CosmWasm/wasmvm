@@ -242,6 +242,7 @@ jobs:
           command: |
             mkdir artifacts
             cp ./api/libwasmvm_muslc.a artifacts
+            cp ./api/libwasmvm_muslc.aarch64.a artifacts
       - run:
           name: Create checksums
           working_directory: artifacts

@@ -1,6 +1,6 @@
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
 # See builders/README.md
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0010
 
 .PHONY: docker-image-centos7
 docker-image-centos7:
