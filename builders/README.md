@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0011:**
+
+- Update Rust to 1.59.0.
+
 **Version 0010:**
 
 - Add cross-compilation setup to build `libwasmvm_muslc.a` and `libwasmvm_muslc.aarch64.a`

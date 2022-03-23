@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0010
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0011
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0010-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0011-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -98,7 +98,7 @@ test-alpine: release-build-alpine
 	@# Build a Go demo binary called ./demo that links the static library from the previous step.
 	@# Whether the result is a statically linked or dynamically linked binary is decided by `go build`
 	@# and it's a bit unclear how this is decided. We use `file` to see what we got.
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc -o demo ./cmd
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) ./build_demo.sh
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) file ./demo
 
 	@# Run the demo binary on Alpine machines
