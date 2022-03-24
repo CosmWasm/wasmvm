@@ -71,7 +71,8 @@ release-build-alpine:
 release-build-linux:
 	rm -rf libwasmvm/target/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7
-	cp libwasmvm/target/release/deps/libwasmvm.so api
+	cp libwasmvm/artifacts/libwasmvm.so api
+	cp libwasmvm/artifacts/libwasmvm.aarch64.so api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
