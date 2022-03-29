@@ -241,7 +241,8 @@ jobs:
           name: Collect artifacts
           command: |
             mkdir artifacts
-            cp ./api/libwasmvm_muslc.a artifacts
+            cp ./api/libwasmvm_muslc.a artifacts/libwasmvm_muslc.x86_64.a
+            cp ./api/libwasmvm_muslc.aarch64.a artifacts/libwasmvm_muslc.aarch64.a
       - run:
           name: Create checksums
           working_directory: artifacts
