@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0009
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0011
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0009-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0011-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -60,7 +60,8 @@ release-build-alpine:
 	rm -rf libwasmvm/target/release
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
-	cp libwasmvm/target/release/examples/libmuslc.a api/libwasmvm_muslc.a
+	cp libwasmvm/artifacts/libwasmvm_muslc.a api
+	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a api
 	make update-bindings
 	# try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
@@ -94,13 +95,18 @@ release-build:
 	make release-build-macos
 
 test-alpine: release-build-alpine
-	# build a go binary
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(BUILDERS_PREFIX)-alpine go build -tags muslc -o demo ./cmd
-	# run static binary in an alpine machines (not dlls)
-	# See https://de.wikipedia.org/wiki/Alpine_Linux#Versionen for supported versions
+	@# Build a Go demo binary called ./demo that links the static library from the previous step.
+	@# Whether the result is a statically linked or dynamically linked binary is decided by `go build`
+	@# and it's a bit unclear how this is decided. We use `file` to see what we got.
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) ./build_demo.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) file ./demo
+
+	@# Run the demo binary on Alpine machines
+	@# See https://de.wikipedia.org/wiki/Alpine_Linux#Versionen for supported versions
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.15 ./demo ./api/testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.14 ./demo ./api/testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.13 ./demo ./api/testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.12 ./demo ./api/testdata/hackatom.wasm
-	# run static binary locally if you are on Linux
-	# ./muslc.exe ./api/testdata/hackatom.wasm
+
+	@# Run binary locally if you are on Linux
+	@# ./demo ./api/testdata/hackatom.wasm
