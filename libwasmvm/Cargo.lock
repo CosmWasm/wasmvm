@@ -183,8 +183,8 @@ checksum = "9d6f2aa4d0537bcc1c74df8755072bd31c1ef1a3a1b85a68e8404a8c353b7b8b"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.0.0-beta7"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta7#e44e10dcd4886b2295432a552d931928a43270d3"
+version = "1.0.0-beta8"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta8#371e62a4aeca18b5d2c43262f4a12c774134843b"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -195,16 +195,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.0.0-beta7"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta7#e44e10dcd4886b2295432a552d931928a43270d3"
+version = "1.0.0-beta8"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta8#371e62a4aeca18b5d2c43262f4a12c774134843b"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.0.0-beta7"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta7#e44e10dcd4886b2295432a552d931928a43270d3"
+version = "1.0.0-beta8"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta8#371e62a4aeca18b5d2c43262f4a12c774134843b"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -219,8 +219,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.0.0-beta7"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta7#e44e10dcd4886b2295432a552d931928a43270d3"
+version = "1.0.0-beta8"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.0.0-beta8#371e62a4aeca18b5d2c43262f4a12c774134843b"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -351,9 +351,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.5"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d82cfc11ce7f2c3faef78d8a684447b40d503d9681acebed6cb728d45940c4db"
+checksum = "0bf124c720b7686e3c2663cf54062ab0f68a88af2fb6a030e87e30bf721fcb38"
 dependencies = [
  "cfg-if",
  "lazy_static",
@@ -694,6 +694,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c21d40587b92fa6a6c6e3c1bdbf87d75511db5672f9c93175574b3a00df1758"
+dependencies = [
+ "ahash",
+]
+
+[[package]]
 name = "heck"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -740,7 +749,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc633605454125dec4b66843673f01c7df2b89479b32e0ed634e43a91cff62a5"
 dependencies = [
  "autocfg",
- "hashbrown",
+ "hashbrown 0.11.2",
  "serde",
 ]
 
@@ -904,7 +913,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40bec70ba014595f99f7aa110b84331ffe1ee9aece7fe6f387cc7e3ecda4d456"
 dependencies = [
  "crc32fast",
- "hashbrown",
+ "hashbrown 0.11.2",
  "indexmap",
  "memchr",
 ]
@@ -1128,21 +1137,21 @@ dependencies = [
 
 [[package]]
 name = "rend"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1033f6fe7ce48c8333e5412891b933e85d6a3a09728c4883240edf64e7a6f11a"
+checksum = "79af64b4b6362ffba04eef3a4e10829718a4896dac19daa741851c86781edf95"
 dependencies = [
  "bytecheck",
 ]
 
 [[package]]
 name = "rkyv"
-version = "0.7.26"
+version = "0.7.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66bf572c17c77322f4d858c214def56b13a3c32b8d833cd6d28a92de8325ac5f"
+checksum = "1f08c8062c1fe1253064043b8fc07bfea1b9702b71b4a86c11ea3588183b12e1"
 dependencies = [
  "bytecheck",
- "hashbrown",
+ "hashbrown 0.12.0",
  "ptr_meta",
  "rend",
  "rkyv_derive",
@@ -1151,9 +1160,9 @@ dependencies = [
 
 [[package]]
 name = "rkyv_derive"
-version = "0.7.26"
+version = "0.7.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df3eca50f172b8e59e2080810fb41b65f047960c197149564d4bd0680af1888e"
+checksum = "e289706df51226e84814bf6ba1a9e1013112ae29bc7a9878f73fce360520c403"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1282,9 +1291,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b69f9a4c9740d74c5baa3fd2e547f9525fa8088a8a958e0ca2409a514e33f5fa"
+checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
 dependencies = [
  "block-buffer",
  "cfg-if",
@@ -1458,9 +1467,9 @@ checksum = "b63708a265f51345575b27fe43f9500ad611579e764c79edbc2037b1121959ec"
 
 [[package]]
 name = "uint"
-version = "0.9.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6470ab50f482bde894a037a57064480a246dbfdd5960bd65a44824693f08da5f"
+checksum = "12f03af7ccf01dd611cc450a0d10dbc9b745770d096473e2faf0ca6e2d66d1e0"
 dependencies = [
  "byteorder",
  "crunchy",
