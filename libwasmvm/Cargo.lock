@@ -183,8 +183,8 @@ checksum = "44c32f031ea41b4291d695026c023b95d59db2d8a2c7640800ed56bc8f510f22"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.16.6"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.6#08484e3d73e7523c229688a53702a9e6337a1ad0"
+version = "0.16.7"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.7#622d0eca57e6e0208b1745da2d874a682c712bec"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -195,16 +195,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.16.6"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.6#08484e3d73e7523c229688a53702a9e6337a1ad0"
+version = "0.16.7"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.7#622d0eca57e6e0208b1745da2d874a682c712bec"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.16.6"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.6#08484e3d73e7523c229688a53702a9e6337a1ad0"
+version = "0.16.7"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.7#622d0eca57e6e0208b1745da2d874a682c712bec"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -219,8 +219,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "0.16.6"
-source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.6#08484e3d73e7523c229688a53702a9e6337a1ad0"
+version = "0.16.7"
+source = "git+https://github.com/CosmWasm/cosmwasm?rev=v0.16.7#622d0eca57e6e0208b1745da2d874a682c712bec"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -1463,9 +1463,9 @@ checksum = "879f6906492a7cd215bfa4cf595b600146ccfac0c79bcbd1f3000162af5e8b06"
 
 [[package]]
 name = "uint"
-version = "0.9.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6470ab50f482bde894a037a57064480a246dbfdd5960bd65a44824693f08da5f"
+checksum = "12f03af7ccf01dd611cc450a0d10dbc9b745770d096473e2faf0ca6e2d66d1e0"
 dependencies = [
  "byteorder",
  "crunchy",
