@@ -13,6 +13,7 @@ mod memory;
 mod querier;
 mod storage;
 mod tests;
+mod version;
 
 // We only interact with this crate via `extern "C"` interfaces, not those public
 // exports. There are no guarantees those exports are stable.
@@ -26,3 +27,4 @@ pub use memory::{
 };
 pub use querier::GoQuerier;
 pub use storage::GoStorage;
+pub use version::{make_version_number, version_number};

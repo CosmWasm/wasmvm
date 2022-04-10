@@ -476,3 +476,40 @@ struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
 void destroy_unmanaged_vector(struct UnmanagedVector v);
+
+/**
+ * Returns a version number of this library in the form 0xEEEEXXXXYYYYZZZZ
+ * with two-byte hexadecimal values EEEE, XXXX, YYYY, ZZZZ from 0 to 65535 each.
+ *
+ * EEEE represents the error value with 0 meaning no error.
+ * XXXX is the major version, YYYY is the minor version and ZZZZ is the patch version.
+ *
+ * ## Examples
+ *
+ * The version number can be decomposed like this:
+ *
+ * ```
+ * # use wasmvm::version_number;
+ * let version = version_number();
+ * let patch = version >> 0 & 0xFFFF;
+ * let minor = version >> 16 & 0xFFFF;
+ * let major = version >> 32 & 0xFFFF;
+ * let error = version >> 48 & 0xFFFF;
+ * assert_eq!(error, 0);
+ * assert_eq!(major, 1);
+ * assert!(minor < 70);
+ * assert!(patch < 70);
+ * ```
+ *
+ * And compared like this:
+ *
+ * ```
+ * # use wasmvm::{make_version_number, version_number};
+ * let min_version = make_version_number(0, 17, 25);
+ * let version = version_number();
+ * let error = version >> 48 & 0xFFFF;
+ * assert_eq!(error, 0);
+ * assert!(version >= min_version);
+ * ```
+ */
+uint64_t version_number(void);
