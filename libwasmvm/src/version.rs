@@ -1,93 +1,56 @@
-/// Returns a version number of this library in the form 0xEEEEXXXXYYYYZZZZ
-/// with two-byte hexadecimal values EEEE, XXXX, YYYY, ZZZZ from 0 to 65535 each.
+use std::os::raw::c_char;
+
+static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0"); // Add trailing NULL byte for C string
+
+/// Returns a version number of this library as a C string.
 ///
-/// EEEE represents the error value with 0 meaning no error.
-/// XXXX is the major version, YYYY is the minor version and ZZZZ is the patch version.
-///
-/// ## Examples
-///
-/// The version number can be decomposed like this:
-///
-/// ```
-/// # use wasmvm::version_number;
-/// let version = version_number();
-/// let patch = version >> 0 & 0xFFFF;
-/// let minor = version >> 16 & 0xFFFF;
-/// let major = version >> 32 & 0xFFFF;
-/// let error = version >> 48 & 0xFFFF;
-/// assert_eq!(error, 0);
-/// assert_eq!(major, 1);
-/// assert!(minor < 70);
-/// assert!(patch < 70);
-/// ```
-///
-/// And compared like this:
-///
-/// ```
-/// # use wasmvm::{make_version_number, version_number};
-/// let min_version = make_version_number(0, 17, 25);
-/// let version = version_number();
-/// let error = version >> 48 & 0xFFFF;
-/// assert_eq!(error, 0);
-/// assert!(version >= min_version);
-/// ```
+/// The string is owned by libwasmvm and must not be mutated or destroyed by the caller.
 #[no_mangle]
-pub extern "C" fn version_number() -> u64 {
-    match version_number_impl() {
-        Ok([major, minor, patch]) => make_version_number(major, minor, patch),
-        Err(err) => {
-            let error = err as u16;
-            let [b0, b1] = error.to_be_bytes();
-            u64::from_be_bytes([b0, b1, 0, 0, 0, 0, 0, 0])
-        }
-    }
-}
-
-/// Creates a version number from the three components major.minor.patch.
-///
-/// See [`version_number`] for more details.
-pub fn make_version_number(major: u16, minor: u16, patch: u16) -> u64 {
-    let [b2, b3] = major.to_be_bytes();
-    let [b4, b5] = minor.to_be_bytes();
-    let [b6, b7] = patch.to_be_bytes();
-    u64::from_be_bytes([0, 0, b2, b3, b4, b5, b6, b7])
-}
-
-// Errors will be converted to u16 and passed over the FFI
-// using big endian encoding.
-enum VersionNumberError {
-    CannotParseMajor = 1,
-    CannotParseMinor,
-    CannotParsePatch,
-}
-
-fn version_number_impl() -> Result<[u16; 3], VersionNumberError> {
-    let major: u16 = env!("CARGO_PKG_VERSION_MAJOR")
-        .parse()
-        .map_err(|_| VersionNumberError::CannotParseMajor)?;
-    let minor: u16 = env!("CARGO_PKG_VERSION_MINOR")
-        .parse()
-        .map_err(|_| VersionNumberError::CannotParseMinor)?;
-    let patch: u16 = env!("CARGO_PKG_VERSION_PATCH")
-        .parse()
-        .map_err(|_| VersionNumberError::CannotParsePatch)?;
-    Ok([major, minor, patch])
+pub extern "C" fn version_str() -> *const c_char {
+    VERSION.as_ptr() as *const _
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CStr;
 
     #[test]
-    fn version_number_works() {
-        let version = version_number();
-        let patch = version >> 0 & 0xFFFF;
-        let minor = version >> 16 & 0xFFFF;
-        let major = version >> 32 & 0xFFFF;
-        let error = version >> 48 & 0xFFFF;
-        assert_eq!(error, 0);
-        assert_eq!(major, 1);
-        assert!(minor < 70);
-        assert!(patch < 70);
+    fn version_works() {
+        // Returns the same pointer every time
+        let ptr1 = version_str();
+        let ptr2 = version_str();
+        assert_eq!(ptr1, ptr2);
+
+        // Contains correct data
+        let version_ptr = version_str();
+        let version_str = unsafe { CStr::from_ptr(version_ptr) }.to_str().unwrap();
+        // assert_eq!(version_str, "1.2.3");
+
+        let mut parts = version_str.split("-");
+        let version_core = parts.next().unwrap();
+        let components = version_core.split(".").collect::<Vec<_>>();
+        assert_eq!(components.len(), 3);
+        assert!(
+            components[0].chars().all(|c| c.is_ascii_digit()),
+            "Invalid major component: '{}'",
+            components[0]
+        );
+        assert!(
+            components[1].chars().all(|c| c.is_ascii_digit()),
+            "Invalid minor component: '{}'",
+            components[1]
+        );
+        assert!(
+            components[2].chars().all(|c| c.is_ascii_digit()),
+            "Invalid patch component: '{}'",
+            components[2]
+        );
+        if let Some(prerelease) = parts.next() {
+            assert!(prerelease
+                .chars()
+                .all(|c| c == '.' || c.is_ascii_alphanumeric()));
+        }
+        assert_eq!(parts.next(), None);
     }
 }

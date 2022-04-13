@@ -27,4 +27,3 @@ pub use memory::{
 };
 pub use querier::GoQuerier;
 pub use storage::GoStorage;
-pub use version::{make_version_number, version_number};
