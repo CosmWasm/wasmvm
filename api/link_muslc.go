@@ -1,4 +1,4 @@
-//go:build linux && muslc
+//go:build (linux || freebsd) && muslc
 
 package api
 
