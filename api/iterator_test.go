@@ -107,7 +107,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, 0, syncMapLen(iteratorStack))
+	assert.Equal(t, 0, syncMapLen(iteratorFrames))
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -153,6 +153,6 @@ func TestQueueIteratorRaces(t *testing.T) {
 	}
 	wg.Wait()
 
-	// when they finish, we should have popped everything off the stack
-	assert.Equal(t, 0, syncMapLen(iteratorStack))
+	// when they finish, we should have removed all frames
+	assert.Equal(t, 0, syncMapLen(iteratorFrames))
 }
