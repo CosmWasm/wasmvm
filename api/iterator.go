@@ -25,10 +25,12 @@ func startCall() uint64 {
 	return latestCallID
 }
 
-func popFrame(callID uint64) frame {
+// removeFrame removes the frame with for the given call ID.
+// The result can be nil when the frame is not initialized,
+// i.e. when startCall() is called but no iterator is stored.
+func removeFrame(callID uint64) frame {
 	iteratorStackMutex.Lock()
 	defer iteratorStackMutex.Unlock()
-	// get the item from the stack
 
 	remove := iteratorStack[callID]
 	delete(iteratorStack, callID)
@@ -37,8 +39,8 @@ func popFrame(callID uint64) frame {
 
 // endCall is called at the end of a contract call to remove one item from the IteratorStack
 func endCall(callID uint64) {
-	// we pull popFrame in another function so we don't hold the mutex while cleaning up the popped frame
-	remove := popFrame(callID)
+	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
+	remove := removeFrame(callID)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
 		iter.Close()
