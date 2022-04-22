@@ -239,7 +239,10 @@ typedef struct U8SliceView {
 } U8SliceView;
 
 typedef struct iterator_t {
-  uint64_t db_counter;
+  /**
+   * An ID assigned to this contract call
+   */
+  uint64_t call_id;
   uint64_t iterator_index;
 } iterator_t;
 

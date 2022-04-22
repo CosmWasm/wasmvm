@@ -118,18 +118,18 @@ var db_vtable = C.Db_vtable{
 
 type DBState struct {
 	Store KVStore
-	// IteratorStackID is used to lookup the proper stack frame for iterators associated with this DB (iterator.go)
-	IteratorStackID uint64
+	// CallID is used to lookup the proper frame for iterators associated with this contract call (iterator.go)
+	CallID uint64
 }
 
 // use this to create C.Db in two steps, so the pointer lives as long as the calling stack
-//   state := buildDBState(kv, counter)
+//   state := buildDBState(kv, callID)
 //   db := buildDB(&state, &gasMeter)
 //   // then pass db into some FFI function
-func buildDBState(kv KVStore, counter uint64) DBState {
+func buildDBState(kv KVStore, callID uint64) DBState {
 	return DBState{
-		Store:           kv,
-		IteratorStackID: counter,
+		Store:  kv,
+		CallID: callID,
 	}
 }
 
@@ -149,10 +149,10 @@ var iterator_vtable = C.Iterator_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(dbCounter uint64, it dbm.Iterator) C.iterator_t {
-	idx := storeIterator(dbCounter, it)
+func buildIterator(callID uint64, it dbm.Iterator) C.iterator_t {
+	idx := storeIterator(callID, it)
 	return C.iterator_t{
-		db_counter:     cu64(dbCounter),
+		call_id:        cu64(callID),
 		iterator_index: cu64(idx),
 	}
 }
@@ -265,7 +265,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
-	out.state = buildIterator(state.IteratorStackID, iter)
+	out.state = buildIterator(state.CallID, iter)
 	out.vtable = iterator_vtable
 	return C.GoResult_Ok
 }
@@ -279,7 +279,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	// 	}
 
 	defer recoverPanic(&ret)
-	if ref.db_counter == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
+	if ref.call_id == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoResult_BadArgument
 	}
@@ -288,7 +288,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	}
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	iter := retrieveIterator(uint64(ref.db_counter), uint64(ref.iterator_index))
+	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_index))
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoResult_Ok
