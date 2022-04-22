@@ -10,8 +10,7 @@ import (
 type frame []dbm.Iterator
 
 // iteratorStack contains one frame for each contract call, indexed by contract call ID.
-// 10 is a rather arbitrary guess on how many frames might be needed simultaneously
-var iteratorStack = make(map[uint64]frame, 10)
+var iteratorStack = make(map[uint64]frame)
 var iteratorStackMutex sync.Mutex
 
 // this is a global counter for creating call IDs
