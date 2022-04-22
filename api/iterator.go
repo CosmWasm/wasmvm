@@ -9,10 +9,11 @@ import (
 type frame []dbm.Iterator
 
 // iteratorStack contains one frame for each contract call, indexed by contract call ID.
-var iteratorStack = make(map[uint64]frame)
-var iteratorStackMutex sync.Mutex
+var iteratorStack sync.Map
 
-// this is a global counter for creating call IDs
+// latestCallID is a global counter for creating call IDs.
+// Instead of using a mutex, https://pkg.go.dev/sync/atomic#AddUint64 could be used. But
+// at least on ARM this did not create any measurable improvement.
 var latestCallID uint64
 var latestCallIDMutex sync.Mutex
 
@@ -25,25 +26,17 @@ func startCall() uint64 {
 	return latestCallID
 }
 
-// removeFrame removes the frame with for the given call ID.
-// The result can be nil when the frame is not initialized,
-// i.e. when startCall() is called but no iterator is stored.
-func removeFrame(callID uint64) frame {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
-
-	remove := iteratorStack[callID]
-	delete(iteratorStack, callID)
-	return remove
-}
-
 // endCall is called at the end of a contract call to remove one item from the IteratorStack
 func endCall(callID uint64) {
-	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
-	remove := removeFrame(callID)
+	// The remove can be nil when the frame is not initialized,
+	// i.e. when startCall() is called but no iterator is stored.
+	removedFrame, didExist := iteratorStack.LoadAndDelete(callID)
+
 	// free all iterators in the frame when we release it
-	for _, iter := range remove {
-		iter.Close()
+	if didExist {
+		for _, iter := range removedFrame.(frame) {
+			iter.Close()
+		}
 	}
 }
 
@@ -51,19 +44,27 @@ func endCall(callID uint64) {
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
 func storeIterator(callID uint64, it dbm.Iterator) uint64 {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
-
-	frame := append(iteratorStack[callID], it)
-	iteratorStack[callID] = frame
-	return uint64(len(frame))
+	loadedFrame, found := iteratorStack.Load(callID)
+	var newFrame frame
+	if found {
+		newFrame = loadedFrame.(frame)
+	} else {
+		newFrame = make(frame, 0, 8)
+	}
+	newFrame = append(newFrame, it)
+	iteratorIndex := uint64(len(newFrame))
+	iteratorStack.Store(callID, newFrame)
+	return iteratorIndex
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
 // We start counting with 1, in storeIterator so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
 func retrieveIterator(callID uint64, index uint64) dbm.Iterator {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
-	return iteratorStack[callID][index-1]
+	loadedFrame, found := iteratorStack.Load(callID)
+	if found {
+		return (loadedFrame.(frame))[index-1]
+	} else {
+		return nil
+	}
 }

@@ -61,7 +61,17 @@ func setupQueueContract(t *testing.T, cache Cache) queueData {
 	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
-func TestQueueIterator(t *testing.T) {
+// This operation is slow, but good enough for tests. See https://github.com/golang/go/issues/20680
+func syncMapLen(m sync.Map) int {
+	var length int
+	m.Range(func(_, _ interface{}) bool {
+		length++
+		return true
+	})
+	return length
+}
+
+func TestQueueIteratorSimple(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
@@ -97,7 +107,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, len(iteratorStack), 0)
+	assert.Equal(t, 0, syncMapLen(iteratorStack))
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -121,8 +131,8 @@ func TestQueueIteratorRaces(t *testing.T) {
 		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
-	// 30 concurrent batches (in go routines) to trigger any race condition
-	numBatches := 30
+	// 300 concurrent batches (in go routines) to trigger any race condition
+	numBatches := 300
 
 	var wg sync.WaitGroup
 	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
@@ -144,5 +154,5 @@ func TestQueueIteratorRaces(t *testing.T) {
 	wg.Wait()
 
 	// when they finish, we should have popped everything off the stack
-	assert.Equal(t, len(iteratorStack), 0)
+	assert.Equal(t, 0, syncMapLen(iteratorStack))
 }
