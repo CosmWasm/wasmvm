@@ -9,12 +9,6 @@ RUN yum -y update \
   && yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm \
   && yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm 
 
-
-#RUN yum -y install epel-release 
-#RUN yum -y install gcc-aarch64-linux-gnu gcc-c++-aarch64-linux-gnu
-#RUN yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm
-#RUN yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm 
-
 # GET FROM https://github.com/rust-lang/docker-rust-nightly
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
