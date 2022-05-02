@@ -149,7 +149,8 @@ jobs:
       - persist_to_workspace:
           root: ./api
           paths:
-            - libwasmvm.so
+            - libwasmvm.aarch64.so
+            - libwasmvm.x86_64.so
       - save_cache:
           paths:
             - ~/.cargo/registry
@@ -171,7 +172,11 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/builds
-      - run: cp /tmp/builds/libwasmvm.so ./api
+      - run:
+          name: Copy .so builds
+          command: |
+            cp /tmp/builds/libwasmvm.x86_64.so ./api
+            cp /tmp/builds/libwasmvm.aarch64.so ./api
       - run:
           name: Go integration tests
           command: make test
