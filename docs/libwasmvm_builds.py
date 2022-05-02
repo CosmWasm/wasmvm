@@ -48,7 +48,7 @@ def wasmer22_supported(os, cpu, build_type):
     if os == "Linux (musl)":
         if build_type == "static":
             if cpu == "x86_64":
-                return SUPPORTED + "libwasmvm_muslc.a"
+                return SUPPORTED + "libwasmvm_muslc.x86_64.a"
             elif cpu == "aarch64":
                 return SUPPORTED + "libwasmvm_muslc.aarch64.a"
         if build_type == "shared":
@@ -58,7 +58,7 @@ def wasmer22_supported(os, cpu, build_type):
             return UNSUPPORTED
         if build_type == "shared":
             if cpu == "x86_64":
-                return SUPPORTED + "libwasmvm.so"
+                return SUPPORTED + "libwasmvm.x86_64.so"
             elif cpu == "aarch64":
                 return SUPPORTED + "libwasmvm.aarch64.so"
     return UNKNOWN
