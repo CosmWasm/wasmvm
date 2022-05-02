@@ -61,18 +61,27 @@ type SubMsg struct {
 }
 
 type Reply struct {
-	ID     uint64        `json:"id"`
-	Result SubcallResult `json:"result"`
+	ID     uint64       `json:"id"`
+	Result SubMsgResult `json:"result"`
 }
 
-// SubcallResult is the raw response we return from the sdk -> reply after executing a SubMsg.
-// This is mirrors Rust's ContractResult<SubcallResponse>.
-type SubcallResult struct {
-	Ok  *SubcallResponse `json:"ok,omitempty"`
-	Err string           `json:"error,omitempty"`
+// SubMsgResult is the raw response we return from wasmd after executing a SubMsg.
+// This is mirrors Rust's SubMsgResult.
+type SubMsgResult struct {
+	Ok  *SubMsgResponse `json:"ok,omitempty"`
+	Err string          `json:"error,omitempty"`
 }
 
-type SubcallResponse struct {
+// SubMsgResponse contains information we get back from a successful sub message execution,
+// with full Cosmos SDK events.
+// This is mirrors Rust's SubMsgResponse.
+type SubMsgResponse struct {
 	Events Events `json:"events"`
 	Data   []byte `json:"data,omitempty"`
 }
+
+// Deprecated: Renamed to SubMsgResult
+type SubcallResult = SubMsgResult
+
+// Deprecated: Renamed to SubMsgResponse
+type SubcallResponse = SubMsgResponse
