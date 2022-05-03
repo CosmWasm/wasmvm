@@ -63,51 +63,88 @@ func setupQueueContract(t *testing.T, cache Cache) queueData {
 }
 
 func TestStoreIterator(t *testing.T) {
+	const limit = 2000
 	callID1 := startCall()
 	callID2 := startCall()
 
 	store := dbm.NewMemDB()
 	var iter dbm.Iterator
 	var index uint64
+	var err error
 
 	iter, _ = store.Iterator(nil, nil)
-	index = storeIterator(callID1, iter)
+	index, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
 	require.Equal(t, uint64(1), index)
 	iter, _ = store.Iterator(nil, nil)
-	index = storeIterator(callID1, iter)
+	index, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
 	require.Equal(t, uint64(2), index)
 
 	iter, _ = store.Iterator(nil, nil)
-	index = storeIterator(callID2, iter)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
 	require.Equal(t, uint64(1), index)
 	iter, _ = store.Iterator(nil, nil)
-	index = storeIterator(callID2, iter)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
 	require.Equal(t, uint64(2), index)
 	iter, _ = store.Iterator(nil, nil)
-	index = storeIterator(callID2, iter)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
 	require.Equal(t, uint64(3), index)
 
 	endCall(callID1)
 	endCall(callID2)
 }
 
+func TestStoreIteratorHitsLimit(t *testing.T) {
+	callID := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+	var err error
+	const limit = 2
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.NoError(t, err)
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.NoError(t, err)
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.ErrorContains(t, err, "Reached iterator limit (2)")
+
+	endCall(callID)
+}
+
 func TestRetrieveIterator(t *testing.T) {
+	const limit = 2000
 	callID1 := startCall()
 	callID2 := startCall()
 
 	store := dbm.NewMemDB()
 	var iter dbm.Iterator
+	var err error
 
 	iter, _ = store.Iterator(nil, nil)
-	index11 := storeIterator(callID1, iter)
+	index11, err := storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
-	_ = storeIterator(callID1, iter)
+	_, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
-	_ = storeIterator(callID2, iter)
+	_, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
-	index22 := storeIterator(callID2, iter)
-	iter, _ = store.Iterator(nil, nil)
-	index23 := storeIterator(callID2, iter)
+	index22, err := storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	iter, err = store.Iterator(nil, nil)
+	index23, err := storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
 
 	// Retrieve existing
 	iter = retrieveIterator(callID1, index11)

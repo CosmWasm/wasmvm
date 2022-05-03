@@ -160,14 +160,22 @@ var iterator_vtable = C.Iterator_vtable{
 	next_db: (C.next_db_fn)(C.cNext_cgo),
 }
 
+// An iterator including referenced objects is 117 bytes large (calculated using https://github.com/DmitriyVTitov/size).
+// We limit the number of iterators per contract call ID here in order limit memory usage to 32768*117 = ~3.8 MB as a safety measure.
+// In any reasonable contract, gas limits should hit sooner than that though.
+const frameLenLimit = 32768
+
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(callID uint64, it dbm.Iterator) C.iterator_t {
-	idx := storeIterator(callID, it)
+func buildIterator(callID uint64, it dbm.Iterator) (C.iterator_t, error) {
+	idx, err := storeIterator(callID, it, frameLenLimit)
+	if err != nil {
+		return C.iterator_t{}, err
+	}
 	return C.iterator_t{
 		call_id:        cu64(callID),
 		iterator_index: cu64(idx),
-	}
+	}, nil
 }
 
 //export cGet
@@ -278,7 +286,14 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 	gasAfter := gm.GasConsumed()
 	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
 
-	out.state = buildIterator(state.CallID, iter)
+	cIterator, err := buildIterator(state.CallID, iter)
+	if err != nil {
+		// store the actual error message in the return buffer
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
+
+	out.state = cIterator
 	out.vtable = iterator_vtable
 	return C.GoError_None
 }

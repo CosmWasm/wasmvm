@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"sync"
 
 	dbm "github.com/tendermint/tm-db"
@@ -51,17 +52,20 @@ func endCall(callID uint64) {
 // storeIterator will add this to the end of the frame for the given ID and return a reference to it.
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
-func storeIterator(callID uint64, it dbm.Iterator) uint64 {
+func storeIterator(callID uint64, it dbm.Iterator, frameLenLimit int) (uint64, error) {
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
 
 	old_frame_len := len(iteratorFrames[callID])
+	if old_frame_len >= frameLenLimit {
+		return 0, fmt.Errorf("Reached iterator limit (%d)", frameLenLimit)
+	}
 
 	// store at array position `old_frame_len`
 	iteratorFrames[callID] = append(iteratorFrames[callID], it)
 	new_index := old_frame_len + 1
 
-	return uint64(new_index)
+	return uint64(new_index), nil
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
