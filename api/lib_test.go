@@ -14,11 +14,13 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
-const TESTING_FEATURES = "staking,stargate,iterator"
-const TESTING_PRINT_DEBUG = false
-const TESTING_GAS_LIMIT = uint64(500_000_000_000) // ~0.5ms
-const TESTING_MEMORY_LIMIT = 32                   // MiB
-const TESTING_CACHE_SIZE = 100                    // MiB
+const (
+	TESTING_FEATURES     = "staking,stargate,iterator"
+	TESTING_PRINT_DEBUG  = false
+	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
+	TESTING_MEMORY_LIMIT = 32                      // MiB
+	TESTING_CACHE_SIZE   = 100                     // MiB
+)
 
 func TestInitAndReleaseCache(t *testing.T) {
 	dataDir := "/foo"
@@ -116,7 +118,8 @@ func TestPinErrors(t *testing.T) {
 	unknownChecksum := []byte{
 		0x72, 0x2c, 0x8c, 0x99, 0x3f, 0xd7, 0x5a, 0x76, 0x27, 0xd6, 0x9e, 0xd9, 0x41, 0x34,
 		0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
-		0x84, 0x22, 0x71, 0x04}
+		0x84, 0x22, 0x71, 0x04,
+	}
 	err = Pin(cache, unknownChecksum)
 	require.ErrorContains(t, err, "No such file or directory")
 }
@@ -921,7 +924,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	querier = Querier(innerQuerier)
 
 	// make a valid query to the other address
-	var queryMsg = QueryMsg{
+	queryMsg := QueryMsg{
 		Capitalized: &CapitalizedQuery{
 			Text: "small Frys :)",
 		},
