@@ -129,7 +129,7 @@ func TestRetrieveIterator(t *testing.T) {
 	endCall(callID2)
 }
 
-func TestQueueIterator(t *testing.T) {
+func TestQueueIteratorSimple(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
