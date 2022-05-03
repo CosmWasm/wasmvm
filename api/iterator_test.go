@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/CosmWasm/wasmvm/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type queueData struct {
@@ -59,6 +60,35 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 
 func setupQueueContract(t *testing.T, cache Cache) queueData {
 	return setupQueueContractWithData(t, cache, 17, 22)
+}
+
+func TestStoreIterator(t *testing.T) {
+	callID1 := startCall()
+	callID2 := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+	var index uint64
+
+	iter, _ = store.Iterator(nil, nil)
+	index = storeIterator(callID1, iter)
+	require.Equal(t, uint64(1), index)
+	iter, _ = store.Iterator(nil, nil)
+	index = storeIterator(callID1, iter)
+	require.Equal(t, uint64(2), index)
+
+	iter, _ = store.Iterator(nil, nil)
+	index = storeIterator(callID2, iter)
+	require.Equal(t, uint64(1), index)
+	iter, _ = store.Iterator(nil, nil)
+	index = storeIterator(callID2, iter)
+	require.Equal(t, uint64(2), index)
+	iter, _ = store.Iterator(nil, nil)
+	index = storeIterator(callID2, iter)
+	require.Equal(t, uint64(3), index)
+
+	endCall(callID1)
+	endCall(callID2)
 }
 
 func TestQueueIterator(t *testing.T) {
