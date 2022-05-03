@@ -2,9 +2,10 @@ package types
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestDelegationWithEmptyArray(t *testing.T) {
@@ -111,5 +112,4 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 			}
 		})
 	}
-
 }
