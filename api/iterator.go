@@ -70,5 +70,14 @@ func storeIterator(callID uint64, it dbm.Iterator) uint64 {
 func retrieveIterator(callID uint64, index uint64) dbm.Iterator {
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
-	return iteratorFrames[callID][index-1]
+	myFrame := iteratorFrames[callID]
+	if myFrame == nil {
+		return nil
+	}
+	posInFrame := int(index) - 1
+	if posInFrame < 0 || posInFrame >= len(myFrame) {
+		// index out of range
+		return nil
+	}
+	return myFrame[posInFrame]
 }

@@ -91,6 +91,44 @@ func TestStoreIterator(t *testing.T) {
 	endCall(callID2)
 }
 
+func TestRetrieveIterator(t *testing.T) {
+	callID1 := startCall()
+	callID2 := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+
+	iter, _ = store.Iterator(nil, nil)
+	index11 := storeIterator(callID1, iter)
+	iter, _ = store.Iterator(nil, nil)
+	_ = storeIterator(callID1, iter)
+	iter, _ = store.Iterator(nil, nil)
+	_ = storeIterator(callID2, iter)
+	iter, _ = store.Iterator(nil, nil)
+	index22 := storeIterator(callID2, iter)
+	iter, _ = store.Iterator(nil, nil)
+	index23 := storeIterator(callID2, iter)
+
+	// Retrieve existing
+	iter = retrieveIterator(callID1, index11)
+	require.NotNil(t, iter)
+	iter = retrieveIterator(callID2, index22)
+	require.NotNil(t, iter)
+
+	// Retrieve non-existent index
+	iter = retrieveIterator(callID1, index23)
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(0))
+	require.Nil(t, iter)
+
+	// Retrieve non-existent call ID
+	iter = retrieveIterator(callID1+1_234_567, index23)
+	require.Nil(t, iter)
+
+	endCall(callID1)
+	endCall(callID2)
+}
+
 func TestQueueIterator(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()

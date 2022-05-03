@@ -302,6 +302,9 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 
 	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
 	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_index))
+	if iter == nil {
+		panic("Unable to retrieve iterator.")
+	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
 		return C.GoError_None
