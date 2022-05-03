@@ -251,3 +251,39 @@ func TestQueueIteratorRaces(t *testing.T) {
 	// when they finish, we should have removed all frames
 	assert.Equal(t, 0, len(iteratorFrames))
 }
+
+func TestQueueIteratorLimit(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	setup := setupQueueContract(t, cache)
+	checksum, querier, api := setup.checksum, setup.querier, setup.api
+
+	var err error
+	var qres types.QueryResponse
+	var gasLimit uint64
+
+	// Open 5000 iterators
+	gasLimit = TESTING_GAS_LIMIT
+	gasMeter := NewMockGasMeter(gasLimit)
+	igasMeter := GasMeter(gasMeter)
+	store := setup.Store(gasMeter)
+	query := []byte(`{"open_iterators":{"count":5000}}`)
+	env := MockEnvBin(t)
+	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Equal(t, "", qres.Err)
+	require.Equal(t, `{}`, string(qres.Ok))
+
+	// Open 35000 iterators
+	gasLimit = TESTING_GAS_LIMIT * 4
+	gasMeter = NewMockGasMeter(gasLimit)
+	igasMeter = GasMeter(gasMeter)
+	store = setup.Store(gasMeter)
+	query = []byte(`{"open_iterators":{"count":35000}}`)
+	env = MockEnvBin(t)
+	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	require.ErrorContains(t, err, "Reached iterator limit (32768)")
+}
