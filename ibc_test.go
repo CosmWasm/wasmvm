@@ -130,9 +130,9 @@ func TestIBCHandshake(t *testing.T) {
 	require.Equal(t, 1, len(res.Messages))
 
 	// check for the expected custom event
-	expected_events := []types.Event{types.Event{
+	expected_events := []types.Event{{
 		Type: "ibc",
-		Attributes: []types.EventAttribute{types.EventAttribute{
+		Attributes: []types.EventAttribute{{
 			Key:   "channel",
 			Value: "connect",
 		}},
@@ -264,9 +264,9 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
 
 	// check for the expected custom event
-	expected_events := []types.Event{types.Event{
+	expected_events := []types.Event{{
 		Type: "ibc",
-		Attributes: []types.EventAttribute{types.EventAttribute{
+		Attributes: []types.EventAttribute{{
 			Key:   "packet",
 			Value: "receive",
 		}},

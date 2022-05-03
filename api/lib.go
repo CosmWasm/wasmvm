@@ -14,14 +14,17 @@ import (
 
 // Value types
 type cint = C.int
-type cbool = C.bool
-type cusize = C.size_t
-type cu8 = C.uint8_t
-type cu32 = C.uint32_t
-type cu64 = C.uint64_t
-type ci8 = C.int8_t
-type ci32 = C.int32_t
-type ci64 = C.int64_t
+
+type (
+	cbool  = C.bool
+	cusize = C.size_t
+	cu8    = C.uint8_t
+	cu32   = C.uint32_t
+	cu64   = C.uint64_t
+	ci8    = C.int8_t
+	ci32   = C.int32_t
+	ci64   = C.int64_t
+)
 
 // Pointers
 type cu8_ptr = *C.uint8_t

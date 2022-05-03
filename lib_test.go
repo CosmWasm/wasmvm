@@ -1,20 +1,23 @@
 package cosmwasm
 
 import (
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/CosmWasm/wasmvm/api"
 	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
-const TESTING_FEATURES = "staking,stargate,iterator"
-const TESTING_PRINT_DEBUG = false
-const TESTING_GAS_LIMIT = uint64(500_000_000_000) // ~0.5ms
-const TESTING_MEMORY_LIMIT = 32                   // MiB
-const TESTING_CACHE_SIZE = 100                    // MiB
+const (
+	TESTING_FEATURES     = "staking,stargate,iterator"
+	TESTING_PRINT_DEBUG  = false
+	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
+	TESTING_MEMORY_LIMIT = 32                      // MiB
+	TESTING_CACHE_SIZE   = 100                     // MiB
+)
 
 const HACKATOM_TEST_CONTRACT = "./api/testdata/hackatom.wasm"
 

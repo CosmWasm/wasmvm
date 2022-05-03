@@ -2,15 +2,18 @@ package main
 
 import (
 	"fmt"
-	wasmvm "github.com/CosmWasm/wasmvm"
 	"io/ioutil"
 	"os"
+
+	wasmvm "github.com/CosmWasm/wasmvm"
 )
 
-const SUPPORTED_FEATURES = "staking"
-const PRINT_DEBUG = true
-const MEMORY_LIMIT = 32 // MiB
-const CACHE_SIZE = 100  // MiB
+const (
+	SUPPORTED_FEATURES = "staking"
+	PRINT_DEBUG        = true
+	MEMORY_LIMIT       = 32  // MiB
+	CACHE_SIZE         = 100 // MiB
+)
 
 // This is just a demo to ensure we can compile a static go binary
 func main() {
@@ -22,7 +25,7 @@ func main() {
 	}
 	fmt.Println("Loaded!")
 
-	os.MkdirAll("tmp", 0755)
+	os.MkdirAll("tmp", 0o755)
 	vm, err := wasmvm.NewVM("tmp", SUPPORTED_FEATURES, MEMORY_LIMIT, PRINT_DEBUG, CACHE_SIZE)
 	if err != nil {
 		panic(err)
