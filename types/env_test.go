@@ -92,7 +92,5 @@ func TestBlockInfoDeserialization(t *testing.T) {
 
 	// Empty string is not a valid uint64 string
 	err = json.Unmarshal([]byte(`{"height":0,"time":"","chain_id":""}`), &block)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid use of ,string struct tag, trying to unmarshal \"\" into uint64")
+	require.ErrorContains(t, err, "invalid use of ,string struct tag, trying to unmarshal \"\" into uint64")
 }

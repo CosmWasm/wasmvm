@@ -105,16 +105,12 @@ func TestPinErrors(t *testing.T) {
 	// Nil checksum (errors in wasmvm Rust code)
 	var nilChecksum []byte
 	err = Pin(cache, nilChecksum)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Null/Nil argument: checksum")
+	require.ErrorContains(t, err, "Null/Nil argument: checksum")
 
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}
 	err = Pin(cache, brokenChecksum)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Checksum not of length 32")
+	require.ErrorContains(t, err, "Checksum not of length 32")
 
 	// Unknown checksum (errors in cosmwasm-vm)
 	unknownChecksum := []byte{
@@ -122,9 +118,7 @@ func TestPinErrors(t *testing.T) {
 		0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
 		0x84, 0x22, 0x71, 0x04}
 	err = Pin(cache, unknownChecksum)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "No such file or directory")
+	require.ErrorContains(t, err, "No such file or directory")
 }
 
 func TestUnpin(t *testing.T) {
@@ -156,16 +150,12 @@ func TestUnpinErrors(t *testing.T) {
 	// Nil checksum (errors in wasmvm Rust code)
 	var nilChecksum []byte
 	err = Unpin(cache, nilChecksum)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Null/Nil argument: checksum")
+	require.ErrorContains(t, err, "Null/Nil argument: checksum")
 
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}
 	err = Unpin(cache, brokenChecksum)
-	// TODO: Use ErrorContains once released (https://github.com/stretchr/testify/commit/6990a05d54)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Checksum not of length 32")
+	require.ErrorContains(t, err, "Checksum not of length 32")
 
 	// No error case triggered in cosmwasm-vm is known right now
 }
