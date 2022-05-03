@@ -198,8 +198,8 @@ func TestIBCPacketDispatch(t *testing.T) {
 	store.SetGasMeter(gasMeter4)
 	reply := types.Reply{
 		ID: id,
-		Result: types.SubcallResult{
-			Ok: &types.SubcallResponse{
+		Result: types.SubMsgResult{
+			Ok: &types.SubMsgResponse{
 				Events: types.Events{{
 					Type: "instantiate",
 					Attributes: types.EventAttributes{
