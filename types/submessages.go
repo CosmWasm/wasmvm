@@ -66,7 +66,7 @@ type Reply struct {
 }
 
 // SubMsgResult is the raw response we return from wasmd after executing a SubMsg.
-// This is mirrors Rust's SubMsgResult.
+// This mirrors Rust's SubMsgResult.
 type SubMsgResult struct {
 	Ok  *SubMsgResponse `json:"ok,omitempty"`
 	Err string          `json:"error,omitempty"`
@@ -74,7 +74,7 @@ type SubMsgResult struct {
 
 // SubMsgResponse contains information we get back from a successful sub message execution,
 // with full Cosmos SDK events.
-// This is mirrors Rust's SubMsgResponse.
+// This mirrors Rust's SubMsgResponse.
 type SubMsgResponse struct {
 	Events Events `json:"events"`
 	Data   []byte `json:"data,omitempty"`

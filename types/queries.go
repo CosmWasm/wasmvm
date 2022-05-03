@@ -326,7 +326,7 @@ type BondedDenomResponse struct {
 	Denom string `json:"denom"`
 }
 
-// Stargate query is encoded the same way as abci_query, with path and protobuf encoded request data.
+// StargateQuery is encoded the same way as abci_query, with path and protobuf encoded request data.
 // The format is defined in [ADR-21](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-021-protobuf-query-encoding.md).
 // The response is protobuf encoded data directly without a JSON response wrapper.
 // The caller is responsible for compiling the proper protobuf definitions for both requests and responses.
