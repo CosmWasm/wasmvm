@@ -109,91 +109,83 @@ mod tests {
         let error = GoError::None;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        assert!(a.is_ok());
+        assert_eq!(a, Ok(()));
 
         let error = GoError::Panic;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        assert!(matches!(a.unwrap_err(), BackendError::ForeignPanic {}));
+        assert_eq!(a.unwrap_err(), BackendError::ForeignPanic {});
 
         let error = GoError::BadArgument;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        assert!(matches!(a.unwrap_err(), BackendError::BadArgument {}));
+        assert_eq!(a.unwrap_err(), BackendError::BadArgument {});
 
         let error = GoError::OutOfGas;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        assert!(matches!(a.unwrap_err(), BackendError::OutOfGas {}));
+        assert_eq!(a.unwrap_err(), BackendError::OutOfGas {});
 
         // CannotSerialize maps to Unknown
         let error = GoError::CannotSerialize;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), default()),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(a.unwrap_err(), BackendError::Unknown { msg: default() });
 
         // GoError::User with none message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::UserErr { msg } => assert_eq!(msg, default()),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(a.unwrap_err(), BackendError::UserErr { msg: default() });
 
         // GoError::User with some message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::UserErr { msg } => assert_eq!(msg, "kaputt"),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(
+            a.unwrap_err(),
+            BackendError::UserErr {
+                msg: "kaputt".to_string()
+            }
+        );
 
         // GoError::User with some message too long message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::UserErr { msg } => assert_eq!(msg, "a".repeat(8192)),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(
+            a.unwrap_err(),
+            BackendError::UserErr {
+                msg: "a".repeat(8192)
+            }
+        );
 
         // GoError::Other with none message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), default()),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(a.unwrap_err(), BackendError::Unknown { msg: default() });
 
         // GoError::Other with some message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), "kaputt"),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(
+            a.unwrap_err(),
+            BackendError::Unknown {
+                msg: "kaputt".to_string()
+            }
+        );
 
         // GoError::Other with some message too long message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
         let a = unsafe { error.into_result(error_msg, default) };
-        // TODO: use equality check on BackendError
-        match a.unwrap_err() {
-            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), "a".repeat(8192)),
-            err => panic!("Unexpected error: {}", err),
-        }
+        assert_eq!(
+            a.unwrap_err(),
+            BackendError::Unknown {
+                msg: "a".repeat(8192)
+            }
+        );
     }
 }
