@@ -55,19 +55,23 @@ impl GoIter {
             }
         };
 
-        let mut key = UnmanagedVector::default();
-        let mut value = UnmanagedVector::default();
+        let mut output_key = UnmanagedVector::default();
+        let mut output_value = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (next_db)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
-            &mut key as *mut UnmanagedVector,
-            &mut value as *mut UnmanagedVector,
+            &mut output_key as *mut UnmanagedVector,
+            &mut output_value as *mut UnmanagedVector,
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
+        // We destruct the `UnmanagedVector`s here, no matter if we need the data.
+        let output_key = output_key.consume();
+        let output_value = output_value.consume();
+
         let gas_info = GasInfo::with_externally_used(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -78,13 +82,9 @@ impl GoIter {
             }
         }
 
-        // We destruct the `UnmanagedVector`s here, no matter if we need the data.
-        let key = key.consume();
-        let value = value.consume();
-
-        let result = match key {
+        let result = match output_key {
             Some(key) => {
-                if let Some(value) = value {
+                if let Some(value) = output_value {
                     Ok(Some((key, value)))
                 } else {
                     Err(BackendError::unknown(
