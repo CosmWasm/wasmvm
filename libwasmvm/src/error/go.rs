@@ -23,10 +23,12 @@ pub enum GoError {
     BadArgument = 2,
     /// Ran out of gas while using the SDK (e.g. storage)
     OutOfGas = 3,
-    /// An error happened during normal operation of a Go callback, which should abort the contract
-    Other = 4,
+    /// Error while trying to serialize data in Go code (typically json.Marshal)
+    CannotSerialize = 4,
     /// An error happened during normal operation of a Go callback, which should be fed back to the contract
     User = 5,
+    /// An error type that should never be created by us. It only serves as a fallback for the i32 to GoError conversion.
+    Other = -1,
 }
 
 impl From<i32> for GoError {
@@ -37,6 +39,7 @@ impl From<i32> for GoError {
             1 => GoError::Panic,
             2 => GoError::BadArgument,
             3 => GoError::OutOfGas,
+            4 => GoError::CannotSerialize,
             5 => GoError::User,
             _ => GoError::Other,
         }
@@ -77,12 +80,17 @@ impl GoError {
         };
 
         match self {
+            // Success
             GoError::None => Ok(()),
+            // Errors with direct counterpart
             GoError::Panic => Err(BackendError::foreign_panic()),
             GoError::BadArgument => Err(BackendError::bad_argument()),
             GoError::OutOfGas => Err(BackendError::out_of_gas()),
-            GoError::Other => Err(BackendError::unknown(build_error_msg())),
             GoError::User => Err(BackendError::user_err(build_error_msg())),
+            // Everything else goes into unknown
+            GoError::CannotSerialize | GoError::Other => {
+                Err(BackendError::unknown(build_error_msg()))
+            }
         }
     }
 }
@@ -117,7 +125,17 @@ mod tests {
         let a = unsafe { error.into_result(error_msg, default) };
         assert!(matches!(a.unwrap_err(), BackendError::OutOfGas {}));
 
-        // User with none message
+        // CannotSerialize maps to Unknown
+        let error = GoError::CannotSerialize;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), default()),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // GoError::User with none message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
@@ -127,7 +145,7 @@ mod tests {
             err => panic!("Unexpected error: {}", err),
         }
 
-        // User with some message
+        // GoError::User with some message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
         let a = unsafe { error.into_result(error_msg, default) };
@@ -137,7 +155,7 @@ mod tests {
             err => panic!("Unexpected error: {}", err),
         }
 
-        // User with some message too long message
+        // GoError::User with some message too long message
         let error = GoError::User;
         let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
         let a = unsafe { error.into_result(error_msg, default) };
@@ -147,7 +165,7 @@ mod tests {
             err => panic!("Unexpected error: {}", err),
         }
 
-        // Other with none message
+        // GoError::Other with none message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(None);
         let a = unsafe { error.into_result(error_msg, default) };
@@ -157,7 +175,7 @@ mod tests {
             err => panic!("Unexpected error: {}", err),
         }
 
-        // Other with some message
+        // GoError::Other with some message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
         let a = unsafe { error.into_result(error_msg, default) };
@@ -167,7 +185,7 @@ mod tests {
             err => panic!("Unexpected error: {}", err),
         }
 
-        // Other with some message too long message
+        // GoError::Other with some message too long message
         let error = GoError::Other;
         let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
         let a = unsafe { error.into_result(error_msg, default) };

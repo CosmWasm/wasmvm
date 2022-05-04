@@ -38,13 +38,17 @@ enum GoError {
    */
   GoError_OutOfGas = 3,
   /**
-   * An error happened during normal operation of a Go callback, which should abort the contract
+   * Error while trying to serialize data in Go code (typically json.Marshal)
    */
-  GoError_Other = 4,
+  GoError_CannotSerialize = 4,
   /**
    * An error happened during normal operation of a Go callback, which should be fed back to the contract
    */
   GoError_User = 5,
+  /**
+   * An error type that should never be created by us. It only serves as a fallback for the i32 to GoError conversion.
+   */
+  GoError_Other = -1,
 };
 typedef int32_t GoError;
 

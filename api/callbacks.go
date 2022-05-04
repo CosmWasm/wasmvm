@@ -429,7 +429,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 	bz, err := json.Marshal(res)
 	if err != nil {
 		*errOut = newUnmanagedVector([]byte(err.Error()))
-		return C.GoError_Other
+		return C.GoError_CannotSerialize
 	}
 	*result = newUnmanagedVector(bz)
 	return C.GoError_None
