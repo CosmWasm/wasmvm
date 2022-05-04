@@ -349,7 +349,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         release_cache(cache_ptr);
@@ -369,7 +369,7 @@ mod tests {
             Some(&mut error_msg),
         );
         assert!(cache_ptr.is_null());
-        assert_eq!(error_msg.is_some(), true);
+        assert!(error_msg.is_some());
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
         assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: data provided contains a nul byte");
     }
@@ -387,7 +387,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -396,7 +396,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         release_cache(cache_ptr);
@@ -415,7 +415,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -424,7 +424,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum = checksum.consume().unwrap_or_default();
 
@@ -434,7 +434,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let wasm = wasm.consume().unwrap_or_default();
         assert_eq!(wasm, HACKATOM);
@@ -455,7 +455,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -464,7 +464,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum = checksum.consume().unwrap_or_default();
 
@@ -474,7 +474,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         // pinning again has no effect
@@ -484,7 +484,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         release_cache(cache_ptr);
@@ -503,7 +503,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -512,7 +512,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum = checksum.consume().unwrap_or_default();
 
@@ -522,7 +522,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -531,7 +531,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         // Unpinning again has no effect
@@ -541,7 +541,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         release_cache(cache_ptr);
@@ -560,7 +560,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
@@ -569,7 +569,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum_hackatom = checksum_hackatom.consume().unwrap_or_default();
 
@@ -579,7 +579,7 @@ mod tests {
             ByteSliceView::new(IBC_REFLECT),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum_ibc_reflect = checksum_ibc_reflect.consume().unwrap_or_default();
 
@@ -590,7 +590,7 @@ mod tests {
             Some(&mut error_msg),
         );
         let _ = error_msg.consume();
-        assert_eq!(hackatom_report.has_ibc_entry_points, false);
+        assert!(!hackatom_report.has_ibc_entry_points);
         assert_eq!(hackatom_report.required_features.consume().unwrap(), b"");
 
         let mut error_msg = UnmanagedVector::default();
@@ -600,7 +600,7 @@ mod tests {
             Some(&mut error_msg),
         );
         let _ = error_msg.consume();
-        assert_eq!(ibc_reflect_report.has_ibc_entry_points, true);
+        assert!(ibc_reflect_report.has_ibc_entry_points);
         assert_eq!(
             ibc_reflect_report.required_features.consume().unwrap(),
             b"iterator,staking,stargate"
@@ -653,7 +653,7 @@ mod tests {
             32,
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         // Get metrics 1
@@ -669,7 +669,7 @@ mod tests {
             ByteSliceView::new(HACKATOM),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
         let checksum = checksum_hackatom.consume().unwrap_or_default();
 
@@ -686,7 +686,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         // Get metrics 3
@@ -714,7 +714,7 @@ mod tests {
             ByteSliceView::new(&checksum),
             Some(&mut error_msg),
         );
-        assert_eq!(error_msg.is_none(), true);
+        assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
         // Get metrics 4
