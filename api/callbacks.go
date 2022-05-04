@@ -53,24 +53,37 @@ import (
 
 func recoverPanic(ret *C.GoError) {
 	if rec := recover(); rec != nil {
-		// we don't want to import cosmos-sdk
-		// we also cannot use interfaces to detect these error types (as they have no methods)
-		// so, let's just rely on the descriptive names
-		// this is used to detect "out of gas panics"
+		// This is used to handle ErrorOutOfGas panics.
+		//
+		// What we do here is something that should not be done in the first place.
+		// "A panic typically means something went unexpectedly wrong. Mostly we use it to fail fast
+		// on errors that shouldn’t occur during normal operation, or that we aren’t prepared to
+		// handle gracefully." says https://gobyexample.com/panic.
+		// And 'Ask yourself "when this happens, should the application immediately crash?" If yes,
+		// use a panic; otherwise, use an error.' says this popular answer on SO: https://stackoverflow.com/a/44505268.
+		// Oh, and "If you're already worrying about discriminating different kinds of panics, you've lost sight of the ball."
+		// (Rob Pike) from https://eli.thegreenplace.net/2018/on-the-uses-and-misuses-of-panics-in-go/
+		//
+		// We don't want to import Cosmos SDK and also cannot use interfaces to detect these
+		// error types (as they have no methods). So, let's just rely on the descriptive names.
 		name := reflect.TypeOf(rec).Name()
 		switch name {
-		// These two cases are for types thrown in panics from this module:
-		// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/store/types/gas.go
-		// ErrorOutOfGas needs to be propagated through the rust code and back into go code, where it should
-		// probably be thrown in a panic again.
-		// TODO figure out how to pass the text in its `Descriptor` field through all the FFI
-		// TODO handle these cases on the Rust side in the first place
+		// These three types are "thrown" (which is not a thing in Go 🙃) in panics from the gas module
+		// (https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/store/types/gas.go):
+		// 1. ErrorOutOfGas
+		// 2. ErrorGasOverflow
+		// 3. ErrorNegativeGasConsumed
+		//
+		// In the baseapp, ErrorOutOfGas gets special treatment:
+		// - https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/baseapp/baseapp.go#L607
+		// - https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/baseapp/recovery.go#L50-L60
+		// This turns the panic into a regular error with a helpful error message.
+		//
+		// The other two gas related panic types indicate programming errors and are handled along
+		// with all other errors in https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/baseapp/recovery.go#L66-L77.
 		case "ErrorOutOfGas":
+			// TODO: figure out how to pass the text in its `Descriptor` field through all the FFI
 			*ret = C.GoError_OutOfGas
-		// Looks like this error is not treated specially upstream:
-		// https://github.com/cosmos/cosmos-sdk/blob/4ffabb65a5c07dbb7010da397535d10927d298c1/baseapp/baseapp.go#L818-L853
-		// but this needs to be periodically verified, in case they do start checking for this type
-		// 	case "ErrorGasOverflow":
 		default:
 			log.Printf("Panic in Go callback: %#v\n", rec)
 			debug.PrintStack()

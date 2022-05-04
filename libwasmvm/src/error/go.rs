@@ -21,7 +21,8 @@ pub enum GoError {
     Panic = 1,
     /// Go received a bad argument from Rust
     BadArgument = 2,
-    /// Ran out of gas while using the SDK (e.g. storage)
+    /// Ran out of gas while using the SDK (e.g. storage). This can come from the Cosmos SDK gas meter
+    /// (https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/store/types/gas.go#L29-L32).
     OutOfGas = 3,
     /// Error while trying to serialize data in Go code (typically json.Marshal)
     CannotSerialize = 4,

@@ -34,7 +34,8 @@ enum GoError {
    */
   GoError_BadArgument = 2,
   /**
-   * Ran out of gas while using the SDK (e.g. storage)
+   * Ran out of gas while using the SDK (e.g. storage). This can come from the Cosmos SDK gas meter
+   * (https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/store/types/gas.go#L29-L32).
    */
   GoError_OutOfGas = 3,
   /**
