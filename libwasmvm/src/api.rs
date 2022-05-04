@@ -58,6 +58,9 @@ impl BackendApi for GoApi {
             &mut used_gas as *mut u64,
         )
         .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
         let gas_info = GasInfo::with_cost(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -68,9 +71,7 @@ impl BackendApi for GoApi {
             }
         }
 
-        let result = output
-            .consume()
-            .ok_or_else(|| BackendError::unknown("Unset output"));
+        let result = output.ok_or_else(|| BackendError::unknown("Unset output"));
         (result, gas_info)
     }
 
@@ -86,6 +87,9 @@ impl BackendApi for GoApi {
             &mut used_gas as *mut u64,
         )
         .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
         let gas_info = GasInfo::with_cost(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -102,7 +106,6 @@ impl BackendApi for GoApi {
         }
 
         let result = output
-            .consume()
             .ok_or_else(|| BackendError::unknown("Unset output"))
             .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
         (result, gas_info)

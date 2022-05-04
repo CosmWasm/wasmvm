@@ -128,7 +128,7 @@ typedef struct ByteSliceView {
  * fn db_read(db: &Db, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
  *
  *     // Create a None vector in order to reserve memory for the result
- *     let mut result = UnmanagedVector::default();
+ *     let mut output = UnmanagedVector::default();
  *
  *     // …
  *     # let mut error_msg = UnmanagedVector::default();
@@ -140,16 +140,17 @@ typedef struct ByteSliceView {
  *         &mut used_gas as *mut u64,
  *         U8SliceView::new(Some(key)),
  *         // Go will create a new UnmanagedVector and override this address
- *         &mut result as *mut UnmanagedVector,
+ *         &mut output as *mut UnmanagedVector,
  *         &mut error_msg as *mut UnmanagedVector,
  *     )
  *     .into();
  *
+ *     // We now own the new UnmanagedVector written to the pointer and must destroy it
+ *     let value = output.consume();
+ *
  *     // Some gas processing and error handling
  *     # let gas_info = GasInfo::free();
  *
- *     // We now own the new UnmanagedVector written to the pointer and must destroy it
- *     let value = result.consume();
  *     (Ok(value), gas_info)
  * }
  * ```

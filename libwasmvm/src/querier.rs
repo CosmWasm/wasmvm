@@ -41,7 +41,7 @@ impl Querier for GoQuerier {
         request: &[u8],
         gas_limit: u64,
     ) -> BackendResult<SystemResult<ContractResult<Binary>>> {
-        let mut query_result = UnmanagedVector::default();
+        let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.vtable.query_external)(
@@ -49,10 +49,13 @@ impl Querier for GoQuerier {
             gas_limit,
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(request)),
-            &mut query_result as *mut UnmanagedVector,
+            &mut output as *mut UnmanagedVector,
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
         let gas_info = GasInfo::with_externally_used(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -68,7 +71,7 @@ impl Querier for GoQuerier {
             }
         }
 
-        let bin_result: Vec<u8> = query_result.consume().unwrap_or_default();
+        let bin_result: Vec<u8> = output.unwrap_or_default();
         let result = serde_json::from_slice(&bin_result).or_else(|e| {
             Ok(SystemResult::Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {}", e),

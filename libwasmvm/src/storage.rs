@@ -25,7 +25,7 @@ impl GoStorage {
 
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
-        let mut result = UnmanagedVector::default();
+        let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoResult = (self.db.vtable.read_db)(
@@ -33,10 +33,13 @@ impl Storage for GoStorage {
             self.db.gas_meter,
             &mut used_gas as *mut u64,
             U8SliceView::new(Some(key)),
-            &mut result as *mut UnmanagedVector,
+            &mut output as *mut UnmanagedVector,
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let output = output.consume();
+
         let gas_info = GasInfo::with_externally_used(used_gas);
 
         // return complete error message (reading from buffer for GoResult::Other)
@@ -52,8 +55,7 @@ impl Storage for GoStorage {
             }
         }
 
-        let value = result.consume();
-        (Ok(value), gas_info)
+        (Ok(output), gas_info)
     }
 
     fn scan(
