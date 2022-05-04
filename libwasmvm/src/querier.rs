@@ -1,7 +1,7 @@
 use cosmwasm_std::{Binary, ContractResult, SystemError, SystemResult};
 use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
-use crate::error::GoResult;
+use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
@@ -44,7 +44,7 @@ impl Querier for GoQuerier {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.query_external)(
+        let go_result: GoError = (self.vtable.query_external)(
             self.state,
             gas_limit,
             &mut used_gas as *mut u64,
@@ -58,7 +58,7 @@ impl Querier for GoQuerier {
 
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to query another contract with this request: {}",

@@ -18,34 +18,35 @@ typedef int32_t ErrnoValue;
 
 /**
  * This enum gives names to the status codes returned from Go callbacks to Rust.
+ * The Go code will return one of these variants when returning.
  *
- * The go code will return one of these variants when returning.
+ * 0 means no error, all the other cases are some sort of error.
  *
  */
-enum GoResult {
-  GoResult_Ok = 0,
+enum GoError {
+  GoError_None = 0,
   /**
    * Go panicked for an unexpected reason.
    */
-  GoResult_Panic = 1,
+  GoError_Panic = 1,
   /**
    * Go received a bad argument from Rust
    */
-  GoResult_BadArgument = 2,
+  GoError_BadArgument = 2,
   /**
    * Ran out of gas while using the SDK (e.g. storage)
    */
-  GoResult_OutOfGas = 3,
+  GoError_OutOfGas = 3,
   /**
    * An error happened during normal operation of a Go callback, which should abort the contract
    */
-  GoResult_Other = 4,
+  GoError_Other = 4,
   /**
    * An error happened during normal operation of a Go callback, which should be fed back to the contract
    */
-  GoResult_User = 5,
+  GoError_User = 5,
 };
-typedef int32_t GoResult;
+typedef int32_t GoError;
 
 typedef struct cache_t {
 
@@ -124,7 +125,7 @@ typedef struct ByteSliceView {
  *
  * ```rust
  * # use cosmwasm_vm::{BackendResult, GasInfo};
- * # use wasmvm::{Db, GoResult, U8SliceView, UnmanagedVector};
+ * # use wasmvm::{Db, GoError, U8SliceView, UnmanagedVector};
  * fn db_read(db: &Db, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
  *
  *     // Create a None vector in order to reserve memory for the result
@@ -134,7 +135,7 @@ typedef struct ByteSliceView {
  *     # let mut error_msg = UnmanagedVector::default();
  *     # let mut used_gas = 0_u64;
  *
- *     let go_result: GoResult = (db.vtable.read_db)(
+ *     let go_error: GoError = (db.vtable.read_db)(
  *         db.state,
  *         db.gas_meter,
  *         &mut used_gas as *mut u64,

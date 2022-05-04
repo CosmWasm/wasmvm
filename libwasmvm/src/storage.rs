@@ -5,7 +5,7 @@ use cosmwasm_std::{Order, Record};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
 use crate::db::Db;
-use crate::error::GoResult;
+use crate::error::GoError;
 use crate::iterator::GoIter;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
@@ -28,7 +28,7 @@ impl Storage for GoStorage {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.db.vtable.read_db)(
+        let go_error: GoError = (self.db.vtable.read_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -42,7 +42,7 @@ impl Storage for GoStorage {
 
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read a key in the db: {}",
@@ -50,7 +50,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -67,7 +67,7 @@ impl Storage for GoStorage {
         let mut error_msg = UnmanagedVector::default();
         let mut iter = GoIter::new(self.db.gas_meter);
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.db.vtable.scan_db)(
+        let go_error: GoError = (self.db.vtable.scan_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -80,7 +80,7 @@ impl Storage for GoStorage {
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read the next key between {:?} and {:?}",
@@ -89,7 +89,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -119,7 +119,7 @@ impl Storage for GoStorage {
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.db.vtable.write_db)(
+        let go_error: GoError = (self.db.vtable.write_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -129,7 +129,7 @@ impl Storage for GoStorage {
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to set a key in the db: {}",
@@ -137,7 +137,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -147,7 +147,7 @@ impl Storage for GoStorage {
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.db.vtable.remove_db)(
+        let go_error: GoError = (self.db.vtable.remove_db)(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -163,7 +163,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

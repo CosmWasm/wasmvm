@@ -138,7 +138,7 @@ impl U8SliceView {
 ///
 /// ```rust
 /// # use cosmwasm_vm::{BackendResult, GasInfo};
-/// # use wasmvm::{Db, GoResult, U8SliceView, UnmanagedVector};
+/// # use wasmvm::{Db, GoError, U8SliceView, UnmanagedVector};
 /// fn db_read(db: &Db, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
 ///
 ///     // Create a None vector in order to reserve memory for the result
@@ -148,7 +148,7 @@ impl U8SliceView {
 ///     # let mut error_msg = UnmanagedVector::default();
 ///     # let mut used_gas = 0_u64;
 ///
-///     let go_result: GoResult = (db.vtable.read_db)(
+///     let go_error: GoError = (db.vtable.read_db)(
 ///         db.state,
 ///         db.gas_meter,
 ///         &mut used_gas as *mut u64,

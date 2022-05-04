@@ -1,7 +1,7 @@
 use cosmwasm_std::Record;
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 
-use crate::error::GoResult;
+use crate::error::GoError;
 use crate::gas_meter::gas_meter_t;
 use crate::memory::UnmanagedVector;
 
@@ -13,8 +13,8 @@ pub struct iterator_t {
     pub iterator_index: u64,
 }
 
-// These functions should return GoResult but because we don't trust them here, we treat the return value as i32
-// and then check it when converting to GoResult manually
+// These functions should return GoError but because we don't trust them here, we treat the return value as i32
+// and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Default)]
 pub struct Iterator_vtable {
@@ -59,7 +59,7 @@ impl GoIter {
         let mut output_value = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (next_db)(
+        let go_result: GoError = (next_db)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
@@ -74,7 +74,7 @@ impl GoIter {
 
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to fetch next item from iterator".to_string();
         unsafe {
             if let Err(err) = go_result.into_ffi_result(error_msg, default) {

@@ -3,8 +3,9 @@ use cosmwasm_vm::BackendError;
 use crate::memory::UnmanagedVector;
 
 /// This enum gives names to the status codes returned from Go callbacks to Rust.
+/// The Go code will return one of these variants when returning.
 ///
-/// The go code will return one of these variants when returning.
+/// 0 means no error, all the other cases are some sort of error.
 ///
 /// cbindgen:prefix-with-name
 // NOTE TO DEVS: If you change the values assigned to the variants of this enum, You must also
@@ -14,8 +15,8 @@ use crate::memory::UnmanagedVector;
 //
 #[repr(i32)] // This makes it so the enum looks like a simple i32 to Go
 #[derive(PartialEq)]
-pub enum GoResult {
-    Ok = 0,
+pub enum GoError {
+    None = 0,
     /// Go panicked for an unexpected reason.
     Panic = 1,
     /// Go received a bad argument from Rust
@@ -28,24 +29,23 @@ pub enum GoResult {
     User = 5,
 }
 
-impl From<i32> for GoResult {
+impl From<i32> for GoError {
     fn from(n: i32) -> Self {
-        use GoResult::*;
         // This conversion treats any number that is not otherwise an expected value as `GoError::Other`
         match n {
-            0 => Ok,
-            1 => Panic,
-            2 => BadArgument,
-            3 => OutOfGas,
-            5 => User,
-            _ => Other,
+            0 => GoError::None,
+            1 => GoError::Panic,
+            2 => GoError::BadArgument,
+            3 => GoError::OutOfGas,
+            5 => GoError::User,
+            _ => GoError::Other,
         }
     }
 }
 
-impl GoResult {
-    /// This converts a GoResult to a `Result<(), BackendError>`, using a fallback error message for some cases.
-    /// If it is GoResult::User the error message will be returned to the contract.
+impl GoError {
+    /// This converts a GoError to a `Result<(), BackendError>`, using a fallback error message for some cases.
+    /// If it is GoError::User the error message will be returned to the contract.
     /// Otherwise, the returned error will trigger a trap in the VM and abort contract execution immediately.
     ///
     /// Safety: this reads data from an externally provided buffer and assumes valid utf-8 encoding
@@ -66,12 +66,12 @@ impl GoResult {
         };
 
         match self {
-            GoResult::Ok => Ok(()),
-            GoResult::Panic => Err(BackendError::foreign_panic()),
-            GoResult::BadArgument => Err(BackendError::bad_argument()),
-            GoResult::OutOfGas => Err(BackendError::out_of_gas()),
-            GoResult::Other => Err(BackendError::unknown(read_error_msg())),
-            GoResult::User => Err(BackendError::user_err(read_error_msg())),
+            GoError::None => Ok(()),
+            GoError::Panic => Err(BackendError::foreign_panic()),
+            GoError::BadArgument => Err(BackendError::bad_argument()),
+            GoError::OutOfGas => Err(BackendError::out_of_gas()),
+            GoError::Other => Err(BackendError::unknown(read_error_msg())),
+            GoError::User => Err(BackendError::user_err(read_error_msg())),
         }
     }
 }
