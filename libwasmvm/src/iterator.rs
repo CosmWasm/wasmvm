@@ -78,9 +78,13 @@ impl GoIter {
             }
         }
 
-        let result = match key.consume() {
+        // We destruct the `UnmanagedVector`s here, no matter if we need the data.
+        let key = key.consume();
+        let value = value.consume();
+
+        let result = match key {
             Some(key) => {
-                if let Some(value) = value.consume() {
+                if let Some(value) = value {
                     Ok(Some((key, value)))
                 } else {
                     Err(BackendError::unknown(
