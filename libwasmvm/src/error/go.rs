@@ -48,20 +48,31 @@ impl GoError {
     /// If it is GoError::User the error message will be returned to the contract.
     /// Otherwise, the returned error will trigger a trap in the VM and abort contract execution immediately.
     ///
-    /// Safety: this reads data from an externally provided buffer and assumes valid utf-8 encoding
-    /// Only call if you trust the code that provides `error_msg` to be correct.
-    pub unsafe fn into_ffi_result<F>(
+    /// This reads data from an externally provided `UnmanagedVector` and assumes UFT-8 encoding. To protect
+    /// against invalid UTF-8 data, a lossy conversion to string is used. The data is limited to 8KB in order
+    /// to protect against long externally generated error messages.
+    ///
+    /// The `error_msg` is always consumed here and must not be used afterwards.
+    pub unsafe fn into_result<F>(
         self,
         error_msg: UnmanagedVector,
-        default: F,
+        default_error_msg: F,
     ) -> Result<(), BackendError>
     where
-        F: Fn() -> String,
+        F: FnOnce() -> String,
     {
-        let read_error_msg = || -> String {
-            match error_msg.consume() {
-                Some(data) => String::from_utf8_lossy(&data).into(),
-                None => default(),
+        const MAX_ERROR_LEN: usize = 8 * 1024;
+
+        // We destruct the UnmanagedVector here, no matter if we need the data.
+        let error_msg = error_msg.consume();
+
+        let build_error_msg = || -> String {
+            match error_msg {
+                Some(mut data) => {
+                    data.truncate(MAX_ERROR_LEN);
+                    String::from_utf8_lossy(&data).into()
+                }
+                None => default_error_msg(),
             }
         };
 
@@ -70,8 +81,100 @@ impl GoError {
             GoError::Panic => Err(BackendError::foreign_panic()),
             GoError::BadArgument => Err(BackendError::bad_argument()),
             GoError::OutOfGas => Err(BackendError::out_of_gas()),
-            GoError::Other => Err(BackendError::unknown(read_error_msg())),
-            GoError::User => Err(BackendError::user_err(read_error_msg())),
+            GoError::Other => Err(BackendError::unknown(build_error_msg())),
+            GoError::User => Err(BackendError::user_err(build_error_msg())),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_vm::BackendError;
+
+    use super::{GoError, UnmanagedVector};
+
+    #[test]
+    fn go_error_into_result_works() {
+        let default = || "Something went wrong but we don't know".to_string();
+
+        let error = GoError::None;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        assert!(a.is_ok());
+
+        let error = GoError::Panic;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        assert!(matches!(a.unwrap_err(), BackendError::ForeignPanic {}));
+
+        let error = GoError::BadArgument;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        assert!(matches!(a.unwrap_err(), BackendError::BadArgument {}));
+
+        let error = GoError::OutOfGas;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        assert!(matches!(a.unwrap_err(), BackendError::OutOfGas {}));
+
+        // User with none message
+        let error = GoError::User;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::UserErr { msg } => assert_eq!(msg, default()),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // User with some message
+        let error = GoError::User;
+        let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::UserErr { msg } => assert_eq!(msg, "kaputt"),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // User with some message too long message
+        let error = GoError::User;
+        let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::UserErr { msg } => assert_eq!(msg, "a".repeat(8192)),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // Other with none message
+        let error = GoError::Other;
+        let error_msg = UnmanagedVector::new(None);
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), default()),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // Other with some message
+        let error = GoError::Other;
+        let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), "kaputt"),
+            err => panic!("Unexpected error: {}", err),
+        }
+
+        // Other with some message too long message
+        let error = GoError::Other;
+        let error_msg = UnmanagedVector::new(Some(vec![0x61; 10000])); // 10000 times "a"
+        let a = unsafe { error.into_result(error_msg, default) };
+        // TODO: use equality check on BackendError
+        match a.unwrap_err() {
+            BackendError::Unknown { msg } => assert_eq!(msg.unwrap(), "a".repeat(8192)),
+            err => panic!("Unexpected error: {}", err),
         }
     }
 }

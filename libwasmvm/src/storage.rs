@@ -50,7 +50,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -89,7 +89,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -137,7 +137,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -163,7 +163,7 @@ impl Storage for GoStorage {
             )
         };
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

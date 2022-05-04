@@ -66,7 +66,7 @@ impl Querier for GoQuerier {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_result.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

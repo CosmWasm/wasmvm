@@ -66,7 +66,7 @@ impl BackendApi for GoApi {
         // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -100,7 +100,7 @@ impl BackendApi for GoApi {
             )
         };
         unsafe {
-            if let Err(err) = go_error.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
