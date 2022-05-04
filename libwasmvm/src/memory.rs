@@ -289,7 +289,7 @@ mod test {
         assert_eq!(view.read().unwrap(), &[] as &[u8]);
 
         let view = ByteSliceView::nil();
-        assert_eq!(view.read().is_none(), true);
+        assert!(view.read().is_none());
     }
 
     #[test]
@@ -303,28 +303,28 @@ mod test {
         assert_eq!(view.to_owned().unwrap(), Vec::<u8>::new());
 
         let view = ByteSliceView::nil();
-        assert_eq!(view.to_owned().is_none(), true);
+        assert!(view.to_owned().is_none());
     }
 
     #[test]
     fn unmanaged_vector_new_works() {
         // With data
         let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
-        assert_eq!(x.is_none, false);
+        assert!(!x.is_none);
         assert_ne!(x.ptr as usize, 0);
         assert_eq!(x.len, 2);
         assert_eq!(x.cap, 2);
 
         // Empty data
         let x = UnmanagedVector::new(Some(vec![]));
-        assert_eq!(x.is_none, false);
+        assert!(!x.is_none);
         assert_eq!(x.ptr as usize, 0x01); // We probably don't get any guarantee for this, but good to know where the 0x01 marker pointer can come from
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
 
         // None
         let x = UnmanagedVector::new(None);
-        assert_eq!(x.is_none, true);
+        assert!(x.is_none);
         assert_eq!(x.ptr as usize, 0);
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
@@ -333,21 +333,21 @@ mod test {
     #[test]
     fn unmanaged_vector_is_some_works() {
         let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
-        assert_eq!(x.is_some(), true);
+        assert!(x.is_some());
         let x = UnmanagedVector::new(Some(vec![]));
-        assert_eq!(x.is_some(), true);
+        assert!(x.is_some());
         let x = UnmanagedVector::new(None);
-        assert_eq!(x.is_some(), false);
+        assert!(!x.is_some());
     }
 
     #[test]
     fn unmanaged_vector_is_none_works() {
         let x = UnmanagedVector::new(Some(vec![0x11, 0x22]));
-        assert_eq!(x.is_none(), false);
+        assert!(!x.is_none());
         let x = UnmanagedVector::new(Some(vec![]));
-        assert_eq!(x.is_none(), false);
+        assert!(!x.is_none());
         let x = UnmanagedVector::new(None);
-        assert_eq!(x.is_none(), true);
+        assert!(x.is_none());
     }
 
     #[test]

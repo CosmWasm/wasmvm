@@ -28,8 +28,8 @@ fn make_instantiate_msg() -> (InstantiateMsg, String) {
     let creator = String::from("creator");
     (
         InstantiateMsg {
-            verifier: verifier.clone(),
-            beneficiary: beneficiary.clone(),
+            verifier,
+            beneficiary,
         },
         creator,
     )
