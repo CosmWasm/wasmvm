@@ -5,9 +5,19 @@ RUN yum -y update \
   # Obtain dependencies for cross compiling
   # The only prebuilt glibc was done by third party Computational
   && yum -y install epel-release \
+  # See https://centos.pkgs.org/7/epel-aarch64/gcc-aarch64-linux-gnu-4.8.5-16.el7.1.aarch64.rpm.html
+  # and https://centos.pkgs.org/7/epel-aarch64/gcc-c++-aarch64-linux-gnu-4.8.5-16.el7.1.aarch64.rpm.html:
+  # "Support for cross-building user space programs is not currently provided as that would massively multiply
+  # the number of packages."
   && yum -y install gcc-aarch64-linux-gnu gcc-c++-aarch64-linux-gnu \
-  && yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm \
-  && yum install -y http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm
+  # See https://stackoverflow.com/a/64920961
+  && wget http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm \
+  && sha256sum glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm | grep 8caf8654ba0c15e1792bf0aaa1ac0cd4ad94ac905e97d6ea0f0e56e9ca1f5e78 \
+  && wget http://springdale.princeton.edu/data/springdale/7/x86_64/os/Computational/glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm \
+  && sha256sum glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm | grep bf050dc2389630f50e90f4cdaf6e4e1d986e89dcd2c8432f72738abe38b3bce2 \
+  && yum install -y glibc-aarch64-linux-gnu-2.24-2.sdl7.2.noarch.rpm \
+  && yum install -y glibc-aarch64-linux-gnu-devel-2.24-2.sdl7.2.noarch.rpm \
+  && rm glibc-aarch64-*.rpm
 
 # GET FROM https://github.com/rust-lang/docker-rust-nightly
 ENV RUSTUP_HOME=/usr/local/rustup \
@@ -42,6 +52,7 @@ COPY guest/cargo-config /.cargo/config
 
 # Copy the missing library libgcc_s.so that gcc does not provide
 RUN wget http://mirror.centos.org/altarch/7/os/aarch64/Packages/libgcc-4.8.5-44.el7.aarch64.rpm \
+  && sha256sum libgcc-4.8.5-44.el7.aarch64.rpm | grep 4f44c5be70ed9d8d74c2a616cde92a842b15eefaccd766959e5fbd7fbe965d2d \
   && rpm2cpio libgcc-4.8.5-44.el7.aarch64.rpm | cpio -idmv \
   && cp /code/lib64/libgcc_s-4.8.5-20150702.so.1 /usr/lib/gcc/aarch64-linux-gnu/4.8.5/libgcc_s.so \
   && rm libgcc-*.el7.aarch64.rpm
