@@ -8,18 +8,26 @@ ALPINE_TESTER := cosmwasm/go-ext-builder:0012-alpine
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
 
-SHARED_LIB_EXT = "" # File extension of the shared library
+SHARED_LIB_SRC = "" # File name of the shared library as created by the Rust build system
+SHARED_LIB_DST = "" # File name of the shared library that we store
 ifeq ($(OS),Windows_NT)
-	SHARED_LIB_EXT = dll
+	SHARED_LIB_SRC = wasmvm.dll
+	SHARED_LIB_DST = wasmvm.dll
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
-		SHARED_LIB_EXT = so
+		SHARED_LIB_SRC = libwasmvm.so
+		SHARED_LIB_DST = libwasmvm.$(shell rustc --print cfg | grep target_arch | cut  -d '"' -f 2).so
 	endif
 	ifeq ($(UNAME_S),Darwin)
-		SHARED_LIB_EXT = dylib
+		SHARED_LIB_SRC = libwasmvm.dylib
+		SHARED_LIB_DST = libwasmvm.dylib
 	endif
 endif
+
+test-filenames:
+	echo $(SHARED_LIB_DST)
+	echo $(SHARED_LIB_SRC)
 
 all: build test
 
@@ -31,7 +39,7 @@ build-rust: build-rust-release
 # In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
 build-rust-debug:
 	(cd libwasmvm && cargo build)
-	cp libwasmvm/target/debug/libwasmvm.$(SHARED_LIB_EXT) api
+	cp libwasmvm/target/debug/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	make update-bindings
 
 # use release build to actually ship - smaller and much faster
@@ -40,7 +48,7 @@ build-rust-debug:
 # enable stripping through cargo (if that is desired).
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
-	cp libwasmvm/target/release/libwasmvm.$(SHARED_LIB_EXT) api
+	cp libwasmvm/target/release/$(SHARED_LIB_SRC) api/$(SHARED_LIB_DST)
 	make update-bindings
 	@ #this pulls out ELF symbols, 80% size reduction!
 
