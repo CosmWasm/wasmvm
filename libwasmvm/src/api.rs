@@ -1,6 +1,6 @@
 use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
 
-use crate::error::GoResult;
+use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 
 // this represents something passed in from the caller side of FFI
@@ -10,8 +10,8 @@ pub struct api_t {
     _private: [u8; 0],
 }
 
-// These functions should return GoResult but because we don't trust them here, we treat the return value as i32
-// and then check it when converting to GoResult manually
+// These functions should return GoError but because we don't trust them here, we treat the return value as i32
+// and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi_vtable {
@@ -50,7 +50,7 @@ impl BackendApi for GoApi {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.canonicalize_address)(
+        let go_error: GoError = (self.vtable.canonicalize_address)(
             self.state,
             U8SliceView::new(Some(human.as_bytes())),
             &mut output as *mut UnmanagedVector,
@@ -63,10 +63,10 @@ impl BackendApi for GoApi {
 
         let gas_info = GasInfo::with_cost(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to canonicalize the address: {}", human);
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }
@@ -79,7 +79,7 @@ impl BackendApi for GoApi {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoResult = (self.vtable.humanize_address)(
+        let go_error: GoError = (self.vtable.humanize_address)(
             self.state,
             U8SliceView::new(Some(canonical)),
             &mut output as *mut UnmanagedVector,
@@ -92,7 +92,7 @@ impl BackendApi for GoApi {
 
         let gas_info = GasInfo::with_cost(used_gas);
 
-        // return complete error message (reading from buffer for GoResult::Other)
+        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to humanize the address: {}",
@@ -100,7 +100,7 @@ impl BackendApi for GoApi {
             )
         };
         unsafe {
-            if let Err(err) = go_result.into_ffi_result(error_msg, default) {
+            if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);
             }
         }

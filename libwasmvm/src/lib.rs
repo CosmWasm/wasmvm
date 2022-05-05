@@ -21,7 +21,7 @@ mod version;
 pub use api::GoApi;
 pub use cache::{cache_t, load_wasm};
 pub use db::{db_t, Db};
-pub use error::GoResult;
+pub use error::GoError;
 pub use memory::{
     destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, U8SliceView, UnmanagedVector,
 };

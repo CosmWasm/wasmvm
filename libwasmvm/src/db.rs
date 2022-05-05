@@ -8,8 +8,8 @@ pub struct db_t {
     _private: [u8; 0],
 }
 
-// These functions should return GoResult but because we don't trust them here, we treat the return value as i32
-// and then check it when converting to GoResult manually
+// These functions should return GoError but because we don't trust them here, we treat the return value as i32
+// and then check it when converting to GoError manually
 #[repr(C)]
 pub struct Db_vtable {
     pub read_db: extern "C" fn(
