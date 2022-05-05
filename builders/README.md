@@ -14,6 +14,12 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0012:**
+
+- Add cross-compilation setup to build `libwasmvm.x86_64.so` and `libwasmvm.aarch64.so`
+  from the CentOS builder image.
+- Update Rust to 1.60.0.
+
 **Version 0011:**
 
 - Update Rust to 1.59.0.

@@ -1,4 +1,4 @@
-//go:build (linux && !muslc) || darwin
+//go:build darwin
 
 package api
 
