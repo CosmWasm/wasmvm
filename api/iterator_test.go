@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/CosmWasm/wasmvm/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type queueData struct {
@@ -61,7 +62,111 @@ func setupQueueContract(t *testing.T, cache Cache) queueData {
 	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
-func TestQueueIterator(t *testing.T) {
+func TestStoreIterator(t *testing.T) {
+	const limit = 2000
+	callID1 := startCall()
+	callID2 := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+	var index uint64
+	var err error
+
+	iter, _ = store.Iterator(nil, nil)
+	index, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), index)
+	iter, _ = store.Iterator(nil, nil)
+	index, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), index)
+
+	iter, _ = store.Iterator(nil, nil)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), index)
+	iter, _ = store.Iterator(nil, nil)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), index)
+	iter, _ = store.Iterator(nil, nil)
+	index, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), index)
+
+	endCall(callID1)
+	endCall(callID2)
+}
+
+func TestStoreIteratorHitsLimit(t *testing.T) {
+	callID := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+	var err error
+	const limit = 2
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.NoError(t, err)
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.NoError(t, err)
+
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID, iter, limit)
+	require.ErrorContains(t, err, "Reached iterator limit (2)")
+
+	endCall(callID)
+}
+
+func TestRetrieveIterator(t *testing.T) {
+	const limit = 2000
+	callID1 := startCall()
+	callID2 := startCall()
+
+	store := dbm.NewMemDB()
+	var iter dbm.Iterator
+	var err error
+
+	iter, _ = store.Iterator(nil, nil)
+	index11, err := storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID1, iter, limit)
+	require.NoError(t, err)
+	iter, _ = store.Iterator(nil, nil)
+	_, err = storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	iter, _ = store.Iterator(nil, nil)
+	index22, err := storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+	iter, err = store.Iterator(nil, nil)
+	index23, err := storeIterator(callID2, iter, limit)
+	require.NoError(t, err)
+
+	// Retrieve existing
+	iter = retrieveIterator(callID1, index11)
+	require.NotNil(t, iter)
+	iter = retrieveIterator(callID2, index22)
+	require.NotNil(t, iter)
+
+	// Retrieve non-existent index
+	iter = retrieveIterator(callID1, index23)
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(0))
+	require.Nil(t, iter)
+
+	// Retrieve non-existent call ID
+	iter = retrieveIterator(callID1+1_234_567, index23)
+	require.Nil(t, iter)
+
+	endCall(callID1)
+	endCall(callID2)
+}
+
+func TestQueueIteratorSimple(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
@@ -97,7 +202,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, len(iteratorStack), 0)
+	assert.Equal(t, 0, len(iteratorFrames))
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -143,6 +248,42 @@ func TestQueueIteratorRaces(t *testing.T) {
 	}
 	wg.Wait()
 
-	// when they finish, we should have popped everything off the stack
-	assert.Equal(t, len(iteratorStack), 0)
+	// when they finish, we should have removed all frames
+	assert.Equal(t, 0, len(iteratorFrames))
+}
+
+func TestQueueIteratorLimit(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	setup := setupQueueContract(t, cache)
+	checksum, querier, api := setup.checksum, setup.querier, setup.api
+
+	var err error
+	var qres types.QueryResponse
+	var gasLimit uint64
+
+	// Open 5000 iterators
+	gasLimit = TESTING_GAS_LIMIT
+	gasMeter := NewMockGasMeter(gasLimit)
+	igasMeter := GasMeter(gasMeter)
+	store := setup.Store(gasMeter)
+	query := []byte(`{"open_iterators":{"count":5000}}`)
+	env := MockEnvBin(t)
+	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Equal(t, "", qres.Err)
+	require.Equal(t, `{}`, string(qres.Ok))
+
+	// Open 35000 iterators
+	gasLimit = TESTING_GAS_LIMIT * 4
+	gasMeter = NewMockGasMeter(gasLimit)
+	igasMeter = GasMeter(gasMeter)
+	store = setup.Store(gasMeter)
+	query = []byte(`{"open_iterators":{"count":35000}}`)
+	env = MockEnvBin(t)
+	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	require.ErrorContains(t, err, "Reached iterator limit (32768)")
 }

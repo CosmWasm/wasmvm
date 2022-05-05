@@ -9,7 +9,8 @@ use crate::memory::UnmanagedVector;
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 pub struct iterator_t {
-    pub db_counter: u64,
+    /// An ID assigned to this contract call
+    pub call_id: u64,
     pub iterator_index: u64,
 }
 

@@ -1,69 +1,87 @@
 package api
 
 import (
+	"fmt"
 	"sync"
 
 	dbm "github.com/tendermint/tm-db"
 )
 
-// frame stores all Iterators for one contract
+// frame stores all Iterators for one contract call
 type frame []dbm.Iterator
 
-// iteratorStack contains one frame for each contract, indexed by a counter
-// 10 is a rather arbitrary guess on how many frames might be needed simultaneously
-var iteratorStack = make(map[uint64]frame, 10)
-var iteratorStackMutex sync.Mutex
+// iteratorFrames contains one frame for each contract call, indexed by contract call ID.
+var iteratorFrames = make(map[uint64]frame)
+var iteratorFramesMutex sync.Mutex
 
-// this is a global counter when we create DBs
-var dbCounter uint64
-var dbCounterMutex sync.Mutex
+// this is a global counter for creating call IDs
+var latestCallID uint64
+var latestCallIDMutex sync.Mutex
 
-// startContract is called at the beginning of a contract runtime to create a new frame on the iteratorStack
-// updates dbCounter for an index
-func startContract() uint64 {
-	dbCounterMutex.Lock()
-	defer dbCounterMutex.Unlock()
-	dbCounter += 1
-	return dbCounter
+// startCall is called at the beginning of a contract call to create a new frame in iteratorFrames.
+// It updates latestCallID for generating a new call ID.
+func startCall() uint64 {
+	latestCallIDMutex.Lock()
+	defer latestCallIDMutex.Unlock()
+	latestCallID += 1
+	return latestCallID
 }
 
-func popFrame(counter uint64) frame {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
-	// get the item from the stack
+// removeFrame removes the frame with for the given call ID.
+// The result can be nil when the frame is not initialized,
+// i.e. when startCall() is called but no iterator is stored.
+func removeFrame(callID uint64) frame {
+	iteratorFramesMutex.Lock()
+	defer iteratorFramesMutex.Unlock()
 
-	remove := iteratorStack[counter]
-	delete(iteratorStack, counter)
+	remove := iteratorFrames[callID]
+	delete(iteratorFrames, callID)
 	return remove
 }
 
-// endContract is called at the end of a contract runtime to remove one item from the IteratorStack
-func endContract(counter uint64) {
-	// we pull popFrame in another function so we don't hold the mutex while cleaning up the popped frame
-	remove := popFrame(counter)
+// endCall is called at the end of a contract call to remove one item the iteratorFrames
+func endCall(callID uint64) {
+	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
+	remove := removeFrame(callID)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
 		iter.Close()
 	}
 }
 
-// storeIterator will add this to the end of the latest stack and return a reference to it.
+// storeIterator will add this to the end of the frame for the given ID and return a reference to it.
 // We start counting with 1, so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
-func storeIterator(dbCounter uint64, it dbm.Iterator) uint64 {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
+func storeIterator(callID uint64, it dbm.Iterator, frameLenLimit int) (uint64, error) {
+	iteratorFramesMutex.Lock()
+	defer iteratorFramesMutex.Unlock()
 
-	frame := append(iteratorStack[dbCounter], it)
-	iteratorStack[dbCounter] = frame
-	return uint64(len(frame))
+	old_frame_len := len(iteratorFrames[callID])
+	if old_frame_len >= frameLenLimit {
+		return 0, fmt.Errorf("Reached iterator limit (%d)", frameLenLimit)
+	}
+
+	// store at array position `old_frame_len`
+	iteratorFrames[callID] = append(iteratorFrames[callID], it)
+	new_index := old_frame_len + 1
+
+	return uint64(new_index), nil
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
 // We start counting with 1, in storeIterator so the 0 value is flagged as an error. This means we must
 // remember to do idx-1 when retrieving
-func retrieveIterator(dbCounter uint64, index uint64) dbm.Iterator {
-	iteratorStackMutex.Lock()
-	defer iteratorStackMutex.Unlock()
-	return iteratorStack[dbCounter][index-1]
+func retrieveIterator(callID uint64, index uint64) dbm.Iterator {
+	iteratorFramesMutex.Lock()
+	defer iteratorFramesMutex.Unlock()
+	myFrame := iteratorFrames[callID]
+	if myFrame == nil {
+		return nil
+	}
+	posInFrame := int(index) - 1
+	if posInFrame < 0 || posInFrame >= len(myFrame) {
+		// index out of range
+		return nil
+	}
+	return myFrame[posInFrame]
 }

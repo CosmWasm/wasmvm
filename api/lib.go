@@ -156,11 +156,10 @@ func Instantiate(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -197,11 +196,10 @@ func Execute(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -235,11 +233,10 @@ func Migrate(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -273,11 +270,10 @@ func Sudo(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -311,11 +307,10 @@ func Reply(
 	r := makeView(reply)
 	defer runtime.KeepAlive(reply)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -349,11 +344,10 @@ func Query(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -387,11 +381,10 @@ func IBCChannelOpen(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -425,11 +418,10 @@ func IBCChannelConnect(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -463,11 +455,10 @@ func IBCChannelClose(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -501,11 +492,10 @@ func IBCPacketReceive(
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -539,11 +529,10 @@ func IBCPacketAck(
 	ac := makeView(ack)
 	defer runtime.KeepAlive(ack)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
@@ -577,11 +566,10 @@ func IBCPacketTimeout(
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
 
-	// set up a new stack frame to handle iterators
-	counter := startContract()
-	defer endContract(counter)
+	callID := startCall()
+	defer endCall(callID)
 
-	dbState := buildDBState(store, counter)
+	dbState := buildDBState(store, callID)
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
