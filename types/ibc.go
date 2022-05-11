@@ -133,16 +133,19 @@ func (m *IBCCloseConfirm) ToMsg() IBCChannelCloseMsg {
 }
 
 type IBCPacketReceiveMsg struct {
-	Packet IBCPacket `json:"packet"`
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer,omitempty"`
 }
 
 type IBCPacketAckMsg struct {
 	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	OriginalPacket  IBCPacket          `json:"original_packet"`
+	Relayer         string             `json:"relayer,omitempty"`
 }
 
 type IBCPacketTimeoutMsg struct {
-	Packet IBCPacket `json:"packet"`
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer,omitempty"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
@@ -192,10 +195,17 @@ type IBCPacket struct {
 
 // IBCChannelOpenResult is the raw response from the ibc_channel_open call.
 // This is mirrors Rust's ContractResult<()>.
-// We just check if Err == "" to see if this is success (no other data on success)
+// Check if Err == "" to see if this is success
+// On Success, IBCV3ChannelOpenResponse *may* be set if the contract is ibcv3 compatible and wishes to
+// define a custom version in the handshake.
 type IBCChannelOpenResult struct {
-	Ok  *struct{} `json:"ok,omitempty"`
-	Err string    `json:"error,omitempty"`
+	Ok  *IBCV3ChannelOpenResponse `json:"ok,omitempty"`
+	Err string                    `json:"error,omitempty"`
+}
+
+// IBCV3ChannelOpenResponse is version negotiation data for the handshake
+type IBCV3ChannelOpenResponse struct {
+	Version string `json:"version"`
 }
 
 // This is the return value for the majority of the ibc handlers.
