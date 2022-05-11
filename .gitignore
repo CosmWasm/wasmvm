@@ -11,3 +11,7 @@ lib*.a
 /demo
 tmp
 a.out
+
+# IDE stuff
+.idea
+.vscode
