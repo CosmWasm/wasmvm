@@ -134,18 +134,18 @@ func (m *IBCCloseConfirm) ToMsg() IBCChannelCloseMsg {
 
 type IBCPacketReceiveMsg struct {
 	Packet  IBCPacket `json:"packet"`
-	Relayer string    `json:"relayer,omitempty"`
+	Relayer string    `json:"relayer"`
 }
 
 type IBCPacketAckMsg struct {
 	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	OriginalPacket  IBCPacket          `json:"original_packet"`
-	Relayer         string             `json:"relayer,omitempty"`
+	Relayer         string             `json:"relayer"`
 }
 
 type IBCPacketTimeoutMsg struct {
 	Packet  IBCPacket `json:"packet"`
-	Relayer string    `json:"relayer,omitempty"`
+	Relayer string    `json:"relayer"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
@@ -199,12 +199,12 @@ type IBCPacket struct {
 // On Success, IBCV3ChannelOpenResponse *may* be set if the contract is ibcv3 compatible and wishes to
 // define a custom version in the handshake.
 type IBCChannelOpenResult struct {
-	Ok  *IBCV3ChannelOpenResponse `json:"ok,omitempty"`
-	Err string                    `json:"error,omitempty"`
+	Ok  *IBC3ChannelOpenResponse `json:"ok,omitempty"`
+	Err string                   `json:"error,omitempty"`
 }
 
-// IBCV3ChannelOpenResponse is version negotiation data for the handshake
-type IBCV3ChannelOpenResponse struct {
+// IBC3ChannelOpenResponse is version negotiation data for the handshake
+type IBC3ChannelOpenResponse struct {
 	Version string `json:"version"`
 }
 

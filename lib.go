@@ -388,7 +388,7 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCV3ChannelOpenResponse, uint64, error) {
+) (*types.IBC3ChannelOpenResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
