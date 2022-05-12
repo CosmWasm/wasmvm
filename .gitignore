@@ -3,6 +3,7 @@
 **/*.rs.bk
 *.iml
 .idea
+.vscode
 
 # no static libraries (35MB+)
 lib*.a
@@ -11,7 +12,3 @@ lib*.a
 /demo
 tmp
 a.out
-
-# IDE stuff
-.idea
-.vscode
