@@ -112,12 +112,14 @@ func TestIBCHandshake(t *testing.T) {
 	env = api.MockEnv()
 	// fails on bad version
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, "random-garbage")
-	_, err = vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	_, _, err = vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.Error(t, err)
 	// passes on good version
 	openMsg = api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	_, err = vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	// also nil
+	require.Nil(t, ores)
 
 	// channel connect
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -180,8 +182,9 @@ func TestIBCPacketDispatch(t *testing.T) {
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	_, err = vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	require.Nil(t, ores)
 
 	// channel connect
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
