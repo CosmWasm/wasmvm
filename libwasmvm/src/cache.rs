@@ -601,10 +601,10 @@ mod tests {
         );
         let _ = error_msg.consume();
         assert!(ibc_reflect_report.has_ibc_entry_points);
-        assert_eq!(
-            ibc_reflect_report.required_features.consume().unwrap(),
-            b"iterator,staking,stargate"
-        );
+        let required_features =
+            String::from_utf8_lossy(&ibc_reflect_report.required_features.consume().unwrap())
+                .to_string();
+        assert_eq!(required_features, "iterator,stargate");
 
         release_cache(cache_ptr);
     }
@@ -702,7 +702,7 @@ mod tests {
                 misses: 0,
                 elements_pinned_memory_cache: 1,
                 elements_memory_cache: 0,
-                size_pinned_memory_cache: 5636253,
+                size_pinned_memory_cache: 5665691,
                 size_memory_cache: 0,
             }
         );
