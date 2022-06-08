@@ -1,4 +1,4 @@
-//go:build custom_wasmvm
+//go:build sys_wasmvm
 
 package api
 

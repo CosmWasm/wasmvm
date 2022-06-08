@@ -1,4 +1,4 @@
-//go:build linux && muslc && !custom_wasmvm
+//go:build linux && muslc && !sys_wasmvm
 
 package api
 
