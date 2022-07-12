@@ -90,8 +90,18 @@ type QueryRequest struct {
 }
 
 type BankQuery struct {
+	Supply      *SupplyQuery      `json:"supply,omitempty"`
 	Balance     *BalanceQuery     `json:"balance,omitempty"`
 	AllBalances *AllBalancesQuery `json:"all_balances,omitempty"`
+}
+
+type SupplyQuery struct {
+	Denom string `json:"denom"`
+}
+
+// SupplyResponse is the expected response to SupplyQuery
+type SupplyResponse struct {
+	Amount Coin `json:"amount"`
 }
 
 type BalanceQuery struct {
