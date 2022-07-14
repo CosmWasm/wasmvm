@@ -195,7 +195,7 @@ jobs:
       - checkout
       - run:
           name: Install Rustup
-          command: choco install rustup.install
+          command: choco install rustup.install --version 1.25.0
       - run:
           name: Install Rust
           command: rustup default 1.59.0
