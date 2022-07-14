@@ -34,6 +34,8 @@ thiserror = "1.0"
 hex = "0.4"
 
 [dev-dependencies]
+assert_approx_eq = "1.1.0"
+cfg-if = "1.0.0"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 tempfile = "3.1.0"
 

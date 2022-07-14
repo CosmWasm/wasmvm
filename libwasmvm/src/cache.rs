@@ -371,7 +371,13 @@ mod tests {
         assert!(cache_ptr.is_null());
         assert!(error_msg.is_some());
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
-        assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: data provided contains a nul byte");
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir\\state: strings passed to WinAPI cannot contain NULs");
+            } else {
+                assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: data provided contains a nul byte");
+            }
+        }
     }
 
     #[test]
@@ -693,18 +699,17 @@ mod tests {
         let mut error_msg = UnmanagedVector::default();
         let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
         let _ = error_msg.consume();
-        assert_eq!(
-            metrics,
-            Metrics {
-                hits_pinned_memory_cache: 0,
-                hits_memory_cache: 0,
-                hits_fs_cache: 1,
-                misses: 0,
-                elements_pinned_memory_cache: 1,
-                elements_memory_cache: 0,
-                size_pinned_memory_cache: 5665691,
-                size_memory_cache: 0,
-            }
+        assert_eq!(metrics.hits_pinned_memory_cache, 0);
+        assert_eq!(metrics.hits_memory_cache, 0);
+        assert_eq!(metrics.hits_fs_cache, 1);
+        assert_eq!(metrics.misses, 0);
+        assert_eq!(metrics.elements_pinned_memory_cache, 1);
+        assert_eq!(metrics.elements_memory_cache, 0);
+        assert_eq!(metrics.size_memory_cache, 0);
+        assert_approx_eq::assert_approx_eq!(
+            i128::from(metrics.size_pinned_memory_cache),
+            5665691,
+            665691
         );
 
         // Unpin

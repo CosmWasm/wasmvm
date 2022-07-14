@@ -38,6 +38,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "assert_approx_eq"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c07dab4369547dbe5114677b33fbbf724971019f3818172d59a97a61c774ffd"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1848,7 +1854,9 @@ checksum = "52144d4c78e5cf8b055ceab8e5fa22814ce4315d6002ad32cfd914f37c12fd65"
 name = "wasmvm"
 version = "1.0.0"
 dependencies = [
+ "assert_approx_eq",
  "cbindgen",
+ "cfg-if",
  "cosmwasm-std",
  "cosmwasm-vm",
  "errno",
