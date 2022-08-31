@@ -17,6 +17,21 @@ jobs:
           keys:
             - cargocache-v3-libwasmvm_sanity-rust:1.59.0-{{ checksum "libwasmvm/Cargo.lock" }}
       - run:
+          name: Ensure libwasmvm/bindings.h is up-to-date
+          working_directory: libwasmvm
+          command: |
+            cargo check
+            CHANGES_IN_REPO=$(git status --porcelain bindings.h)
+            if [[ -n "$CHANGES_IN_REPO" ]]; then
+              echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+              git status && git --no-pager diff
+              exit 1
+            fi
+      - run:
+          # It is easy to update libwasmvm/bindings.h as part of the development but forget `make update-bindings`
+          name: Ensure internal/api/bindings.h is up to date
+          command: diff libwasmvm/bindings.h internal/api/bindings.h
+      - run:
           name: Check Rust formatting
           working_directory: libwasmvm
           command: cargo fmt -- --check
