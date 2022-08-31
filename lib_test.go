@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/api"
+	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-const HACKATOM_TEST_CONTRACT = "./api/testdata/hackatom.wasm"
+const HACKATOM_TEST_CONTRACT = "./internal/api/testdata/hackatom.wasm"
 
 func withVM(t *testing.T) *VM {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")

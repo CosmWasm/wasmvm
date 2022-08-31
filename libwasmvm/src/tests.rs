@@ -10,7 +10,7 @@ use cosmwasm_vm::{
     InstanceOptions, Size,
 };
 
-static CONTRACT: &[u8] = include_bytes!("../../api/testdata/hackatom.wasm");
+static CONTRACT: &[u8] = include_bytes!("../../internal/api/testdata/hackatom.wasm");
 const PRINT_DEBUG: bool = false;
 const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 const MEMORY_LIMIT: Size = Size::mebi(32);

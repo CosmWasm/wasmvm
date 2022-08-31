@@ -5,13 +5,13 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/api"
+	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const IBC_TEST_CONTRACT = "./api/testdata/ibc_reflect.wasm"
+const IBC_TEST_CONTRACT = "./internal/api/testdata/ibc_reflect.wasm"
 
 func TestIBC(t *testing.T) {
 	vm := withVM(t)
