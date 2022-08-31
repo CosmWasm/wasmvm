@@ -26,6 +26,9 @@ func MockEnv() types.Env {
 			Time:    1578939743_987654321,
 			ChainID: "foobar",
 		},
+		Transaction: &types.TransactionInfo{
+			Index: 4,
+		},
 		Contract: types.ContractInfo{
 			Address: MOCK_CONTRACT_ADDR,
 		},
