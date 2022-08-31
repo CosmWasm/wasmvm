@@ -1,10 +1,10 @@
 package cosmwasm
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
-	"encoding/json"
 
 	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
@@ -157,12 +157,6 @@ func TestEnv(t *testing.T) {
 	require.NoError(t, err)
 	expected, _ = json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
-
-
-
-
-	// fmt.Printf(
-	t.Logf("Response: %v", string(ires.Data))
 }
 
 func TestGetMetrics(t *testing.T) {
