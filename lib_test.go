@@ -19,7 +19,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-const HACKATOM_TEST_CONTRACT = "./internal/api/testdata/hackatom.wasm"
+const HACKATOM_TEST_CONTRACT = "./testdata/hackatom.wasm"
 
 func withVM(t *testing.T) *VM {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")

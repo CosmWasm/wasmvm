@@ -1,7 +1,7 @@
 Update contracts via e.g.
 
 ```sh
-cd internal/api/testdata
+cd testdata
 ./download_releases.sh v0.14.0-beta2
 ```
 

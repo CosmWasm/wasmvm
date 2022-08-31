@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const IBC_TEST_CONTRACT = "./internal/api/testdata/ibc_reflect.wasm"
+const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
 
 func TestIBC(t *testing.T) {
 	vm := withVM(t)
