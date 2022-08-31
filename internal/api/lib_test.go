@@ -61,7 +61,7 @@ func TestCreateAndGet(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
 	checksum, err := Create(cache, wasm)
@@ -85,7 +85,7 @@ func TestPin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
 	checksum, err := Create(cache, wasm)
@@ -128,7 +128,7 @@ func TestUnpin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
 	checksum, err := Create(cache, wasm)
@@ -173,7 +173,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{}, metrics)
 
 	// Create contract
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 	checksum, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -294,7 +294,7 @@ func TestInstantiate(t *testing.T) {
 	defer cleanup()
 
 	// create contract
-	wasm, err := ioutil.ReadFile("./testdata/hackatom.wasm")
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 	checksum, err := Create(cache, wasm)
 	require.NoError(t, err)
@@ -786,15 +786,15 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 }
 
 func createTestContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "./testdata/hackatom.wasm")
+	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
 func createQueueContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "./testdata/queue.wasm")
+	return createContract(t, cache, "../../testdata/queue.wasm")
 }
 
 func createReflectContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "./testdata/reflect.wasm")
+	return createContract(t, cache, "../../testdata/reflect.wasm")
 }
 
 func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
