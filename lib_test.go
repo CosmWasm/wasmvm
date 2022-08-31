@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"encoding/json"
 
 	"github.com/CosmWasm/wasmvm/internal/api"
 	"github.com/CosmWasm/wasmvm/types"
@@ -19,6 +20,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
+const CYBERPUNK_TEST_CONTRACT = "./testdata/cyberpunk.wasm"
 const HACKATOM_TEST_CONTRACT = "./testdata/hackatom.wasm"
 
 func withVM(t *testing.T) *VM {
@@ -95,6 +97,72 @@ func TestHappyPath(t *testing.T) {
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
 	assert.Equal(t, expectedData, hres.Data)
+}
+
+func TestEnv(t *testing.T) {
+	vm := withVM(t)
+	checksum := createTestContract(t, vm, CYBERPUNK_TEST_CONTRACT)
+
+	deserCost := types.UFraction{1, 1}
+	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	// instantiate it with this store
+	store := api.NewLookup(gasMeter1)
+	goapi := api.NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+
+	// instantiate
+	env := api.MockEnv()
+	info := api.MockInfo("creator", nil)
+	ires, _, err := vm.Instantiate(checksum, env, info, []byte(`{}`), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(ires.Messages))
+
+	// Execute mirror env without Transaction
+	env = types.Env{
+		Block: types.BlockInfo{
+			Height:  444,
+			Time:    1955939743_123456789,
+			ChainID: "nice-chain",
+		},
+		Contract: types.ContractInfo{
+			Address: "wasm10dyr9899g6t0pelew4nvf4j5c3jcgv0r5d3a5l",
+		},
+		Transaction: nil,
+	}
+	info = api.MockInfo("creator", nil)
+	msg := []byte(`{"mirror_env": {}}`)
+	ires, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	require.NoError(t, err)
+	expected, _ := json.Marshal(env)
+	require.Equal(t, expected, ires.Data)
+
+	// Execute mirror env with Transaction
+	env = types.Env{
+		Block: types.BlockInfo{
+			Height:  444,
+			Time:    1955939743_123456789,
+			ChainID: "nice-chain",
+		},
+		Contract: types.ContractInfo{
+			Address: "wasm10dyr9899g6t0pelew4nvf4j5c3jcgv0r5d3a5l",
+		},
+		Transaction: &types.TransactionInfo{
+			Index: 18,
+		},
+	}
+	info = api.MockInfo("creator", nil)
+	msg = []byte(`{"mirror_env": {}}`)
+	ires, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	require.NoError(t, err)
+	expected, _ = json.Marshal(env)
+	require.Equal(t, expected, ires.Data)
+
+
+
+
+	// fmt.Printf(
+	t.Logf("Response: %v", string(ires.Data))
 }
 
 func TestGetMetrics(t *testing.T) {
