@@ -185,16 +185,16 @@ fn do_unpin(
 
 /// The result type of the FFI function analyze_code.
 ///
-/// Please note that the unmanaged vector in `required_features`
+/// Please note that the unmanaged vector in `required_capabilities`
 /// has to be destroyed exactly once. When calling `analyze_code`
 /// from Go this is done via `C.destroy_unmanaged_vector`.
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct AnalysisReport {
     pub has_ibc_entry_points: bool,
-    /// An UTF-8 encoded comma separated list of reqired features.
+    /// An UTF-8 encoded comma separated list of reqired capabilities.
     /// This is never None/nil.
-    pub required_features: UnmanagedVector,
+    pub required_capabilities: UnmanagedVector,
 }
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
@@ -207,7 +207,7 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
         let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
-            required_features: UnmanagedVector::new(Some(required_capabilities_utf8)),
+            required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
         }
     }
 }
@@ -590,7 +590,10 @@ mod tests {
         );
         let _ = error_msg.consume();
         assert!(!hackatom_report.has_ibc_entry_points);
-        assert_eq!(hackatom_report.required_features.consume().unwrap(), b"");
+        assert_eq!(
+            hackatom_report.required_capabilities.consume().unwrap(),
+            b""
+        );
 
         let mut error_msg = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
@@ -601,7 +604,7 @@ mod tests {
         let _ = error_msg.consume();
         assert!(ibc_reflect_report.has_ibc_entry_points);
         let required_capabilities =
-            String::from_utf8_lossy(&ibc_reflect_report.required_features.consume().unwrap())
+            String::from_utf8_lossy(&ibc_reflect_report.required_capabilities.consume().unwrap())
                 .to_string();
         assert_eq!(required_capabilities, "iterator,stargate");
 

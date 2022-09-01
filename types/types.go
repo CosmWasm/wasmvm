@@ -62,7 +62,9 @@ func (o OutOfGasError) Error() string {
 // This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
 	HasIBCEntryPoints bool
-	RequiredFeatures  string
+	// Deprecated, use RequiredCapabilities. For now both fields contain the same value.
+	RequiredFeatures     string
+	RequiredCapabilities string
 }
 
 type Metrics struct {
