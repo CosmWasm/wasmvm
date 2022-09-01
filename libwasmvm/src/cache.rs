@@ -6,7 +6,7 @@ use std::str::from_utf8;
 use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
+use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
@@ -27,7 +27,7 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 #[no_mangle]
 pub extern "C" fn init_cache(
     data_dir: ByteSliceView,
-    supported_features: ByteSliceView,
+    available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
@@ -35,7 +35,7 @@ pub extern "C" fn init_cache(
     let r = catch_unwind(|| {
         do_init_cache(
             data_dir,
-            supported_features,
+            available_capabilities,
             cache_size,
             instance_memory_limit,
         )
@@ -46,7 +46,7 @@ pub extern "C" fn init_cache(
 
 fn do_init_cache(
     data_dir: ByteSliceView,
-    supported_capabilities: ByteSliceView,
+    available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
@@ -55,9 +55,9 @@ fn do_init_cache(
         .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features
-    let capabilities_bin = supported_capabilities
+    let capabilities_bin = available_capabilities
         .read()
-        .ok_or_else(|| Error::unset_arg(FEATURES_ARG))?;
+        .ok_or_else(|| Error::unset_arg(AVAILABLE_CAPABILITIES_ARG))?;
     let capabilities = capabilities_from_csv(from_utf8(capabilities_bin)?);
     let memory_cache_size = Size::mebi(
         cache_size
