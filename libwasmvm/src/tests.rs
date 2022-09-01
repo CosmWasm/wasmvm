@@ -6,7 +6,7 @@ use tempfile::TempDir;
 use cosmwasm_std::coins;
 use cosmwasm_vm::testing::{mock_backend, mock_env, mock_info, mock_instance_with_gas_limit};
 use cosmwasm_vm::{
-    call_execute_raw, call_instantiate_raw, features_from_csv, to_vec, Cache, CacheOptions,
+    call_execute_raw, call_instantiate_raw, capabilities_from_csv, to_vec, Cache, CacheOptions,
     InstanceOptions, Size,
 };
 
@@ -40,7 +40,7 @@ fn handle_cpu_loop_with_cache() {
     let backend = mock_backend(&[]);
     let options = CacheOptions {
         base_dir: TempDir::new().unwrap().path().to_path_buf(),
-        supported_features: features_from_csv("staking"),
+        available_capabilities: capabilities_from_csv("staking"),
         memory_cache_size: MEMORY_CACHE_SIZE,
         instance_memory_limit: MEMORY_LIMIT,
     };

@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
+use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
@@ -46,7 +46,7 @@ pub extern "C" fn init_cache(
 
 fn do_init_cache(
     data_dir: ByteSliceView,
-    supported_features: ByteSliceView,
+    supported_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
@@ -55,11 +55,10 @@ fn do_init_cache(
         .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features
-    let features_bin = supported_features
+    let capabilities_bin = supported_capabilities
         .read()
         .ok_or_else(|| Error::unset_arg(FEATURES_ARG))?;
-    let features_str = from_utf8(features_bin)?;
-    let features = features_from_csv(features_str);
+    let capabilities = capabilities_from_csv(from_utf8(capabilities_bin)?);
     let memory_cache_size = Size::mebi(
         cache_size
             .try_into()
@@ -72,7 +71,7 @@ fn do_init_cache(
     );
     let options = CacheOptions {
         base_dir: dir_str.into(),
-        supported_features: features,
+        available_capabilities: capabilities,
         memory_cache_size,
         instance_memory_limit,
     };
@@ -202,13 +201,13 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
         let cosmwasm_vm::AnalysisReport {
             has_ibc_entry_points,
-            required_features,
+            required_capabilities,
         } = report;
 
-        let required_features_utf8 = set_to_csv(required_features).into_bytes();
+        let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
-            required_features: UnmanagedVector::new(Some(required_features_utf8)),
+            required_features: UnmanagedVector::new(Some(required_capabilities_utf8)),
         }
     }
 }
@@ -601,10 +600,10 @@ mod tests {
         );
         let _ = error_msg.consume();
         assert!(ibc_reflect_report.has_ibc_entry_points);
-        let required_features =
+        let required_capabilities =
             String::from_utf8_lossy(&ibc_reflect_report.required_features.consume().unwrap())
                 .to_string();
-        assert_eq!(required_features, "iterator,stargate");
+        assert_eq!(required_capabilities, "iterator,stargate");
 
         release_cache(cache_ptr);
     }
