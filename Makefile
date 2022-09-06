@@ -71,10 +71,6 @@ release-build-alpine:
 	cp libwasmvm/artifacts/libwasmvm_muslc.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
-	# try running go tests using this lib with muslc
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
-	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go test -tags muslc -count=1 ./...
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
@@ -112,6 +108,11 @@ release-build:
 	make release-build-windows
 
 test-alpine: release-build-alpine
+# try running go tests using this lib with muslc
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
+# Use package list mode to include all subdirectores. The -count=1 turns off caching.
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go test -tags muslc -count=1 ./...
+
 	@# Build a Go demo binary called ./demo that links the static library from the previous step.
 	@# Whether the result is a statically linked or dynamically linked binary is decided by `go build`
 	@# and it's a bit unclear how this is decided. We use `file` to see what we got.
