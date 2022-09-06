@@ -108,9 +108,11 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
+	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	res := types.AnalysisReport{
-		HasIBCEntryPoints: bool(report.has_ibc_entry_points),
-		RequiredFeatures:  string(copyAndDestroyUnmanagedVector(report.required_features)),
+		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
+		RequiredFeatures:     requiredCapabilities,
+		RequiredCapabilities: requiredCapabilities,
 	}
 	return &res, nil
 }

@@ -3,10 +3,10 @@ use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use cosmwasm_vm::{features_from_csv, Cache, CacheOptions, Checksum, Size};
+use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, FEATURES_ARG, WASM_ARG};
+use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
@@ -27,7 +27,7 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 #[no_mangle]
 pub extern "C" fn init_cache(
     data_dir: ByteSliceView,
-    supported_features: ByteSliceView,
+    available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
@@ -35,7 +35,7 @@ pub extern "C" fn init_cache(
     let r = catch_unwind(|| {
         do_init_cache(
             data_dir,
-            supported_features,
+            available_capabilities,
             cache_size,
             instance_memory_limit,
         )
@@ -46,7 +46,7 @@ pub extern "C" fn init_cache(
 
 fn do_init_cache(
     data_dir: ByteSliceView,
-    supported_features: ByteSliceView,
+    available_capabilities: ByteSliceView,
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
 ) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
@@ -55,11 +55,10 @@ fn do_init_cache(
         .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
     // parse the supported features
-    let features_bin = supported_features
+    let capabilities_bin = available_capabilities
         .read()
-        .ok_or_else(|| Error::unset_arg(FEATURES_ARG))?;
-    let features_str = from_utf8(features_bin)?;
-    let features = features_from_csv(features_str);
+        .ok_or_else(|| Error::unset_arg(AVAILABLE_CAPABILITIES_ARG))?;
+    let capabilities = capabilities_from_csv(from_utf8(capabilities_bin)?);
     let memory_cache_size = Size::mebi(
         cache_size
             .try_into()
@@ -72,7 +71,7 @@ fn do_init_cache(
     );
     let options = CacheOptions {
         base_dir: dir_str.into(),
-        supported_features: features,
+        available_capabilities: capabilities,
         memory_cache_size,
         instance_memory_limit,
     };
@@ -186,29 +185,29 @@ fn do_unpin(
 
 /// The result type of the FFI function analyze_code.
 ///
-/// Please note that the unmanaged vector in `required_features`
+/// Please note that the unmanaged vector in `required_capabilities`
 /// has to be destroyed exactly once. When calling `analyze_code`
 /// from Go this is done via `C.destroy_unmanaged_vector`.
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct AnalysisReport {
     pub has_ibc_entry_points: bool,
-    /// An UTF-8 encoded comma separated list of reqired features.
+    /// An UTF-8 encoded comma separated list of reqired capabilities.
     /// This is never None/nil.
-    pub required_features: UnmanagedVector,
+    pub required_capabilities: UnmanagedVector,
 }
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
         let cosmwasm_vm::AnalysisReport {
             has_ibc_entry_points,
-            required_features,
+            required_capabilities,
         } = report;
 
-        let required_features_utf8 = set_to_csv(required_features).into_bytes();
+        let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
-            required_features: UnmanagedVector::new(Some(required_features_utf8)),
+            required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
         }
     }
 }
@@ -591,7 +590,10 @@ mod tests {
         );
         let _ = error_msg.consume();
         assert!(!hackatom_report.has_ibc_entry_points);
-        assert_eq!(hackatom_report.required_features.consume().unwrap(), b"");
+        assert_eq!(
+            hackatom_report.required_capabilities.consume().unwrap(),
+            b""
+        );
 
         let mut error_msg = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
@@ -601,10 +603,10 @@ mod tests {
         );
         let _ = error_msg.consume();
         assert!(ibc_reflect_report.has_ibc_entry_points);
-        let required_features =
-            String::from_utf8_lossy(&ibc_reflect_report.required_features.consume().unwrap())
+        let required_capabilities =
+            String::from_utf8_lossy(&ibc_reflect_report.required_capabilities.consume().unwrap())
                 .to_string();
-        assert_eq!(required_features, "iterator,stargate");
+        assert_eq!(required_capabilities, "iterator,stargate");
 
         release_cache(cache_ptr);
     }
@@ -702,7 +704,7 @@ mod tests {
                 misses: 0,
                 elements_pinned_memory_cache: 1,
                 elements_memory_cache: 0,
-                size_pinned_memory_cache: 5665691,
+                size_pinned_memory_cache: 5602873,
                 size_memory_cache: 0,
             }
         );

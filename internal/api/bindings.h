@@ -196,17 +196,17 @@ typedef struct UnmanagedVector {
 /**
  * The result type of the FFI function analyze_code.
  *
- * Please note that the unmanaged vector in `required_features`
+ * Please note that the unmanaged vector in `required_capabilities`
  * has to be destroyed exactly once. When calling `analyze_code`
  * from Go this is done via `C.destroy_unmanaged_vector`.
  */
 typedef struct AnalysisReport {
   bool has_ibc_entry_points;
   /**
-   * An UTF-8 encoded comma separated list of reqired features.
+   * An UTF-8 encoded comma separated list of reqired capabilities.
    * This is never None/nil.
    */
-  struct UnmanagedVector required_features;
+  struct UnmanagedVector required_capabilities;
 } AnalysisReport;
 
 typedef struct Metrics {
@@ -304,7 +304,7 @@ typedef struct GoQuerier {
 } GoQuerier;
 
 struct cache_t *init_cache(struct ByteSliceView data_dir,
-                           struct ByteSliceView supported_features,
+                           struct ByteSliceView available_capabilities,
                            uint32_t cache_size,
                            uint32_t instance_memory_limit,
                            struct UnmanagedVector *error_msg);
