@@ -14,6 +14,7 @@ mod querier;
 mod storage;
 mod tests;
 mod version;
+mod test_utils;
 
 // We only interact with this crate via `extern "C"` interfaces, not those public
 // exports. There are no guarantees those exports are stable.
