@@ -14,6 +14,10 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0013:**
+
+- Update Rust to 1.63.0.
+
 **Version 0012:**
 
 - Add cross-compilation setup to build `libwasmvm.x86_64.so` and `libwasmvm.aarch64.so`
