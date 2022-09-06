@@ -41,12 +41,12 @@ fn assert_approx_eq_impl(
     if !(left >= lower_bound && left <= upper_bound) {
         match panic_msg {
             Some(panic_msg) => panic!(
-                "{} doesn't belong to the expected range of {} - {}: {}",
-                left, lower_bound, upper_bound, panic_msg
+                "assertion failed: `(left ~= right)`\nleft: {}\nright: {}\nratio applied to right: {}\nacceptable range: {} - {}: {}",
+                left, right, ratio, lower_bound, upper_bound, panic_msg
             ),
             None => panic!(
-                "{} doesn't belong to the expected range of {} - {}",
-                left, lower_bound, upper_bound
+                "assertion failed: `(left ~= right)`\nleft: {}\nright: {}\nratio applied to right: {}\nacceptable range: {} - {}",
+                left, right, ratio, lower_bound, upper_bound
             ),
         }
     }
@@ -59,14 +59,23 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "8 doesn't belong to the expected range of 9 - 11")]
+    fn assert_approx_with_vars() {
+        let a = 66_u32;
+        let b = 67_u32;
+        assert_approx_eq!(a, b, "0.02");
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "assertion failed: `(left ~= right)`\nleft: 8\nright: 10\nratio applied to right: 0.12\nacceptable range: 9 - 11"
+    )]
     fn assert_approx_fail() {
         assert_approx_eq!(8_u32, 10_u32, "0.12");
     }
 
     #[test]
     #[should_panic(
-        expected = "8 doesn't belong to the expected range of 9 - 11: some extra info about the error"
+        expected = "assertion failed: `(left ~= right)`\nleft: 8\nright: 10\nratio applied to right: 0.12\nacceptable range: 9 - 11: some extra info about the error"
     )]
     fn assert_approx_with_custom_panic_msg() {
         assert_approx_eq!(
