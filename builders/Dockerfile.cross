@@ -2,14 +2,16 @@ FROM rust:1.63.0-bullseye
 
 # Install build dependencies
 RUN apt-get update \
-  && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake
+  && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake \
+    # Support for Windows cross-compile
+    mingw-w64
 
 ## ADD MACOS SUPPORT
 
 WORKDIR /opt
 
-# Add macOS Rust targets
-RUN rustup target add x86_64-apple-darwin aarch64-apple-darwin
+# Add macOS and Windows Rust targets
+RUN rustup target add x86_64-apple-darwin x86_64-pc-windows-gnu
 
 # Build osxcross
 # See https://github.com/tpoechtrager/osxcross/blob/master/build.sh#L31-L49 for SDK overview.

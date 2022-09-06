@@ -92,6 +92,13 @@ release-build-macos:
 	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
 	make update-bindings
 
+# Creates a release build in a containerized build environment of the shared library for Windows (.dll)
+release-build-windows:
+	rm -rf libwasmvm/target/release
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
+	cp libwasmvm/target/x86_64-pc-windows-gnu/release/wasmvm.dll internal/api
+	make update-bindings
+
 update-bindings:
 # After we build libwasmvm, we have to copy the generated bindings for Go code to use.
 # We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).

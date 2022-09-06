@@ -17,6 +17,7 @@ can do the cross-compilation.
 **Version 0013:**
 
 - Update Rust to 1.63.0.
+- Add Windows support to cosmwasm/go-ext-builder:0013-cross. This image builds for macOS and Windows now.
 
 **Version 0012:**
 
