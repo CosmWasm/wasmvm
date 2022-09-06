@@ -109,6 +109,7 @@ release-build:
 	make release-build-alpine
 	make release-build-linux
 	make release-build-macos
+	make release-build-windows
 
 test-alpine: release-build-alpine
 	@# Build a Go demo binary called ./demo that links the static library from the previous step.
