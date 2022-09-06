@@ -695,19 +695,34 @@ mod tests {
         let mut error_msg = UnmanagedVector::default();
         let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
         let _ = error_msg.consume();
-        assert_eq!(
-            metrics,
-            Metrics {
-                hits_pinned_memory_cache: 0,
-                hits_memory_cache: 0,
-                hits_fs_cache: 1,
-                misses: 0,
-                elements_pinned_memory_cache: 1,
-                elements_memory_cache: 0,
-                size_pinned_memory_cache: 5602873,
-                size_memory_cache: 0,
-            }
+        let Metrics {
+            hits_pinned_memory_cache,
+            hits_memory_cache,
+            hits_fs_cache,
+            misses,
+            elements_pinned_memory_cache,
+            elements_memory_cache,
+            size_pinned_memory_cache,
+            size_memory_cache,
+        } = metrics;
+        assert_eq!(hits_pinned_memory_cache, 0);
+        assert_eq!(hits_memory_cache, 0);
+        assert_eq!(hits_fs_cache, 1);
+        assert_eq!(misses, 0);
+        assert_eq!(elements_pinned_memory_cache, 1);
+        assert_eq!(elements_memory_cache, 0);
+        let expected = 5602873; // +/- 20%
+        assert!(
+            size_pinned_memory_cache > expected * 80 / 100,
+            "size_pinned_memory_cache: {}",
+            size_pinned_memory_cache
         );
+        assert!(
+            size_pinned_memory_cache < expected * 120 / 100,
+            "size_pinned_memory_cache: {}",
+            size_pinned_memory_cache
+        );
+        assert_eq!(size_memory_cache, 0);
 
         // Unpin
         let mut error_msg = UnmanagedVector::default();
