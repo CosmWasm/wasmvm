@@ -11,7 +11,7 @@ RUN apt-get update \
 WORKDIR /opt
 
 # Add macOS and Windows Rust targets
-RUN rustup target add x86_64-apple-darwin x86_64-pc-windows-gnu
+RUN rustup target add x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-gnu
 
 # Build osxcross
 # See https://github.com/tpoechtrager/osxcross/blob/master/build.sh#L31-L49 for SDK overview.
