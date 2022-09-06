@@ -1,66 +1,57 @@
-/// Asserts that two expressions are approximately equal to each other (using [`PartialOrd`]).
+#![cfg(test)]
+
+use cosmwasm_std::{Decimal, Uint128};
+use std::str::FromStr as _;
+
+/// Asserts that two expressions are approximately equal to each other.
 ///
 /// The ratio argument defines how wide a range of values we accept, and is applied
-/// to the **second** argument.
+/// to the **second** (`right`) argument.
 ///
 /// On panic, this macro will print the values of the expressions with their
 /// debug representations, and info about the acceptable range.
 ///
-/// Like [`assert!`], this macro has a second form, where a custom
+/// Like [`assert_eq!`], this macro has a second form, where a custom
 /// panic message can be provided.
-///
-/// # Examples
-///
-/// ```
-/// let a = 3;
-/// let b = 1 + 2;
-/// assert_eq!(a, b);
-///
-/// assert_eq!(a, b, "we are testing addition with {} and {}", a, b);
-/// ```
 #[macro_export]
 macro_rules! assert_approx_eq {
     ($left:expr, $right:expr, $ratio:expr $(,)?) => {{
-        use cosmwasm_std::{Decimal, Uint128};
-        use std::str::FromStr as _;
-
-        let left = Uint128::from($left);
-        let right = Uint128::from($right);
-        let ratio = Decimal::from_str($ratio).unwrap();
-
-        let delta = Uint128::from($right) * ratio;
-        let lower_bound = right - delta;
-        let upper_bound = right + delta;
-
-        if !(left >= lower_bound && left <= upper_bound) {
-            panic!(
-                "{} doesn't belong to the expected range of {} - {}",
-                left, lower_bound, upper_bound
-            );
-        }
+        $crate::test_utils::assert_approx_eq_impl($left, $right, $ratio, None);
     }};
     ($left:expr, $right:expr, $ratio:expr, $($args:tt)+) => {{
-        use cosmwasm_std::{Decimal, Uint128};
-        use std::str::FromStr as _;
-
-        let left = Uint128::from($left);
-        let right = Uint128::from($right);
-        let ratio = Decimal::from_str($ratio).unwrap();
-
-        let delta = Uint128::from($right) * ratio;
-        let lower_bound = right - delta;
-        let upper_bound = right + delta;
-
-        if !(left >= lower_bound && left <= upper_bound) {
-            panic!(
-                "{} doesn't belong to the expected range of {} - {}: {}",
-                left, lower_bound, upper_bound, format!($($args)*)
-            );
-        }
+        $crate::test_utils::assert_approx_eq_impl($left, $right, $ratio, Some(format!($($args)*)));
     }};
 }
 
-#[cfg(test)]
+#[track_caller]
+fn assert_approx_eq_impl(
+    left: impl Into<Uint128>,
+    right: impl Into<Uint128>,
+    ratio: &str,
+    panic_msg: Option<String>,
+) {
+    let left = left.into();
+    let right = right.into();
+    let ratio = Decimal::from_str(ratio).unwrap();
+
+    let delta = right * ratio;
+    let lower_bound = right - delta;
+    let upper_bound = right + delta;
+
+    if !(left >= lower_bound && left <= upper_bound) {
+        match panic_msg {
+            Some(panic_msg) => panic!(
+                "{} doesn't belong to the expected range of {} - {}: {}",
+                left, lower_bound, upper_bound, panic_msg
+            ),
+            None => panic!(
+                "{} doesn't belong to the expected range of {} - {}",
+                left, lower_bound, upper_bound
+            ),
+        }
+    }
+}
+
 mod tests {
     #[test]
     fn assert_approx() {
