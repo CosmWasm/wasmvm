@@ -714,13 +714,11 @@ mod tests {
         let expected = 5602873; // +/- 20%
         assert!(
             size_pinned_memory_cache > expected * 80 / 100,
-            "size_pinned_memory_cache: {}",
-            size_pinned_memory_cache
+            "size_pinned_memory_cache: {size_pinned_memory_cache}"
         );
         assert!(
             size_pinned_memory_cache < expected * 120 / 100,
-            "size_pinned_memory_cache: {}",
-            size_pinned_memory_cache
+            "size_pinned_memory_cache: {size_pinned_memory_cache}"
         );
         assert_eq!(size_memory_cache, 0);
 
