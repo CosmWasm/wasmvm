@@ -328,6 +328,8 @@ pub extern "C" fn release_cache(cache: *mut cache_t) {
 
 #[cfg(test)]
 mod tests {
+    use crate::assert_approx_eq;
+
     use super::*;
     use std::iter::FromIterator;
     use tempfile::TempDir;
@@ -711,13 +713,10 @@ mod tests {
         assert_eq!(misses, 0);
         assert_eq!(elements_pinned_memory_cache, 1);
         assert_eq!(elements_memory_cache, 0);
-        let expected = 5602873; // +/- 20%
-        assert!(
-            size_pinned_memory_cache > expected * 80 / 100,
-            "size_pinned_memory_cache: {size_pinned_memory_cache}"
-        );
-        assert!(
-            size_pinned_memory_cache < expected * 120 / 100,
+        assert_approx_eq!(
+            size_pinned_memory_cache,
+            5602873,
+            "0.2",
             "size_pinned_memory_cache: {size_pinned_memory_cache}"
         );
         assert_eq!(size_memory_cache, 0);

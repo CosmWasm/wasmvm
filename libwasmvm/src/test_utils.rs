@@ -24,7 +24,7 @@ macro_rules! assert_approx_eq {
 }
 
 #[track_caller]
-fn assert_approx_eq_impl<U: Into<Uint128>>(
+pub fn assert_approx_eq_impl<U: Into<Uint128>>(
     left: U,
     right: U,
     max_rel_diff: &str,
