@@ -35,8 +35,7 @@ pub fn assert_approx_eq_impl<U: Into<Uint128>>(
     let max_rel_diff = Decimal::from_str(max_rel_diff).unwrap();
 
     let largest = std::cmp::max(left, right);
-    let smallest = std::cmp::min(left, right);
-    let rel_diff = Decimal::from_ratio(largest - smallest, largest);
+    let rel_diff = Decimal::from_ratio(left.abs_diff(right), largest);
 
     if rel_diff > max_rel_diff {
         match panic_msg {
