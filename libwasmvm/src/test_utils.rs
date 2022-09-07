@@ -24,9 +24,9 @@ macro_rules! assert_approx_eq {
 }
 
 #[track_caller]
-fn assert_approx_eq_impl(
-    left: impl Into<Uint128>,
-    right: impl Into<Uint128>,
+fn assert_approx_eq_impl<U: Into<Uint128>>(
+    left: U,
+    right: U,
     ratio: &str,
     panic_msg: Option<String>,
 ) {
