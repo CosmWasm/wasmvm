@@ -12,6 +12,7 @@ mod iterator;
 mod memory;
 mod querier;
 mod storage;
+mod test_utils;
 mod tests;
 mod version;
 
