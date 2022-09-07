@@ -5,21 +5,21 @@ use std::str::FromStr as _;
 
 /// Asserts that two expressions are approximately equal to each other.
 ///
-/// The ratio argument defines how wide a range of values we accept, and is applied
-/// to the **second** (`right`) argument.
+/// The `max_rel_diff` argument defines the maximum relative difference
+/// of the `left` and `right` values.
 ///
-/// On panic, this macro will print the values of the expressions with their
-/// debug representations, and info about the acceptable range.
+/// On panic, this macro will print the values of the arguments and
+/// the actual relative difference.
 ///
 /// Like [`assert_eq!`], this macro has a second form, where a custom
 /// panic message can be provided.
 #[macro_export]
 macro_rules! assert_approx_eq {
-    ($left:expr, $right:expr, $ratio:expr $(,)?) => {{
-        $crate::test_utils::assert_approx_eq_impl($left, $right, $ratio, None);
+    ($left:expr, $right:expr, $max_rel_diff:expr $(,)?) => {{
+        $crate::test_utils::assert_approx_eq_impl($left, $right, $max_rel_diff, None);
     }};
-    ($left:expr, $right:expr, $ratio:expr, $($args:tt)+) => {{
-        $crate::test_utils::assert_approx_eq_impl($left, $right, $ratio, Some(format!($($args)*)));
+    ($left:expr, $right:expr, $max_rel_diff:expr, $($args:tt)+) => {{
+        $crate::test_utils::assert_approx_eq_impl($left, $right, $max_rel_diff, Some(format!($($args)*)));
     }};
 }
 
@@ -27,26 +27,26 @@ macro_rules! assert_approx_eq {
 fn assert_approx_eq_impl<U: Into<Uint128>>(
     left: U,
     right: U,
-    ratio: &str,
+    max_rel_diff: &str,
     panic_msg: Option<String>,
 ) {
     let left = left.into();
     let right = right.into();
-    let ratio = Decimal::from_str(ratio).unwrap();
+    let max_rel_diff = Decimal::from_str(max_rel_diff).unwrap();
 
-    let delta = right * ratio;
-    let lower_bound = right - delta;
-    let upper_bound = right + delta;
+    let largest = std::cmp::max(left, right);
+    let smallest = std::cmp::min(left, right);
+    let rel_diff = Decimal::from_ratio(largest - smallest, largest);
 
-    if !(left >= lower_bound && left <= upper_bound) {
+    if rel_diff > max_rel_diff {
         match panic_msg {
             Some(panic_msg) => panic!(
-                "assertion failed: `(left ~= right)`\nleft: {}\nright: {}\nratio applied to right: {}\nacceptable range: {} - {}: {}",
-                left, right, ratio, lower_bound, upper_bound, panic_msg
+                "assertion failed: `(left ≈ right)`\nleft: {}\nright: {}\nrelative difference: {}\nmax allowed relative difference: {}\n: {}",
+                left, right, rel_diff, max_rel_diff, panic_msg
             ),
             None => panic!(
-                "assertion failed: `(left ~= right)`\nleft: {}\nright: {}\nratio applied to right: {}\nacceptable range: {} - {}",
-                left, right, ratio, lower_bound, upper_bound
+                "assertion failed: `(left ≈ right)`\nleft: {}\nright: {}\nrelative difference: {}\nmax allowed relative difference: {}\n",
+                left, right, rel_diff, max_rel_diff
             ),
         }
     }
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "assertion failed: `(left ~= right)`\nleft: 8\nright: 10\nratio applied to right: 0.12\nacceptable range: 9 - 11"
+        expected = "assertion failed: `(left ≈ right)`\nleft: 8\nright: 10\nrelative difference: 0.2\nmax allowed relative difference: 0.12\n"
     )]
     fn assert_approx_fail() {
         assert_approx_eq!(8_u32, 10_u32, "0.12");
@@ -89,12 +89,12 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "assertion failed: `(left ~= right)`\nleft: 8\nright: 10\nratio applied to right: 0.12\nacceptable range: 9 - 11: some extra info about the error"
+        expected = "assertion failed: `(left ≈ right)`\nleft: 17\nright: 20\nrelative difference: 0.15\nmax allowed relative difference: 0.12\n: some extra info about the error"
     )]
     fn assert_approx_with_custom_panic_msg() {
         assert_approx_eq!(
-            8_u32,
-            10_u32,
+            17_u32,
+            20_u32,
             "0.12",
             "some extra {} about the error",
             "info"
