@@ -56,12 +56,26 @@ mod tests {
     #[test]
     fn assert_approx() {
         assert_approx_eq!(9_u32, 10_u32, "0.12");
+        assert_approx_eq!(9_u64, 10_u64, "0.12");
+        assert_approx_eq!(
+            9_000_000_000_000_000_000_000_000_000_000_000_000_u128,
+            10_000_000_000_000_000_000_000_000_000_000_000_000_u128,
+            "0.10"
+        );
     }
 
     #[test]
     fn assert_approx_with_vars() {
         let a = 66_u32;
         let b = 67_u32;
+        assert_approx_eq!(a, b, "0.02");
+
+        let a = 66_u64;
+        let b = 67_u64;
+        assert_approx_eq!(a, b, "0.02");
+
+        let a = 66_u128;
+        let b = 67_u128;
         assert_approx_eq!(a, b, "0.02");
     }
 
