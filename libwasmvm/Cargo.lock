@@ -217,8 +217,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.1.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.0#6082e8a35a193f1365cb3367f77bd87c593a7ae4"
+version = "1.1.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.2#b102c15ded828343466d89bfec7198e62bc91d49"
 dependencies = [
  "digest 0.10.3",
  "ed25519-zebra",
@@ -229,22 +229,23 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.1.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.0#6082e8a35a193f1365cb3367f77bd87c593a7ae4"
+version = "1.1.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.2#b102c15ded828343466d89bfec7198e62bc91d49"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.1.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.0#6082e8a35a193f1365cb3367f77bd87c593a7ae4"
+version = "1.1.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.2#b102c15ded828343466d89bfec7198e62bc91d49"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
  "cosmwasm-derive",
  "derivative",
  "forward_ref",
+ "hex",
  "schemars",
  "serde",
  "serde-json-wasm",
@@ -254,8 +255,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.1.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.0#6082e8a35a193f1365cb3367f77bd87c593a7ae4"
+version = "1.1.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.1.2#b102c15ded828343466d89bfec7198e62bc91d49"
 dependencies = [
  "clru",
  "cosmwasm-crypto",
@@ -1919,7 +1920,7 @@ checksum = "718ed7c55c2add6548cca3ddd6383d738cd73b892df400e96b9aa876f0141d7a"
 
 [[package]]
 name = "wasmvm"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
