@@ -67,9 +67,9 @@ func storeIterator(callID uint64, it dbm.Iterator, frameLenLimit int) (uint64, e
 
 	// store at array position `old_frame_len`
 	iteratorFrames[callID] = append(iteratorFrames[callID], it)
-	new_index := oldFrameLen + 1
+	newIndex := oldFrameLen + 1
 
-	return uint64(new_index), nil
+	return uint64(newIndex), nil
 }
 
 // retrieveIterator will recover an iterator based on index. This ensures it will not be garbage collected.
