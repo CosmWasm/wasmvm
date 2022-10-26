@@ -60,7 +60,7 @@ func Create(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := newUnmanagedVector(nil)
-	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
+	checksum, err := C.save_wasm(cache.ptr, w, &errmsg) //nolint:gocritic
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}

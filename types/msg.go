@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+var null = "null"
+
 //------- Results / Msgs -------------
 
 // ContractResult is the raw response from the instantiate/execute/migrate calls.
@@ -46,7 +48,7 @@ func (e Events) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (e *Events) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []Event
@@ -77,7 +79,7 @@ func (a EventAttributes) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (a *EventAttributes) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []EventAttribute
@@ -169,11 +171,11 @@ func (v voteOption) String() string {
 	return fromVoteOption[v]
 }
 
-func (v voteOption) MarshalJSON() ([]byte, error) {
+func (v voteOption) MarshalJSON() ([]byte, error) { //nolint:stylecheck
 	return json.Marshal(v.String())
 }
 
-func (s *voteOption) UnmarshalJSON(b []byte) error {
+func (s *voteOption) UnmarshalJSON(b []byte) error { //nolint:revive
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {

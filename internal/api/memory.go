@@ -40,7 +40,7 @@ func constructUnmanagedVector(is_none cbool, ptr cu8_ptr, len cusize, cap cusize
 }
 
 func newUnmanagedVector(data []byte) C.UnmanagedVector {
-	if data == nil {
+	if data == nil { //nolint:gocritic
 		return C.new_unmanaged_vector(cbool(true), cu8_ptr(nil), cusize(0))
 	} else if len(data) == 0 {
 		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
