@@ -7,6 +7,7 @@ import (
 	wasmvm "github.com/CosmWasm/wasmvm"
 )
 
+//nolint:revive,stylecheck
 const (
 	SUPPORTED_FEATURES = "staking"
 	PRINT_DEBUG        = true
