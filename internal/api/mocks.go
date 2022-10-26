@@ -17,7 +17,10 @@ import (
 
 /** helper constructors **/
 
-const MockContractAddr = "contract"
+const (
+	MockContractAddr = "contract"
+	Foobar           = "foobar"
+)
 
 func MockEnv() types.Env {
 	return types.Env{
@@ -370,8 +373,8 @@ func NewMockAPI() *GoAPI {
 	}
 }
 
-func TestMockApi(t *testing.T) {
-	human := "foobar"
+func TestMockAPI(t *testing.T) {
+	human := Foobar
 	canon, cost, err := MockCanonicalAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
@@ -385,7 +388,7 @@ func TestMockApi(t *testing.T) {
 
 /**** MockQuerier ****/
 
-const DEFAULT_QUERIER_GAS_LIMIT = 1_000_000
+const DefaultQuerierGasLimit = 1_000_000
 
 type MockQuerier struct {
 	Bank    BankQuerier
@@ -411,7 +414,7 @@ func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	q.usedGas += uint64(len(marshaled))
+	q.usedGas += uint64(len(marshaled)) //nolint:staticcheck
 	if request.Bank != nil {
 		return q.Bank.Query(request.Bank)
 	}
@@ -509,7 +512,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	var resp CustomResponse
-	if query.Ping != nil {
+	if query.Ping != nil { //nolint:gocritic
 		resp.Msg = "PONG"
 	} else if query.Capitalized != nil {
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
@@ -522,7 +525,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 // ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
-	addr := "foobar"
+	addr := Foobar
 	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 
@@ -534,7 +537,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp)
@@ -549,7 +552,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp2)
@@ -558,7 +561,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 }
 
 func TestBankQuerierBalance(t *testing.T) {
-	addr := "foobar"
+	addr := Foobar
 	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 
@@ -571,7 +574,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.BalanceResponse
 	err = json.Unmarshal(res, &resp)
@@ -587,7 +590,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.BalanceResponse
 	err = json.Unmarshal(res, &resp2)
@@ -603,7 +606,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req3, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req3, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp3 types.BalanceResponse
 	err = json.Unmarshal(res, &resp3)

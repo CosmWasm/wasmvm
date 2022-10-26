@@ -316,7 +316,7 @@ func (vm *VM) Sudo(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data)) //nolint:stylecheck
 	}
 	gasUsed += gasForDeserialization
 
@@ -361,7 +361,7 @@ func (vm *VM) Reply(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data)) //nolint:stylecheck
 	}
 	gasUsed += gasForDeserialization
 
@@ -447,7 +447,7 @@ func (vm *VM) IBCChannelConnect(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data)) //nolint:stylecheck
 	}
 	gasUsed += gasForDeserialization
 
@@ -490,7 +490,7 @@ func (vm *VM) IBCChannelClose(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data)) //nolint:stylecheck
 	}
 	gasUsed += gasForDeserialization
 
@@ -533,7 +533,7 @@ func (vm *VM) IBCPacketReceive(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data)) //nolint:stylecheck
 	}
 	gasUsed += gasForDeserialization
 

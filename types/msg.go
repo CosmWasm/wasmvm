@@ -142,7 +142,7 @@ type GovMsg struct {
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64     `json:"proposal_id"`
+	ProposalId uint64     `json:"proposal_id"` //nolint:revive,stylecheck
 	Vote       voteOption `json:"vote"`
 }
 
