@@ -17,7 +17,7 @@ import (
 
 /** helper constructors **/
 
-const MOCK_CONTRACT_ADDR = "contract"
+const MockContractAddr = "contract"
 
 func MockEnv() types.Env {
 	return types.Env{
@@ -30,7 +30,7 @@ func MockEnv() types.Env {
 			Index: 4,
 		},
 		Contract: types.ContractInfo{
-			Address: MOCK_CONTRACT_ADDR,
+			Address: MockContractAddr,
 		},
 	}
 }
