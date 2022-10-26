@@ -352,7 +352,7 @@ type GoAPI struct {
 	CanonicalAddress CanonicalizeAddress
 }
 
-var api_vtable = C.GoApi_vtable{
+var apiVtable = C.GoApi_vtable{
 	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
 	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
 }
@@ -362,18 +362,18 @@ var api_vtable = C.GoApi_vtable{
 func buildAPI(api *GoAPI) C.GoApi {
 	return C.GoApi{
 		state:  (*C.api_t)(unsafe.Pointer(api)),
-		vtable: api_vtable,
+		vtable: apiVtable,
 	}
 }
 
 //export cHumanAddress
-func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
+func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, usedGas *cu64) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -381,7 +381,7 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 	s := copyU8Slice(src)
 
 	h, cost, err := api.HumanAddress(s)
-	*used_gas = cu64(cost)
+	*usedGas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
 		*errOut = newUnmanagedVector([]byte(err.Error()))
