@@ -417,10 +417,10 @@ func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte
 		return q.Custom.Query(request.Custom)
 	}
 	if request.Staking != nil {
-		return nil, types.UnsupportedRequest{"staking"}
+		return nil, types.UnsupportedRequest{Kind: "staking"}
 	}
 	if request.Wasm != nil {
-		return nil, types.UnsupportedRequest{"wasm"}
+		return nil, types.UnsupportedRequest{Kind: "wasm"}
 	}
 	return nil, types.Unknown{}
 }
@@ -466,7 +466,7 @@ func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 		}
 		return json.Marshal(resp)
 	}
-	return nil, types.UnsupportedRequest{"Empty BankQuery"}
+	return nil, types.UnsupportedRequest{Kind: "Empty BankQuery"}
 }
 
 type CustomQuerier interface {
@@ -478,7 +478,7 @@ type NoCustom struct{}
 var _ CustomQuerier = NoCustom{}
 
 func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
-	return nil, types.UnsupportedRequest{"custom"}
+	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
 // ReflectCustom fulfills the requirements for testing `reflect` contract
