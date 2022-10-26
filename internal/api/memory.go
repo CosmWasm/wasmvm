@@ -56,7 +56,7 @@ func newUnmanagedVector(data []byte) C.UnmanagedVector {
 
 func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 	var out []byte
-	if v.is_none {
+	if v.is_none { //nolint:gocritic
 		out = nil
 	} else if v.cap == cusize(0) {
 		// There is no allocation we can copy

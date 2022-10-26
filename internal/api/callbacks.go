@@ -444,7 +444,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !result.is_none || !(*errOut).is_none {
+	if !result.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
