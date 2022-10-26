@@ -122,7 +122,7 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) dbm.Iterator
 }
 
-var db_vtable = C.Db_vtable{
+var dbVtable = C.Db_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
 	write_db:  (C.write_db_fn)(C.cSet_cgo),
 	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
@@ -153,11 +153,11 @@ func buildDB(state *DBState, gm *GasMeter) C.Db {
 	return C.Db{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
 		state:     (*C.db_t)(unsafe.Pointer(state)),
-		vtable:    db_vtable,
+		vtable:    dbVtable,
 	}
 }
 
-var iterator_vtable = C.Iterator_vtable{
+var iteratorVtable = C.Iterator_vtable{
 	next_db: (C.next_db_fn)(C.cNext_cgo),
 }
 
@@ -295,7 +295,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 	}
 
 	out.state = cIterator
-	out.vtable = iterator_vtable
+	out.vtable = iteratorVtable
 	return C.GoError_None
 }
 
