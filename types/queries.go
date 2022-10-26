@@ -354,7 +354,7 @@ type WasmQuery struct {
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 }
 
-// SmartQuery respone is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte)
 type SmartQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`

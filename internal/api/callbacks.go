@@ -136,9 +136,10 @@ type DBState struct {
 }
 
 // use this to create C.Db in two steps, so the pointer lives as long as the calling stack
-//   state := buildDBState(kv, callID)
-//   db := buildDB(&state, &gasMeter)
-//   // then pass db into some FFI function
+//
+//	state := buildDBState(kv, callID)
+//	db := buildDB(&state, &gasMeter)
+//	// then pass db into some FFI function
 func buildDBState(kv KVStore, callID uint64) DBState {
 	return DBState{
 		Store:  kv,
@@ -422,7 +423,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 
 /****** Go Querier ********/
 
-var querier_vtable = C.Querier_vtable{
+var querierVtable = C.Querier_vtable{
 	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
 }
 
@@ -431,7 +432,7 @@ var querier_vtable = C.Querier_vtable{
 func buildQuerier(q *Querier) C.GoQuerier {
 	return C.GoQuerier{
 		state:  (*C.querier_t)(unsafe.Pointer(q)),
-		vtable: querier_vtable,
+		vtable: querierVtable,
 	}
 }
 
