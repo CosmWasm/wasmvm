@@ -574,7 +574,7 @@ func (vm *VM) IBCPacketAck(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
@@ -618,7 +618,7 @@ func (vm *VM) IBCPacketTimeout(
 
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasUsed {
-		return nil, gasUsed, fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return nil, gasUsed, fmt.Errorf("insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasUsed += gasForDeserialization
 
