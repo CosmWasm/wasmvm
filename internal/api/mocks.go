@@ -247,6 +247,8 @@ func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
 // Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
+//
+//nolint:staticcheck
 const (
 	GetPrice    uint64 = 99000
 	SetPrice           = 187000

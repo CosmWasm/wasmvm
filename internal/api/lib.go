@@ -26,7 +26,7 @@ type (
 )
 
 // Pointers
-type cu8_ptr = *C.uint8_t //nolint:revive
+type cu8_ptr = *C.uint8_t //nolint:revive,stylecheck
 
 type Cache struct {
 	ptr *C.cache_t
