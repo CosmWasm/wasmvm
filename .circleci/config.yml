@@ -66,7 +66,8 @@ jobs:
 
   libwasmvm_audit:
     docker:
-      # Note: the audit tool can use a more modern Rust version than the build jobs (which should be in sync with the builders)
+      # The audit tool might use a more modern Rust version than the build jobs. See
+      # "Tooling Rust compiler" in docs/COMPILER_VERSIONS.md
       - image: cimg/rust:1.63.0
     steps:
       - checkout
