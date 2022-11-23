@@ -121,7 +121,7 @@ func TestPinErrors(t *testing.T) {
 		0x84, 0x22, 0x71, 0x04,
 	}
 	err = Pin(cache, unknownChecksum)
-	require.ErrorContains(t, err, "No such file or directory")
+	require.ErrorContains(t, err, "Error opening Wasm file for reading")
 }
 
 func TestUnpin(t *testing.T) {
