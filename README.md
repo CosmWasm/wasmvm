@@ -14,7 +14,8 @@ link with, and Go developers should just be able to import this directly.
 
 ## Supported Platforms
 
-Requires Rust 1.55+ and Go 1.17+.
+See [COMPILER_VERSIONS.md](docs/COMPILER_VERSIONS.md) for information on Go and
+Rust compiler support.
 
 The Rust implementation of the VM is compiled to a library called libwasmvm. This is
 then linked to the Go code when the final binary is built. For that reason not all
@@ -84,12 +85,3 @@ but we are not there yet.
 To build the rust side, try `make build-rust` and wait for it to compile. This depends on
 `cargo` being installed with `rustc` version 1.47+. Generally, you can just use `rustup` to
 install all this with no problems.
-
-## Toolchain
-
-We fix the Rust version in the CI and build containers, so the following should be in sync:
-
-- `.circleci/config.yml`
-- `builders/Dockerfile.*`
-
-For development you should be able to use any reasonably up-to-date Rust stable.
