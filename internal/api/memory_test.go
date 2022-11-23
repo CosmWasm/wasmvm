@@ -58,6 +58,7 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 
 // Like the test above but without `newUnmanagedVector` calls.
 // Since only Rust can actually create them, we only test edge cases here.
+//
 //go:nocheckptr
 func TestCopyDestroyUnmanagedVector(t *testing.T) {
 	{

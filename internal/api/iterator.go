@@ -11,12 +11,16 @@ import (
 type frame []dbm.Iterator
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
-var iteratorFrames = make(map[uint64]frame)
-var iteratorFramesMutex sync.Mutex
+var (
+	iteratorFrames      = make(map[uint64]frame)
+	iteratorFramesMutex sync.Mutex
+)
 
 // this is a global counter for creating call IDs
-var latestCallID uint64
-var latestCallIDMutex sync.Mutex
+var (
+	latestCallID      uint64
+	latestCallIDMutex sync.Mutex
+)
 
 // startCall is called at the beginning of a contract call to create a new frame in iteratorFrames.
 // It updates latestCallID for generating a new call ID.
