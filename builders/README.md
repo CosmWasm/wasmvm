@@ -14,6 +14,11 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0014:**
+
+- Update Rust to 1.65.0.
+- Update Go (for testing only) to 1.18.8.
+
 **Version 0013:**
 
 - Update Rust to 1.63.0 in `Dockerfile.alpine` and `Dockerfile.cross`;
