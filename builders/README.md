@@ -88,7 +88,7 @@ Create a local docker image, capable of cross-compling linux and macos dynamic l
 ```
 
 Then in the repo root, `make release-build` will use the above docker image and
-copy the generated `{so,dylib}` files into `api` directory to be linked.
+copy the generated `{so,dylib}` files into `internal/api` directory to be linked.
 
 ## Future Work
 
