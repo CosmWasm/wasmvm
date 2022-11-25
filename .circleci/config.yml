@@ -95,7 +95,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.17.4
+      - image: cimg/go:1.18.8
     steps:
       - checkout
       - run:
@@ -105,7 +105,7 @@ jobs:
 
   tidy-go:
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.18.8
     steps:
       - checkout
       - run:
@@ -123,7 +123,7 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.18.8
     steps:
       - run:
           name: Install shfmt
@@ -178,7 +178,7 @@ jobs:
 
   test:
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.18.8
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
