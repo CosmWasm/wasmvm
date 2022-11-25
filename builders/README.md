@@ -16,8 +16,11 @@ can do the cross-compilation.
 
 **Version 0013:**
 
-- Update Rust to 1.63.0.
+- Update Rust to 1.63.0 in `Dockerfile.alpine` and `Dockerfile.cross`;
+  `Dockerfile.centos7` was accidentally not updated and remained on 1.60.0 ([#350]).
 - Add Windows support to cosmwasm/go-ext-builder:0013-cross. This image builds for macOS and Windows now.
+
+[#350]: https://github.com/CosmWasm/wasmvm/pull/350
 
 **Version 0012:**
 
