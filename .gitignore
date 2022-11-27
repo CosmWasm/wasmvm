@@ -6,7 +6,7 @@
 .vscode
 
 # no static libraries (35MB+)
-lib*.a
+/internal/api/lib*.a
 
 # artifacts from compile tests
 /demo
