@@ -1,4 +1,5 @@
-
+# Run python3 docs/libwasmvm_builds.py and paste output into
+# README.md
 
 oss = ["Linux (glibc)", "Linux (musl)", "macOS", "Windows (mingw)"]
 cpus = ["x86_64", "aarch64"]
@@ -14,7 +15,7 @@ UNDER_CONSTRUCTION = "🏗" + ZERO_WIDTH_SPACE
 def wasmer22_supported(os, cpu, build_type):
     if os == "Windows (mingw)":
         if cpu == "x86_64" and build_type == "shared":
-            return UNDER_CONSTRUCTION + "wasmvm.dll"
+            return SUPPORTED + "wasmvm.dll"
         else:
             return UNSUPPORTED
     if os == "macOS" and build_type == "static":
@@ -40,8 +41,6 @@ def wasmer22_supported(os, cpu, build_type):
     return UNKNOWN
 
 def get_note(os, cpu, build_type):
-    if os == "Windows (mingw)" and cpu == "x86_64" and build_type == "shared":
-        return "See [#288]"
     if os == "Linux (glibc)" and cpu == "x86_64" and build_type == "static":
         return "Would link libwasmvm statically but glibc dynamically as static glibc linking is not recommended. Potentially interesting for Osmosis."
     if os == "Linux (musl)" and build_type == "shared":
@@ -52,7 +51,6 @@ def get_note(os, cpu, build_type):
 
 def get_links():
     return """
-[#288]: https://github.com/CosmWasm/wasmvm/pull/288
 [#294]: https://github.com/CosmWasm/wasmvm/pull/294
 """
 
