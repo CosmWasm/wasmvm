@@ -55,8 +55,13 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
-// Create will compile the wasm code, and store the resulting pre-compile
-// as well as the original code. Both can be referenced later via Checksum
+// Deprecated: Renamed to StoreCode
+func (vm *VM) Create(code WasmCode) (Checksum, error) {
+	return vm.StoreCode(code)
+}
+
+// StoreCode will compile the Wasm code, and store the resulting compiled module
+// as well as the original code. Both can be referenced later via Checksum.
 // This must be done one time for given code, after which it can be
 // instatitated many times, and each instance called many times.
 //
@@ -65,17 +70,17 @@ func (vm *VM) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (vm *VM) Create(code WasmCode) (Checksum, error) {
-	return api.Create(vm.cache, code)
+func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
+	return api.StoreCode(vm.cache, code)
 }
 
-// GetCode will load the original wasm code for the given code id.
-// This will only succeed if that code id was previously returned from
-// a call to Create.
+// GetCode will load the original Wasm code for the given checksum.
+// This will only succeed if that checksum was previously returned from
+// a call to StoreCode.
 //
-// This can be used so that the (short) code id (hash) is stored in the iavl tree
-// and the larger binary blobs (wasm and pre-compiles) are all managed by the
-// rust library
+// This can be used so that the (short) checksum is stored in the iavl tree
+// and the larger binary blobs (wasm and compiled modules) are all managed
+// by libwasmvm/cosmwasm-vm (Rust part).
 func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
 	return api.GetCode(vm.cache, checksum)
 }

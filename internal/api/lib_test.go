@@ -57,14 +57,14 @@ func withCache(t *testing.T) (Cache, func()) {
 	return cache, cleanup
 }
 
-func TestCreateAndGet(t *testing.T) {
+func TestStoreCodeAndGetCode(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	code, err := GetCode(cache, checksum)
@@ -72,12 +72,12 @@ func TestCreateAndGet(t *testing.T) {
 	require.Equal(t, wasm, code)
 }
 
-func TestCreateFailsWithBadData(t *testing.T) {
+func TestStoreCodeFailsWithBadData(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
 	wasm := []byte("some invalid data")
-	_, err := Create(cache, wasm)
+	_, err := StoreCode(cache, wasm)
 	require.Error(t, err)
 }
 
@@ -88,7 +88,7 @@ func TestPin(t *testing.T) {
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -131,7 +131,7 @@ func TestUnpin(t *testing.T) {
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -172,10 +172,10 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &types.Metrics{}, metrics)
 
-	// Create contract
+	// Store contract
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	// GetMetrics 2
@@ -285,7 +285,7 @@ func TestInstantiate(t *testing.T) {
 	// create contract
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -789,7 +789,7 @@ func createReflectContract(t *testing.T, cache Cache) []byte {
 func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 	return checksum
 }

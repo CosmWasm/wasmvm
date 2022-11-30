@@ -19,7 +19,7 @@ func TestIBC(t *testing.T) {
 	wasm, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 
 	code, err := vm.GetCode(checksum)
@@ -277,7 +277,7 @@ func TestAnalyzeCode(t *testing.T) {
 	// Store non-IBC contract
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 	// and analyze
 	report, err := vm.AnalyzeCode(checksum)
@@ -289,7 +289,7 @@ func TestAnalyzeCode(t *testing.T) {
 	// Store IBC contract
 	wasm2, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
-	checksum2, err := vm.Create(wasm2)
+	checksum2, err := vm.StoreCode(wasm2)
 	require.NoError(t, err)
 	// and analyze
 	report2, err := vm.AnalyzeCode(checksum2)
