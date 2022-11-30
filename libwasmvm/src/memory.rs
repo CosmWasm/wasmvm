@@ -44,7 +44,15 @@ impl ByteSliceView {
         if self.is_nil {
             None
         } else {
-            Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })
+            Some(
+                // "`data` must be non-null and aligned even for zero-length slices"
+                if self.len == 0 {
+                    let dangling = std::ptr::NonNull::<u8>::dangling();
+                    unsafe { slice::from_raw_parts(dangling.as_ptr(), 0) }
+                } else {
+                    unsafe { slice::from_raw_parts(self.ptr, self.len) }
+                },
+            )
         }
     }
 
@@ -294,6 +302,14 @@ mod test {
 
         let view = ByteSliceView::nil();
         assert!(view.read().is_none());
+
+        // This is what we get when creating a ByteSliceView for an empty []byte in Go
+        let view = ByteSliceView {
+            is_nil: false,
+            ptr: std::ptr::null::<u8>(),
+            len: 0,
+        };
+        assert!(view.read().is_some());
     }
 
     #[test]
