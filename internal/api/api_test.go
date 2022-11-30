@@ -17,7 +17,7 @@ func TestValidateAddressFailure(t *testing.T) {
 	// create contract
 	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)

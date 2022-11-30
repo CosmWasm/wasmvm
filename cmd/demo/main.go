@@ -31,7 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	checksum, err := vm.Create(bz)
+	checksum, err := vm.StoreCode(bz)
 	if err != nil {
 		panic(err)
 	}

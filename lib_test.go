@@ -41,18 +41,69 @@ func withVM(t *testing.T) *VM {
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	wasm, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 	return checksum
 }
 
-func TestCreateAndGet(t *testing.T) {
+func TestStoreCode(t *testing.T) {
+	vm := withVM(t)
+
+	// Valid hackatom contract
+	{
+		wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+		require.NoError(t, err)
+		_, err = vm.StoreCode(wasm)
+		require.NoError(t, err)
+	}
+
+	// Valid cyberpunk contract
+	{
+		wasm, err := ioutil.ReadFile(CYBERPUNK_TEST_CONTRACT)
+		require.NoError(t, err)
+		_, err = vm.StoreCode(wasm)
+		require.NoError(t, err)
+	}
+
+	// Valid Wasm with no exports
+	{
+		// echo '(module)' | wat2wasm - -o empty.wasm
+		// hexdump -C < empty.wasm
+
+		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract doesn't have a memory section")
+	}
+
+	// No Wasm
+	{
+		wasm := []byte("foobar")
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+	}
+
+	// Empty
+	{
+		wasm := []byte("")
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+	}
+
+	// Nil
+	{
+		var wasm []byte = nil
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Null/Nil argument: wasm")
+	}
+}
+
+func TestStoreCodeAndGet(t *testing.T) {
 	vm := withVM(t)
 
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 
 	code, err := vm.GetCode(checksum)

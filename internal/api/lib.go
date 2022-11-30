@@ -56,7 +56,7 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func Create(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := newUnmanagedVector(nil)
