@@ -7,6 +7,7 @@ use std::slice;
 ///
 /// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
 #[repr(C)]
+#[derive(Debug)]
 pub struct ByteSliceView {
     /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
     is_nil: bool,
