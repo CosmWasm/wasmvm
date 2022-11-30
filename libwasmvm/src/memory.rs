@@ -265,6 +265,8 @@ pub extern "C" fn new_unmanaged_vector(
     } else if length == 0 {
         UnmanagedVector::new(Some(Vec::new()))
     } else {
+        // In slice::from_raw_parts, `data` must be non-null and aligned even for zero-length slices.
+        // For this reason we cover the length == 0 case separately above.
         let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
         let copy = Vec::from(external_memory);
         UnmanagedVector::new(Some(copy))
@@ -365,6 +367,36 @@ mod test {
     #[test]
     fn unmanaged_vector_defaults_to_none() {
         let x = UnmanagedVector::default();
+        assert_eq!(x.consume(), None);
+    }
+
+    #[test]
+    fn new_unmanaged_vector_works() {
+        // Some simple data
+        let data = b"some stuff";
+        let x = new_unmanaged_vector(false, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), Some(Vec::<u8>::from(b"some stuff" as &[u8])));
+
+        // empty created in Rust
+        let data = b"";
+        let x = new_unmanaged_vector(false, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+
+        // empty created in Go
+        let x = new_unmanaged_vector(false, std::ptr::null::<u8>(), 0);
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+
+        // nil with garbage pointer
+        let x = new_unmanaged_vector(true, 345 as *const u8, 46);
+        assert_eq!(x.consume(), None);
+
+        // nil with empty slice
+        let data = b"";
+        let x = new_unmanaged_vector(true, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), None);
+
+        // nil with null pointer
+        let x = new_unmanaged_vector(true, std::ptr::null::<u8>(), 0);
         assert_eq!(x.consume(), None);
     }
 }
