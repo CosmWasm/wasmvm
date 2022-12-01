@@ -339,7 +339,7 @@ jobs:
             go version
             make --version
       - attach_workspace:
-          at: /c/builds
+          at: C:/builds
       - run:
           name: Copy .dll to system library path
           command: cp /c/builds/wasmvm.dll /c/Windows/System32
