@@ -253,6 +253,7 @@ jobs:
   build_shared_library_windows:
     executor:
       name: win/default
+      size: large
       shell: bash.exe
     steps:
       - checkout
