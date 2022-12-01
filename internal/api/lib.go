@@ -53,7 +53,7 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, insta
 }
 
 func ReleaseCache(cache Cache) {
-	C.release_cache(cache.ptr)
+	C.release_cache(cache.ptr) // No error case that needs handling
 }
 
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
@@ -93,7 +93,7 @@ func Pin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	_, err := C.pin(cache.ptr, cs, &errmsg)
+	_, err := C.pin(cache.ptr, cs, &errmsg) // returns (_Ctype_void, syscall.Errno)
 	if err != nil {
 		return ffiErrorWithMessage(err, errmsg)
 	}
@@ -104,7 +104,7 @@ func Unpin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	_, err := C.unpin(cache.ptr, cs, &errmsg)
+	_, err := C.unpin(cache.ptr, cs, &errmsg) // returns (_Ctype_void, syscall.Errno)
 	if err != nil {
 		return ffiErrorWithMessage(err, errmsg)
 	}
