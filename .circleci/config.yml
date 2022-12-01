@@ -233,7 +233,7 @@ jobs:
           name: Create release build of libwasmvm
           command: make build-rust
       - persist_to_workspace:
-          root: ./internal/api
+          root: internal/api
           paths:
             - libwasmvm.x86_64.so
       - save_cache:
@@ -282,7 +282,7 @@ jobs:
           name: Create release build of libwasmvm
           command: make build-rust
       - persist_to_workspace:
-          root: ./internal/api
+          root: internal/api
           paths:
             - wasmvm.dll
       - save_cache:
