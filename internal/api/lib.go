@@ -47,7 +47,7 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, insta
 
 	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
 	if err != nil {
-		return Cache{}, errorWithMessage(err, errmsg)
+		return Cache{}, ffiErrorWithMessage(err, errmsg)
 	}
 	return Cache{ptr: ptr}, nil
 }
@@ -62,7 +62,7 @@ func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	errmsg := newUnmanagedVector(nil)
 	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
@@ -84,7 +84,7 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	errmsg := newUnmanagedVector(nil)
 	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(wasm), nil
 }
@@ -95,7 +95,7 @@ func Pin(cache Cache, checksum []byte) error {
 	errmsg := newUnmanagedVector(nil)
 	_, err := C.pin(cache.ptr, cs, &errmsg)
 	if err != nil {
-		return errorWithMessage(err, errmsg)
+		return ffiErrorWithMessage(err, errmsg)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func Unpin(cache Cache, checksum []byte) error {
 	errmsg := newUnmanagedVector(nil)
 	_, err := C.unpin(cache.ptr, cs, &errmsg)
 	if err != nil {
-		return errorWithMessage(err, errmsg)
+		return ffiErrorWithMessage(err, errmsg)
 	}
 	return nil
 }
@@ -117,7 +117,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	errmsg := newUnmanagedVector(nil)
 	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, ffiErrorWithMessage(err, errmsg)
 	}
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	res := types.AnalysisReport{
@@ -132,7 +132,7 @@ func GetMetrics(cache Cache) (*types.Metrics, error) {
 	errmsg := newUnmanagedVector(nil)
 	metrics, err := C.get_metrics(cache.ptr, &errmsg)
 	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+		return nil, ffiErrorWithMessage(err, errmsg)
 	}
 
 	return &types.Metrics{
@@ -182,7 +182,7 @@ func Instantiate(
 	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -222,7 +222,7 @@ func Execute(
 	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -259,7 +259,7 @@ func Migrate(
 	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -296,7 +296,7 @@ func Sudo(
 	res, err := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -333,7 +333,7 @@ func Reply(
 	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -370,7 +370,7 @@ func Query(
 	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -407,7 +407,7 @@ func IBCChannelOpen(
 	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -444,7 +444,7 @@ func IBCChannelConnect(
 	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -481,7 +481,7 @@ func IBCChannelClose(
 	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -518,7 +518,7 @@ func IBCPacketReceive(
 	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -555,7 +555,7 @@ func IBCPacketAck(
 	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
@@ -592,21 +592,31 @@ func IBCPacketTimeout(
 	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
 }
 
-/**** To error module ***/
+// ffiErrorWithMessage takes a error, tries to read the error message
+// written by the Rust code and returns a readable error.
+//
+// This function must only be called on `ffiErr`s of type syscall.Errno
+// that are no 0 (no error).
+func ffiErrorWithMessage(ffiErr error, errMsg C.UnmanagedVector) error {
+	errno := ffiErr.(syscall.Errno) // panics if conversion fails
 
-func errorWithMessage(err error, b C.UnmanagedVector) error {
-	// this checks for out of gas as a special case
-	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
+	if errno == 0 {
+		panic("Called ffiErrorWithMessage with a 0 errno (no error)")
+	}
+
+	// Checks for out of gas as a special case. See "ErrnoValue" in libwasmvm/src/error/rust.rs.
+	if errno == 2 {
 		return types.OutOfGasError{}
 	}
-	msg := copyAndDestroyUnmanagedVector(b)
-	if msg == nil {
-		return err
+
+	msg := copyAndDestroyUnmanagedVector(errMsg)
+	if msg == nil || len(msg) == 0 {
+		return fmt.Errorf("FFI call errored with errno %#v and no error message.", errno)
 	}
 	return fmt.Errorf("%s", string(msg))
 }
