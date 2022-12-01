@@ -316,6 +316,36 @@ jobs:
           command: make test-safety
       - run: make build-go
 
+  # Test the Go project on Windows
+  wasmvm_test_windows:
+    executor:
+      name: win/default
+      shell: bash.exe
+    environment:
+      GORACE: "halt_on_error=1"
+    steps:
+      - checkout
+      - run:
+          name: Install make and mingw
+          # See https://github.com/docker/containerd-packaging/pull/294 for discussion around mingw version
+          command: |
+            set -o errexit
+            choco install -y make
+            choco install -y mingw --version 10.2.0 --allow-downgrade
+      - run:
+          name: Show Go version information
+          command: |
+            go version
+            make --version
+      - attach_workspace:
+          at: /c/builds
+      - run:
+          name: Copy .dll to system library path
+          command: cp /c/builds/wasmvm.dll /c/Windows/System32
+      - run:
+          name: Run Go tests
+          command: make test
+
   test_alpine_build:
     machine:
       image: ubuntu-2004:202101-01
@@ -430,6 +460,9 @@ workflows:
       - wasmvm_test:
           requires:
             - build_shared_library
+      - wasmvm_test_windows:
+          requires:
+            - build_shared_library_windows
       - build_static_lib:
           requires:
             - build_shared_library
@@ -463,6 +496,7 @@ workflows:
             - format-scripts
             - lint-scripts
             - wasmvm_test
+            - wasmvm_test_windows
           filters:
             tags:
               ignore:
