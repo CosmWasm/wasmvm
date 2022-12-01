@@ -184,7 +184,8 @@ jobs:
             - libwasmvm/target/release/deps
           key: cargocache-v3-build_shared_library-rust:1.59.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
-  test:
+  # Test the Go project
+  wasmvm_test:
     docker:
       - image: cimg/go:1.18.8
     environment:
@@ -313,7 +314,7 @@ workflows:
           filters: # required since other jobs with tag filters require this one
             tags:
               only: /.*/
-      - test:
+      - wasmvm_test:
           requires:
             - build_shared_library
       - build_static_lib:
@@ -348,7 +349,7 @@ workflows:
             - tidy-go
             - format-scripts
             - lint-scripts
-            - test
+            - wasmvm_test
           filters:
             tags:
               ignore:
