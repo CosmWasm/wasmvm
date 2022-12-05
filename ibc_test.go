@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/internal/api"
-	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmvm/internal/api"
+	"github.com/CosmWasm/wasmvm/types"
 )
 
 const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
