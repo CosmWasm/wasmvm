@@ -128,13 +128,6 @@ pub fn clear_error() {
 
 pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) {
     if let Some(error_msg) = error_msg {
-        if error_msg.is_some() {
-            panic!(
-                "There is an old error message in the given pointer that has not been \
-                cleaned up. Error message pointers should not be reused for multiple calls."
-            )
-        }
-
         let msg: Vec<u8> = err.to_string().into();
         *error_msg = UnmanagedVector::new(Some(msg));
     } else {
