@@ -53,10 +53,6 @@ enum GoError {
 };
 typedef int32_t GoError;
 
-typedef struct cache_t {
-
-} cache_t;
-
 /**
  * A view into an externally owned byte slice (Go `[]byte`).
  * Use this for the current call only. A view cannot be copied for safety reasons.
@@ -193,6 +189,22 @@ typedef struct UnmanagedVector {
   uintptr_t cap;
 } UnmanagedVector;
 
+typedef struct cache_t {
+
+} cache_t;
+
+/**
+ * A struct that holds a pointer to the cache. This struct can be
+ * copied freely.
+ *
+ * In case of `init_cache` we need a pointer to a pointer for the output
+ * and in order to be able to do this consistently with e.g. `AnalysisReport`
+ * and `Metrics`, we use thiy type.
+ */
+typedef struct CachePtr {
+  struct cache_t *ptr;
+} CachePtr;
+
 /**
  * The result type of the FFI function analyze_code.
  *
@@ -303,11 +315,12 @@ typedef struct GoQuerier {
   struct Querier_vtable vtable;
 } GoQuerier;
 
-struct cache_t *init_cache(struct ByteSliceView data_dir,
-                           struct ByteSliceView available_capabilities,
-                           uint32_t cache_size,
-                           uint32_t instance_memory_limit,
-                           struct UnmanagedVector *error_msg);
+int32_t init_cache(struct ByteSliceView data_dir,
+                   struct ByteSliceView available_capabilities,
+                   uint32_t cache_size,
+                   uint32_t instance_memory_limit,
+                   struct UnmanagedVector *error_msg,
+                   struct CachePtr *out);
 
 int32_t save_wasm(struct cache_t *cache,
                   struct ByteSliceView wasm,

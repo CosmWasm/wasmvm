@@ -159,26 +159,6 @@ pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
     }
 }
 
-/// If `result` is Ok, this returns the Ok value and clears [errno].
-/// Otherwise it returns a null pointer, writes the error message to `error_msg` and sets [errno].
-///
-/// [errno]: https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns
-pub fn handle_c_error_ptr<T>(
-    result: Result<*mut T, RustError>,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> *mut T {
-    match result {
-        Ok(value) => {
-            clear_error();
-            value
-        }
-        Err(error) => {
-            set_error(error, error_msg);
-            std::ptr::null_mut()
-        }
-    }
-}
-
 /// If `result` is Ok, this returns the binary representation of the Ok value and clears [errno].
 /// Otherwise it returns an empty vector, writes the error message to `error_msg` and sets [errno].
 ///
