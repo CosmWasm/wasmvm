@@ -3,6 +3,4 @@ mod go;
 mod rust;
 
 pub use go::GoError;
-pub use rust::{
-    handle_c_error_binary, to_c_result, to_c_result_binary, to_c_result_unit, RustError as Error,
-};
+pub use rust::{to_c_result, to_c_result_binary, to_c_result_unit, RustError as Error};
