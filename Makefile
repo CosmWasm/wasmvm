@@ -1,4 +1,4 @@
-.PHONY: all build build-rust build-go test
+.PHONY: all build build-rust build-go test format
 
 # Builds the Rust library libwasmvm
 BUILDERS_PREFIX := cosmwasm/go-ext-builder:0014
@@ -128,3 +128,9 @@ test-alpine: release-build-alpine
 
 	@# Run binary locally if you are on Linux
 	@# ./demo ./testdata/hackatom.wasm
+
+.PHONY: format
+format:
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./client/lcd/statik/statik.go" | xargs gofumpt -w -s
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./client/lcd/statik/statik.go" | xargs misspell -w
+	find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" -not -path "./client/lcd/statik/statik.go" | xargs goimports -w -local github.com/igelax/tgrade-tools
