@@ -9,12 +9,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum ErrnoValue {
-  ErrnoValue_Success = 0,
-  ErrnoValue_Other = 1,
-  ErrnoValue_OutOfGas = 2,
+/**
+ * An error code used to communicate the errors of FFI calls.
+ * Similar to shell codes and errno, 0 means no error.
+ */
+enum ErrorCode {
+  ErrorCode_Success = 0,
+  ErrorCode_Other = 1,
+  ErrorCode_OutOfGas = 2,
 };
-typedef int32_t ErrnoValue;
+typedef int32_t ErrorCode;
 
 /**
  * This enum gives names to the status codes returned from Go callbacks to Rust.
