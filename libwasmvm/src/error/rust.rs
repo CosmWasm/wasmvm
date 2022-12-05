@@ -117,13 +117,10 @@ impl From<std::string::FromUtf8Error> for RustError {
 /// cbindgen:prefix-with-name
 #[repr(i32)]
 enum ErrnoValue {
+    #[allow(dead_code)]
     Success = 0,
     Other = 1,
     OutOfGas = 2,
-}
-
-pub fn clear_error() {
-    set_errno(ErrnoValue::Success as i32);
 }
 
 pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> i32 {
@@ -156,29 +153,6 @@ pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
     } else {
         // The caller provided a nil pointer for the output message.
         // That's not nice but we can live with it.
-    }
-}
-
-/// If `result` is Ok, this returns the binary representation of the Ok value and clears [errno].
-/// Otherwise it returns an empty vector, writes the error message to `error_msg` and sets [errno].
-///
-/// [errno]: https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns
-pub fn handle_c_error_binary<T>(
-    result: Result<T, RustError>,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> Vec<u8>
-where
-    T: Into<Vec<u8>>,
-{
-    match result {
-        Ok(value) => {
-            clear_error();
-            value.into()
-        }
-        Err(error) => {
-            set_error(error, error_msg);
-            Vec::new()
-        }
     }
 }
 
@@ -228,9 +202,8 @@ pub fn to_c_result_unit(
 
 #[cfg(test)]
 mod tests {
-    use super::super::errno::errno;
     use super::*;
-    use cosmwasm_vm::{BackendError, Checksum};
+    use cosmwasm_vm::BackendError;
     use std::str;
 
     #[test]
@@ -337,112 +310,5 @@ mod tests {
             }
             _ => panic!("expect different error"),
         }
-    }
-
-    #[test]
-    fn handle_c_error_binary_works() {
-        // Ok (non-empty vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
-        let _ = error_msg.consume();
-
-        // Ok (empty vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![]);
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok (non-empty slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Ok(b"foobar");
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::from(b"foobar" as &[u8]));
-        let _ = error_msg.consume();
-
-        // Ok (empty slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Ok(b"");
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok (checksum)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Checksum, RustError> = Ok(Checksum::from([
-            0x72, 0x2c, 0x8c, 0x99, 0x3f, 0xd7, 0x5a, 0x76, 0x27, 0xd6, 0x9e, 0xd9, 0x41, 0x34,
-            0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
-            0x84, 0x22, 0x71, 0x04,
-        ]));
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(
-            data,
-            vec![
-                0x72, 0x2c, 0x8c, 0x99, 0x3f, 0xd7, 0x5a, 0x76, 0x27, 0xd6, 0x9e, 0xd9, 0x41, 0x34,
-                0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
-                0x84, 0x22, 0x71, 0x04,
-            ]
-        );
-        let _ = error_msg.consume();
-
-        // Err (vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Err(RustError::panic());
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Err (slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Err(RustError::panic());
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Err (checksum)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Checksum, RustError> = Err(RustError::panic());
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-    }
-
-    #[test]
-    fn handle_c_error_binary_clears_an_old_error() {
-        // Err
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Err(RustError::panic());
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
-        let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
-        let _ = error_msg.consume();
     }
 }
