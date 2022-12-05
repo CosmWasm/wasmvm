@@ -7,10 +7,7 @@ use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
-use crate::error::{
-    handle_c_error_default, handle_c_error_ptr, to_c_result, to_c_result_binary, to_c_result_unit,
-    Error,
-};
+use crate::error::{handle_c_error_ptr, to_c_result, to_c_result_binary, to_c_result_unit, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -333,16 +330,18 @@ impl From<cosmwasm_vm::Metrics> for Metrics {
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn get_metrics(
     cache: *mut cache_t,
     error_msg: Option<&mut UnmanagedVector>,
-) -> Metrics {
+    out: Option<&mut Metrics>,
+) -> i32 {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_metrics(c)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    handle_c_error_default(r, error_msg)
+    to_c_result(r, error_msg, out)
 }
 
 #[allow(clippy::unnecessary_wraps)] // Keep unused Result for consistent boilerplate for all fn do_*
@@ -792,9 +791,11 @@ mod tests {
 
         // Get metrics 1
         let mut error_msg = UnmanagedVector::default();
-        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let mut out = Metrics::default();
+        let error = get_metrics(cache_ptr, Some(&mut error_msg), Some(&mut out));
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
-        assert_eq!(metrics, Metrics::default());
+        assert_eq!(out, Metrics::default());
 
         // Save wasm
         let mut error_msg = UnmanagedVector::default();
@@ -812,9 +813,11 @@ mod tests {
 
         // Get metrics 2
         let mut error_msg = UnmanagedVector::default();
-        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let mut out = Metrics::default();
+        let error = get_metrics(cache_ptr, Some(&mut error_msg), Some(&mut out));
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
-        assert_eq!(metrics, Metrics::default());
+        assert_eq!(out, Metrics::default());
 
         // Pin
         let mut error_msg = UnmanagedVector::default();
@@ -829,7 +832,9 @@ mod tests {
 
         // Get metrics 3
         let mut error_msg = UnmanagedVector::default();
-        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let mut out = Metrics::default();
+        let error = get_metrics(cache_ptr, Some(&mut error_msg), Some(&mut out));
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
         let Metrics {
             hits_pinned_memory_cache,
@@ -840,7 +845,7 @@ mod tests {
             elements_memory_cache,
             size_pinned_memory_cache,
             size_memory_cache,
-        } = metrics;
+        } = out;
         assert_eq!(hits_pinned_memory_cache, 0);
         assert_eq!(hits_memory_cache, 0);
         assert_eq!(hits_fs_cache, 1);
@@ -868,10 +873,12 @@ mod tests {
 
         // Get metrics 4
         let mut error_msg = UnmanagedVector::default();
-        let metrics = get_metrics(cache_ptr, Some(&mut error_msg));
+        let mut out = Metrics::default();
+        let error = get_metrics(cache_ptr, Some(&mut error_msg), Some(&mut out));
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
         assert_eq!(
-            metrics,
+            out,
             Metrics {
                 hits_pinned_memory_cache: 0,
                 hits_memory_cache: 0,

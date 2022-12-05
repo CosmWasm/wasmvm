@@ -202,29 +202,6 @@ where
     }
 }
 
-/// If `result` is Ok, this returns the Ok value and clears [errno].
-/// Otherwise it returns the default value, writes the error message to `error_msg` and sets [errno].
-///
-/// [errno]: https://utcc.utoronto.ca/~cks/space/blog/programming/GoCgoErrorReturns
-pub fn handle_c_error_default<T>(
-    result: Result<T, RustError>,
-    error_msg: Option<&mut UnmanagedVector>,
-) -> T
-where
-    T: Default,
-{
-    match result {
-        Ok(value) => {
-            clear_error();
-            value
-        }
-        Err(error) => {
-            set_error(error, error_msg);
-            Default::default()
-        }
-    }
-}
-
 /// If `result` is Ok, this writes the Ok value to `out` and returns 0.
 /// Otherwise it writes the error message to `error_msg` and returns the error code.
 pub fn to_c_result_binary(
@@ -483,100 +460,6 @@ mod tests {
         let mut error_msg = UnmanagedVector::default();
         let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
         let data = handle_c_error_binary(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
-        let _ = error_msg.consume();
-    }
-
-    #[test]
-    fn handle_c_error_default_works() {
-        // Ok (non-empty vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);
-        let _ = error_msg.consume();
-
-        // Ok (empty vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![]);
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok (non-empty slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Ok(b"foobar");
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::from(b"foobar" as &[u8]));
-        let _ = error_msg.consume();
-
-        // Ok (empty slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Ok(b"");
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok (unit)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<(), RustError> = Ok(());
-        let _data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Success as i32);
-        assert!(error_msg.is_none());
-        let _ = error_msg.consume();
-
-        // Err (vector)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Err(RustError::panic());
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Err (slice)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<&[u8], RustError> = Err(RustError::panic());
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Err (unit)
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<(), RustError> = Err(RustError::panic());
-        let _data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        let _ = error_msg.consume();
-    }
-
-    #[test]
-    fn handle_c_error_default_clears_an_old_error() {
-        // Err
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Err(RustError::panic());
-        let data = handle_c_error_default(res, Some(&mut error_msg));
-        assert_eq!(errno(), ErrnoValue::Other as i32);
-        assert!(error_msg.is_some());
-        assert_eq!(data, Vec::<u8>::new());
-        let _ = error_msg.consume();
-
-        // Ok
-        let mut error_msg = UnmanagedVector::default();
-        let res: Result<Vec<u8>, RustError> = Ok(vec![0xF0, 0x0B, 0xAA]);
-        let data = handle_c_error_default(res, Some(&mut error_msg));
         assert_eq!(errno(), ErrnoValue::Success as i32);
         assert!(error_msg.is_none());
         assert_eq!(data, vec![0xF0, 0x0B, 0xAA]);

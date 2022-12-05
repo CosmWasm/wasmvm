@@ -336,7 +336,7 @@ int32_t analyze_code(struct cache_t *cache,
                      struct UnmanagedVector *error_msg,
                      struct AnalysisReport *out);
 
-struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
+int32_t get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg, struct Metrics *out);
 
 /**
  * frees a cache reference
