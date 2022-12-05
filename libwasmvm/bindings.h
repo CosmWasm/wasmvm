@@ -331,9 +331,10 @@ int32_t unpin(struct cache_t *cache,
               struct ByteSliceView checksum,
               struct UnmanagedVector *error_msg);
 
-struct AnalysisReport analyze_code(struct cache_t *cache,
-                                   struct ByteSliceView checksum,
-                                   struct UnmanagedVector *error_msg);
+int32_t analyze_code(struct cache_t *cache,
+                     struct ByteSliceView checksum,
+                     struct UnmanagedVector *error_msg,
+                     struct AnalysisReport *out);
 
 struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
 

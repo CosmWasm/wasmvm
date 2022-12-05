@@ -8,7 +8,8 @@ use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 use crate::api::GoApi;
 use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
 use crate::error::{
-    handle_c_error_default, handle_c_error_ptr, to_c_result_binary, to_c_result_unit, Error,
+    handle_c_error_default, handle_c_error_ptr, to_c_result, to_c_result_binary, to_c_result_unit,
+    Error,
 };
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
@@ -254,17 +255,19 @@ fn set_to_csv(set: HashSet<String>) -> String {
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn analyze_code(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
-) -> AnalysisReport {
+    out: Option<&mut AnalysisReport>,
+) -> i32 {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
             .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    handle_c_error_default(r, error_msg)
+    to_c_result(r, error_msg, out)
 }
 
 fn do_analyze_code(
@@ -710,29 +713,31 @@ mod tests {
         let checksum_ibc_reflect = out.consume().unwrap_or_default();
 
         let mut error_msg = UnmanagedVector::default();
-        let hackatom_report = analyze_code(
+        let mut out = AnalysisReport::default();
+        let error = analyze_code(
             cache_ptr,
             ByteSliceView::new(&checksum_hackatom),
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
-        assert!(!hackatom_report.has_ibc_entry_points);
-        assert_eq!(
-            hackatom_report.required_capabilities.consume().unwrap(),
-            b""
-        );
+        assert!(!out.has_ibc_entry_points);
+        assert_eq!(out.required_capabilities.consume().unwrap(), b"");
 
         let mut error_msg = UnmanagedVector::default();
-        let ibc_reflect_report = analyze_code(
+        let mut out = AnalysisReport::default();
+        let error = analyze_code(
             cache_ptr,
             ByteSliceView::new(&checksum_ibc_reflect),
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         let _ = error_msg.consume();
-        assert!(ibc_reflect_report.has_ibc_entry_points);
+        assert!(out.has_ibc_entry_points);
         let required_capabilities =
-            String::from_utf8_lossy(&ibc_reflect_report.required_capabilities.consume().unwrap())
-                .to_string();
+            String::from_utf8_lossy(&out.required_capabilities.consume().unwrap()).to_string();
         assert_eq!(required_capabilities, "iterator,stargate");
 
         release_cache(cache_ptr);
