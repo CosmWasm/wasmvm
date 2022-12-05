@@ -7,7 +7,6 @@ import "C"
 import (
 	"fmt"
 	"runtime"
-	"syscall"
 	"unsafe"
 
 	"github.com/CosmWasm/wasmvm/types"
@@ -620,30 +619,6 @@ func IBCPacketTimeout(
 		return nil, uint64(gasUsed), ffiErrorWithMessage2(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(out), uint64(gasUsed), nil
-}
-
-// ffiErrorWithMessage takes a error, tries to read the error message
-// written by the Rust code and returns a readable error.
-//
-// This function must only be called on `ffiErr`s of type syscall.Errno
-// that are no 0 (no error).
-func ffiErrorWithMessage(ffiErr error, errMsg C.UnmanagedVector) error {
-	errno := ffiErr.(syscall.Errno) // panics if conversion fails
-
-	if errno == 0 {
-		panic("Called ffiErrorWithMessage with a 0 errno (no error)")
-	}
-
-	// Checks for out of gas as a special case. See "ErrnoValue" in libwasmvm/src/error/rust.rs.
-	if errno == 2 {
-		return types.OutOfGasError{}
-	}
-
-	msg := copyAndDestroyUnmanagedVector(errMsg)
-	if msg == nil || len(msg) == 0 {
-		return fmt.Errorf("FFI call errored with errno %#v and no error message.", errno)
-	}
-	return fmt.Errorf("%s", string(msg))
 }
 
 // ffiErrorWithMessage2 takes a error number, tries to read the error message
