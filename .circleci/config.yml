@@ -98,11 +98,18 @@ jobs:
     docker:
       - image: cimg/go:1.18.8
     steps:
+      - run:
+          name: Install gofumpt
+          command: go install mvdan.cc/gofumpt@v0.4.0
       - checkout
       - run:
-          name: Check Go formatting
+          name: Check Go formatting with gofmt
           command: |
             [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
+      - run:
+          name: Check Go formatting with gofumpt
+          command: |
+            [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
 
   tidy-go:
     docker:
