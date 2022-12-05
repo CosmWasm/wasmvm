@@ -57,7 +57,7 @@ build-go:
 
 test:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
-	RUST_BACKTRACE=1 go test -v -count=1 -ldflags "-linkmode=external" ./...
+	RUST_BACKTRACE=1 go test -v -count=1 ./...
 
 test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
