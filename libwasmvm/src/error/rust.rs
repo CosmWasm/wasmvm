@@ -113,16 +113,24 @@ impl From<std::string::FromUtf8Error> for RustError {
     }
 }
 
+/// An error code used to communicate the errors of FFI calls.
+/// Similar to shell codes and errno, 0 means no error.
 /// cbindgen:prefix-with-name
 #[repr(i32)]
-enum ErrnoValue {
-    #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
+pub enum ErrorCode {
     Success = 0,
     Other = 1,
     OutOfGas = 2,
 }
 
-pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> i32 {
+impl ErrorCode {
+    pub fn to_int(self) -> i32 {
+        self as i32
+    }
+}
+
+pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> ErrorCode {
     if let Some(error_msg) = error_msg {
         if error_msg.is_some() {
             panic!(
@@ -138,11 +146,11 @@ pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> i32
         // That's not nice but we can live with it.
     }
 
-    let errno: ErrnoValue = match err {
-        RustError::OutOfGas { .. } => ErrnoValue::OutOfGas,
-        _ => ErrnoValue::Other,
+    let errno: ErrorCode = match err {
+        RustError::OutOfGas { .. } => ErrorCode::OutOfGas,
+        _ => ErrorCode::Other,
     };
-    errno as i32
+    errno
 }
 
 pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
@@ -161,13 +169,14 @@ pub fn to_c_result_binary(
     error_msg_ptr: Option<&mut UnmanagedVector>,
     out_ptr: Option<&mut UnmanagedVector>,
 ) -> i32 {
-    match result {
+    let code = match result {
         Ok(value) => {
             set_out(value, out_ptr);
-            0
+            ErrorCode::Success
         }
         Err(error) => set_error(error, error_msg_ptr),
-    }
+    };
+    code.to_int()
 }
 
 /// If `result` is Ok, this writes the Ok value to `out` and returns 0.
@@ -177,13 +186,14 @@ pub fn to_c_result<T>(
     error_msg_ptr: Option<&mut UnmanagedVector>,
     out_ptr: Option<&mut T>,
 ) -> i32 {
-    match result {
+    let code = match result {
         Ok(value) => {
             set_out(value, out_ptr);
-            0
+            ErrorCode::Success
         }
         Err(error) => set_error(error, error_msg_ptr),
-    }
+    };
+    code.to_int()
 }
 
 /// If `result` is Ok, this writes the Ok value to `out` and returns 0.
@@ -192,10 +202,11 @@ pub fn to_c_result_unit(
     result: Result<(), RustError>,
     error_msg_ptr: Option<&mut UnmanagedVector>,
 ) -> i32 {
-    match result {
-        Ok(_) => 0,
+    let code = match result {
+        Ok(_) => ErrorCode::Success,
         Err(error) => set_error(error, error_msg_ptr),
-    }
+    };
+    code.to_int()
 }
 
 #[cfg(test)]

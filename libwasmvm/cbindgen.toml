@@ -51,7 +51,7 @@ style = "both"
 [export]
 include = [
     "GoError",
-    "ErrnoValue",
+    "ErrorCode",
 ]
 exclude = []
 # prefix = "CAPI_"
