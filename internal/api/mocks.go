@@ -622,7 +622,7 @@ func TestReflectCustomQuerier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, resp.Msg, "PONG")
 
-	// try captial
+	// try capital
 	msg2, err := json.Marshal(CustomQuery{Capitalized: &CapitalizedQuery{Text: "small."}})
 	require.NoError(t, err)
 	bz, err = q.Query(msg2)
