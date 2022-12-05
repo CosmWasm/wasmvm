@@ -130,15 +130,10 @@ impl ErrorCode {
     }
 }
 
-pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> ErrorCode {
+/// Takes the `RustError`, writes the error message to
+/// the `error_msg` pointer and returns an Error code.
+pub fn set_error_msg(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> ErrorCode {
     if let Some(error_msg) = error_msg {
-        if error_msg.is_some() {
-            panic!(
-                "There is an old error message in the given pointer that has not been \
-                cleaned up. Error message pointers should not be reused for multiple calls."
-            )
-        }
-
         let msg: Vec<u8> = err.to_string().into();
         *error_msg = UnmanagedVector::new(Some(msg));
     } else {
@@ -146,11 +141,11 @@ pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> Err
         // That's not nice but we can live with it.
     }
 
-    let errno: ErrorCode = match err {
+    let code: ErrorCode = match err {
         RustError::OutOfGas { .. } => ErrorCode::OutOfGas,
         _ => ErrorCode::Other,
     };
-    errno
+    code
 }
 
 pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
@@ -174,7 +169,7 @@ pub fn to_c_result_binary(
             set_out(value, out_ptr);
             ErrorCode::Success
         }
-        Err(error) => set_error(error, error_msg_ptr),
+        Err(error) => set_error_msg(error, error_msg_ptr),
     };
     code.to_int()
 }
@@ -191,7 +186,7 @@ pub fn to_c_result<T>(
             set_out(value, out_ptr);
             ErrorCode::Success
         }
-        Err(error) => set_error(error, error_msg_ptr),
+        Err(error) => set_error_msg(error, error_msg_ptr),
     };
     code.to_int()
 }
@@ -204,7 +199,7 @@ pub fn to_c_result_unit(
 ) -> i32 {
     let code = match result {
         Ok(_) => ErrorCode::Success,
-        Err(error) => set_error(error, error_msg_ptr),
+        Err(error) => set_error_msg(error, error_msg_ptr),
     };
     code.to_int()
 }
