@@ -56,7 +56,7 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr) // No error case that needs handling
 }
 
-/// StoreCode stored the Wasm blob and returns the checksum
+// / StoreCode stored the Wasm blob and returns the checksum
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
@@ -134,9 +134,10 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 
 func GetMetrics(cache Cache) (*types.Metrics, error) {
 	errmsg := newUnmanagedVector(nil)
-	metrics, err := C.get_metrics(cache.ptr, &errmsg)
-	if err != nil {
-		return nil, ffiErrorWithMessage(err, errmsg)
+	metrics := C.Metrics{}
+	err := C.get_metrics(cache.ptr, &errmsg, &metrics)
+	if err != 0 {
+		return nil, ffiErrorWithMessage2(err, errmsg)
 	}
 
 	return &types.Metrics{
