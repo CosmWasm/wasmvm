@@ -191,13 +191,14 @@ func Instantiate(
 	q := buildQuerier(querier)
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
+	out := newUnmanagedVector(nil)
 
-	res, err := C.instantiate(toCachePtr(cache), cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	err := C.instantiate(toCachePtr(cache), cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg, &out)
+	if err != 0 {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage2(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(out), uint64(gasUsed), nil
 }
 
 func Execute(
@@ -231,13 +232,14 @@ func Execute(
 	q := buildQuerier(querier)
 	var gasUsed cu64
 	errmsg := newUnmanagedVector(nil)
+	out := newUnmanagedVector(nil)
 
-	res, err := C.execute(toCachePtr(cache), cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	err := C.execute(toCachePtr(cache), cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg, &out)
+	if err != 0 {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), ffiErrorWithMessage(err, errmsg)
+		return nil, uint64(gasUsed), ffiErrorWithMessage2(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(out), uint64(gasUsed), nil
 }
 
 func Migrate(
