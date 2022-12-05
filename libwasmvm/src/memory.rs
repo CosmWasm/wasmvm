@@ -200,7 +200,7 @@ impl U8SliceView {
 /// // `output` is ready to be passed around
 /// ```
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct UnmanagedVector {
     /// True if and only if this is None. If this is true, the other fields must be ignored.
     is_none: bool,
