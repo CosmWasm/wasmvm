@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/types"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/CosmWasm/wasmvm/types"
 )
 
 type queueData struct {
