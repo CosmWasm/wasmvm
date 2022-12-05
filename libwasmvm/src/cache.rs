@@ -7,13 +7,46 @@ use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
 
 use crate::api::GoApi;
 use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
-use crate::error::{handle_c_error_ptr, to_c_result, to_c_result_binary, to_c_result_unit, Error};
+use crate::error::{to_c_result, to_c_result_binary, to_c_result_unit, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
 #[repr(C)]
 pub struct cache_t {}
+
+/// A struct that holds a pointer to the cache. This struct can be
+/// copied freely.
+///
+/// In case of `init_cache` we need a pointer to a pointer for the output
+/// and in order to be able to do this consistently with e.g. `AnalysisReport`
+/// and `Metrics`, we use thiy type.
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct CachePtr {
+    pub ptr: *mut cache_t,
+}
+
+impl Default for CachePtr {
+    fn default() -> Self {
+        Self {
+            ptr: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl CachePtr {
+    pub fn new(rust_ptr: *mut Cache<GoApi, GoStorage, GoQuerier>) -> Self {
+        Self {
+            ptr: rust_ptr as *mut cache_t,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn is_null(self) -> bool {
+        self.ptr.is_null()
+    }
+}
 
 pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
     if ptr.is_null() {
@@ -31,7 +64,8 @@ pub extern "C" fn init_cache(
     cache_size: u32,            // in MiB
     instance_memory_limit: u32, // in MiB
     error_msg: Option<&mut UnmanagedVector>,
-) -> *mut cache_t {
+    out: Option<&mut CachePtr>,
+) -> i32 {
     let r = catch_unwind(|| {
         do_init_cache(
             data_dir,
@@ -41,7 +75,8 @@ pub extern "C" fn init_cache(
         )
     })
     .unwrap_or_else(|_| Err(Error::panic()));
-    handle_c_error_ptr(r, error_msg) as *mut cache_t
+    let r = r.map(CachePtr::new);
+    to_c_result(r, error_msg, out)
 }
 
 fn do_init_cache(
@@ -380,17 +415,20 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
-        release_cache(cache_ptr);
+        release_cache(out.ptr);
     }
 
     #[test]
@@ -399,14 +437,17 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
-        assert!(cache_ptr.is_null());
+        assert_ne!(error, 0);
+        assert!(out.is_null());
         assert!(error_msg.is_some());
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
         assert_eq!(
@@ -421,15 +462,19 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -454,15 +499,19 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -513,15 +562,19 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -559,15 +612,19 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -612,15 +669,19 @@ mod tests {
         let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -675,15 +736,19 @@ mod tests {
         let capabilities = b"staking,stargate,iterator";
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         let mut error_msg = UnmanagedVector::default();
         let mut out = UnmanagedVector::default();
@@ -779,15 +844,19 @@ mod tests {
 
         // Init cache
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
+        let mut out = CachePtr::default();
+        let error = init_cache(
             ByteSliceView::new(dir.as_bytes()),
             ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
+            Some(&mut out),
         );
+        assert_eq!(error, 0);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+        let cache_ptr = out.ptr;
 
         // Get metrics 1
         let mut error_msg = UnmanagedVector::default();

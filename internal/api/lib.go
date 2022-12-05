@@ -44,12 +44,13 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, insta
 	defer runtime.KeepAlive(supportedFeaturesBytes)
 
 	errmsg := newUnmanagedVector(nil)
+	out := C.CachePtr{}
 
-	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
-	if err != nil {
-		return Cache{}, ffiErrorWithMessage(err, errmsg)
+	err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg, &out)
+	if err != 0 {
+		return Cache{}, ffiErrorWithMessage2(err, errmsg)
 	}
-	return Cache{ptr: ptr}, nil
+	return Cache{ptr: out.ptr}, nil
 }
 
 func ReleaseCache(cache Cache) {
