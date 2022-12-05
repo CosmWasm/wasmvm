@@ -243,6 +243,22 @@ pub fn to_c_result_binary(
 
 /// If `result` is Ok, this writes the Ok value to `out` and returns 0.
 /// Otherwise it writes the error message to `error_msg` and returns the error code.
+pub fn to_c_result<T>(
+    result: Result<T, RustError>,
+    error_msg_ptr: Option<&mut UnmanagedVector>,
+    out_ptr: Option<&mut T>,
+) -> i32 {
+    match result {
+        Ok(value) => {
+            set_out(value, out_ptr);
+            0
+        }
+        Err(error) => set_error(error, error_msg_ptr),
+    }
+}
+
+/// If `result` is Ok, this writes the Ok value to `out` and returns 0.
+/// Otherwise it writes the error message to `error_msg` and returns the error code.
 pub fn to_c_result_unit(
     result: Result<(), RustError>,
     error_msg_ptr: Option<&mut UnmanagedVector>,

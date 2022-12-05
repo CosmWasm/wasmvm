@@ -118,13 +118,14 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return nil, ffiErrorWithMessage(err, errmsg)
+	out := C.AnalysisReport{}
+	err := C.analyze_code(cache.ptr, cs, &errmsg, &out)
+	if err != 0 {
+		return nil, ffiErrorWithMessage2(err, errmsg)
 	}
-	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
+	requiredCapabilities := string(copyAndDestroyUnmanagedVector(out.required_capabilities))
 	res := types.AnalysisReport{
-		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
+		HasIBCEntryPoints:    bool(out.has_ibc_entry_points),
 		RequiredFeatures:     requiredCapabilities,
 		RequiredCapabilities: requiredCapabilities,
 	}
