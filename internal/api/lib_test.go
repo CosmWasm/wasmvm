@@ -313,7 +313,7 @@ func TestInstantiate(t *testing.T) {
 func TestExecute(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
@@ -377,7 +377,7 @@ func TestExecute(t *testing.T) {
 func TestExecuteCpuLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
@@ -416,7 +416,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 func TestExecuteStorageLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	maxGas := TESTING_GAS_LIMIT
 	gasMeter1 := NewMockGasMeter(maxGas)
@@ -456,7 +456,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	maxGas := TESTING_GAS_LIMIT
 	gasMeter1 := NewMockGasMeter(maxGas)
@@ -487,7 +487,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 func TestMigrate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
@@ -532,7 +532,7 @@ func TestMigrate(t *testing.T) {
 func TestMultipleInstances(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	// instance1 controlled by fred
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -586,7 +586,7 @@ func TestMultipleInstances(t *testing.T) {
 func TestSudo(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
@@ -774,7 +774,7 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createTestContract(t *testing.T, cache Cache) []byte {
+func createHackatomContract(t *testing.T, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
@@ -813,7 +813,7 @@ func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress,
 func TestQuery(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	// set up contract
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -856,7 +856,7 @@ func TestQuery(t *testing.T) {
 func TestHackatomQuerier(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createTestContract(t, cache)
+	checksum := createHackatomContract(t, cache)
 
 	// set up contract
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
