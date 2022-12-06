@@ -3,6 +3,17 @@ version: 2.1
 orbs:
   win: circleci/windows@5.0
 
+commands:
+  show_cpu_info:
+    steps:
+      - run:
+          name: Show CPU info
+          command: |
+            set -o errexit
+            curl -sS -L --output py-cpuinfo.zip https://github.com/workhorsy/py-cpuinfo/archive/refs/tags/v9.0.0.zip
+            unzip -q py-cpuinfo.zip
+            python py-cpuinfo-*/cpuinfo/cpuinfo.py
+
 jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
   libwasmvm_sanity:
@@ -79,6 +90,7 @@ jobs:
       - run:
           name: Reset git config set by CircleCI to make Cargo work
           command: git config --global --unset url.ssh://git@github.com.insteadof
+      - show_cpu_info
       - run:
           name: Install Rust
           command: |
@@ -260,6 +272,7 @@ jobs:
       - run:
           name: Reset git config set by CircleCI to make Cargo work
           command: git config --global --unset url.ssh://git@github.com.insteadof
+      - show_cpu_info
       - run:
           name: Install make
           command: |
@@ -326,6 +339,7 @@ jobs:
       GORACE: "halt_on_error=1"
     steps:
       - checkout
+      - show_cpu_info
       - run:
           name: Install make and mingw
           # See https://github.com/docker/containerd-packaging/pull/294 for discussion around mingw version
