@@ -374,8 +374,11 @@ type ContractInfoQuery struct {
 }
 
 type ContractInfoResponse struct {
-	CodeID  uint64 `json:"code_id"`
-	Creator string `json:"creator"`
+	CodeID uint64 `json:"code_id"`
+	// Checksum is the checksum of the Wasm blob behind this code ID.
+	// This field was newly added in CosmWasm XX.YY.
+	Checksum string `json:"checksum,omitempty"`
+	Creator  string `json:"creator"`
 	// Set to the admin who can migrate contract, if any
 	Admin  string `json:"admin,omitempty"`
 	Pinned bool   `json:"pinned"`

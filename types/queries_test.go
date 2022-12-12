@@ -113,3 +113,39 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 		})
 	}
 }
+
+func TestContractInfoResponse(t *testing.T) {
+	// No checksum
+	info := ContractInfoResponse{
+		CodeID:  3456,
+		Creator: "tgrade1js7ezrm55fqgxu3p62d9xn6patjku2z7ne5dvg",
+		Admin:   "tgrade1z363ulwcrxged4z5jswyt5dn5v3lzsemwz9ewj",
+		Pinned:  false,
+		IBCPort: "wasm.abcdef",
+	}
+	bz, err := json.Marshal(&info)
+	t.Logf("Serialized: %s", string(bz))
+	require.NoError(t, err)
+
+	var deserialized ContractInfoResponse
+	err = json.Unmarshal(bz, &deserialized)
+	require.NoError(t, err)
+	assert.Equal(t, deserialized, info)
+
+	// Checksum set
+	info = ContractInfoResponse{
+		CodeID:   3456,
+		Checksum: "75b6183689b80a229ea27994a7c8cd9c17ddd29e947998f2734abda825eac3c0",
+		Creator:  "tgrade1js7ezrm55fqgxu3p62d9xn6patjku2z7ne5dvg",
+		Admin:    "tgrade1z363ulwcrxged4z5jswyt5dn5v3lzsemwz9ewj",
+		Pinned:   false,
+		IBCPort:  "wasm.abcdef",
+	}
+	bz, err = json.Marshal(&info)
+	t.Logf("Serialized: %s", string(bz))
+	require.NoError(t, err)
+
+	err = json.Unmarshal(bz, &deserialized)
+	require.NoError(t, err)
+	assert.Equal(t, deserialized, info)
+}
