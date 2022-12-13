@@ -6,11 +6,87 @@ from Go applications, in particular from [x/wasm](https://github.com/CosmWasm/wa
 
 ## Structure
 
-This repo contains both Rust and Go code. The rust code is compiled into a dll/so
-to be linked via cgo and wrapped with a pleasant Go API. The full build step
-involves compiling rust -> C library, and linking that library to the Go code.
-For ergonomics of the user, we will include pre-compiled libraries to easily
-link with, and Go developers should just be able to import this directly.
+This repo contains both Rust and Go code. The Rust code is compiled into a
+library (shared `.dll`/`.dylib`/`.so` or static `.a`) to be linked via cgo and
+wrapped with a pleasant Go API. The full build step involves compiling Rust -> C
+library, and linking that library to the Go code. For ergonomics of the user, we
+will include pre-compiled libraries to easily link with, and Go developers
+should just be able to import this directly.
+
+### Rust code
+
+The Rust code lives in a sub-folder `./libwasmvm`. This folder compiles to a
+library that can be used via FFI. It is compiled like this:
+
+```sh
+# Run unit tests
+(cd libwasmvm && cargo test)
+
+# Create release build for your current system. Uses whatever default Rust
+# version you have installed.
+make build-rust
+
+# Create reproducible release builds for other systems (slow, don't use for development)
+make release-build-alpine
+make release-build-linux
+make release-build-macos
+make release-build-windows
+```
+
+### Go code
+
+The Go code consistes of three packages:
+
+1. The types (the `github.com/CosmWasm/wasmvm/types` import), using
+   `package types`
+2. The internal package `internal/api`, using `package api`
+3. This repo (the `github.com/CosmWasm/wasmvm` import), using `package cosmwasm`
+
+The dependencies between them are as follows:
+
+```mermaid
+graph TD;
+    api-->types;
+    cosmwasm-->types;
+    cosmwasm-->api;
+```
+
+The Go code is built like this:
+
+```
+make build-go
+make test
+```
+
+#### Package github.com/CosmWasm/wasmvm/types
+
+This packages contains types used by the two other packages. It can be compiled
+without cgo.
+
+```sh
+# Build
+go build ./types
+# Build without CGO
+CGO_ENABLED=0 go build ./types
+```
+
+#### Package internal/api
+
+This package contains the code binding the libwasmvm build to the Go code. All
+low level FFI handling code belongs there. This package can only be built using
+cgo. Uing the `internal/` convention makes this package fully private.
+
+#### Package github.com/CosmWasm/wasmvm
+
+This is the package users import. It can be compiled without cgo, but when you
+do so, a lot of functionality is removed.
+
+```sh
+# Build
+go build .
+# Build without CGO
+CGO_ENABLED=0 go build .
+```
 
 ## Supported Platforms
 
