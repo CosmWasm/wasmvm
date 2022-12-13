@@ -17,11 +17,11 @@ import (
 type queueData struct {
 	checksum []byte
 	store    *Lookup
-	api      *GoAPI
+	api      *types.GoAPI
 	querier  types.Querier
 }
 
-func (q queueData) Store(meter MockGasMeter) KVStore {
+func (q queueData) Store(meter MockGasMeter) types.KVStore {
 	return q.store.WithGasMeter(meter)
 }
 
@@ -37,14 +37,14 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{}`)
 
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
 	for _, value := range values {
 		// push 17
-		var gasMeter2 GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
+		var gasMeter2 types.GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
 		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 
 	// query the sum
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"sum":{}}`)
 	env := MockEnvBin(t)
@@ -213,7 +213,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
 		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-		igasMeter := GasMeter(gasMeter)
+		igasMeter := types.GasMeter(gasMeter)
 		store := setup.Store(gasMeter)
 
 		// query reduce (multiple iterators at once)
@@ -267,7 +267,7 @@ func TestQueueIteratorLimit(t *testing.T) {
 	// Open 5000 iterators
 	gasLimit = TESTING_GAS_LIMIT
 	gasMeter := NewMockGasMeter(gasLimit)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"open_iterators":{"count":5000}}`)
 	env := MockEnvBin(t)
@@ -281,7 +281,7 @@ func TestQueueIteratorLimit(t *testing.T) {
 	// Open 35000 iterators
 	gasLimit = TESTING_GAS_LIMIT * 4
 	gasMeter = NewMockGasMeter(gasLimit)
-	igasMeter = GasMeter(gasMeter)
+	igasMeter = types.GasMeter(gasMeter)
 	store = setup.Store(gasMeter)
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)

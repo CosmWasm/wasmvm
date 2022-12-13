@@ -185,7 +185,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
@@ -289,7 +289,7 @@ func TestInstantiate(t *testing.T) {
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
@@ -316,7 +316,7 @@ func TestExecute(t *testing.T) {
 	checksum := createTestContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -337,7 +337,7 @@ func TestExecute(t *testing.T) {
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
 	info = MockInfoBin(t, "fred")
@@ -380,7 +380,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	checksum := createTestContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -402,7 +402,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	// execute a cpu loop
 	maxGas := uint64(40_000_000)
 	gasMeter2 := NewMockGasMeter(maxGas)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
@@ -420,7 +420,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	maxGas := TESTING_GAS_LIMIT
 	gasMeter1 := NewMockGasMeter(maxGas)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -437,7 +437,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	// execute a storage loop
 	gasMeter2 := NewMockGasMeter(maxGas)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
@@ -460,7 +460,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 
 	maxGas := TESTING_GAS_LIMIT
 	gasMeter1 := NewMockGasMeter(maxGas)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	balance := types.Coins{types.NewCoin(250, "ATOM")}
@@ -475,7 +475,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	requireOkResponse(t, res, 0)
 
 	gasMeter2 := NewMockGasMeter(maxGas)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	failingApi := NewMockFailureAPI()
@@ -490,7 +490,7 @@ func TestMigrate(t *testing.T) {
 	checksum := createTestContract(t, cache)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
@@ -536,7 +536,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// instance1 controlled by fred
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	store1 := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
@@ -551,7 +551,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store2 := NewLookup(gasMeter2)
 	info = MockInfoBin(t, "chrous")
 	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
@@ -589,7 +589,7 @@ func TestSudo(t *testing.T) {
 	checksum := createTestContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -605,7 +605,7 @@ func TestSudo(t *testing.T) {
 
 	// call sudo with same store
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
 	msg = []byte(`{"steal_funds":{"recipient":"community-pool","amount":[{"amount":"700","denom":"gold"}]}}`)
@@ -633,7 +633,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	checksum := createReflectContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -661,7 +661,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
 	res, _, err = Execute(cache, checksum, env, info, payloadMsg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -686,7 +686,7 @@ func TestReplyAndQuery(t *testing.T) {
 	checksum := createReflectContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
@@ -721,7 +721,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
 	res, _, err = Reply(cache, checksum, env, replyBin, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -795,9 +795,9 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store KVStore, api *GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, signer)
 	res, cost, err := Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -817,7 +817,7 @@ func TestQuery(t *testing.T) {
 
 	// set up contract
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
@@ -829,7 +829,7 @@ func TestQuery(t *testing.T) {
 
 	// invalid query
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter2 := GasMeter(gasMeter2)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	query := []byte(`{"Raw":{"val":"config"}}`)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -841,7 +841,7 @@ func TestQuery(t *testing.T) {
 
 	// make a valid query
 	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter3 := GasMeter(gasMeter3)
+	igasMeter3 := types.GasMeter(gasMeter3)
 	store.SetGasMeter(gasMeter3)
 	query = []byte(`{"verifier":{}}`)
 	data, _, err = Query(cache, checksum, env, query, &igasMeter3, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -860,7 +860,7 @@ func TestHackatomQuerier(t *testing.T) {
 
 	// set up contract
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Coins{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
@@ -902,7 +902,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 
 	// set up contract
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Coins{types.NewCoin(1234, "ATOM")}
