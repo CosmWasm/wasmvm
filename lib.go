@@ -15,16 +15,16 @@ type Checksum []byte
 type WasmCode []byte
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
-type KVStore = api.KVStore
+type KVStore = types.KVStore
 
 // GoAPI is a reference to some "precompiles", go callbacks
-type GoAPI = api.GoAPI
+type GoAPI = types.GoAPI
 
 // Querier lets us make read-only queries on other modules
 type Querier = types.Querier
 
 // GasMeter is a read-only version of the sdk gas meter
-type GasMeter = api.GasMeter
+type GasMeter = types.GasMeter
 
 // VM is the main entry point to this library.
 // You should create an instance with its own subdirectory to manage state inside,
