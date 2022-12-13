@@ -247,6 +247,53 @@ jobs:
             - libwasmvm/target/release/deps
           key: cargocache-v3-build_shared_library-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
+  # Analogue to build_shared_library this builds wasmvm.dll using a native Rust installation
+  # (i.e. no docker builders). In contrast to libwasmvm_sanity_windows this is a release build
+  # and gets its own build cache.
+  build_shared_library_windows:
+    executor:
+      name: win/default
+      shell: bash.exe
+    steps:
+      - checkout
+      - run:
+          name: Reset git config set by CircleCI to make Cargo work
+          command: git config --global --unset url.ssh://git@github.com.insteadof
+      - run:
+          name: Install make
+          command: |
+            set -o errexit
+            choco install -y make
+      - run:
+          name: Install Rust
+          command: |
+            set -o errexit
+            curl -sS --output rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
+            ./rustup-init.exe --no-modify-path --profile minimal --default-toolchain 1.60.0 -y
+            echo 'export PATH="$PATH;$USERPROFILE/.cargo/bin"' >> "$BASH_ENV"
+      - run:
+          name: Show Rust version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cachev4-build_shared_library_windows-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cachev4-build_shared_library_windows-rust:1.60.0-
+      - run:
+          name: Create release build of libwasmvm
+          command: make build-rust
+      - persist_to_workspace:
+          root: ./internal/api
+          paths:
+            - wasmvm.dll
+      - save_cache:
+          paths:
+            # ".." is the easiest way to get $HOME here (pwd is $HOME\project)
+            - ../.cargo/registry
+            - libwasmvm/target/release/.fingerprint
+            - libwasmvm/target/release/build
+            - libwasmvm/target/release/deps
+          key: cachev4-build_shared_library_windows-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
+
   # Test the Go project
   wasmvm_test:
     docker:
@@ -379,6 +426,7 @@ workflows:
           filters: # required since other jobs with tag filters require this one
             tags:
               only: /.*/
+      - build_shared_library_windows
       - wasmvm_test:
           requires:
             - build_shared_library
