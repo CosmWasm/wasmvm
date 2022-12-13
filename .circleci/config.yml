@@ -86,7 +86,7 @@ jobs:
             - cargocache-v3-libwasmvm_audit-rust:1.65.0-
       - run:
           name: Install cargo-audit
-          command: cargo install --debug cargo-audit --version 0.17.0
+          command: cargo install --debug cargo-audit --version 0.17.4
       - run:
           name: Run cargo-audit
           working_directory: libwasmvm
