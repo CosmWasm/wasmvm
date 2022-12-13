@@ -113,6 +113,19 @@ jobs:
           command: |
             [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
 
+  # Build types and cosmwam package without cgo
+  no-cgo:
+    docker:
+      - image: cimg/go:1.18.8
+    steps:
+      - checkout
+      - run:
+          name: Build package "types" without cgo
+          command: CGO_ENABLED=0 go build ./types
+      - run:
+          name: Build package "cosmwasm" without cgo
+          command: CGO_ENABLED=0 go build .
+
   tidy-go:
     docker:
       - image: cimg/go:1.18.8
@@ -310,6 +323,7 @@ workflows:
       - libwasmvm_sanity
       - libwasmvm_audit
       - format-go
+      - no-cgo
       - tidy-go
       - format-scripts
       - lint-scripts
