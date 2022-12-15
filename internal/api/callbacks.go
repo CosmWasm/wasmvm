@@ -92,35 +92,7 @@ func recoverPanic(ret *C.GoError) {
 	}
 }
 
-type Gas = uint64
-
-// GasMeter is a copy of an interface declaration from cosmos-sdk
-// https://github.com/cosmos/cosmos-sdk/blob/18890a225b46260a9adc587be6fa1cc2aff101cd/store/types/gas.go#L34
-type GasMeter interface {
-	GasConsumed() Gas
-}
-
 /****** DB ********/
-
-// KVStore copies a subset of types from cosmos-sdk
-// We may wish to make this more generic sometime in the future, but not now
-// https://github.com/cosmos/cosmos-sdk/blob/bef3689245bab591d7d169abd6bea52db97a70c7/store/types/store.go#L170
-type KVStore interface {
-	Get(key []byte) []byte
-	Set(key, value []byte)
-	Delete(key []byte)
-
-	// Iterator over a domain of keys in ascending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	// To iterate over entire domain, use store.Iterator(nil, nil)
-	Iterator(start, end []byte) dbm.Iterator
-
-	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
-	// Iterator must be closed by caller.
-	ReverseIterator(start, end []byte) dbm.Iterator
-}
 
 var db_vtable = C.Db_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
@@ -130,7 +102,7 @@ var db_vtable = C.Db_vtable{
 }
 
 type DBState struct {
-	Store KVStore
+	Store types.KVStore
 	// CallID is used to lookup the proper frame for iterators associated with this contract call (iterator.go)
 	CallID uint64
 }
@@ -140,7 +112,7 @@ type DBState struct {
 //	state := buildDBState(kv, callID)
 //	db := buildDB(&state, &gasMeter)
 //	// then pass db into some FFI function
-func buildDBState(kv KVStore, callID uint64) DBState {
+func buildDBState(kv types.KVStore, callID uint64) DBState {
 	return DBState{
 		Store:  kv,
 		CallID: callID,
@@ -149,7 +121,7 @@ func buildDBState(kv KVStore, callID uint64) DBState {
 
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildDB(state *DBState, gm *GasMeter) C.Db {
+func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 	return C.Db{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
 		state:     (*C.db_t)(unsafe.Pointer(state)),
@@ -191,8 +163,8 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
+	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
 	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
@@ -219,8 +191,8 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8Sli
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
+	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
 	k := copyU8Slice(key)
 	v := copyU8Slice(val)
 
@@ -244,8 +216,8 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
-	kv := *(*KVStore)(unsafe.Pointer(ptr))
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
+	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
 	k := copyU8Slice(key)
 
 	gasBefore := gm.GasConsumed()
@@ -268,7 +240,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	state := (*DBState)(unsafe.Pointer(ptr))
 	kv := state.Store
 	s := copyU8Slice(start)
@@ -316,7 +288,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	gm := *(*GasMeter)(unsafe.Pointer(gasMeter))
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_index))
 	if iter == nil {
 		panic("Unable to retrieve iterator.")
@@ -340,18 +312,6 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	return C.GoError_None
 }
 
-/***** GoAPI *******/
-
-type (
-	HumanizeAddress     func([]byte) (string, uint64, error)
-	CanonicalizeAddress func(string) ([]byte, uint64, error)
-)
-
-type GoAPI struct {
-	HumanAddress     HumanizeAddress
-	CanonicalAddress CanonicalizeAddress
-}
-
 var api_vtable = C.GoApi_vtable{
 	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
 	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
@@ -359,7 +319,7 @@ var api_vtable = C.GoApi_vtable{
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
 // since this is only used internally, we can verify the code that this is the case
-func buildAPI(api *GoAPI) C.GoApi {
+func buildAPI(api *types.GoAPI) C.GoApi {
 	return C.GoApi{
 		state:  (*C.api_t)(unsafe.Pointer(api)),
 		vtable: api_vtable,
@@ -377,7 +337,7 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	api := (*GoAPI)(unsafe.Pointer(ptr))
+	api := (*types.GoAPI)(unsafe.Pointer(ptr))
 	s := copyU8Slice(src)
 
 	h, cost, err := api.HumanAddress(s)
@@ -405,7 +365,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
-	api := (*GoAPI)(unsafe.Pointer(ptr))
+	api := (*types.GoAPI)(unsafe.Pointer(ptr))
 	s := string(copyU8Slice(src))
 	c, cost, err := api.CanonicalAddress(s)
 	*used_gas = cu64(cost)
