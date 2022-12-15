@@ -125,6 +125,12 @@ jobs:
       - run:
           name: Build package "cosmwasm" without cgo
           command: CGO_ENABLED=0 go build .
+      - run:
+          name: Test package "types" without cgo
+          command: CGO_ENABLED=0 go test ./types
+      - run:
+          name: Test package "cosmwasm" without cgo
+          command: CGO_ENABLED=0 go test .
 
   tidy-go:
     docker:
