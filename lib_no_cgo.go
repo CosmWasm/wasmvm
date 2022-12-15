@@ -23,3 +23,12 @@ type Querier = types.Querier
 
 // GasMeter is a read-only version of the sdk gas meter
 type GasMeter = types.GasMeter
+
+// LibwasmvmVersion returns the version of the loaded library
+// at runtime. This can be used for debugging to verify the loaded version
+// matches the expected version.
+//
+// When cgo is disabled at build time, this returns an error at runtime.
+func LibwasmvmVersion() (string, error) {
+	return libwasmvmVersionImpl()
+}
