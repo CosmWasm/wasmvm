@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	TESTING_FEATURES     = "staking,stargate,iterator"
+	TESTING_FEATURES     = "staking,stargate,iterator,cosmwasm_1_1,cosmwasm_1_2"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
@@ -201,7 +201,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
@@ -214,7 +214,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Pin
 	err = Pin(cache, checksum)
@@ -227,8 +227,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
@@ -243,8 +243,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Unpin
 	err = Unpin(cache, checksum)
@@ -259,7 +259,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
@@ -275,7 +275,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 }
 
 func TestInstantiate(t *testing.T) {
@@ -301,7 +301,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1432036ec), cost)
+	assert.Equal(t, uint64(0x13a78a36c), cost)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
@@ -332,7 +332,7 @@ func TestExecute(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1432036ec), cost)
+	assert.Equal(t, uint64(0x13a78a36c), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute with the same store
@@ -345,7 +345,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Now().Sub(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x2335827f0), cost)
+	assert.Equal(t, uint64(0x222892d70), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -396,7 +396,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1432036ec), cost)
+	assert.Equal(t, uint64(0x13a78a36c), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute a cpu loop
@@ -547,7 +547,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x140fd2fdc), cost)
+	assert.Equal(t, uint64(0x138559c5c), cost)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -558,14 +558,14 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x142390b3c), cost)
+	assert.Equal(t, uint64(0x1399177bc), cost)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x129b512e0)
+	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x1218ff5d0)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x23257cef0)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x22188d470)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes := resp.Ok.Attributes
@@ -574,7 +574,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x232d7fb70)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x2220900f0)
 	require.Equal(t, "", resp.Err)
 	require.Equal(t, 1, len(resp.Ok.Messages))
 	attributes = resp.Ok.Attributes
