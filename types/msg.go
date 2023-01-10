@@ -142,8 +142,12 @@ type GovMsg struct {
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64     `json:"proposal_id"`
-	Vote       voteOption `json:"vote"`
+	ProposalId uint64 `json:"proposal_id"`
+	// Vote is the vote option.
+	//
+	// This should be called "option" for consistency with Cosmos SDK. Sorry for that.
+	// See <https://github.com/CosmWasm/cosmwasm/issues/1571>.
+	Vote voteOption `json:"vote"`
 }
 
 type VoteWeightedMsg struct {
