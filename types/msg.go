@@ -135,6 +135,8 @@ type IBCMsg struct {
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
 	Vote *VoteMsg `json:"vote,omitempty"`
+	/// This maps directly to [MsgVoteWeighted](https://github.com/cosmos/cosmos-sdk/blob/v0.45.8/proto/cosmos/gov/v1beta1/tx.proto#L66-L78) in the Cosmos SDK with voter set to the contract address.
+	VoteWeighted *VoteWeightedMsg `json:"vote_weighted,omitempty"`
 }
 
 type voteOption int
@@ -142,6 +144,17 @@ type voteOption int
 type VoteMsg struct {
 	ProposalId uint64     `json:"proposal_id"`
 	Vote       voteOption `json:"vote"`
+}
+
+type VoteWeightedMsg struct {
+	ProposalId uint64               `json:"proposal_id"`
+	Options    []WeightedVoteOption `json:"options"`
+}
+
+type WeightedVoteOption struct {
+	Option voteOption `json:"option"`
+	// Weight is a Decimal string, e.g. "0.25" for 25%
+	Weight string `json:"weight"`
 }
 
 const (
