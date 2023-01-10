@@ -271,11 +271,12 @@ type StargateMsg struct {
 }
 
 type WasmMsg struct {
-	Execute     *ExecuteMsg     `json:"execute,omitempty"`
-	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
-	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
-	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
-	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
+	Execute      *ExecuteMsg      `json:"execute,omitempty"`
+	Instantiate  *InstantiateMsg  `json:"instantiate,omitempty"`
+	Instantiate2 *Instantiate2Msg `json:"instantiate2,omitempty"`
+	Migrate      *MigrateMsg      `json:"migrate,omitempty"`
+	UpdateAdmin  *UpdateAdminMsg  `json:"update_admin,omitempty"`
+	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -302,7 +303,7 @@ type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Funds Coins `json:"funds"`
@@ -310,6 +311,23 @@ type InstantiateMsg struct {
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
 	Admin string `json:"admin,omitempty"`
+}
+
+// Instantiate2Msg will create a new contract instance from a previously uploaded CodeID
+// using the predictable address derivation.
+type Instantiate2Msg struct {
+	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
+	CodeID uint64 `json:"code_id"`
+	// Msg is assumed to be a json-encoded message, which will be passed directly
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
+	Msg []byte `json:"msg"`
+	// Send is an optional amount of coins this contract sends to the called contract
+	Funds Coins `json:"funds"`
+	// Label is optional metadata to be stored with a contract instance.
+	Label string `json:"label"`
+	// Admin (optional) may be set here to allow future migrations from this address
+	Admin string `json:"admin,omitempty"`
+	Salt  []byte `json:"salt"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)
