@@ -54,7 +54,7 @@ fn do_init_cache(
         .read()
         .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
     let dir_str = String::from_utf8(dir.to_vec())?;
-    // parse the supported features
+    // parse the supported capabilities
     let capabilities_bin = available_capabilities
         .read()
         .ok_or_else(|| Error::unset_arg(AVAILABLE_CAPABILITIES_ARG))?;
@@ -340,12 +340,12 @@ mod tests {
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -359,12 +359,12 @@ mod tests {
     #[test]
     fn init_cache_writes_error() {
         let dir: String = String::from("broken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -381,12 +381,12 @@ mod tests {
     #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -409,12 +409,12 @@ mod tests {
     #[test]
     fn load_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -449,12 +449,12 @@ mod tests {
     #[test]
     fn pin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -497,12 +497,12 @@ mod tests {
     #[test]
     fn unpin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -554,12 +554,12 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking,stargate,iterator";
+        let capabilities = b"staking,stargate,iterator";
 
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
@@ -649,13 +649,13 @@ mod tests {
     #[test]
     fn get_metrics_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let features = b"staking";
+        let capabilities = b"staking";
 
         // Init cache
         let mut error_msg = UnmanagedVector::default();
         let cache_ptr = init_cache(
             ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(features),
+            ByteSliceView::new(capabilities),
             512,
             32,
             Some(&mut error_msg),
