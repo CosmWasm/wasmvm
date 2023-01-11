@@ -114,6 +114,22 @@ func TestStoreCodeAndGet(t *testing.T) {
 	require.Equal(t, WasmCode(wasm), code)
 }
 
+func TestRemoveCode(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	checksum, err := vm.StoreCode(wasm)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.ErrorContains(t, err, "Wasm file does not exist")
+}
+
 func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)

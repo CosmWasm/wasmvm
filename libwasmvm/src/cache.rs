@@ -105,6 +105,32 @@ fn do_save_wasm(
 }
 
 #[no_mangle]
+pub extern "C" fn remove_wasm(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_wasm(c, checksum)))
+            .unwrap_or_else(|_| Err(Error::panic())),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_remove_wasm(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksum: ByteSliceView,
+) -> Result<(), Error> {
+    let checksum: Checksum = checksum
+        .read()
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
+        .try_into()?;
+    cache.remove_wasm(&checksum)?;
+    Ok(())
+}
+
+#[no_mangle]
 pub extern "C" fn load_wasm(
     cache: *mut cache_t,
     checksum: ByteSliceView,
@@ -402,6 +428,60 @@ mod tests {
         );
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
+
+        release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn remove_wasm_works() {
+        let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
+        let capabilities = b"staking";
+
+        let mut error_msg = UnmanagedVector::default();
+        let cache_ptr = init_cache(
+            ByteSliceView::new(dir.as_bytes()),
+            ByteSliceView::new(capabilities),
+            512,
+            32,
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+
+        let mut error_msg = UnmanagedVector::default();
+        let checksum = save_wasm(
+            cache_ptr,
+            ByteSliceView::new(HACKATOM),
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+        let checksum = checksum.consume().unwrap_or_default();
+
+        // Removing once works
+        let mut error_msg = UnmanagedVector::default();
+        remove_wasm(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        assert!(error_msg.is_none());
+        let _ = error_msg.consume();
+
+        // Removing again fails
+        let mut error_msg = UnmanagedVector::default();
+        remove_wasm(
+            cache_ptr,
+            ByteSliceView::new(&checksum),
+            Some(&mut error_msg),
+        );
+        let error_msg = error_msg
+            .consume()
+            .map(|e| String::from_utf8_lossy(&e).into_owned());
+        assert_eq!(
+            error_msg.unwrap(),
+            "Error calling the VM: Cache error: Wasm file does not exist"
+        );
 
         release_cache(cache_ptr);
     }

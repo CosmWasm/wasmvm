@@ -72,6 +72,25 @@ func TestStoreCodeAndGetCode(t *testing.T) {
 	require.Equal(t, wasm, code)
 }
 
+func TestRemoveCode(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	checksum, err := StoreCode(cache, wasm)
+	require.NoError(t, err)
+
+	// First removal works
+	err = RemoveCode(cache, checksum)
+	require.NoError(t, err)
+
+	// Second removal fails
+	err = RemoveCode(cache, checksum)
+	require.ErrorContains(t, err, "Wasm file does not exist")
+}
+
 func TestStoreCodeFailsWithBadData(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
