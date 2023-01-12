@@ -797,6 +797,10 @@ func createHackatomContract(t *testing.T, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
+func createCyberpunkContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+}
+
 func createQueueContract(t *testing.T, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/queue.wasm")
 }
