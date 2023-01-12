@@ -393,6 +393,64 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, expectedData, result.Ok.Data)
 }
 
+func TestExecutePanic(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createCyberpunkContract(t, cache)
+
+	maxGas := TESTING_GAS_LIMIT
+	gasMeter1 := NewMockGasMeter(maxGas)
+	igasMeter1 := types.GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	res, _, err := Instantiate(cache, checksum, env, info, []byte(`{}`), &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// execute a panic
+	gasMeter2 := NewMockGasMeter(maxGas)
+	igasMeter2 := types.GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	info = MockInfoBin(t, "fred")
+	res, _, err = Execute(cache, checksum, env, info, []byte(`{"panic":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	require.ErrorContains(t, err, "RuntimeError: Aborted: panicked at 'This page intentionally faulted'")
+}
+
+func TestExecuteUnreachable(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createCyberpunkContract(t, cache)
+
+	maxGas := TESTING_GAS_LIMIT
+	gasMeter1 := NewMockGasMeter(maxGas)
+	igasMeter1 := types.GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	res, _, err := Instantiate(cache, checksum, env, info, []byte(`{}`), &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// execute a panic
+	gasMeter2 := NewMockGasMeter(maxGas)
+	igasMeter2 := types.GasMeter(gasMeter2)
+	store.SetGasMeter(gasMeter2)
+	info = MockInfoBin(t, "fred")
+	res, _, err = Execute(cache, checksum, env, info, []byte(`{"unreachable":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	require.ErrorContains(t, err, "RuntimeError: unreachable")
+}
+
 func TestExecuteCpuLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
