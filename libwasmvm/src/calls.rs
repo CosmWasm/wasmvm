@@ -12,7 +12,7 @@ use cosmwasm_vm::{
 
 use crate::api::GoApi;
 use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
-use crate::cache::{cache_t, to_cache};
+use crate::cache::{to_cache, CachePtr};
 use crate::db::Db;
 use crate::error::{handle_c_error_binary, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
@@ -29,7 +29,7 @@ fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
 
 #[no_mangle]
 pub extern "C" fn instantiate(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     info: ByteSliceView,
@@ -61,7 +61,7 @@ pub extern "C" fn instantiate(
 
 #[no_mangle]
 pub extern "C" fn execute(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     info: ByteSliceView,
@@ -93,7 +93,7 @@ pub extern "C" fn execute(
 
 #[no_mangle]
 pub extern "C" fn migrate(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -123,7 +123,7 @@ pub extern "C" fn migrate(
 
 #[no_mangle]
 pub extern "C" fn sudo(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -153,7 +153,7 @@ pub extern "C" fn sudo(
 
 #[no_mangle]
 pub extern "C" fn reply(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -183,7 +183,7 @@ pub extern "C" fn reply(
 
 #[no_mangle]
 pub extern "C" fn query(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -213,7 +213,7 @@ pub extern "C" fn query(
 
 #[no_mangle]
 pub extern "C" fn ibc_channel_open(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -243,7 +243,7 @@ pub extern "C" fn ibc_channel_open(
 
 #[no_mangle]
 pub extern "C" fn ibc_channel_connect(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -273,7 +273,7 @@ pub extern "C" fn ibc_channel_connect(
 
 #[no_mangle]
 pub extern "C" fn ibc_channel_close(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -303,7 +303,7 @@ pub extern "C" fn ibc_channel_close(
 
 #[no_mangle]
 pub extern "C" fn ibc_packet_receive(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -333,7 +333,7 @@ pub extern "C" fn ibc_packet_receive(
 
 #[no_mangle]
 pub extern "C" fn ibc_packet_ack(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -363,7 +363,7 @@ pub extern "C" fn ibc_packet_ack(
 
 #[no_mangle]
 pub extern "C" fn ibc_packet_timeout(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -402,7 +402,7 @@ type VmFn2Args = fn(
 // the only difference is which low-level function they dispatch to.
 fn call_2_args(
     vm_fn: VmFn2Args,
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     arg1: ByteSliceView,
     arg2: ByteSliceView,
@@ -484,7 +484,7 @@ type VmFn3Args = fn(
 // The only difference is which low-level function they dispatch to.
 fn call_3_args(
     vm_fn: VmFn3Args,
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     arg1: ByteSliceView,
     arg2: ByteSliceView,
