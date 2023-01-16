@@ -642,16 +642,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "errno-sys"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c0007216af1525058024bc6dc15bbd2ffe8af877f0fbf754fbdb78c59d634e8"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
 name = "fallible-iterator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1918,7 +1908,6 @@ dependencies = [
  "cbindgen",
  "cosmwasm-std",
  "cosmwasm-vm",
- "errno-sys",
  "hex",
  "serde",
  "serde_json",
