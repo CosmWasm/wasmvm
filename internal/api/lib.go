@@ -67,6 +67,17 @@ func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
+func RemoveCode(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := newUnmanagedVector(nil)
+	_, err := C.remove_wasm(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)

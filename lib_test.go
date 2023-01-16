@@ -114,6 +114,22 @@ func TestStoreCodeAndGet(t *testing.T) {
 	require.Equal(t, WasmCode(wasm), code)
 }
 
+func TestRemoveCode(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	checksum, err := vm.StoreCode(wasm)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.ErrorContains(t, err, "Wasm file does not exist")
+}
+
 func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
@@ -254,7 +270,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
@@ -268,7 +284,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Pin
 	err = vm.Pin(checksum)
@@ -281,8 +297,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
@@ -298,8 +314,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Unpin
 	err = vm.Unpin(checksum)
@@ -314,7 +330,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
@@ -331,5 +347,5 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 }

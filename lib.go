@@ -60,6 +60,10 @@ func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
 	return api.StoreCode(vm.cache, code)
 }
 
+func (vm *VM) RemoveCode(checksum Checksum) error {
+	return api.RemoveCode(vm.cache, checksum)
+}
+
 // GetCode will load the original Wasm code for the given checksum.
 // This will only succeed if that checksum was previously returned from
 // a call to StoreCode.
