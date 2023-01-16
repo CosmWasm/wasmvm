@@ -3,7 +3,6 @@ use cosmwasm_vm::VmError;
 use std::backtrace::Backtrace;
 use thiserror::Error;
 
-use super::errno::set_errno;
 use crate::memory::UnmanagedVector;
 
 #[derive(Error, Debug)]
@@ -139,12 +138,11 @@ pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> i32
         // That's not nice but we can live with it.
     }
 
-    let errno = match err {
+    let errno: ErrnoValue = match err {
         RustError::OutOfGas { .. } => ErrnoValue::OutOfGas,
         _ => ErrnoValue::Other,
-    } as i32;
-    set_errno(errno);
-    errno
+    };
+    errno as i32
 }
 
 pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
