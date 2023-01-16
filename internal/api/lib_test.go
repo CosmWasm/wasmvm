@@ -473,26 +473,25 @@ func TestExecuteUnreachable(t *testing.T) {
 func TestExecuteCpuLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createHackatomContract(t, cache)
+	checksum := createCyberpunkContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(`{}`)
 
 	start := time.Now()
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff := time.Now().Sub(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x13a78a36c), cost)
+	assert.Equal(t, uint64(0xd45091d0), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
 
 	// execute a cpu loop
