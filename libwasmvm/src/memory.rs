@@ -129,10 +129,10 @@ impl U8SliceView {
 /// Transferring ownership from Rust to Go using return values of FFI calls:
 ///
 /// ```
-/// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
+/// # use wasmvm::{CachePtr, ByteSliceView, UnmanagedVector};
 /// #[no_mangle]
 /// pub extern "C" fn save_wasm_to_cache(
-///     cache: *mut cache_t,
+///     cache: CachePtr,
 ///     wasm: ByteSliceView,
 ///     error_msg: Option<&mut UnmanagedVector>,
 /// ) -> UnmanagedVector {
