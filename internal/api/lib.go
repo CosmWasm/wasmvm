@@ -56,24 +56,26 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr) // No error case that needs handling
 }
 
+/// StoreCode stored the Wasm blob and returns the checksum
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := newUnmanagedVector(nil)
-	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
-	if err != nil {
-		return nil, ffiErrorWithMessage(err, errmsg)
+	out := newUnmanagedVector(nil)
+	err := C.save_wasm(cache.ptr, w, &errmsg, &out)
+	if err != 0 {
+		return nil, ffiErrorWithMessage2(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(checksum), nil
+	return copyAndDestroyUnmanagedVector(out), nil
 }
 
 func RemoveCode(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	_, err := C.remove_wasm(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
+	err := C.remove_wasm(cache.ptr, cs, &errmsg)
+	if err != 0 {
+		return ffiErrorWithMessage2(err, errmsg)
 	}
 	return nil
 }
@@ -82,20 +84,21 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return nil, ffiErrorWithMessage(err, errmsg)
+	out := newUnmanagedVector(nil)
+	err := C.load_wasm(cache.ptr, cs, &errmsg, &out)
+	if err != 0 {
+		return nil, ffiErrorWithMessage2(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(wasm), nil
+	return copyAndDestroyUnmanagedVector(out), nil
 }
 
 func Pin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	_, err := C.pin(cache.ptr, cs, &errmsg) // returns (_Ctype_void, syscall.Errno)
-	if err != nil {
-		return ffiErrorWithMessage(err, errmsg)
+	err := C.pin(cache.ptr, cs, &errmsg)
+	if err != 0 {
+		return ffiErrorWithMessage2(err, errmsg)
 	}
 	return nil
 }
@@ -104,9 +107,9 @@ func Unpin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := newUnmanagedVector(nil)
-	_, err := C.unpin(cache.ptr, cs, &errmsg) // returns (_Ctype_void, syscall.Errno)
-	if err != nil {
-		return ffiErrorWithMessage(err, errmsg)
+	err := C.unpin(cache.ptr, cs, &errmsg)
+	if err != 0 {
+		return ffiErrorWithMessage2(err, errmsg)
 	}
 	return nil
 }
@@ -607,6 +610,27 @@ func ffiErrorWithMessage(ffiErr error, errMsg C.UnmanagedVector) error {
 
 	if errno == 0 {
 		panic("Called ffiErrorWithMessage with a 0 errno (no error)")
+	}
+
+	// Checks for out of gas as a special case. See "ErrnoValue" in libwasmvm/src/error/rust.rs.
+	if errno == 2 {
+		return types.OutOfGasError{}
+	}
+
+	msg := copyAndDestroyUnmanagedVector(errMsg)
+	if msg == nil || len(msg) == 0 {
+		return fmt.Errorf("FFI call errored with errno %#v and no error message.", errno)
+	}
+	return fmt.Errorf("%s", string(msg))
+}
+
+// ffiErrorWithMessage2 takes a error number, tries to read the error message
+// written by the Rust code and returns a readable error.
+//
+// This function must only be called on non-zero error numbers.
+func ffiErrorWithMessage2(errno cint, errMsg C.UnmanagedVector) error {
+	if errno == 0 {
+		panic("Called ffiErrorWithMessage2 with a 0 error number (no error)")
 	}
 
 	// Checks for out of gas as a special case. See "ErrnoValue" in libwasmvm/src/error/rust.rs.
