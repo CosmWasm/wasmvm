@@ -126,7 +126,7 @@ pub fn clear_error() {
     set_errno(ErrnoValue::Success as i32);
 }
 
-pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) {
+pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) -> i32 {
     if let Some(error_msg) = error_msg {
         if error_msg.is_some() {
             panic!(
@@ -147,6 +147,16 @@ pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) {
         _ => ErrnoValue::Other,
     } as i32;
     set_errno(errno);
+    errno
+}
+
+pub fn set_out<T>(value: T, out_ptr: Option<&mut T>) {
+    if let Some(out_ref) = out_ptr {
+        *out_ref = value;
+    } else {
+        // The caller provided a nil pointer for the output message.
+        // That's not nice but we can live with it.
+    }
 }
 
 /// If `result` is Ok, this returns the Ok value and clears [errno].
@@ -212,6 +222,34 @@ where
             set_error(error, error_msg);
             Default::default()
         }
+    }
+}
+
+/// If `result` is Ok, this writes the Ok value to `out` and returns 0.
+/// Otherwise it writes the error message to `error_msg` and returns the error code.
+pub fn to_c_result_binary(
+    result: Result<UnmanagedVector, RustError>,
+    error_msg_ptr: Option<&mut UnmanagedVector>,
+    out_ptr: Option<&mut UnmanagedVector>,
+) -> i32 {
+    match result {
+        Ok(value) => {
+            set_out(value, out_ptr);
+            0
+        }
+        Err(error) => set_error(error, error_msg_ptr),
+    }
+}
+
+/// If `result` is Ok, this writes the Ok value to `out` and returns 0.
+/// Otherwise it writes the error message to `error_msg` and returns the error code.
+pub fn to_c_result_unit(
+    result: Result<(), RustError>,
+    error_msg_ptr: Option<&mut UnmanagedVector>,
+) -> i32 {
+    match result {
+        Ok(_) => 0,
+        Err(error) => set_error(error, error_msg_ptr),
     }
 }
 

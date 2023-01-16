@@ -309,21 +309,27 @@ struct cache_t *init_cache(struct ByteSliceView data_dir,
                            uint32_t instance_memory_limit,
                            struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector save_wasm(struct cache_t *cache,
-                                 struct ByteSliceView wasm,
-                                 struct UnmanagedVector *error_msg);
+int32_t save_wasm(struct cache_t *cache,
+                  struct ByteSliceView wasm,
+                  struct UnmanagedVector *error_msg,
+                  struct UnmanagedVector *out);
 
-void remove_wasm(struct cache_t *cache,
-                 struct ByteSliceView checksum,
-                 struct UnmanagedVector *error_msg);
+int32_t remove_wasm(struct cache_t *cache,
+                    struct ByteSliceView checksum,
+                    struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector load_wasm(struct cache_t *cache,
-                                 struct ByteSliceView checksum,
-                                 struct UnmanagedVector *error_msg);
+int32_t load_wasm(struct cache_t *cache,
+                  struct ByteSliceView checksum,
+                  struct UnmanagedVector *error_msg,
+                  struct UnmanagedVector *out);
 
-void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+int32_t pin(struct cache_t *cache,
+            struct ByteSliceView checksum,
+            struct UnmanagedVector *error_msg);
 
-void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+int32_t unpin(struct cache_t *cache,
+              struct ByteSliceView checksum,
+              struct UnmanagedVector *error_msg);
 
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
