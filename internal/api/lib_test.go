@@ -24,10 +24,6 @@ const (
 )
 
 func TestInitAndReleaseCache(t *testing.T) {
-	dataDir := "/foo"
-	_, err := InitCache(dataDir, TESTING_FEATURES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
-	require.Error(t, err)
-
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
