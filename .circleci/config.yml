@@ -298,7 +298,7 @@ jobs:
       - persist_to_workspace:
           root: internal\api
           paths:
-            - wasmvm.dll
+            - libwasmvm.a
       - save_cache:
           paths:
             # ".." is the easiest way to get $HOME here (pwd is $HOME\project)
@@ -355,8 +355,8 @@ jobs:
       - attach_workspace:
           at: C:/builds
       - run:
-          name: Copy .dll to system library path
-          command: cp /c/builds/wasmvm.dll /c/Windows/System32
+          name: Copy libwasmvm.a to system library path
+          command: cp /c/builds/libwasmvm.a /c/Windows/System32
       - run:
           name: Run Go tests
           command: make test
