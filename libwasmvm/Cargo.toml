@@ -11,13 +11,21 @@ readme = "README.md"
 exclude = [".circleci/*", ".gitignore"]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = [
+  "cdylib", # creates the .so/.dylib/.dll to be linked from other languages
+  "rlib",   # creates a Rust library that can be used for examples
+]
 
-# the example is to allow us to compile a muslc static lib with the same codebase as we compile the
-# normal dynamic libs (best workaround I could find to override crate-type on the command line)
+# Use examples as a workaround for changing the crate-type from the command line.
+# The example muslc is deprecated but required for old builder versions.
 [[example]]
 name = "muslc"
 path = "src/lib.rs"
+crate-type = ["staticlib"]
+
+[[example]]
+name = "staticwasmvm"
+path = "examples/staticwasmvm.rs"
 crate-type = ["staticlib"]
 
 [features]
