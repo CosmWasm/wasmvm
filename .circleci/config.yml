@@ -271,7 +271,7 @@ jobs:
 
   test_alpine_build:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:2022.10.1
     steps:
       - checkout
       - run: make test-alpine
@@ -281,7 +281,7 @@ jobs:
 
   deploy_to_git:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:2022.10.1
     resource_class: xlarge
     steps:
       - add_ssh_keys:
@@ -319,9 +319,12 @@ jobs:
 
   build_static_lib:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:2022.10.1
     resource_class: xlarge
     steps:
+      - run:
+          name: Check Go version # needed for ghr installation
+          command: go version
       - checkout
       - run:
           name: Build static library for Alpine
