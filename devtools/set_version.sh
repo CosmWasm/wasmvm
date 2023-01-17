@@ -41,15 +41,14 @@ git add "$CARGO_TOML" "$CARGO_LOCK"
 git commit -m "Set libwasmvm version: $NEW"
 git push
 
-while true ; do
-  sleep 30
+while true; do
+  echo "Waiting for library build commit ..."
+  sleep 45
   git pull
-  if git log --oneline | head -n 1 | grep "[skip ci] Built release libraries" ; then
-    TAG="v$VERSION"
+  if git log --oneline | head -n 1 | grep "[skip ci] Built release libraries"; then
+    TAG="v$NEW"
     git tag "$TAG"
     echo "Tag $TAG created. Please review and git push --tags"
     exit 0
-  else
-    echo "Waiting for library build commit ..."
   fi
 done
