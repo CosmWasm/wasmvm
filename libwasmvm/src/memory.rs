@@ -237,6 +237,16 @@ impl UnmanagedVector {
         }
     }
 
+    /// Creates a non-none UnmanagedVector with the given data.
+    pub fn some(data: impl Into<Vec<u8>>) -> Self {
+        Self::new(Some(data.into()))
+    }
+
+    /// Creates a none UnmanagedVector.
+    pub fn none() -> Self {
+        Self::new(None)
+    }
+
     pub fn is_none(&self) -> bool {
         self.is_none
     }
@@ -258,7 +268,7 @@ impl UnmanagedVector {
 
 impl Default for UnmanagedVector {
     fn default() -> Self {
-        Self::new(None)
+        Self::none()
     }
 }
 
@@ -345,9 +355,36 @@ mod test {
         // None
         let x = UnmanagedVector::new(None);
         assert!(x.is_none);
-        assert_eq!(x.ptr as usize, 0);
+        assert_eq!(x.ptr as usize, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.len, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.cap, 0); // this is not guaranteed, could be anything
+    }
+
+    #[test]
+    fn unmanaged_vector_some_works() {
+        // With data
+        let x = UnmanagedVector::some(vec![0x11, 0x22]);
+        assert!(!x.is_none);
+        assert_ne!(x.ptr as usize, 0);
+        assert_eq!(x.len, 2);
+        assert_eq!(x.cap, 2);
+
+        // Empty data
+        let x = UnmanagedVector::some(vec![]);
+        assert!(!x.is_none);
+        assert_eq!(x.ptr as usize, 0x01); // We probably don't get any guarantee for this, but good to know where the 0x01 marker pointer can come from
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
+    }
+
+    #[test]
+    fn unmanaged_vector_none_works() {
+        let x = UnmanagedVector::new(None);
+        assert!(x.is_none);
+
+        assert_eq!(x.ptr as usize, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.len, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.cap, 0); // this is not guaranteed, could be anything
     }
 
     #[test]
