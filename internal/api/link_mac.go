@@ -1,4 +1,4 @@
-//go:build darwin && !sys_wasmvm
+//go:build darwin && !static_wasm && !sys_wasmvm
 
 package api
 

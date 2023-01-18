@@ -335,6 +335,9 @@ jobs:
           name: Build static library for Alpine
           command: make release-build-alpine
       - run:
+          name: Build static library for MacOS
+          command: make release-build-macos-static
+      - run:
           name: Debug build results
           command: ls -l ./internal/api
       - run:
@@ -343,6 +346,7 @@ jobs:
             mkdir artifacts
             cp ./internal/api/libwasmvm_muslc.a artifacts/libwasmvm_muslc.x86_64.a
             cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/libwasmvm_muslc.aarch64.a
+            cp ./internal/api/static/libwasmvm_darwin.a artifacts/libwasmvm_darwin.a
       - run:
           name: Create checksums
           working_directory: artifacts
