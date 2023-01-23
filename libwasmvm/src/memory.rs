@@ -129,10 +129,10 @@ impl U8SliceView {
 /// Transferring ownership from Rust to Go using return values of FFI calls:
 ///
 /// ```
-/// # use wasmvm::{cache_t, ByteSliceView, UnmanagedVector};
+/// # use wasmvm::{CachePtr, ByteSliceView, UnmanagedVector};
 /// #[no_mangle]
 /// pub extern "C" fn save_wasm_to_cache(
-///     cache: *mut cache_t,
+///     cache: CachePtr,
 ///     wasm: ByteSliceView,
 ///     error_msg: Option<&mut UnmanagedVector>,
 /// ) -> UnmanagedVector {
@@ -200,7 +200,7 @@ impl U8SliceView {
 /// // `output` is ready to be passed around
 /// ```
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct UnmanagedVector {
     /// True if and only if this is None. If this is true, the other fields must be ignored.
     is_none: bool,
