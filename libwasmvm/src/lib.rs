@@ -20,7 +20,7 @@ mod version;
 // exports. There are no guarantees those exports are stable.
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use api::GoApi;
-pub use cache::{cache_t, load_wasm};
+pub use cache::{load_wasm, CachePtr};
 pub use db::{db_t, Db};
 pub use error::GoError;
 pub use memory::{

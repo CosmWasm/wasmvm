@@ -3,6 +3,17 @@ version: 2.1
 orbs:
   win: circleci/windows@5.0
 
+commands:
+  show_cpu_info:
+    steps:
+      - run:
+          name: Show CPU info
+          command: |
+            set -o errexit
+            curl -sS -L --output py-cpuinfo.zip https://github.com/workhorsy/py-cpuinfo/archive/refs/tags/v9.0.0.zip
+            unzip -q py-cpuinfo.zip
+            python py-cpuinfo-*/cpuinfo/cpuinfo.py
+
 jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
   libwasmvm_sanity:
@@ -79,6 +90,7 @@ jobs:
       - run:
           name: Reset git config set by CircleCI to make Cargo work
           command: git config --global --unset url.ssh://git@github.com.insteadof
+      - show_cpu_info
       - run:
           name: Install Rust
           command: |
@@ -233,7 +245,7 @@ jobs:
           name: Create release build of libwasmvm
           command: make build-rust
       - persist_to_workspace:
-          root: ./internal/api
+          root: internal/api
           paths:
             - libwasmvm.x86_64.so
       - save_cache:
@@ -246,6 +258,55 @@ jobs:
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
           key: cargocache-v3-build_shared_library-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
+
+  # Analogue to build_shared_library this builds wasmvm.dll using a native Rust installation
+  # (i.e. no docker builders). In contrast to libwasmvm_sanity_windows this is a release build
+  # and gets its own build cache.
+  build_shared_library_windows:
+    executor:
+      name: win/default
+      size: large
+      shell: bash.exe
+    steps:
+      - checkout
+      - run:
+          name: Reset git config set by CircleCI to make Cargo work
+          command: git config --global --unset url.ssh://git@github.com.insteadof
+      - show_cpu_info
+      - run:
+          name: Install make
+          command: |
+            set -o errexit
+            choco install -y make
+      - run:
+          name: Install Rust
+          command: |
+            set -o errexit
+            curl -sS --output rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
+            ./rustup-init.exe --no-modify-path --profile minimal --default-toolchain 1.60.0 -y
+            echo 'export PATH="$PATH;$USERPROFILE/.cargo/bin"' >> "$BASH_ENV"
+      - run:
+          name: Show Rust version information
+          command: rustc --version; cargo --version; rustup --version
+      - restore_cache:
+          keys:
+            - cachev4-build_shared_library_windows-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cachev4-build_shared_library_windows-rust:1.60.0-
+      - run:
+          name: Create release build of libwasmvm
+          command: make build-rust
+      - persist_to_workspace:
+          root: internal\api
+          paths:
+            - wasmvm.dll
+      - save_cache:
+          paths:
+            # ".." is the easiest way to get $HOME here (pwd is $HOME\project)
+            - ../.cargo/registry
+            - libwasmvm/target/release/.fingerprint
+            - libwasmvm/target/release/build
+            - libwasmvm/target/release/deps
+          key: cachev4-build_shared_library_windows-rust:1.60.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   # Test the Go project
   wasmvm_test:
@@ -268,6 +329,37 @@ jobs:
           name: Go tests with cgo and race condition safety checks
           command: make test-safety
       - run: make build-go
+
+  # Test the Go project on Windows
+  wasmvm_test_windows:
+    executor:
+      name: win/default
+      shell: bash.exe
+    environment:
+      GORACE: "halt_on_error=1"
+    steps:
+      - checkout
+      - show_cpu_info
+      - run:
+          name: Install make and mingw
+          # See https://github.com/docker/containerd-packaging/pull/294 for discussion around mingw version
+          command: |
+            set -o errexit
+            choco install -y make
+            choco install -y mingw --version 10.2.0 --allow-downgrade
+      - run:
+          name: Show Go version information
+          command: |
+            go version
+            make --version
+      - attach_workspace:
+          at: C:/builds
+      - run:
+          name: Copy .dll to system library path
+          command: cp /c/builds/wasmvm.dll /c/Windows/System32
+      - run:
+          name: Run Go tests
+          command: make test
 
   test_alpine_build:
     machine:
@@ -386,9 +478,13 @@ workflows:
           filters: # required since other jobs with tag filters require this one
             tags:
               only: /.*/
+      - build_shared_library_windows
       - wasmvm_test:
           requires:
             - build_shared_library
+      - wasmvm_test_windows:
+          requires:
+            - build_shared_library_windows
       - build_static_lib:
           requires:
             - build_shared_library
@@ -422,6 +518,7 @@ workflows:
             - format-scripts
             - lint-scripts
             - wasmvm_test
+            - wasmvm_test_windows
           filters:
             tags:
               ignore:

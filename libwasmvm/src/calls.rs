@@ -12,9 +12,9 @@ use cosmwasm_vm::{
 
 use crate::api::GoApi;
 use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_USED_ARG};
-use crate::cache::{cache_t, to_cache};
+use crate::cache::{to_cache, CachePtr};
 use crate::db::Db;
-use crate::error::{handle_c_error_binary, Error};
+use crate::error::{to_c_result, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -28,8 +28,9 @@ fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStor
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn instantiate(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     info: ByteSliceView,
@@ -41,7 +42,8 @@ pub extern "C" fn instantiate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_3_args(
         call_instantiate_raw,
         cache,
@@ -56,12 +58,14 @@ pub extern "C" fn instantiate(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn execute(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     info: ByteSliceView,
@@ -73,7 +77,8 @@ pub extern "C" fn execute(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_3_args(
         call_execute_raw,
         cache,
@@ -88,12 +93,14 @@ pub extern "C" fn execute(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn migrate(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -104,7 +111,8 @@ pub extern "C" fn migrate(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_migrate_raw,
         cache,
@@ -118,12 +126,14 @@ pub extern "C" fn migrate(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn sudo(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -134,7 +144,8 @@ pub extern "C" fn sudo(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_sudo_raw,
         cache,
@@ -148,12 +159,14 @@ pub extern "C" fn sudo(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn reply(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -164,7 +177,8 @@ pub extern "C" fn reply(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_reply_raw,
         cache,
@@ -178,12 +192,14 @@ pub extern "C" fn reply(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn query(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -194,7 +210,8 @@ pub extern "C" fn query(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_query_raw,
         cache,
@@ -208,12 +225,14 @@ pub extern "C" fn query(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_channel_open(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -224,7 +243,8 @@ pub extern "C" fn ibc_channel_open(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_channel_open_raw,
         cache,
@@ -238,12 +258,14 @@ pub extern "C" fn ibc_channel_open(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_channel_connect(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -254,7 +276,8 @@ pub extern "C" fn ibc_channel_connect(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_channel_connect_raw,
         cache,
@@ -268,12 +291,14 @@ pub extern "C" fn ibc_channel_connect(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_channel_close(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -284,7 +309,8 @@ pub extern "C" fn ibc_channel_close(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_channel_close_raw,
         cache,
@@ -298,12 +324,14 @@ pub extern "C" fn ibc_channel_close(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_packet_receive(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -314,7 +342,8 @@ pub extern "C" fn ibc_packet_receive(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_packet_receive_raw,
         cache,
@@ -328,12 +357,14 @@ pub extern "C" fn ibc_packet_receive(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_packet_ack(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -344,7 +375,8 @@ pub extern "C" fn ibc_packet_ack(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_packet_ack_raw,
         cache,
@@ -358,12 +390,14 @@ pub extern "C" fn ibc_packet_ack(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn ibc_packet_timeout(
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     env: ByteSliceView,
     msg: ByteSliceView,
@@ -374,7 +408,8 @@ pub extern "C" fn ibc_packet_timeout(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     call_2_args(
         call_ibc_packet_timeout_raw,
         cache,
@@ -388,6 +423,7 @@ pub extern "C" fn ibc_packet_timeout(
         print_debug,
         gas_used,
         error_msg,
+        out,
     )
 }
 
@@ -400,9 +436,10 @@ type VmFn2Args = fn(
 // this wraps all error handling and ffi for the 6 ibc entry points and query.
 // (all of which take env and one "msg" argument).
 // the only difference is which low-level function they dispatch to.
+#[must_use]
 fn call_2_args(
     vm_fn: VmFn2Args,
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     arg1: ByteSliceView,
     arg2: ByteSliceView,
@@ -413,7 +450,8 @@ fn call_2_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_call_2_args(
@@ -433,8 +471,8 @@ fn call_2_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    let data = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(data))
+    let r = r.map(UnmanagedVector::some);
+    to_c_result(r, error_msg, out)
 }
 
 // this is internal processing, same for all the 6 ibc entry points
@@ -482,9 +520,10 @@ type VmFn3Args = fn(
 // This wraps all error handling and ffi for instantiate, execute and migrate
 // (and anything else that takes env, info and msg arguments).
 // The only difference is which low-level function they dispatch to.
+#[must_use]
 fn call_3_args(
     vm_fn: VmFn3Args,
-    cache: *mut cache_t,
+    cache: CachePtr,
     checksum: ByteSliceView,
     arg1: ByteSliceView,
     arg2: ByteSliceView,
@@ -496,7 +535,8 @@ fn call_3_args(
     print_debug: bool,
     gas_used: Option<&mut u64>,
     error_msg: Option<&mut UnmanagedVector>,
-) -> UnmanagedVector {
+    out: Option<&mut UnmanagedVector>,
+) -> i32 {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || {
             do_call_3_args(
@@ -517,8 +557,8 @@ fn call_3_args(
         .unwrap_or_else(|_| Err(Error::panic())),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
-    let data = handle_c_error_binary(r, error_msg);
-    UnmanagedVector::new(Some(data))
+    let r = r.map(UnmanagedVector::some);
+    to_c_result(r, error_msg, out)
 }
 
 fn do_call_3_args(

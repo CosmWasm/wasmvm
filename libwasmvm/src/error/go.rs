@@ -14,7 +14,7 @@ use crate::memory::UnmanagedVector;
 //               You have been warned.
 //
 #[repr(i32)] // This makes it so the enum looks like a simple i32 to Go
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum GoError {
     None = 0,
     /// Go panicked for an unexpected reason.
