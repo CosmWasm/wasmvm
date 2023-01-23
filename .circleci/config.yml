@@ -296,9 +296,13 @@ jobs:
       - run:
           name: Build shared library for macOS
           command: make release-build-macos
-      - run:
-          name: Build shared library for Windows
-          command: make release-build-windows
+      # Shared libraries for Windows (.dll) currently do not work (https://github.com/CosmWasm/wasmvm/issues/389)
+      # and .dll builds are not deterministic.
+      # Deactivating this step to avoid polluting the git hostory.
+      #
+      # - run:
+      #     name: Build shared library for Windows
+      #     command: make release-build-windows
       - run:
           name: Debug build results
           command: ls -l ./internal/api
