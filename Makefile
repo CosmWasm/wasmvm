@@ -96,7 +96,7 @@ release-build-macos-static:
 		-v $(shell pwd)/libwasmvm:/code \
 		-v $(shell pwd)/builders/guest/build_macos_static.sh:/usr/local/bin/build_macos_static.sh \
 		$(BUILDERS_PREFIX)-cross build_macos_static.sh
-	cp libwasmvm/artifacts/libwasmvm_darwin.a internal/api/static/libwasmvm_darwin.a
+	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)

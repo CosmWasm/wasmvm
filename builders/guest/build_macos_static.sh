@@ -19,6 +19,6 @@ export CXX=o64-clang++
 cargo build --release --target x86_64-apple-darwin --example wasmvmstatic
 
 # Create a universal library with both archs
-lipo -output artifacts/libwasmvm_darwin.a -create \
+lipo -output artifacts/libwasmvmstatic_darwin.a -create \
   target/x86_64-apple-darwin/release/examples/libwasmvmstatic.a \
   target/aarch64-apple-darwin/release/examples/libwasmvmstatic.a

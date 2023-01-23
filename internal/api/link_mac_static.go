@@ -2,5 +2,5 @@
 
 package api
 
-// #cgo LDFLAGS: -L${SRCDIR}/static -lwasmvm_darwin
+// #cgo LDFLAGS: -L${SRCDIR} -lwasmvmstatic_darwin
 import "C"
