@@ -162,7 +162,8 @@ type WeightedVoteOption struct {
 }
 
 const (
-	Yes voteOption = iota
+	UnsetVoteOption voteOption = iota // The default value. We never return this in any valid instance (see toVoteOption).
+	Yes
 	No
 	Abstain
 	NoWithVeto
