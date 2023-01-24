@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "1.2.0-rc.1"
+version = "1.2.0"
 publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
