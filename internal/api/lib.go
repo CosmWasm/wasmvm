@@ -26,7 +26,9 @@ type (
 )
 
 // Pointers
-type cu8_ptr = *C.uint8_t
+type (
+	cu8_ptr = *C.uint8_t
+)
 
 type Cache struct {
 	ptr *C.cache_t

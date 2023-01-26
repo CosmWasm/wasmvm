@@ -180,7 +180,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 }
 
 //export cSet
-func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, val C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, val C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || gasMeter == nil || usedGas == nil || errOut == nil {
@@ -199,13 +199,13 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8Sli
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
 
 //export cDelete
-func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || gasMeter == nil || usedGas == nil || errOut == nil {
@@ -223,13 +223,13 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key C.U8
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
 
 //export cScan
-func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil || errOut == nil {
@@ -257,7 +257,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 		return C.GoError_BadArgument
 	}
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	cIterator, err := buildIterator(state.CallID, iter)
 	if err != nil {
@@ -272,7 +272,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, start C.U8
 }
 
 //export cNext
-func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
 	// typical usage of iterator
 	// 	for ; itr.Valid(); itr.Next() {
 	// 		k, v := itr.Key(); itr.Value()
@@ -305,7 +305,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *C.uint64_t, key *
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	*key = newUnmanagedVector(k)
 	*val = newUnmanagedVector(v)
@@ -397,7 +397,7 @@ func buildQuerier(q *Querier) C.GoQuerier {
 }
 
 //export cQueryExternal
-func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, request C.U8SliceView, result *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8SliceView, result *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if ptr == nil || usedGas == nil || result == nil || errOut == nil {
@@ -415,7 +415,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit C.uint64_t, usedGas *C.uint64_t, 
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint64(gasLimit))
 	gasAfter := querier.GasConsumed()
-	*usedGas = (C.uint64_t)(gasAfter - gasBefore)
+	*usedGas = (cu64)(gasAfter - gasBefore)
 
 	// serialize the response
 	bz, err := json.Marshal(res)
