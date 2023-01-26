@@ -40,7 +40,10 @@ pub extern "C" fn init_cache(
             instance_memory_limit,
         )
     })
-    .unwrap_or_else(|_| Err(Error::panic()));
+    .unwrap_or_else(|err| {
+        eprintln!("Panic in do_init_cache: {:?}", err);
+        Err(Error::panic())
+    });
     handle_c_error_ptr(r, error_msg) as *mut cache_t
 }
 
@@ -87,8 +90,12 @@ pub extern "C" fn save_wasm(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_save_wasm: {:?}", err);
+                Err(Error::panic())
+            })
+        }
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let checksum = handle_c_error_binary(r, error_msg);
@@ -112,7 +119,10 @@ pub extern "C" fn remove_wasm(
 ) {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_wasm(c, checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+            .unwrap_or_else(|err| {
+                eprintln!("Panic in do_remove_wasm: {:?}", err);
+                Err(Error::panic())
+            }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
@@ -138,7 +148,10 @@ pub extern "C" fn load_wasm(
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+            .unwrap_or_else(|err| {
+                eprintln!("Panic in do_load_wasm: {:?}", err);
+                Err(Error::panic())
+            }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
@@ -164,8 +177,12 @@ pub extern "C" fn pin(
     error_msg: Option<&mut UnmanagedVector>,
 ) {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_pin: {:?}", err);
+                Err(Error::panic())
+            })
+        }
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
@@ -190,8 +207,12 @@ pub extern "C" fn unpin(
     error_msg: Option<&mut UnmanagedVector>,
 ) {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_unpin: {:?}", err);
+                Err(Error::panic())
+            })
+        }
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
@@ -252,7 +273,10 @@ pub extern "C" fn analyze_code(
 ) -> AnalysisReport {
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+            .unwrap_or_else(|err| {
+                eprintln!("Panic in do_analyze_code: {:?}", err);
+                Err(Error::panic())
+            }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
@@ -326,8 +350,12 @@ pub extern "C" fn get_metrics(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> Metrics {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_get_metrics(c)))
-            .unwrap_or_else(|_| Err(Error::panic())),
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_get_metrics(c))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_get_metrics: {:?}", err);
+                Err(Error::panic())
+            })
+        }
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     handle_c_error_default(r, error_msg)
