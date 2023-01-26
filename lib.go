@@ -55,6 +55,7 @@ func (vm *VM) Create(code WasmCode) (Checksum, error) {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
+// See https://github.com/CosmWasm/wasmvm/issues/395
 func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
 	return api.StoreCode(vm.cache, code)
 }
