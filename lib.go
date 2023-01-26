@@ -27,7 +27,6 @@ type VM struct {
 // `memoryLimit` is the memory limit of each contract execution (in MiB)
 // `printDebug` is a flag to enable/disable printing debug logs from the contract to STDOUT. This should be false in production environments.
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
-// `deserCost` sets the gas cost of deserializing one byte of data.
 func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
 	if err != nil {
@@ -110,6 +109,10 @@ func (vm *VM) GetMetrics() (*types.Metrics, error) {
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Instantiate(
 	checksum Checksum,
 	env types.Env,
@@ -158,6 +161,10 @@ func (vm *VM) Instantiate(
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the env with relevant info on this instance (address, balance, etc)
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Execute(
 	checksum Checksum,
 	env types.Env,
@@ -203,6 +210,10 @@ func (vm *VM) Execute(
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Query(
 	checksum Checksum,
 	env types.Env,
@@ -246,6 +257,10 @@ func (vm *VM) Query(
 // the given data.
 //
 // MigrateMsg has some data on how to perform the migration.
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Migrate(
 	checksum Checksum,
 	env types.Env,
@@ -289,6 +304,10 @@ func (vm *VM) Migrate(
 //
 // These work much like Migrate (same scenario) but allows custom apps to extend the priviledged entry points
 // without forking cosmwasm-vm.
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Sudo(
 	checksum Checksum,
 	env types.Env,
@@ -330,6 +349,10 @@ func (vm *VM) Sudo(
 // of executing a SubMsg.
 //
 // These work much like Sudo (same scenario) but focuses on one specific case (and one message type)
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) Reply(
 	checksum Checksum,
 	env types.Env,
@@ -373,6 +396,10 @@ func (vm *VM) Reply(
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
 // during the handshake pahse
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCChannelOpen(
 	checksum Checksum,
 	env types.Env,
@@ -416,6 +443,10 @@ func (vm *VM) IBCChannelOpen(
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
 // during the handshake pahse
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCChannelConnect(
 	checksum Checksum,
 	env types.Env,
@@ -459,6 +490,10 @@ func (vm *VM) IBCChannelConnect(
 
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
 // at the end of the channel lifetime
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCChannelClose(
 	checksum Checksum,
 	env types.Env,
@@ -502,6 +537,10 @@ func (vm *VM) IBCChannelClose(
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
 // packet is received on a channel belonging to this contract
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCPacketReceive(
 	checksum Checksum,
 	env types.Env,
@@ -543,6 +582,10 @@ func (vm *VM) IBCPacketReceive(
 // IBCPacketAck is available on IBC-enabled contracts and is called when an
 // the response for an outgoing packet (previously sent by this contract)
 // is received
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCPacketAck(
 	checksum Checksum,
 	env types.Env,
@@ -587,6 +630,10 @@ func (vm *VM) IBCPacketAck(
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
 // outgoing packet (previously sent by this contract) will provably never be executed.
 // Usually handled like ack returning an error
+//
+// deserCost sets the gas cost of deserializing one byte of data, measured in [Cosmos SDK gas].
+//
+// [Cosmos SDK gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.2.0/docs/GAS.md
 func (vm *VM) IBCPacketTimeout(
 	checksum Checksum,
 	env types.Env,
