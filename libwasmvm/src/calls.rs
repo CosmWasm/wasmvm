@@ -430,7 +430,10 @@ fn call_2_args(
                 gas_used,
             )
         }))
-        .unwrap_or_else(|_| Err(Error::panic())),
+        .unwrap_or_else(|err| {
+            eprintln!("Panic in do_call_2_args: {:?}", err);
+            Err(Error::panic())
+        }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
@@ -514,7 +517,10 @@ fn call_3_args(
                 gas_used,
             )
         }))
-        .unwrap_or_else(|_| Err(Error::panic())),
+        .unwrap_or_else(|err| {
+            eprintln!("Panic in do_call_3_args: {:?}", err);
+            Err(Error::panic())
+        }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let data = handle_c_error_binary(r, error_msg);
