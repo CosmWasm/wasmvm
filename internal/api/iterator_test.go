@@ -117,7 +117,7 @@ func TestStoreIteratorHitsLimit(t *testing.T) {
 
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID, iter, limit)
-	require.ErrorContains(t, err, "Reached iterator limit (2)")
+	require.ErrorContains(t, err, "reached iterator limit (2)")
 
 	endCall(callID)
 }
@@ -221,8 +221,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
 		var reduced types.QueryResponse
-		err = json.Unmarshal(data, &reduced)
-		require.NoError(t, err)
+		_ = json.Unmarshal(data, &reduced)
 		require.Equal(t, "", reduced.Err)
 		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
@@ -285,6 +284,6 @@ func TestQueueIteratorLimit(t *testing.T) {
 	store = setup.Store(gasMeter)
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
-	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "Reached iterator limit (32768)")
+	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	require.ErrorContains(t, err, "reached iterator limit (32768)")
 }

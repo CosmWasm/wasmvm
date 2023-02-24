@@ -4,7 +4,7 @@ package cosmwasm
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
 func TestIBC(t *testing.T) {
 	vm := withVM(t)
 
-	wasm, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
+	wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
 
 	checksum, err := vm.StoreCode(wasm)
@@ -92,7 +92,7 @@ func TestIBCHandshake(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -159,7 +159,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -224,6 +224,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.NoError(t, err)
 	var accounts ListAccountsResponse
 	err = json.Unmarshal(qres, &accounts)
+	require.NoError(t, err)
 	require.Equal(t, 1, len(accounts.Accounts))
 	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
 	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
@@ -250,6 +251,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// assert app-level success
 	var ack AcknowledgeDispatch
 	err = json.Unmarshal(pres.Acknowledgement, &ack)
+	require.NoError(t, err)
 	require.Empty(t, ack.Err)
 
 	// error on message from another channel
@@ -261,6 +263,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// assert app-level failure
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
+	require.NoError(t, err)
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
 
 	// check for the expected custom event
@@ -278,7 +281,7 @@ func TestAnalyzeCode(t *testing.T) {
 	vm := withVM(t)
 
 	// Store non-IBC contract
-	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
@@ -290,7 +293,7 @@ func TestAnalyzeCode(t *testing.T) {
 	require.Equal(t, "", report.RequiredCapabilities)
 
 	// Store IBC contract
-	wasm2, err := ioutil.ReadFile(IBC_TEST_CONTRACT)
+	wasm2, err := os.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
 	checksum2, err := vm.StoreCode(wasm2)
 	require.NoError(t, err)
@@ -325,11 +328,11 @@ func TestIBCMsgGetCounterVersion(t *testing.T) {
 	const VERSION = "random-garbage"
 
 	msg1 := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, VERSION)
-	v, ok := msg1.GetCounterVersion()
+	_, ok := msg1.GetCounterVersion()
 	require.False(t, ok)
 
 	msg2 := api.MockIBCChannelOpenTry(CHANNEL_ID, types.Ordered, VERSION)
-	v, ok = msg2.GetCounterVersion()
+	v, ok := msg2.GetCounterVersion()
 	require.True(t, ok)
 	require.Equal(t, VERSION, v)
 
@@ -339,6 +342,6 @@ func TestIBCMsgGetCounterVersion(t *testing.T) {
 	require.Equal(t, VERSION, v)
 
 	msg4 := api.MockIBCChannelConnectConfirm(CHANNEL_ID, types.Ordered, VERSION)
-	v, ok = msg4.GetCounterVersion()
+	_, ok = msg4.GetCounterVersion()
 	require.False(t, ok)
 }
