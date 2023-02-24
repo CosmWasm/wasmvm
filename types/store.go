@@ -1,7 +1,7 @@
 package types
 
 import (
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
 )
 
 // KVStore copies a subset of types from cosmos-sdk
