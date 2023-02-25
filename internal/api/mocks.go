@@ -24,7 +24,7 @@ func MockEnv() types.Env {
 		Block: types.BlockInfo{
 			Height:  123,
 			Time:    1578939743_987654321,
-			ChainID: "foobar",
+			ChainID: Foobar,
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 4,
@@ -370,7 +370,7 @@ func NewMockAPI() *types.GoAPI {
 }
 
 func TestMockApi(t *testing.T) {
-	human := "foobar"
+	human := Foobar
 	canon, cost, err := MockCanonicalAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
@@ -507,7 +507,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	var resp CustomResponse
-	if query.Ping != nil {
+	if query.Ping != nil { //nolint:gocritic
 		resp.Msg = "PONG"
 	} else if query.Capitalized != nil {
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
@@ -520,7 +520,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 // ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
-	addr := "foobar"
+	addr := Foobar
 	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 
@@ -556,7 +556,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 }
 
 func TestBankQuerierBalance(t *testing.T) {
-	addr := "foobar"
+	addr := Foobar
 	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 

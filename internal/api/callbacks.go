@@ -159,7 +159,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*val).is_none || !(*errOut).is_none {
+	if !val.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -187,7 +187,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -284,7 +284,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.Unma
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !key.is_none || !(*val).is_none || !(*errOut).is_none {
+	if !key.is_none || !val.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -333,7 +333,7 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !dest.is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -361,7 +361,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !dest.is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -404,7 +404,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !result.is_none || !(*errOut).is_none {
+	if !result.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
