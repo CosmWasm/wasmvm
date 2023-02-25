@@ -843,7 +843,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
+func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) { //nolint:unparam
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)

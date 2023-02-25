@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	wasmvm "github.com/CosmWasm/wasmvm"
@@ -19,7 +18,7 @@ const (
 func main() {
 	file := os.Args[1]
 	fmt.Printf("Running %s...\n", file)
-	bz, err := ioutil.ReadFile(file)
+	bz, err := os.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}

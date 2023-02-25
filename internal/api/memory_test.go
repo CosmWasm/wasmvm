@@ -61,7 +61,7 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 func TestCopyDestroyUnmanagedVector(t *testing.T) {
 	{
 		// ptr, cap and len broken. Do not access those values when is_none is true
-		invalid_ptr := unsafe.Pointer(uintptr(42)) //go:nocheckptr
+		invalid_ptr := unsafe.Pointer(uintptr(42))
 		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalid_ptr), cusize(0xBB), cusize(0xAA))
 		copy := copyAndDestroyUnmanagedVector(uv)
 		require.Nil(t, copy)

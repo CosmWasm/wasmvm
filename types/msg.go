@@ -31,6 +31,8 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
+const null = "null"
+
 // Events must encode empty array as []
 type Events []Event
 
@@ -46,7 +48,7 @@ func (e Events) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (e *Events) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []Event
@@ -77,7 +79,7 @@ func (a EventAttributes) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON ensures that we get [] for empty arrays
 func (a *EventAttributes) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
+	if string(data) == "[]" || string(data) == null {
 		return nil
 	}
 	var raw []EventAttribute
@@ -142,7 +144,7 @@ type GovMsg struct {
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64 `json:"proposal_id"`
+	ProposalID uint64 `json:"proposal_id"`
 	// Vote is the vote option.
 	//
 	// This should be called "option" for consistency with Cosmos SDK. Sorry for that.
@@ -151,7 +153,7 @@ type VoteMsg struct {
 }
 
 type VoteWeightedMsg struct {
-	ProposalId uint64               `json:"proposal_id"`
+	ProposalID uint64               `json:"proposal_id"`
 	Options    []WeightedVoteOption `json:"options"`
 }
 
@@ -191,7 +193,7 @@ func (v voteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *voteOption) UnmarshalJSON(b []byte) error {
+func (v *voteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
@@ -202,7 +204,7 @@ func (s *voteOption) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid vote option '%v'", j)
 	}
-	*s = voteOption
+	*v = voteOption
 	return nil
 }
 

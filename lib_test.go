@@ -93,7 +93,7 @@ func TestStoreCode(t *testing.T) {
 
 	// Nil
 	{
-		var wasm []byte = nil
+		var wasm []byte
 		_, err := vm.StoreCode(wasm)
 		require.ErrorContains(t, err, "Null/Nil argument: wasm")
 	}
