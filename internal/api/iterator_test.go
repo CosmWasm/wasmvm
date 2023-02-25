@@ -143,7 +143,7 @@ func TestRetrieveIterator(t *testing.T) {
 	iter, _ = store.Iterator(nil, nil)
 	index22, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
-	iter, err = store.Iterator(nil, nil)
+	iter, _ = store.Iterator(nil, nil)
 	index23, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 
