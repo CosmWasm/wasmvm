@@ -8,7 +8,8 @@ import (
 type replyOn int
 
 const (
-	ReplyAlways replyOn = iota
+	UnsetReplyOn replyOn = iota // The default value. We never return this in any valid instance (see toReplyOn).
+	ReplyAlways
 	ReplySuccess
 	ReplyError
 	ReplyNever

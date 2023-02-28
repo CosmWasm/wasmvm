@@ -113,3 +113,69 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 		})
 	}
 }
+
+func TestWasmQuerySerialization(t *testing.T) {
+	var err error
+
+	// ContractInfo
+	document := []byte(`{"contract_info":{"contract_addr":"aabbccdd456"}}`)
+	var query WasmQuery
+	err = json.Unmarshal(document, &query)
+	require.NoError(t, err)
+
+	require.Nil(t, query.Smart)
+	require.Nil(t, query.Raw)
+	require.Nil(t, query.CodeInfo)
+	require.NotNil(t, query.ContractInfo)
+	require.Equal(t, "aabbccdd456", query.ContractInfo.ContractAddr)
+
+	// CodeInfo
+	document = []byte(`{"code_info":{"code_id":70}}`)
+	query = WasmQuery{}
+	err = json.Unmarshal(document, &query)
+	require.NoError(t, err)
+
+	require.Nil(t, query.Smart)
+	require.Nil(t, query.Raw)
+	require.Nil(t, query.ContractInfo)
+	require.NotNil(t, query.CodeInfo)
+	require.Equal(t, uint64(70), query.CodeInfo.CodeID)
+}
+
+func TestContractInfoResponseSerialization(t *testing.T) {
+	document := []byte(`{"code_id":67,"creator":"jane","admin":"king","pinned":true,"ibc_port":"wasm.123"}`)
+	var res ContractInfoResponse
+	err := json.Unmarshal(document, &res)
+	require.NoError(t, err)
+
+	require.Equal(t, ContractInfoResponse{
+		CodeID:  uint64(67),
+		Creator: "jane",
+		Admin:   "king",
+		Pinned:  true,
+		IBCPort: "wasm.123",
+	}, res)
+}
+
+func TestCodeInfoResponseSerialization(t *testing.T) {
+	// Deserializaton
+	document := []byte(`{"code_id":67,"creator":"jane","checksum":"f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"}`)
+	var res CodeInfoResponse
+	err := json.Unmarshal(document, &res)
+	require.NoError(t, err)
+	require.Equal(t, CodeInfoResponse{
+		CodeID:   uint64(67),
+		Creator:  "jane",
+		Checksum: ForceNewChecksum("f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"),
+	}, res)
+
+	// Serialization
+	myRes := CodeInfoResponse{
+		CodeID:   uint64(0),
+		Creator:  "sam",
+		Checksum: ForceNewChecksum("ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"),
+	}
+	serialized, err := json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.Equal(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
+}

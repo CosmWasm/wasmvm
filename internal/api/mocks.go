@@ -195,28 +195,28 @@ type ErrorGasOverflow struct {
 }
 
 type MockGasMeter interface {
-	GasMeter
-	ConsumeGas(amount Gas, descriptor string)
+	types.GasMeter
+	ConsumeGas(amount types.Gas, descriptor string)
 }
 
 type mockGasMeter struct {
-	limit    Gas
-	consumed Gas
+	limit    types.Gas
+	consumed types.Gas
 }
 
 // NewMockGasMeter returns a reference to a new mockGasMeter.
-func NewMockGasMeter(limit Gas) MockGasMeter {
+func NewMockGasMeter(limit types.Gas) MockGasMeter {
 	return &mockGasMeter{
 		limit:    limit,
 		consumed: 0,
 	}
 }
 
-func (g *mockGasMeter) GasConsumed() Gas {
+func (g *mockGasMeter) GasConsumed() types.Gas {
 	return g.consumed
 }
 
-func (g *mockGasMeter) Limit() Gas {
+func (g *mockGasMeter) Limit() types.Gas {
 	return g.limit
 }
 
@@ -230,7 +230,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 	return a + b, false
 }
 
-func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
+func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
@@ -243,7 +243,7 @@ func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	}
 }
 
-/*** Mock KVStore ****/
+/*** Mock types.KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
 // Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
@@ -331,9 +331,9 @@ func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
 	return iter
 }
 
-var _ KVStore = (*Lookup)(nil)
+var _ types.KVStore = (*Lookup)(nil)
 
-/***** Mock GoAPI ****/
+/***** Mock types.GoAPI ****/
 
 const CanonicalLength = 32
 
@@ -366,8 +366,8 @@ func MockHumanAddress(canon []byte) (string, uint64, error) {
 	return human, CostHuman, nil
 }
 
-func NewMockAPI() *GoAPI {
-	return &GoAPI{
+func NewMockAPI() *types.GoAPI {
+	return &types.GoAPI{
 		HumanAddress:     MockHumanAddress,
 		CanonicalAddress: MockCanonicalAddress,
 	}
@@ -398,7 +398,7 @@ type MockQuerier struct {
 
 var _ types.Querier = MockQuerier{}
 
-func DefaultQuerier(contractAddr string, coins types.Coins) Querier {
+func DefaultQuerier(contractAddr string, coins types.Coins) types.Querier {
 	balances := map[string]types.Coins{
 		contractAddr: coins,
 	}

@@ -11,6 +11,7 @@ type SystemError struct {
 	InvalidRequest     *InvalidRequest     `json:"invalid_request,omitempty"`
 	InvalidResponse    *InvalidResponse    `json:"invalid_response,omitempty"`
 	NoSuchContract     *NoSuchContract     `json:"no_such_contract,omitempty"`
+	NoSuchCode         *NoSuchCode         `json:"no_such_code,omitempty"`
 	Unknown            *Unknown            `json:"unknown,omitempty"`
 	UnsupportedRequest *UnsupportedRequest `json:"unsupported_request,omitempty"`
 }
@@ -32,6 +33,8 @@ func (a SystemError) Error() string {
 		return a.InvalidResponse.Error()
 	case a.NoSuchContract != nil:
 		return a.NoSuchContract.Error()
+	case a.NoSuchCode != nil:
+		return a.NoSuchCode.Error()
 	case a.Unknown != nil:
 		return a.Unknown.Error()
 	case a.UnsupportedRequest != nil:
@@ -65,6 +68,14 @@ type NoSuchContract struct {
 
 func (e NoSuchContract) Error() string {
 	return fmt.Sprintf("no such contract: %s", e.Addr)
+}
+
+type NoSuchCode struct {
+	CodeID uint64 `json:"code_id,omitempty"`
+}
+
+func (e NoSuchCode) Error() string {
+	return fmt.Sprintf("no such code: %d", e.CodeID)
 }
 
 type Unknown struct{}
@@ -111,6 +122,10 @@ func ToSystemError(err error) *SystemError {
 		return &SystemError{NoSuchContract: &t}
 	case *NoSuchContract:
 		return &SystemError{NoSuchContract: t}
+	case NoSuchCode:
+		return &SystemError{NoSuchCode: &t}
+	case *NoSuchCode:
+		return &SystemError{NoSuchCode: t}
 	case Unknown:
 		return &SystemError{Unknown: &t}
 	case *Unknown:

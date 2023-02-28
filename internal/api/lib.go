@@ -28,6 +28,7 @@ type (
 // Pointers
 type cu8_ptr = *C.uint8_t //nolint:revive,stylecheck
 
+
 type Cache struct {
 	ptr *C.cache_t
 }
@@ -43,7 +44,7 @@ func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, insta
 	f := makeView(supportedFeaturesBytes)
 	defer runtime.KeepAlive(supportedFeaturesBytes)
 
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg) //nolint:gocritic
 	if err != nil {
@@ -56,22 +57,33 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func Create(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
-	errmsg := newUnmanagedVector(nil)
-	checksum, err := C.save_wasm(cache.ptr, w, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
+func RemoveCode(cache Cache, checksum []byte) error {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.remove_wasm(cache.ptr, cs, &errmsg)
+	if err != nil {
+		return errorWithMessage(err, errmsg)
+	}
+	return nil
+}
+
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := newUnmanagedVector(nil)
-	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -81,8 +93,8 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 func Pin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := newUnmanagedVector(nil)
-	_, err := C.pin(cache.ptr, cs, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.pin(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}
@@ -92,8 +104,8 @@ func Pin(cache Cache, checksum []byte) error {
 func Unpin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := newUnmanagedVector(nil)
-	_, err := C.unpin(cache.ptr, cs, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	_, err := C.unpin(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return errorWithMessage(err, errmsg)
 	}
@@ -103,8 +115,8 @@ func Unpin(cache Cache, checksum []byte) error {
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
-	errmsg := newUnmanagedVector(nil)
-	report, err := C.analyze_code(cache.ptr, cs, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -118,8 +130,8 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 }
 
 func GetMetrics(cache Cache) (*types.Metrics, error) {
-	errmsg := newUnmanagedVector(nil)
-	metrics, err := C.get_metrics(cache.ptr, &errmsg) //nolint:gocritic
+	errmsg := uninitializedUnmanagedVector()
+	metrics, err := C.get_metrics(cache.ptr, &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -142,9 +154,9 @@ func Instantiate(
 	env []byte,
 	info []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -166,7 +178,7 @@ func Instantiate(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -182,9 +194,9 @@ func Execute(
 	env []byte,
 	info []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -206,7 +218,7 @@ func Execute(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -221,9 +233,9 @@ func Migrate(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -243,7 +255,7 @@ func Migrate(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -258,9 +270,9 @@ func Sudo(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -280,7 +292,7 @@ func Sudo(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -295,9 +307,9 @@ func Reply(
 	checksum []byte,
 	env []byte,
 	reply []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -317,7 +329,7 @@ func Reply(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -332,9 +344,9 @@ func Query(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -354,7 +366,7 @@ func Query(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -369,9 +381,9 @@ func IBCChannelOpen(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -391,7 +403,7 @@ func IBCChannelOpen(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -406,9 +418,9 @@ func IBCChannelConnect(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -428,7 +440,7 @@ func IBCChannelConnect(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -443,9 +455,9 @@ func IBCChannelClose(
 	checksum []byte,
 	env []byte,
 	msg []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -465,7 +477,7 @@ func IBCChannelClose(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -480,9 +492,9 @@ func IBCPacketReceive(
 	checksum []byte,
 	env []byte,
 	packet []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -502,7 +514,7 @@ func IBCPacketReceive(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -517,9 +529,9 @@ func IBCPacketAck(
 	checksum []byte,
 	env []byte,
 	ack []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -539,7 +551,7 @@ func IBCPacketAck(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
@@ -554,9 +566,9 @@ func IBCPacketTimeout(
 	checksum []byte,
 	env []byte,
 	packet []byte,
-	gasMeter *GasMeter,
-	store KVStore,
-	api *GoAPI,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
@@ -576,7 +588,7 @@ func IBCPacketTimeout(
 	a := buildAPI(api)
 	q := buildQuerier(querier)
 	var gasUsed cu64
-	errmsg := newUnmanagedVector(nil)
+	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {

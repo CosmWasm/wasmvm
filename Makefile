@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0013
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0014
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0013-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0014-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -128,3 +128,9 @@ test-alpine: release-build-alpine
 
 	@# Run binary locally if you are on Linux
 	@# ./demo ./testdata/hackatom.wasm
+
+.PHONY: format
+format:
+	find . -name '*.go' -type f | xargs gofumpt -w -s
+	find . -name '*.go' -type f | xargs misspell -w
+	find . -name '*.go' -type f | xargs goimports -w -local github.com/CosmWasm/wasmvm

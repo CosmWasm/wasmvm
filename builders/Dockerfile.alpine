@@ -2,7 +2,9 @@
 # 1. Build the static Rust library
 # 2. Execute Go tests that use and test this library
 # For 2. we define the Go image here. For 1. we install Rust below.
-FROM golang:1.17.7-alpine
+#
+# See also docs/COMPILER_VERSIONS.md
+FROM golang:1.18.8-alpine
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -16,7 +18,7 @@ RUN set -eux \
 
 RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-musl/rustup-init" \
   && chmod +x rustup-init \
-  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.63.0 \
+  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.65.0 \
   && rm rustup-init \
   && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 

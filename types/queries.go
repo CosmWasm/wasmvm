@@ -352,6 +352,7 @@ type WasmQuery struct {
 	Smart        *SmartQuery        `json:"smart,omitempty"`
 	Raw          *RawQuery          `json:"raw,omitempty"`
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
+	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
 }
 
 // SmartQuery response is raw bytes ([]byte)
@@ -381,4 +382,14 @@ type ContractInfoResponse struct {
 	Pinned bool   `json:"pinned"`
 	// Set if the contract is IBC enabled
 	IBCPort string `json:"ibc_port,omitempty"`
+}
+
+type CodeInfoQuery struct {
+	CodeID uint64 `json:"code_id"`
+}
+
+type CodeInfoResponse struct {
+	CodeID   uint64   `json:"code_id"`
+	Creator  string   `json:"creator"`
+	Checksum Checksum `json:"checksum,omitempty"`
 }

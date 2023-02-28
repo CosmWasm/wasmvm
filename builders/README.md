@@ -14,10 +14,18 @@ can do the cross-compilation.
 
 ## Changelog
 
+**Version 0014:**
+
+- Update Rust to 1.65.0.
+- Update Go (for testing only) to 1.18.8.
+
 **Version 0013:**
 
-- Update Rust to 1.63.0.
+- Update Rust to 1.63.0 in `Dockerfile.alpine` and `Dockerfile.cross`;
+  `Dockerfile.centos7` was accidentally not updated and remained on 1.60.0 ([#350]).
 - Add Windows support to cosmwasm/go-ext-builder:0013-cross. This image builds for macOS and Windows now.
+
+[#350]: https://github.com/CosmWasm/wasmvm/pull/350
 
 **Version 0012:**
 
@@ -85,7 +93,7 @@ Create a local docker image, capable of cross-compling linux and macos dynamic l
 ```
 
 Then in the repo root, `make release-build` will use the above docker image and
-copy the generated `{so,dylib}` files into `api` directory to be linked.
+copy the generated `{so,dylib}` files into `internal/api` directory to be linked.
 
 ## Future Work
 

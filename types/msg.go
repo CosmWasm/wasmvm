@@ -137,17 +137,35 @@ type IBCMsg struct {
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
 	Vote *VoteMsg `json:"vote,omitempty"`
+	/// This maps directly to [MsgVoteWeighted](https://github.com/cosmos/cosmos-sdk/blob/v0.45.8/proto/cosmos/gov/v1beta1/tx.proto#L66-L78) in the Cosmos SDK with voter set to the contract address.
+	VoteWeighted *VoteWeightedMsg `json:"vote_weighted,omitempty"`
 }
 
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64     `json:"proposal_id"` //nolint:revive,stylecheck
-	Vote       voteOption `json:"vote"`
+	ProposalId uint64 `json:"proposal_id"`
+	// Vote is the vote option.
+	//
+	// This should be called "option" for consistency with Cosmos SDK. Sorry for that.
+	// See <https://github.com/CosmWasm/cosmwasm/issues/1571>.
+	Vote voteOption `json:"vote"`
+}
+
+type VoteWeightedMsg struct {
+	ProposalId uint64               `json:"proposal_id"`
+	Options    []WeightedVoteOption `json:"options"`
+}
+
+type WeightedVoteOption struct {
+	Option voteOption `json:"option"`
+	// Weight is a Decimal string, e.g. "0.25" for 25%
+	Weight string `json:"weight"`
 }
 
 const (
-	Yes voteOption = iota
+	UnsetVoteOption voteOption = iota // The default value. We never return this in any valid instance (see toVoteOption).
+	Yes
 	No
 	Abstain
 	NoWithVeto
@@ -256,11 +274,12 @@ type StargateMsg struct {
 }
 
 type WasmMsg struct {
-	Execute     *ExecuteMsg     `json:"execute,omitempty"`
-	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
-	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
-	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
-	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
+	Execute      *ExecuteMsg      `json:"execute,omitempty"`
+	Instantiate  *InstantiateMsg  `json:"instantiate,omitempty"`
+	Instantiate2 *Instantiate2Msg `json:"instantiate2,omitempty"`
+	Migrate      *MigrateMsg      `json:"migrate,omitempty"`
+	UpdateAdmin  *UpdateAdminMsg  `json:"update_admin,omitempty"`
+	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -287,7 +306,7 @@ type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
 	Funds Coins `json:"funds"`
@@ -295,6 +314,23 @@ type InstantiateMsg struct {
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
 	Admin string `json:"admin,omitempty"`
+}
+
+// Instantiate2Msg will create a new contract instance from a previously uploaded CodeID
+// using the predictable address derivation.
+type Instantiate2Msg struct {
+	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
+	CodeID uint64 `json:"code_id"`
+	// Msg is assumed to be a json-encoded message, which will be passed directly
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
+	Msg []byte `json:"msg"`
+	// Send is an optional amount of coins this contract sends to the called contract
+	Funds Coins `json:"funds"`
+	// Label is optional metadata to be stored with a contract instance.
+	Label string `json:"label"`
+	// Admin (optional) may be set here to allow future migrations from this address
+	Admin string `json:"admin,omitempty"`
+	Salt  []byte `json:"salt"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)

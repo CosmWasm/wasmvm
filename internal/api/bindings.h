@@ -313,6 +313,10 @@ struct UnmanagedVector save_wasm(struct cache_t *cache,
                                  struct ByteSliceView wasm,
                                  struct UnmanagedVector *error_msg);
 
+void remove_wasm(struct cache_t *cache,
+                 struct ByteSliceView checksum,
+                 struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector load_wasm(struct cache_t *cache,
                                  struct ByteSliceView checksum,
                                  struct UnmanagedVector *error_msg);

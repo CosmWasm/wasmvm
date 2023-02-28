@@ -1,3 +1,5 @@
+//go:build cgo
+
 package cosmwasm
 
 import (
@@ -5,10 +7,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/internal/api"
-	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmvm/internal/api"
+	"github.com/CosmWasm/wasmvm/types"
 )
 
 const (
@@ -40,23 +43,90 @@ func withVM(t *testing.T) *VM {
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 	return checksum
 }
 
-func TestCreateAndGet(t *testing.T) {
+func TestStoreCode(t *testing.T) {
+	vm := withVM(t)
+
+	// Valid hackatom contract
+	{
+		wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+		require.NoError(t, err)
+		_, err = vm.StoreCode(wasm)
+		require.NoError(t, err)
+	}
+
+	// Valid cyberpunk contract
+	{
+		wasm, err := ioutil.ReadFile(CYBERPUNK_TEST_CONTRACT)
+		require.NoError(t, err)
+		_, err = vm.StoreCode(wasm)
+		require.NoError(t, err)
+	}
+
+	// Valid Wasm with no exports
+	{
+		// echo '(module)' | wat2wasm - -o empty.wasm
+		// hexdump -C < empty.wasm
+
+		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract doesn't have a memory section")
+	}
+
+	// No Wasm
+	{
+		wasm := []byte("foobar")
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+	}
+
+	// Empty
+	{
+		wasm := []byte("")
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+	}
+
+	// Nil
+	{
+		var wasm []byte = nil
+		_, err := vm.StoreCode(wasm)
+		require.ErrorContains(t, err, "Null/Nil argument: wasm")
+	}
+}
+
+func TestStoreCodeAndGet(t *testing.T) {
 	vm := withVM(t)
 
 	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	checksum, err := vm.Create(wasm)
+	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 
 	code, err := vm.GetCode(checksum)
 	require.NoError(t, err)
 	require.Equal(t, WasmCode(wasm), code)
+}
+
+func TestRemoveCode(t *testing.T) {
+	vm := withVM(t)
+
+	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	checksum, err := vm.StoreCode(wasm)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.NoError(t, err)
+
+	err = vm.RemoveCode(checksum)
+	require.ErrorContains(t, err, "Wasm file does not exist")
 }
 
 func TestHappyPath(t *testing.T) {
@@ -199,7 +269,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
@@ -213,7 +283,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Pin
 	err = vm.Pin(checksum)
@@ -226,8 +296,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
@@ -243,8 +313,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizePinnedMemoryCache, 0.18)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizePinnedMemoryCache, 0.2)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Unpin
 	err = vm.Unpin(checksum)
@@ -259,7 +329,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
@@ -276,5 +346,5 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 5602873, metrics.SizeMemoryCache, 0.18)
+	require.InEpsilon(t, 4075417, metrics.SizeMemoryCache, 0.2)
 }
