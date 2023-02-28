@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
 )
 
 // frame stores all Iterators for one contract call

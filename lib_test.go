@@ -4,7 +4,6 @@ package cosmwasm
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -54,7 +53,7 @@ func TestStoreCode(t *testing.T) {
 
 	// Valid hackatom contract
 	{
-		wasm, err := ioutil.ReadFile(HackatomTestContract)
+		wasm, err := os.ReadFile(HackatomTestContract)
 		require.NoError(t, err)
 		_, err = vm.StoreCode(wasm)
 		require.NoError(t, err)
@@ -62,7 +61,7 @@ func TestStoreCode(t *testing.T) {
 
 	// Valid cyberpunk contract
 	{
-		wasm, err := ioutil.ReadFile(CyberpunkTestContract)
+		wasm, err := os.ReadFile(CyberpunkTestContract)
 		require.NoError(t, err)
 		_, err = vm.StoreCode(wasm)
 		require.NoError(t, err)

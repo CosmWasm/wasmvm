@@ -43,7 +43,7 @@ import (
 	"runtime/debug"
 	"unsafe"
 
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
 
 	"github.com/CosmWasm/wasmvm/types"
 )

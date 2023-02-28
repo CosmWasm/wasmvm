@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,7 +35,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 // wasmd expects us to create the base directory
 // https://github.com/CosmWasm/wasmd/blob/v0.30.0/x/wasm/keeper/keeper.go#L128
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
+	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
@@ -95,7 +94,7 @@ func TestRemoveCode(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
 	checksum, err := StoreCode(cache, wasm)
