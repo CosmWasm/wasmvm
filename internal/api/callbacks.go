@@ -94,8 +94,7 @@ func recoverPanic(ret *C.GoError) {
 
 /****** DB ********/
 
-
-var db_vtable = C.Db_vtable{
+var dbVtable = C.Db_vtable{
 	read_db:   (C.read_db_fn)(C.cGet_cgo),
 	write_db:  (C.write_db_fn)(C.cSet_cgo),
 	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
@@ -314,8 +313,7 @@ func cNext(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.Unma
 	return C.GoError_None
 }
 
-
-var api_vtable = C.GoApi_vtable{
+var apiVtable = C.GoApi_vtable{
 	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
 	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
 }

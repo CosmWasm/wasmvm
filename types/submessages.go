@@ -33,7 +33,7 @@ func (r replyOn) String() string {
 	return fromReplyOn[r]
 }
 
-func (s replyOn) MarshalJSON() ([]byte, error) { //nolint:revive,stylecheck
+func (s replyOn) MarshalJSON() ([]byte, error) { //nolint:revive
 	return json.Marshal(s.String())
 }
 

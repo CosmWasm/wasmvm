@@ -144,7 +144,7 @@ type GovMsg struct {
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64 `json:"proposal_id"`
+	ProposalID uint64 `json:"proposal_id"`
 	// Vote is the vote option.
 	//
 	// This should be called "option" for consistency with Cosmos SDK. Sorry for that.
@@ -153,7 +153,7 @@ type VoteMsg struct {
 }
 
 type VoteWeightedMsg struct {
-	ProposalId uint64               `json:"proposal_id"`
+	ProposalID uint64               `json:"proposal_id"`
 	Options    []WeightedVoteOption `json:"options"`
 }
 
@@ -189,7 +189,7 @@ func (v voteOption) String() string {
 	return fromVoteOption[v]
 }
 
-func (v voteOption) MarshalJSON() ([]byte, error) { //nolint:stylecheck
+func (v voteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
