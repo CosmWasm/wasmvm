@@ -30,9 +30,9 @@ func makeView(s []byte) C.ByteSliceView {
 }
 
 // Creates a C.UnmanagedVector, which cannot be done in test files directly
-func constructUnmanagedVector(is_none cbool, ptr cu8_ptr, len cusize, cap cusize) C.UnmanagedVector {
+func constructUnmanagedVector(isNone cbool, ptr cu8_ptr, len cusize, cap cusize) C.UnmanagedVector {
 	return C.UnmanagedVector{
-		is_none: is_none,
+		is_none: isNone,
 		ptr:     ptr,
 		len:     len,
 		cap:     cap,

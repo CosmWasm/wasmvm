@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	SUPPORTED_FEATURES = "staking"
-	PRINT_DEBUG        = true
-	MEMORY_LIMIT       = 32  // MiB
-	CACHE_SIZE         = 100 // MiB
+	SupportedFeatures = "staking"
+	PrintDebug        = true
+	MemoryLimit       = 32  // MiB
+	CacheSize         = 100 // MiB
 )
 
 // This is just a demo to ensure we can compile a static go binary
@@ -25,7 +25,7 @@ func main() {
 	fmt.Println("Loaded!")
 
 	os.MkdirAll("tmp", 0o755)
-	vm, err := wasmvm.NewVM("tmp", SUPPORTED_FEATURES, MEMORY_LIMIT, PRINT_DEBUG, CACHE_SIZE)
+	vm, err := wasmvm.NewVM("tmp", SupportedFeatures, MemoryLimit, PrintDebug, CacheSize)
 	if err != nil {
 		panic(err)
 	}

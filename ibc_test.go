@@ -91,13 +91,13 @@ func TestIBCHandshake(t *testing.T) {
 
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter1 := api.NewMockGasMeter(TestingGasLimit)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Coins{}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
@@ -105,26 +105,26 @@ func TestIBCHandshake(t *testing.T) {
 	initMsg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	ires, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	ires, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(ires.Messages))
 
 	// channel open
-	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter2 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, ores)
 
 	// channel connect
-	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter3 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter3)
 	env = api.MockEnv()
 	// completes and dispatches message to create reflect contract
 	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter2, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(res.Messages))
 
@@ -158,13 +158,13 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// setup
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter1 := api.NewMockGasMeter(TestingGasLimit)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Coins{}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
@@ -172,29 +172,29 @@ func TestIBCPacketDispatch(t *testing.T) {
 	initMsg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	_, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	_, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 
 	// channel open
-	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter2 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter2)
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, ores)
 
 	// channel connect
-	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter3 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter3)
 	// completes and dispatches message to create reflect contract
 	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT, deserCost)
+	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter3, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(res.Messages))
 	id := res.Messages[0].ID
 
 	// mock reflect init callback (to store address)
-	gasMeter4 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter4 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter4)
 	reply := types.Reply{
 		ID: id,
@@ -213,14 +213,14 @@ func TestIBCPacketDispatch(t *testing.T) {
 			},
 		},
 	}
-	_, _, err = vm.Reply(checksum, env, reply, store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT, deserCost)
+	_, _, err = vm.Reply(checksum, env, reply, store, *goapi, querier, gasMeter4, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 
 	// ensure the channel is registered
 	queryMsg := IBCQueryMsg{
 		ListAccounts: &struct{}{},
 	}
-	qres, _, err := vm.Query(checksum, env, toBytes(t, queryMsg), store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT, deserCost)
+	qres, _, err := vm.Query(checksum, env, toBytes(t, queryMsg), store, *goapi, querier, gasMeter4, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	var accounts ListAccountsResponse
 	err = json.Unmarshal(qres, &accounts)
@@ -230,7 +230,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
 
 	// process message received on this channel
-	gasMeter5 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter5 := api.NewMockGasMeter(TestingGasLimit)
 	store.SetGasMeter(gasMeter5)
 	ibcMsg := IBCPacketMsg{
 		Dispatch: &DispatchMsg{
@@ -243,7 +243,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 		},
 	}
 	msg := api.MockIBCPacketReceive(CHANNEL_ID, toBytes(t, ibcMsg))
-	pr, _, err := vm.IBCPacketReceive(checksum, env, msg, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
+	pr, _, err := vm.IBCPacketReceive(checksum, env, msg, store, *goapi, querier, gasMeter5, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	assert.NotNil(t, pr.Ok)
 	pres := pr.Ok
@@ -256,7 +256,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 
 	// error on message from another channel
 	msg2 := api.MockIBCPacketReceive("no-such-channel", toBytes(t, ibcMsg))
-	pr2, _, err := vm.IBCPacketReceive(checksum, env, msg2, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
+	pr2, _, err := vm.IBCPacketReceive(checksum, env, msg2, store, *goapi, querier, gasMeter5, TestingGasLimit, deserCost)
 	require.NoError(t, err)
 	assert.NotNil(t, pr.Ok)
 	pres2 := pr2.Ok
@@ -281,7 +281,7 @@ func TestAnalyzeCode(t *testing.T) {
 	vm := withVM(t)
 
 	// Store non-IBC contract
-	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	wasm, err := os.ReadFile(HackatomTestContract)
 	require.NoError(t, err)
 	checksum, err := vm.StoreCode(wasm)
 	require.NoError(t, err)

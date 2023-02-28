@@ -20,11 +20,11 @@ func TestValidateAddressFailure(t *testing.T) {
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
-	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter := NewMockGasMeter(TestingGasLimit)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -34,7 +34,7 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
 	igasMeter := types.GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TestingGasLimit, TestingPrintDebug)
 	require.NoError(t, err)
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
