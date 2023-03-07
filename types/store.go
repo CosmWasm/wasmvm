@@ -43,6 +43,8 @@ type KVStore interface {
 //	if err := itr.Error(); err != nil {
 //	  ...
 //	}
+//
+// Copied from https://github.com/tendermint/tm-db/blob/v0.6.7/types.go#L121
 type Iterator interface {
 	// Domain returns the start (inclusive) and end (exclusive) limits of the iterator.
 	// CONTRACT: start, end readonly []byte
@@ -67,6 +69,6 @@ type Iterator interface {
 	// Error returns the last error encountered by the iterator, if any.
 	Error() error
 
-	// Close closes the iterator, relasing any allocated resources.
+	// Close closes the iterator, releasing any allocated resources.
 	Close() error
 }

@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tm-db"
 
+	"github.com/CosmWasm/wasmvm/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -255,13 +255,13 @@ const (
 )
 
 type Lookup struct {
-	db    *dbm.MemDB
+	db    *testdb.MemDB
 	meter MockGasMeter
 }
 
 func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
-		db:    dbm.NewMemDB(),
+		db:    testdb.NewMemDB(),
 		meter: meter,
 	}
 }
