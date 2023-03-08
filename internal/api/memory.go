@@ -30,9 +30,9 @@ func makeView(s []byte) C.ByteSliceView {
 }
 
 // Creates a C.UnmanagedVector, which cannot be done in test files directly
-func constructUnmanagedVector(is_none cbool, ptr cu8_ptr, len cusize, cap cusize) C.UnmanagedVector {
+func constructUnmanagedVector(isNone cbool, ptr cu8_ptr, len cusize, cap cusize) C.UnmanagedVector {
 	return C.UnmanagedVector{
-		is_none: is_none,
+		is_none: isNone,
 		ptr:     ptr,
 		len:     len,
 		cap:     cap,
@@ -46,7 +46,7 @@ func uninitializedUnmanagedVector() C.UnmanagedVector {
 }
 
 func newUnmanagedVector(data []byte) C.UnmanagedVector {
-	if data == nil {
+	if data == nil { //nolint:gocritic
 		return C.new_unmanaged_vector(cbool(true), cu8_ptr(nil), cusize(0))
 	} else if len(data) == 0 {
 		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
@@ -62,7 +62,7 @@ func newUnmanagedVector(data []byte) C.UnmanagedVector {
 
 func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 	var out []byte
-	if v.is_none {
+	if v.is_none { //nolint:gocritic
 		out = nil
 	} else if v.cap == cusize(0) {
 		// There is no allocation we can copy
