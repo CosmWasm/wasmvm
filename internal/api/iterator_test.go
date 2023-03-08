@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	dbm "github.com/tendermint/tm-db"
-
+	"github.com/CosmWasm/wasmvm/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -68,8 +67,8 @@ func TestStoreIterator(t *testing.T) {
 	callID1 := startCall()
 	callID2 := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var index uint64
 	var err error
 
@@ -102,8 +101,8 @@ func TestStoreIterator(t *testing.T) {
 func TestStoreIteratorHitsLimit(t *testing.T) {
 	callID := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var err error
 	const limit = 2
 
@@ -127,8 +126,8 @@ func TestRetrieveIterator(t *testing.T) {
 	callID1 := startCall()
 	callID2 := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var err error
 
 	iter, _ = store.Iterator(nil, nil)

@@ -33,7 +33,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-// wasmd expectes us to create the base directory
+// wasmd expects us to create the base directory
 // https://github.com/CosmWasm/wasmd/blob/v0.30.0/x/wasm/keeper/keeper.go#L128
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
