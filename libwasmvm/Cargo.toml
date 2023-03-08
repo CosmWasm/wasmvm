@@ -35,7 +35,7 @@ hex = "0.4.3"
 
 [dev-dependencies]
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-tempfile = "3.1.0"
+tempfile = "3.4.0"
 
 [build-dependencies]
 cbindgen = "0.24.3"
