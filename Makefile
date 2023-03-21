@@ -103,6 +103,14 @@ release-build-macos-static:
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
+# Creates a release build in a native MacOS build environment, of the shared library for macOS (.dylib)
+release-build-macos-native:
+	rm -rf libwasmvm/target/x86_64-apple-darwin/release
+	rm -rf libwasmvm/target/aarch64-apple-darwin/release
+	(cd libwasmvm && ../builders/guest/build_macos_native.sh)
+	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
+	make update-bindings
+
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:
 	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
