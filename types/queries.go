@@ -90,9 +90,10 @@ type QueryRequest struct {
 }
 
 type BankQuery struct {
-	Supply      *SupplyQuery      `json:"supply,omitempty"`
-	Balance     *BalanceQuery     `json:"balance,omitempty"`
-	AllBalances *AllBalancesQuery `json:"all_balances,omitempty"`
+	Supply           *SupplyQuery           `json:"supply,omitempty"`
+	Balance          *BalanceQuery          `json:"balance,omitempty"`
+	AllBalances      *AllBalancesQuery      `json:"all_balances,omitempty"`
+	AllDenomMetadata *AllDenomMetadataQuery `json:"all_denom_metadata,omitempty"`
 }
 
 type SupplyQuery struct {
@@ -122,6 +123,8 @@ type AllBalancesQuery struct {
 type AllBalancesResponse struct {
 	Amount Coins `json:"amount"`
 }
+
+type AllDenomMetadataQuery struct{}
 
 // IBCQuery defines a query request from the contract into the chain.
 // This is the counterpart of [IbcQuery](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L61-L83).
