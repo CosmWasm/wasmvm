@@ -1,16 +1,16 @@
 # Cross Compilation Scripts
 
 As this library is targetting go developers, we cannot assume a properly set up
-rust environment on their system. Further, when importing this library, there is no
-clean way to add a `libwasmvm.{so,dll,dylib}`. It needs to be committed with the
-tagged (go) release in order to be easily usable.
+rust environment on their system. Further, when importing this library, there is
+no clean way to add a `libwasmvm.{so,dll,dylib}`. It needs to be committed with
+the tagged (go) release in order to be easily usable.
 
-The solution is to precompile the rust code into libraries for the major platforms
-(Linux, Windows, MacOS) and commit them to the repository at each tagged release.
-This should be doable from one host machine, but is a bit tricky. This folder
-contains build scripts and a Docker image to create all dynamic libraries from one
-host. In general this is set up for a Linux host, but any machine that can run Docker
-can do the cross-compilation.
+The solution is to precompile the rust code into libraries for the major
+platforms (Linux, Windows, MacOS) and commit them to the repository at each
+tagged release. This should be doable from one host machine, but is a bit
+tricky. This folder contains build scripts and a Docker image to create all
+dynamic libraries from one host. In general this is set up for a Linux host, but
+any machine that can run Docker can do the cross-compilation.
 
 ## Changelog
 
@@ -22,15 +22,17 @@ can do the cross-compilation.
 **Version 0013:**
 
 - Update Rust to 1.63.0 in `Dockerfile.alpine` and `Dockerfile.cross`;
-  `Dockerfile.centos7` was accidentally not updated and remained on 1.60.0 ([#350]).
-- Add Windows support to cosmwasm/go-ext-builder:0013-cross. This image builds for macOS and Windows now.
+  `Dockerfile.centos7` was accidentally not updated and remained on 1.60.0
+  ([#350]).
+- Add Windows support to cosmwasm/go-ext-builder:0013-cross. This image builds
+  for macOS and Windows now.
 
 [#350]: https://github.com/CosmWasm/wasmvm/pull/350
 
 **Version 0012:**
 
-- Add cross-compilation setup to build `libwasmvm.x86_64.so` and `libwasmvm.aarch64.so`
-  from the CentOS builder image.
+- Add cross-compilation setup to build `libwasmvm.x86_64.so` and
+  `libwasmvm.aarch64.so` from the CentOS builder image.
 - Update Rust to 1.60.0.
 
 **Version 0011:**
@@ -39,8 +41,8 @@ can do the cross-compilation.
 
 **Version 0010:**
 
-- Add cross-compilation setup to build `libwasmvm_muslc.a` and `libwasmvm_muslc.aarch64.a`
-  from the alpine builder image.
+- Add cross-compilation setup to build `libwasmvm_muslc.a` and
+  `libwasmvm_muslc.aarch64.a` from the alpine builder image.
 
 **Version 0009:**
 
@@ -53,7 +55,8 @@ can do the cross-compilation.
 
 **Version 0007:**
 
-- Do not copy output from the target folder to final destination. The caller should do that.
+- Do not copy output from the target folder to final destination. The caller
+  should do that.
 - Update Rust to 1.53.0.
 
 **Version 0006:**
@@ -86,14 +89,16 @@ can do the cross-compilation.
 
 ## Usage
 
-Create a local docker image, capable of cross-compling linux and macos dynamic libs:
+Create a local docker image, capable of cross-compling linux and macos dynamic
+libs:
 
 ```sh
 (cd builders && make docker-images)
 ```
 
 Then in the repo root, `make release-build` will use the above docker image and
-copy the generated `{so,dylib}` files into `internal/api` directory to be linked.
+copy the generated `{so,dylib}` files into `internal/api` directory to be
+linked.
 
 ## Future Work
 
