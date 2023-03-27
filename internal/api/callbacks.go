@@ -43,8 +43,6 @@ import (
 	"runtime/debug"
 	"unsafe"
 
-	dbm "github.com/tendermint/tm-db"
-
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -140,7 +138,7 @@ const frameLenLimit = 32768
 
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
-func buildIterator(callID uint64, it dbm.Iterator) (C.iterator_t, error) {
+func buildIterator(callID uint64, it types.Iterator) (C.iterator_t, error) {
 	idx, err := storeIterator(callID, it, frameLenLimit)
 	if err != nil {
 		return C.iterator_t{}, err
@@ -246,7 +244,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	s := copyU8Slice(start)
 	e := copyU8Slice(end)
 
-	var iter dbm.Iterator
+	var iter types.Iterator
 	gasBefore := gm.GasConsumed()
 	switch order {
 	case 1: // Ascending

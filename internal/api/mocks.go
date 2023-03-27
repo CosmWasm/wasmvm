@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tm-db"
 
+	"github.com/CosmWasm/wasmvm/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -255,13 +255,13 @@ const (
 )
 
 type Lookup struct {
-	db    *dbm.MemDB
+	db    *testdb.MemDB
 	meter MockGasMeter
 }
 
 func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
-		db:    dbm.NewMemDB(),
+		db:    testdb.NewMemDB(),
 		meter: meter,
 	}
 }
@@ -305,7 +305,7 @@ func (l Lookup) Delete(key []byte) {
 }
 
 // Iterator wraps the underlying DB's Iterator method panicing on error.
-func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
+func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.Iterator(start, end)
 	if err != nil {
@@ -316,7 +316,7 @@ func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
 }
 
 // ReverseIterator wraps the underlying DB's ReverseIterator method panicing on error.
-func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
+func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.ReverseIterator(start, end)
 	if err != nil {

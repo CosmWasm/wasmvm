@@ -342,6 +342,9 @@ jobs:
           name: Build static library for Linux
           command: make release-build-linux
       - run:
+          name: Build static library for MacOS
+          command: make release-build-macos-static
+      - run:
           name: Debug build results
           command: ls -l ./internal/api
       - run:
@@ -352,6 +355,7 @@ jobs:
             cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/libwasmvm_muslc.aarch64.a
             cp ./internal/api/libwasmvm.aarch64.so artifacts/libwasmvm.aarch64.so
             cp ./internal/api/libwasmvm.x86_64.so artifacts/libwasmvm.x86_64.so
+            cp ./internal/api/libwasmvmstatic_darwin.a artifacts/libwasmvmstatic_darwin.a
       - run:
           name: Create checksums
           working_directory: artifacts
