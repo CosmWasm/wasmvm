@@ -4,7 +4,7 @@
 # For 2. we define the Go image here. For 1. we install Rust below.
 #
 # See also docs/COMPILER_VERSIONS.md
-FROM golang:1.18.8-alpine
+FROM golang:1.19.7-alpine
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -18,7 +18,7 @@ RUN set -eux \
 
 RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-musl/rustup-init" \
   && chmod +x rustup-init \
-  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.65.0 \
+  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.68.2 \
   && rm rustup-init \
   && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 

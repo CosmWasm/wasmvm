@@ -14,6 +14,12 @@ any machine that can run Docker can do the cross-compilation.
 
 ## Changelog
 
+**Version 0015:**
+
+- Update Rust to 1.68.2.
+- Update Go (for testing only) to 1.19.7.
+- Add `build_macos_static.sh` to cross builders for macOS build.
+
 **Version 0014:**
 
 - Update Rust to 1.65.0.

@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0014
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0015
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0014-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0015-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
