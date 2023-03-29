@@ -50,6 +50,74 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Replicating the cosmos-sdk bank module Metadata type
+type DenomMetadata struct {
+	Description string `json:"description"`
+	// denom_units represents the list of DenomUnit's for a given coin
+	DenomUnits []*DenomUnit `json:"denom_units"`
+	// base represents the base denom (should be the DenomUnit with exponent = 0).
+	Base string `json:"base"`
+	// display indicates the suggested denom that should be
+	// displayed in clients.
+	Display string `json:"display"`
+	// name defines the name of the token (eg: Cosmos Atom)
+	//
+	// Since: cosmos-sdk 0.43
+	Name string `json:"name"`
+	// symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
+	// be the same as the display.
+	//
+	// Since: cosmos-sdk 0.43
+	Symbol string `json:"symbol"`
+	// URI to a document (on or off-chain) that contains additional information. Optional.
+	//
+	// Since: cosmos-sdk 0.46
+	URI string `json:"uri"`
+	// URIHash is a sha256 hash of a document pointed by URI. It's used to verify that
+	// the document didn't change. Optional.
+	//
+	// Since: cosmos-sdk 0.46
+	URIHash string `json:"uri_hash"`
+}
+
+// Replicating the cosmos-sdk bank module DenomUnit type
+type DenomUnit struct {
+	// denom represents the string name of the given denom unit (e.g uatom).
+	Denom string `json:"denom"`
+	// exponent represents power of 10 exponent that one must
+	// raise the base_denom to in order to equal the given DenomUnit's denom
+	// 1 denom = 10^exponent base_denom
+	// (e.g. with a base_denom of uatom, one can create a DenomUnit of 'atom' with
+	// exponent = 6, thus: 1 atom = 10^6 uatom).
+	Exponent uint32 `json:"exponent"`
+	// aliases is a list of string aliases for the given denom
+	Aliases []string `json:"aliases"`
+}
+
+// Replicating the PageRequest type for pagination from the cosmos-sdk
+type PageRequest struct {
+	// key is a value returned in PageResponse.next_key to begin
+	// querying the next page most efficiently. Only one of offset or key
+	// should be set.
+	Key []byte `json:"key"`
+	// offset is a numeric offset that can be used when key is unavailable.
+	// It is less efficient than using key. Only one of offset or key should
+	// be set.
+	Offset uint64 `json:"offset"`
+	// limit is the total number of results to be returned in the result page.
+	// If left empty it will default to a value to be set by each app.
+	Limit uint64 `json:"limit"`
+	// count_total is set to true  to indicate that the result set should include
+	// a count of the total number of items available for pagination in UIs.
+	// count_total is only respected when offset is used. It is ignored when key
+	// is set.
+	CountTotal bool `json:"count_total"`
+	// reverse is set to true if results are to be returned in the descending order.
+	//
+	// Since: cosmos-sdk 0.43
+	Reverse bool `json:"reverse"`
+}
+
 type OutOfGasError struct{}
 
 var _ error = OutOfGasError{}

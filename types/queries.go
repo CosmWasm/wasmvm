@@ -93,6 +93,7 @@ type BankQuery struct {
 	Supply           *SupplyQuery           `json:"supply,omitempty"`
 	Balance          *BalanceQuery          `json:"balance,omitempty"`
 	AllBalances      *AllBalancesQuery      `json:"all_balances,omitempty"`
+	DenomMetadata    *DenomMetadataQuery    `json:"get_denom_metadata,omitempty"`
 	AllDenomMetadata *AllDenomMetadataQuery `json:"all_denom_metadata,omitempty"`
 }
 
@@ -124,7 +125,23 @@ type AllBalancesResponse struct {
 	Amount Coins `json:"amount"`
 }
 
-type AllDenomMetadataQuery struct{}
+type DenomMetadataQuery struct {
+	Denom string `json:"denom"`
+}
+
+type DenomMetadataResponse struct {
+	Metadata DenomMetadata `json:"metadata"`
+}
+
+type AllDenomMetadataQuery struct {
+	// optional argument
+	// default pagination will be used if this is omitted
+	Pagination *PageRequest `json:"pagination,omitempty"`
+}
+
+type AllDenomMetadataResponse struct {
+	Metadata []DenomMetadata `json:"metadata"`
+}
 
 // IBCQuery defines a query request from the contract into the chain.
 // This is the counterpart of [IbcQuery](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L61-L83).
