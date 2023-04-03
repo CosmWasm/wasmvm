@@ -36,6 +36,12 @@ func NewVM(dataDir string, supportedFeatures string, memoryLimit uint32, printDe
 	return &VM{cache: cache, printDebug: printDebug}, nil
 }
 
+// GetDefaultFeatures is called app.go to auto enable new features
+// on wasmvm upgrade.
+func GetDefaultFeatures() string {
+	return "cosmwasm_1_1,cosmwasm_1_2"
+}
+
 // Cleanup should be called when no longer using this to free resources on the rust-side
 func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
