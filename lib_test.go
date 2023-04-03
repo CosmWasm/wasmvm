@@ -134,7 +134,7 @@ func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
@@ -175,7 +175,7 @@ func TestEnv(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, CYBERPUNK_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
@@ -242,7 +242,7 @@ func TestGetMetrics(t *testing.T) {
 	// Create contract
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 
 	// GetMetrics 2
 	metrics, err = vm.GetMetrics()
