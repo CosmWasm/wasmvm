@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TESTING_FEATURES     = "staking,stargate,iterator"
+	TESTING_CAPABILITIES = "staking,stargate,iterator"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
@@ -31,7 +31,7 @@ const (
 func withVM(t *testing.T) *VM {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
-	vm, err := NewVM(tmpdir, TESTING_FEATURES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
+	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

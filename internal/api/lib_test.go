@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TESTING_FEATURES     = "staking,stargate,iterator,cosmwasm_1_1,cosmwasm_1_2"
+	TESTING_CAPABILITIES = "staking,stargate,iterator,cosmwasm_1_1,cosmwasm_1_2"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
@@ -28,7 +28,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -41,7 +41,7 @@ func TestInitCacheWorksForNonExistentDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
-	cache, err := InitCache(createMe, TESTING_FEATURES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	cache, err := InitCache(createMe, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -51,11 +51,11 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 	// https://gist.github.com/doctaphred/d01d05291546186941e1b7ddc02034d3
 	// On Unix we should not have permission to create this.
 	cannotBeCreated := "/foo:bar"
-	_, err := InitCache(cannotBeCreated, TESTING_FEATURES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	_, err := InitCache(cannotBeCreated, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.ErrorContains(t, err, "Error creating state directory")
 }
 
-func TestInitCacheEmptyFeatures(t *testing.T) {
+func TestInitCacheEmptyCapabilities(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
@@ -66,7 +66,7 @@ func TestInitCacheEmptyFeatures(t *testing.T) {
 func withCache(t *testing.T) (Cache, func()) {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, TESTING_FEATURES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.NoError(t, err)
 
 	cleanup := func() {
