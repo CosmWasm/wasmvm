@@ -58,6 +58,10 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
+func GetDefaultFeatures() string {
+	return "cosmwasm_1_1,cosmwasm_1_2"
+}
+
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)

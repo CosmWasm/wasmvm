@@ -15,8 +15,9 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
+var TESTING_FEATURES = "staking,stargate,iterator," + GetDefaultFeatures()
+
 const (
-	TESTING_FEATURES     = "staking,stargate,iterator,cosmwasm_1_1,cosmwasm_1_2"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
