@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TESTING_FEATURES     = "staking,stargate,iterator"
+	TESTING_CAPABILITIES = "staking,stargate,iterator"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
@@ -31,7 +31,7 @@ const (
 func withVM(t *testing.T) *VM {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
-	vm, err := NewVM(tmpdir, TESTING_FEATURES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
+	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -134,7 +134,7 @@ func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
@@ -175,7 +175,7 @@ func TestEnv(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, CYBERPUNK_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
@@ -242,7 +242,7 @@ func TestGetMetrics(t *testing.T) {
 	// Create contract
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{1, 1}
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 
 	// GetMetrics 2
 	metrics, err = vm.GetMetrics()
