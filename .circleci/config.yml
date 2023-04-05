@@ -139,7 +139,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.18.8
+      - image: cimg/go:1.19.7
     steps:
       - run:
           name: Install gofumpt
@@ -157,7 +157,7 @@ jobs:
   # Build types and cosmwam package without cgo
   wasmvm_no_cgo:
     docker:
-      - image: cimg/go:1.18.8
+      - image: cimg/go:1.19.7
     steps:
       - checkout
       - run:
@@ -175,7 +175,7 @@ jobs:
 
   tidy-go:
     docker:
-      - image: cimg/go:1.18.8
+      - image: cimg/go:1.19.7
     steps:
       - checkout
       - run:
@@ -193,7 +193,7 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.18.8
+      - image: cimg/go:1.19.7
     steps:
       - run:
           name: Install shfmt
@@ -250,7 +250,7 @@ jobs:
   # Test the Go project
   wasmvm_test:
     docker:
-      - image: cimg/go:1.18.8
+      - image: cimg/go:1.19.7
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
