@@ -92,10 +92,7 @@ release-build-macos:
 release-build-macos-static:
 	rm -rf libwasmvm/target/x86_64-apple-darwin/release
 	rm -rf libwasmvm/target/aarch64-apple-darwin/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) \
-		-v $(shell pwd)/libwasmvm:/code \
-		-v $(shell pwd)/builders/guest/build_macos_static.sh:/usr/local/bin/build_macos_static.sh \
-		$(BUILDERS_PREFIX)-cross build_macos_static.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
