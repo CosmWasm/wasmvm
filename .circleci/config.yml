@@ -362,8 +362,6 @@ jobs:
           name: Create checksums
           working_directory: artifacts
           command: sha256sum * > checksums.txt && cat checksums.txt
-      - store_artifacts:
-          path: artifacts
       # Deploy to GitHub releases on tag builds
       - when:
           condition: << pipeline.git.tag >>
