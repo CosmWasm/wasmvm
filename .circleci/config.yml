@@ -348,9 +348,16 @@ jobs:
           name: Collect artifacts
           command: |
             mkdir artifacts
+
+            # Static (from build)
             cp ./internal/api/libwasmvm_muslc.a artifacts/libwasmvm_muslc.x86_64.a
             cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/libwasmvm_muslc.aarch64.a
-            cp ./internal/api/libwasmvmstatic_darwin.a artifacts/libwasmvmstatic_darwin.a
+            cp ./internal/api/libwasmvmstatic_darwin.a artifacts/
+
+            # Shared (from git)
+            cp ./internal/api/libwasmvm.aarch64.so artifacts/
+            cp ./internal/api/libwasmvm.x86_64.so artifacts/
+            cp ./internal/api/libwasmvm.dylib artifacts/
       - run:
           name: Create checksums
           working_directory: artifacts
