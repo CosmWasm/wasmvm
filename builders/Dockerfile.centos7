@@ -43,8 +43,8 @@ RUN chmod -R 777 /usr/local/cargo
 
 WORKDIR /code
 
-COPY guest/*.sh /opt/
-RUN chmod +x /opt/*.sh
+COPY guest/*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
@@ -57,4 +57,4 @@ RUN wget http://mirror.centos.org/altarch/7/os/aarch64/Packages/libgcc-4.8.5-44.
   && cp /code/lib64/libgcc_s-4.8.5-20150702.so.1 /usr/lib/gcc/aarch64-linux-gnu/4.8.5/libgcc_s.so \
   && rm libgcc-*.el7.aarch64.rpm
 
-CMD ["/opt/build_linux.sh"]
+CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_linux.sh) to docker run' && exit 1"]
