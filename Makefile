@@ -1,9 +1,9 @@
 .PHONY: all build build-rust build-go test
 
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0015
+BUILDERS_PREFIX := cosmwasm/go-ext-builder:0016-dev
 # Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0015-alpine
+ALPINE_TESTER := cosmwasm/go-ext-builder:0016-dev-alpine
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -75,7 +75,8 @@ release-build-alpine:
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
 	rm -rf libwasmvm/target/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7 build_linux.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7 build_gnu_x86_64.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
 	make update-bindings
