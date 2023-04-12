@@ -18,6 +18,16 @@ const (
 // This is just a demo to ensure we can compile a static go binary
 func main() {
 	file := os.Args[1]
+
+	if file == "version" {
+		libwasmvmVersion, err := wasmvm.LibwasmvmVersion()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("libwasmvm: %s\n", libwasmvmVersion)
+		return
+	}
+
 	fmt.Printf("Running %s...\n", file)
 	bz, err := ioutil.ReadFile(file)
 	if err != nil {

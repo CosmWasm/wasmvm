@@ -54,6 +54,7 @@ build-rust-release:
 
 build-go:
 	go build ./...
+	go build -o build/demo ./cmd/demo
 
 test:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
