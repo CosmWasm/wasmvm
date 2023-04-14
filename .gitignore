@@ -9,6 +9,7 @@
 lib*.a
 
 # artifacts from compile tests
+/build/
 /demo
 tmp
 a.out
