@@ -371,7 +371,7 @@ mod tests {
         assert!(cache_ptr.is_null());
         assert!(error_msg.is_some());
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
-        assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: data provided contains a nul byte");
+        assert_eq!(msg, "Error calling the VM: Cache error: Error creating directory broken\u{0}dir/state: file name contained an unexpected NUL byte");
     }
 
     #[test]
