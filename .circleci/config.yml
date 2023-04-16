@@ -345,4 +345,4 @@ workflows:
             branches:
               only:
                 - main
-                - /^release\//
+                - /^release\/.*/
