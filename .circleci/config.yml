@@ -244,9 +244,17 @@ jobs:
 
   build_static_lib:
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:2022.10.1
     resource_class: xlarge
     steps:
+      - run:
+          name: Check Go version # needed for ghr installation
+          command: go version
+      - run:
+          name: Install ghr
+          command: |
+            go install github.com/tcnksm/ghr@v0.16.0
+            ghr --version
       - checkout
       - run:
           name: Build static library for Alpine
@@ -270,11 +278,6 @@ jobs:
       - when:
           condition: << pipeline.git.tag >>
           steps:
-            - run:
-                name: Install ghr
-                command: |
-                  go get github.com/tcnksm/ghr
-                  ghr --version
             - run:
                 name: Publish artifacts on GitHub
                 command: |
