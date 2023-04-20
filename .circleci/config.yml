@@ -385,7 +385,8 @@ workflows:
   build_and_test:
     jobs:
       - libwasmvm_sanity
-      - libwasmvm_sanity_windows
+      # Temporarily disabled. This check is still running on main.
+      # - libwasmvm_sanity_windows
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
@@ -439,3 +440,4 @@ workflows:
             branches:
               only:
                 - main
+                - /^release\/.*/
