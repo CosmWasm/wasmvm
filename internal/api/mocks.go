@@ -249,9 +249,9 @@ func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 // Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
 const (
 	GetPrice    uint64 = 99000
-	SetPrice           = 187000
-	RemovePrice        = 142000
-	RangePrice         = 261000
+	SetPrice    uint64 = 187000
+	RemovePrice uint64 = 142000
+	RangePrice  uint64 = 261000
 )
 
 type Lookup struct {
@@ -405,11 +405,6 @@ func DefaultQuerier(contractAddr string, coins types.Coins) types.Querier {
 }
 
 func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
-	marshaled, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-	q.usedGas += uint64(len(marshaled))
 	if request.Bank != nil {
 		return q.Bank.Query(request.Bank)
 	}
@@ -417,10 +412,10 @@ func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte
 		return q.Custom.Query(request.Custom)
 	}
 	if request.Staking != nil {
-		return nil, types.UnsupportedRequest{"staking"}
+		return nil, types.UnsupportedRequest{Kind: "staking"}
 	}
 	if request.Wasm != nil {
-		return nil, types.UnsupportedRequest{"wasm"}
+		return nil, types.UnsupportedRequest{Kind: "wasm"}
 	}
 	return nil, types.Unknown{}
 }
@@ -466,7 +461,7 @@ func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 		}
 		return json.Marshal(resp)
 	}
-	return nil, types.UnsupportedRequest{"Empty BankQuery"}
+	return nil, types.UnsupportedRequest{Kind: "Empty BankQuery"}
 }
 
 type CustomQuerier interface {
@@ -478,7 +473,7 @@ type NoCustom struct{}
 var _ CustomQuerier = NoCustom{}
 
 func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
-	return nil, types.UnsupportedRequest{"custom"}
+	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
 // ReflectCustom fulfills the requirements for testing `reflect` contract
