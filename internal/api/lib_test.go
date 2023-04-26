@@ -60,8 +60,8 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	cache, err := InitCache(tmpdir, "", TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
-	ReleaseCache(cache)
 	require.NoError(t, err)
+	ReleaseCache(cache)
 }
 
 func withCache(t *testing.T) (Cache, func()) {
