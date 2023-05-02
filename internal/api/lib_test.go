@@ -1009,7 +1009,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	initBalance := types.Coins{types.NewCoin(1234, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, initBalance)
 	// we need this to handle the custom requests from the reflect contract
-	innerQuerier := querier.(MockQuerier)
+	innerQuerier := querier.(*MockQuerier)
 	innerQuerier.Custom = ReflectCustom{}
 	querier = Querier(innerQuerier)
 
