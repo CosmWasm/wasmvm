@@ -35,7 +35,10 @@ func main() {
 	}
 	fmt.Println("Loaded!")
 
-	os.MkdirAll("tmp", 0o755)
+	err = os.MkdirAll("tmp", 0o755)
+	if err != nil {
+		panic(err)
+	}
 	vm, err := wasmvm.NewVM("tmp", SUPPORTED_CAPABILITIES, MEMORY_LIMIT, PRINT_DEBUG, CACHE_SIZE)
 	if err != nil {
 		panic(err)
