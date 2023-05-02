@@ -391,20 +391,20 @@ type MockQuerier struct {
 	usedGas uint64
 }
 
-var _ types.Querier = MockQuerier{}
+var _ types.Querier = &MockQuerier{}
 
 func DefaultQuerier(contractAddr string, coins types.Coins) types.Querier {
 	balances := map[string]types.Coins{
 		contractAddr: coins,
 	}
-	return MockQuerier{
+	return &MockQuerier{
 		Bank:    NewBankQuerier(balances),
 		Custom:  NoCustom{},
 		usedGas: 0,
 	}
 }
 
-func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
+func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
 	if request.Bank != nil {
 		return q.Bank.Query(request.Bank)
 	}
