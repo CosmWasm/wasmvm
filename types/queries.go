@@ -141,6 +141,10 @@ type AllDenomMetadataQuery struct {
 
 type AllDenomMetadataResponse struct {
 	Metadata []DenomMetadata `json:"metadata"`
+	// next_key is the key to be passed to PageRequest.key to
+	// query the next page most efficiently. It will be empty if
+	// there are no more results.
+	NextKey []byte `json:"next_key,omitempty"`
 }
 
 // IBCQuery defines a query request from the contract into the chain.
