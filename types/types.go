@@ -102,7 +102,7 @@ type PageRequest struct {
 	Key []byte `json:"key"`
 	// limit is the total number of results to be returned in the result page.
 	// If left empty it will default to a value to be set by each app.
-	Limit uint64 `json:"limit"`
+	Limit uint32 `json:"limit"`
 	// reverse is set to true if results are to be returned in the descending order.
 	//
 	// Since: cosmos-sdk 0.43
