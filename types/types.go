@@ -53,18 +53,18 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 // Replicating the cosmos-sdk bank module Metadata type
 type DenomMetadata struct {
 	Description string `json:"description"`
-	// denom_units represents the list of DenomUnit's for a given coin
+	// DenomUnits represents the list of DenomUnits for a given coin
 	DenomUnits []*DenomUnit `json:"denom_units"`
-	// base represents the base denom (should be the DenomUnit with exponent = 0).
+	// Base represents the base denom (should be the DenomUnit with exponent = 0).
 	Base string `json:"base"`
-	// display indicates the suggested denom that should be
+	// Display indicates the suggested denom that should be
 	// displayed in clients.
 	Display string `json:"display"`
-	// name defines the name of the token (eg: Cosmos Atom)
+	// Name defines the name of the token (eg: Cosmos Atom)
 	//
 	// Since: cosmos-sdk 0.43
 	Name string `json:"name"`
-	// symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
+	// Symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
 	// be the same as the display.
 	//
 	// Since: cosmos-sdk 0.43
@@ -82,30 +82,28 @@ type DenomMetadata struct {
 
 // Replicating the cosmos-sdk bank module DenomUnit type
 type DenomUnit struct {
-	// denom represents the string name of the given denom unit (e.g uatom).
+	// Denom represents the string name of the given denom unit (e.g uatom).
 	Denom string `json:"denom"`
-	// exponent represents power of 10 exponent that one must
+	// Exponent represents power of 10 exponent that one must
 	// raise the base_denom to in order to equal the given DenomUnit's denom
 	// 1 denom = 10^exponent base_denom
 	// (e.g. with a base_denom of uatom, one can create a DenomUnit of 'atom' with
 	// exponent = 6, thus: 1 atom = 10^6 uatom).
 	Exponent uint32 `json:"exponent"`
-	// aliases is a list of string aliases for the given denom
+	// Aliases is a list of string aliases for the given denom
 	Aliases []string `json:"aliases"`
 }
 
 // Simplified version of the cosmos-sdk PageRequest type
 type PageRequest struct {
-	// key is a value returned in PageResponse.next_key to begin
+	// Key is a value returned in PageResponse.next_key to begin
 	// querying the next page most efficiently. Only one of offset or key
 	// should be set.
 	Key []byte `json:"key"`
-	// limit is the total number of results to be returned in the result page.
+	// Limit is the total number of results to be returned in the result page.
 	// If left empty it will default to a value to be set by each app.
 	Limit uint32 `json:"limit"`
-	// reverse is set to true if results are to be returned in the descending order.
-	//
-	// Since: cosmos-sdk 0.43
+	// Reverse is set to true if results are to be returned in the descending order.
 	Reverse bool `json:"reverse"`
 }
 

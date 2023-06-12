@@ -134,14 +134,14 @@ type DenomMetadataResponse struct {
 }
 
 type AllDenomMetadataQuery struct {
-	// optional argument
-	// default pagination will be used if this is omitted
+	// Pagination is an optional argument.
+	// Default pagination will be used if this is omitted
 	Pagination *PageRequest `json:"pagination,omitempty"`
 }
 
 type AllDenomMetadataResponse struct {
 	Metadata []DenomMetadata `json:"metadata"`
-	// next_key is the key to be passed to PageRequest.key to
+	// NextKey is the key to be passed to PageRequest.key to
 	// query the next page most efficiently. It will be empty if
 	// there are no more results.
 	NextKey []byte `json:"next_key,omitempty"`
