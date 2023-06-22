@@ -109,12 +109,11 @@ func TestGovMsgVoteWeightedSerialization(t *testing.T) {
 }
 
 func TestMsgFundCommunityPoolSerialization(t *testing.T) {
-	document := []byte(`{"fund_community_pool":{"amount":[{"amount":"300","denom":"adenom"},{"amount":"400","denom":"bdenom"}],"depositor":"generousone"}}`)
+	document := []byte(`{"fund_community_pool":{"amount":[{"amount":"300","denom":"adenom"},{"amount":"400","denom":"bdenom"}]}}`)
 	
 	var msg DistributionMsg
 	err := json.Unmarshal(document, &msg)
 	require.NoError(t, err)
 	
 	require.Equal(t, Coins{{"adenom", "300"},{"bdenom", "400"}}, msg.FundCommunityPool.Amount)
-	require.Equal(t, "generousone", msg.FundCommunityPool.Depositor)
 }
