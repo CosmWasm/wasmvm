@@ -269,7 +269,7 @@ type WithdrawDelegatorRewardMsg struct {
 // `depositor` is automatically filled with the current contract's address
 type FundCommunityPoolMsg struct {
 	// Amount is the list of coins to be send to the community pool
-	Amount     Coins  `json:"amount"`
+	Amount Coins `json:"amount"`
 }
 
 // StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
