@@ -14,6 +14,11 @@ any machine that can run Docker can do the cross-compilation.
 
 ## Changelog
 
+**Version 0016:**
+
+- Update Rust to 1.69.0.
+- Let `build_muslc.sh` use `--example wasmvmstatic` instead of `--example muslc`
+
 **Version 0015:**
 
 - Update Rust to 1.68.2.
