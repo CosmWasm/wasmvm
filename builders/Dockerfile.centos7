@@ -26,25 +26,21 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 
 RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" \
   && chmod +x rustup-init \
-  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.68.2 \
+  && ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.69.0 \
   && rm rustup-init \
   && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
   && rustup --version \
   && cargo --version \
-  && rustc --version
-
-# Add aarch64 as a target of compilation
-RUN rustup target add aarch64-unknown-linux-gnu
-
-# allow non-root user to download more deps later
-RUN chmod -R 777 /usr/local/cargo
+  && rustc --version \
+  && chmod -R 777 /usr/local/cargo \
+  && rustup target add aarch64-unknown-linux-gnu
 
 ## COPY BUILD SCRIPTS
 
 WORKDIR /code
 
-COPY guest/*.sh /opt/
-RUN chmod +x /opt/*.sh
+COPY guest/*.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
@@ -57,4 +53,4 @@ RUN wget http://mirror.centos.org/altarch/7/os/aarch64/Packages/libgcc-4.8.5-44.
   && cp /code/lib64/libgcc_s-4.8.5-20150702.so.1 /usr/lib/gcc/aarch64-linux-gnu/4.8.5/libgcc_s.so \
   && rm libgcc-*.el7.aarch64.rpm
 
-CMD ["/opt/build_linux.sh"]
+CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_linux.sh) to docker run' && exit 1"]
