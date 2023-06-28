@@ -8,11 +8,11 @@ export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 echo "Starting aarch64-unknown-linux-musl build"
 export CC=/opt/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc
-cargo build --release --target aarch64-unknown-linux-musl --example muslc
+cargo build --release --target aarch64-unknown-linux-musl --example wasmvmstatic
 unset CC
 
 echo "Starting x86_64-unknown-linux-musl build"
-cargo build --release --target x86_64-unknown-linux-musl --example muslc
+cargo build --release --target x86_64-unknown-linux-musl --example wasmvmstatic
 
-cp target/aarch64-unknown-linux-musl/release/examples/libmuslc.a artifacts/libwasmvm_muslc.aarch64.a
-cp target/x86_64-unknown-linux-musl/release/examples/libmuslc.a artifacts/libwasmvm_muslc.a
+cp target/aarch64-unknown-linux-musl/release/examples/libwasmvmstatic.a artifacts/libwasmvm_muslc.aarch64.a
+cp target/x86_64-unknown-linux-musl/release/examples/libwasmvmstatic.a artifacts/libwasmvm_muslc.a
