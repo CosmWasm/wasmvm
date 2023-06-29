@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -86,6 +87,8 @@ func TestStoreCodeAndGetCode(t *testing.T) {
 
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	require.Equal(t, expectedChecksum[:], checksum)
 
 	code, err := GetCode(cache, checksum)
 	require.NoError(t, err)
