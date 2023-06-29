@@ -230,8 +230,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.2.4"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.2.4#721195cdef67772f825c59ad9cc1be45ce926fb2"
+version = "1.2.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=release/1.3#c91b410522cb3d62b2d90b6077e81c59b57f649e"
 dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
@@ -242,16 +242,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.2.4"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.2.4#721195cdef67772f825c59ad9cc1be45ce926fb2"
+version = "1.2.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=release/1.3#c91b410522cb3d62b2d90b6077e81c59b57f649e"
 dependencies = [
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.2.4"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.2.4#721195cdef67772f825c59ad9cc1be45ce926fb2"
+version = "1.2.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=release/1.3#c91b410522cb3d62b2d90b6077e81c59b57f649e"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -269,14 +269,15 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.2.4"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.2.4#721195cdef67772f825c59ad9cc1be45ce926fb2"
+version = "1.2.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=release/1.3#c91b410522cb3d62b2d90b6077e81c59b57f649e"
 dependencies = [
  "bitflags",
  "bytecheck",
  "clru",
  "cosmwasm-crypto",
  "cosmwasm-std",
+ "crc32fast",
  "enumset",
  "hex",
  "loupe",
@@ -1072,9 +1073,9 @@ checksum = "4d5d9eb14b174ee9aa2ef96dc2b94637a2d4b6e7cb873c7e171f0c20c6cf3eac"
 
 [[package]]
 name = "parity-wasm"
-version = "0.42.2"
+version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be5e13c266502aadf83426d87d81a0f5d1ef45b8027f5a471c360abfe4bfae92"
+checksum = "e1ad0aff30c1da14b1254fcb2af73e1fa9a28670e584a626f53a369d0e157304"
 
 [[package]]
 name = "pin-project-lite"
