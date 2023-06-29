@@ -123,6 +123,23 @@ func TestStoreCodeFailsWithBadData(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestStoreCodeUnchecked(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	checksum, err := StoreCodeUnchecked(cache, wasm)
+	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	require.Equal(t, expectedChecksum[:], checksum)
+
+	code, err := GetCode(cache, checksum)
+	require.NoError(t, err)
+	require.Equal(t, wasm, code)
+}
+
 func TestPin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()

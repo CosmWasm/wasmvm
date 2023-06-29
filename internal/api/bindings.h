@@ -350,6 +350,7 @@ struct cache_t *init_cache(struct ByteSliceView data_dir,
 
 struct UnmanagedVector save_wasm(struct cache_t *cache,
                                  struct ByteSliceView wasm,
+                                 bool unchecked,
                                  struct UnmanagedVector *error_msg);
 
 void remove_wasm(struct cache_t *cache,
