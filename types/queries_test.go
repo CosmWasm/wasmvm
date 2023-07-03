@@ -157,6 +157,29 @@ func TestContractInfoResponseSerialization(t *testing.T) {
 	}, res)
 }
 
+func TestDistributionQuerySerialization(t *testing.T) {
+	var err error
+
+	// Deserialization
+	document := []byte(`{"delegator_withdraw_address":{"delegator_address":"jane"}}`)
+	var query DistributionQuery
+	err = json.Unmarshal(document, &query)
+	require.NoError(t, err)
+	require.Equal(t, query, DistributionQuery{
+		DelegatorWithdrawAddress: &DelegatorWithdrawAddressQuery{
+			DelegatorAddress: "jane",
+		},
+	})
+
+	// Serialization
+	res := DelegatorWithdrawAddressResponse{
+		WithdrawAddress: "jane",
+	}
+	serialized, err := json.Marshal(res)
+	require.NoError(t, err)
+	require.Equal(t, string(serialized), `{"withdraw_address":"jane"}`)
+}
+
 func TestCodeInfoResponseSerialization(t *testing.T) {
 	// Deserializaton
 	document := []byte(`{"code_id":67,"creator":"jane","checksum":"f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00"}`)

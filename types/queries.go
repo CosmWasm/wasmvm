@@ -81,12 +81,13 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 // QueryRequest is an rust enum and only (exactly) one of the fields should be set
 // Should we do a cleaner approach in Go? (type/data?)
 type QueryRequest struct {
-	Bank     *BankQuery      `json:"bank,omitempty"`
-	Custom   json.RawMessage `json:"custom,omitempty"`
-	IBC      *IBCQuery       `json:"ibc,omitempty"`
-	Staking  *StakingQuery   `json:"staking,omitempty"`
-	Stargate *StargateQuery  `json:"stargate,omitempty"`
-	Wasm     *WasmQuery      `json:"wasm,omitempty"`
+	Bank         *BankQuery         `json:"bank,omitempty"`
+	Custom       json.RawMessage    `json:"custom,omitempty"`
+	IBC          *IBCQuery          `json:"ibc,omitempty"`
+	Staking      *StakingQuery      `json:"staking,omitempty"`
+	Distribution *DistributionQuery `json:"distribution,omitempty"`
+	Stargate     *StargateQuery     `json:"stargate,omitempty"`
+	Wasm         *WasmQuery         `json:"wasm,omitempty"`
 }
 
 type BankQuery struct {
@@ -317,6 +318,18 @@ type Delegation struct {
 	Delegator string `json:"delegator"`
 	Validator string `json:"validator"`
 	Amount    Coin   `json:"amount"`
+}
+
+type DistributionQuery struct {
+	DelegatorWithdrawAddress *DelegatorWithdrawAddressQuery `json:"delegator_withdraw_address,omitempty"`
+}
+
+type DelegatorWithdrawAddressQuery struct {
+	DelegatorAddress string `json:"delegator_address"`
+}
+
+type DelegatorWithdrawAddressResponse struct {
+	WithdrawAddress string `json:"withdraw_address"`
 }
 
 // DelegationResponse is the expected response to DelegationsQuery
