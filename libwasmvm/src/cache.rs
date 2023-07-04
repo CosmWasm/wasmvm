@@ -236,7 +236,7 @@ fn do_unpin(
 /// has to be destroyed exactly once. When calling `analyze_code`
 /// from Go this is done via `C.destroy_unmanaged_vector`.
 #[repr(C)]
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct AnalysisReport {
     pub has_ibc_entry_points: bool,
     /// An UTF-8 encoded comma separated list of reqired capabilities.
@@ -295,7 +295,7 @@ fn do_analyze_code(
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct Metrics {
     pub hits_pinned_memory_cache: u32,
     pub hits_memory_cache: u32,
