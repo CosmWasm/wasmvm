@@ -91,9 +91,11 @@ type QueryRequest struct {
 }
 
 type BankQuery struct {
-	Supply      *SupplyQuery      `json:"supply,omitempty"`
-	Balance     *BalanceQuery     `json:"balance,omitempty"`
-	AllBalances *AllBalancesQuery `json:"all_balances,omitempty"`
+	Supply           *SupplyQuery           `json:"supply,omitempty"`
+	Balance          *BalanceQuery          `json:"balance,omitempty"`
+	AllBalances      *AllBalancesQuery      `json:"all_balances,omitempty"`
+	DenomMetadata    *DenomMetadataQuery    `json:"denom_metadata,omitempty"`
+	AllDenomMetadata *AllDenomMetadataQuery `json:"all_denom_metadata,omitempty"`
 }
 
 type SupplyQuery struct {
@@ -122,6 +124,28 @@ type AllBalancesQuery struct {
 // AllBalancesResponse is the expected response to AllBalancesQuery
 type AllBalancesResponse struct {
 	Amount Coins `json:"amount"`
+}
+
+type DenomMetadataQuery struct {
+	Denom string `json:"denom"`
+}
+
+type DenomMetadataResponse struct {
+	Metadata DenomMetadata `json:"metadata"`
+}
+
+type AllDenomMetadataQuery struct {
+	// Pagination is an optional argument.
+	// Default pagination will be used if this is omitted
+	Pagination *PageRequest `json:"pagination,omitempty"`
+}
+
+type AllDenomMetadataResponse struct {
+	Metadata []DenomMetadata `json:"metadata"`
+	// NextKey is the key to be passed to PageRequest.key to
+	// query the next page most efficiently. It will be empty if
+	// there are no more results.
+	NextKey []byte `json:"next_key,omitempty"`
 }
 
 // IBCQuery defines a query request from the contract into the chain.
