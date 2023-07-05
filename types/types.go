@@ -54,7 +54,7 @@ func (c *Coins) UnmarshalJSON(data []byte) error {
 type DenomMetadata struct {
 	Description string `json:"description"`
 	// DenomUnits represents the list of DenomUnits for a given coin
-	DenomUnits []*DenomUnit `json:"denom_units"`
+	DenomUnits []DenomUnit `json:"denom_units"`
 	// Base represents the base denom (should be the DenomUnit with exponent = 0).
 	Base string `json:"base"`
 	// Display indicates the suggested denom that should be
