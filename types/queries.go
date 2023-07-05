@@ -93,7 +93,7 @@ type BankQuery struct {
 	Supply           *SupplyQuery           `json:"supply,omitempty"`
 	Balance          *BalanceQuery          `json:"balance,omitempty"`
 	AllBalances      *AllBalancesQuery      `json:"all_balances,omitempty"`
-	DenomMetadata    *DenomMetadataQuery    `json:"get_denom_metadata,omitempty"`
+	DenomMetadata    *DenomMetadataQuery    `json:"denom_metadata,omitempty"`
 	AllDenomMetadata *AllDenomMetadataQuery `json:"all_denom_metadata,omitempty"`
 }
 
