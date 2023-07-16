@@ -150,3 +150,7 @@ format:
 	find . -name '*.go' -type f | xargs gofumpt -w -s
 	find . -name '*.go' -type f | xargs misspell -w
 	find . -name '*.go' -type f | xargs goimports -w -local github.com/CosmWasm/wasmvm
+
+.PHONY: lint
+lint:
+	golangci-lint run
