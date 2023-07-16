@@ -248,7 +248,7 @@ type RedelegateMsg struct {
 type DistributionMsg struct {
 	SetWithdrawAddress      *SetWithdrawAddressMsg      `json:"set_withdraw_address,omitempty"`
 	WithdrawDelegatorReward *WithdrawDelegatorRewardMsg `json:"withdraw_delegator_reward,omitempty"`
-	FundCommunityPool       *FundCommunityPoolMsg       `json:"fund_community_pool",omitempty"`
+	FundCommunityPool       *FundCommunityPoolMsg       `json:"fund_community_pool,omitempty"`
 }
 
 // SetWithdrawAddressMsg is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
