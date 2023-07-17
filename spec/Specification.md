@@ -1,6 +1,6 @@
 # Specification
 
-This section attempts to codify the [architecture](./Architecture) with a number of concrete
+This section attempts to codify the [architecture](./Architecture.md) with a number of concrete
 implementation details, function signatures, naming choices, etc.
 
 ## Definitions
