@@ -13,12 +13,19 @@ pub struct GasReport {
 }
 
 impl From<cosmwasm_vm::GasReport> for GasReport {
-    fn from(value: cosmwasm_vm::GasReport) -> Self {
+    fn from(
+        cosmwasm_vm::GasReport {
+            limit,
+            remaining,
+            used_externally,
+            used_internally,
+        }: cosmwasm_vm::GasReport,
+    ) -> Self {
         Self {
-            limit: value.limit,
-            remaining: value.remaining,
-            used_externally: value.used_externally,
-            used_internally: value.used_internally,
+            limit,
+            remaining,
+            used_externally,
+            used_internally,
         }
     }
 }
