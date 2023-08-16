@@ -18,6 +18,7 @@ use crate::error::{handle_c_error_binary, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
+use crate::GasReport;
 
 fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
@@ -39,7 +40,7 @@ pub extern "C" fn instantiate(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_3_args(
@@ -71,7 +72,7 @@ pub extern "C" fn execute(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_3_args(
@@ -102,7 +103,7 @@ pub extern "C" fn migrate(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -132,7 +133,7 @@ pub extern "C" fn sudo(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -162,7 +163,7 @@ pub extern "C" fn reply(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -192,7 +193,7 @@ pub extern "C" fn query(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -222,7 +223,7 @@ pub extern "C" fn ibc_channel_open(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -252,7 +253,7 @@ pub extern "C" fn ibc_channel_connect(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -282,7 +283,7 @@ pub extern "C" fn ibc_channel_close(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -312,7 +313,7 @@ pub extern "C" fn ibc_packet_receive(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -342,7 +343,7 @@ pub extern "C" fn ibc_packet_ack(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -372,7 +373,7 @@ pub extern "C" fn ibc_packet_timeout(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
@@ -411,7 +412,7 @@ fn call_2_args(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -452,7 +453,7 @@ fn do_call_2_args(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
@@ -470,7 +471,7 @@ fn do_call_2_args(
     let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2);
-    *gas_used = instance.create_gas_report().used_internally;
+    *gas_used = instance.create_gas_report().into();
     instance.recycle();
     Ok(res?)
 }
@@ -497,7 +498,7 @@ fn call_3_args(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -539,7 +540,7 @@ fn do_call_3_args(
     querier: GoQuerier,
     gas_limit: u64,
     print_debug: bool,
-    gas_used: Option<&mut u64>,
+    gas_used: Option<&mut GasReport>,
 ) -> Result<Vec<u8>, Error> {
     let gas_used = gas_used.ok_or_else(|| Error::empty_arg(GAS_USED_ARG))?;
     let checksum: Checksum = checksum
@@ -558,7 +559,7 @@ fn do_call_3_args(
     let mut instance = cache.get_instance(&checksum, backend, options)?;
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
-    *gas_used = instance.create_gas_report().used_internally;
+    *gas_used = instance.create_gas_report().into();
     instance.recycle();
     Ok(res?)
 }
