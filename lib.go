@@ -127,29 +127,29 @@ func (vm *VM) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.Response, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	infoBin, err := json.Marshal(info)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Instantiate(vm.cache, checksum, envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var result types.ContractResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if result.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", result.Err)
+		return nil, gasReport, fmt.Errorf("%s", result.Err)
 	}
-	return result.Ok, gasReport.UsedInternally, nil
+	return result.Ok, gasReport, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same Checksum is the
@@ -169,29 +169,29 @@ func (vm *VM) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.Response, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	infoBin, err := json.Marshal(info)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Execute(vm.cache, checksum, envBin, infoBin, executeMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var result types.ContractResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if result.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", result.Err)
+		return nil, gasReport, fmt.Errorf("%s", result.Err)
 	}
-	return result.Ok, gasReport.UsedInternally, nil
+	return result.Ok, gasReport, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -207,25 +207,25 @@ func (vm *VM) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Query(vm.cache, checksum, envBin, queryMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.QueryResponse
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // Migrate will migrate an existing contract to a new code binary.
@@ -244,25 +244,25 @@ func (vm *VM) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.Response, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Migrate(vm.cache, checksum, envBin, migrateMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.ContractResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // Sudo allows native Go modules to make priviledged (sudo) calls on the contract.
@@ -281,25 +281,25 @@ func (vm *VM) Sudo(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.Response, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Sudo(vm.cache, checksum, envBin, sudoMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.ContractResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // Reply allows the native Go wasm modules to make a priviledged call to return the result
@@ -316,29 +316,29 @@ func (vm *VM) Reply(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.Response, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	replyBin, err := json.Marshal(reply)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.Reply(vm.cache, checksum, envBin, replyBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.ContractResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
@@ -353,29 +353,29 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBC3ChannelOpenResponse, uint64, error) {
+) (*types.IBC3ChannelOpenResponse, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCChannelOpen(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCChannelOpenResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
@@ -390,29 +390,29 @@ func (vm *VM) IBCChannelConnect(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResponse, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCChannelConnect(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCBasicResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
@@ -427,29 +427,29 @@ func (vm *VM) IBCChannelClose(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResponse, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCChannelClose(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCBasicResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
@@ -464,26 +464,26 @@ func (vm *VM) IBCPacketReceive(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCReceiveResult, uint64, error) {
+) (*types.IBCReceiveResult, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCPacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCReceiveResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &resp, gasReport, nil
 }
 
 // IBCPacketAck is available on IBC-enabled contracts and is called when an
@@ -499,29 +499,29 @@ func (vm *VM) IBCPacketAck(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResponse, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCPacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCBasicResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
@@ -537,29 +537,29 @@ func (vm *VM) IBCPacketTimeout(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResponse, types.GasReport, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	msgBin, err := json.Marshal(msg)
 	if err != nil {
-		return nil, 0, err
+		return nil, types.EmptyGasReport(gasLimit), err
 	}
 	data, gasReport, err := api.IBCPacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 
 	var resp types.IBCBasicResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
 	if err != nil {
-		return nil, gasReport.UsedInternally, err
+		return nil, gasReport, err
 	}
 	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
+		return nil, gasReport, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return resp.Ok, gasReport, nil
 }
 
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
