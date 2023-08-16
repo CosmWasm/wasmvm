@@ -28,8 +28,27 @@ func (q QueryResponse) MarshalJSON() ([]byte, error) {
 
 //-------- Querier -----------
 
+// Querier is a thing that allows the contract to query information
+// from the environment it is executed in. This is typically used to query
+// a different contract or another module in a Cosmos blockchain.
+//
+// Queries are performed synchronously, i.e. the original caller is blocked
+// until the query response is returned.
 type Querier interface {
+	// Query takes a query request, performs the query and returns the response.
+	// It takes a gas limit measured in [CosmWasm gas] (aka. wasmvm gas) to ensure
+	// the query does not consume more gas than the contract execution has left.
+	//
+	// [CosmWasm gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.3.1/docs/GAS.md
 	Query(request QueryRequest, gasLimit uint64) ([]byte, error)
+	// GasConsumed returns the gas that was consumed by the querier during its entire
+	// lifetime or by the context in which it was executed in. The absolute gas values
+	// must not be used directly as it is undefined what is included in this value. Instead
+	// wasmvm will call GasConsumed before and after the query and use the difference
+	// as the query's gas usage.
+	// Like the gas limit above, this is measured in [CosmWasm gas] (aka. wasmvm gas).
+	//
+	// [CosmWasm gas]: https://github.com/CosmWasm/cosmwasm/blob/v1.3.1/docs/GAS.md
 	GasConsumed() uint64
 }
 
