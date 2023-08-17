@@ -122,12 +122,19 @@ type GasReport struct {
 	UsedInternally uint64
 }
 
+// EmptyGasReport creates a new GasReport with the given limit and 0 gas used.
 func EmptyGasReport(limit uint64) GasReport {
+	return NewGasReport(limit, 0)
+}
+
+// NewGasReport creates a new GasReport with the given limit and amount of gas used internally.
+// UsedExternally is set to 0.
+func NewGasReport(limit uint64, usedInternally uint64) GasReport {
 	return GasReport{
 		Limit:          limit,
-		Remaining:      limit,
+		Remaining:      limit - usedInternally,
 		UsedExternally: 0,
-		UsedInternally: 0,
+		UsedInternally: usedInternally,
 	}
 }
 
