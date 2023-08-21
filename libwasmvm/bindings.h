@@ -411,7 +411,7 @@ struct UnmanagedVector instantiate(struct cache_t *cache,
                                    struct GoQuerier querier,
                                    uint64_t gas_limit,
                                    bool print_debug,
-                                   struct GasReport *gas_used,
+                                   struct GasReport *gas_report,
                                    struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector execute(struct cache_t *cache,
@@ -424,7 +424,7 @@ struct UnmanagedVector execute(struct cache_t *cache,
                                struct GoQuerier querier,
                                uint64_t gas_limit,
                                bool print_debug,
-                               struct GasReport *gas_used,
+                               struct GasReport *gas_report,
                                struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector migrate(struct cache_t *cache,
@@ -436,7 +436,7 @@ struct UnmanagedVector migrate(struct cache_t *cache,
                                struct GoQuerier querier,
                                uint64_t gas_limit,
                                bool print_debug,
-                               struct GasReport *gas_used,
+                               struct GasReport *gas_report,
                                struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector sudo(struct cache_t *cache,
@@ -448,7 +448,7 @@ struct UnmanagedVector sudo(struct cache_t *cache,
                             struct GoQuerier querier,
                             uint64_t gas_limit,
                             bool print_debug,
-                            struct GasReport *gas_used,
+                            struct GasReport *gas_report,
                             struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector reply(struct cache_t *cache,
@@ -460,7 +460,7 @@ struct UnmanagedVector reply(struct cache_t *cache,
                              struct GoQuerier querier,
                              uint64_t gas_limit,
                              bool print_debug,
-                             struct GasReport *gas_used,
+                             struct GasReport *gas_report,
                              struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector query(struct cache_t *cache,
@@ -472,7 +472,7 @@ struct UnmanagedVector query(struct cache_t *cache,
                              struct GoQuerier querier,
                              uint64_t gas_limit,
                              bool print_debug,
-                             struct GasReport *gas_used,
+                             struct GasReport *gas_report,
                              struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
@@ -484,7 +484,7 @@ struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
                                         struct GoQuerier querier,
                                         uint64_t gas_limit,
                                         bool print_debug,
-                                        struct GasReport *gas_used,
+                                        struct GasReport *gas_report,
                                         struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
@@ -496,7 +496,7 @@ struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
                                            struct GoQuerier querier,
                                            uint64_t gas_limit,
                                            bool print_debug,
-                                           struct GasReport *gas_used,
+                                           struct GasReport *gas_report,
                                            struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
@@ -508,7 +508,7 @@ struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
                                          struct GoQuerier querier,
                                          uint64_t gas_limit,
                                          bool print_debug,
-                                         struct GasReport *gas_used,
+                                         struct GasReport *gas_report,
                                          struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
@@ -520,7 +520,7 @@ struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
                                           struct GoQuerier querier,
                                           uint64_t gas_limit,
                                           bool print_debug,
-                                          struct GasReport *gas_used,
+                                          struct GasReport *gas_report,
                                           struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
@@ -532,7 +532,7 @@ struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
                                       struct GoQuerier querier,
                                       uint64_t gas_limit,
                                       bool print_debug,
-                                      struct GasReport *gas_used,
+                                      struct GasReport *gas_report,
                                       struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
@@ -544,7 +544,7 @@ struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
                                           struct GoQuerier querier,
                                           uint64_t gas_limit,
                                           bool print_debug,
-                                          struct GasReport *gas_used,
+                                          struct GasReport *gas_report,
                                           struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
