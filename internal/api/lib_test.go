@@ -360,7 +360,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x13a78a36c), cost)
+	assert.Equal(t, uint64(0x13a78a36c), cost.UsedInternally)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
@@ -391,8 +391,8 @@ func TestExecute(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x13a78a36c), cost)
-	t.Logf("Time (%d gas): %s\n", cost, diff)
+	assert.Equal(t, uint64(0x13a78a36c), cost.UsedInternally)
+	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -404,8 +404,8 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x222892d70), cost)
-	t.Logf("Time (%d gas): %s\n", cost, diff)
+	assert.Equal(t, uint64(0x222892d70), cost.UsedInternally)
+	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
 	var result types.ContractResult
@@ -512,8 +512,8 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xd45091d0), cost)
-	t.Logf("Time (%d gas): %s\n", cost, diff)
+	assert.Equal(t, uint64(0xd45091d0), cost.UsedInternally)
+	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a cpu loop
 	maxGas := uint64(40_000_000)
@@ -525,8 +525,8 @@ func TestExecuteCpuLoop(t *testing.T) {
 	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.Error(t, err)
-	assert.Equal(t, cost, maxGas)
-	t.Logf("CPULoop Time (%d gas): %s\n", cost, diff)
+	assert.Equal(t, cost.UsedInternally, maxGas)
+	t.Logf("CPULoop Time (%d gas): %s\n", cost.UsedInternally, diff)
 }
 
 func TestExecuteStorageLoop(t *testing.T) {
@@ -557,15 +557,15 @@ func TestExecuteStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	_, cost, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff := time.Since(start)
 	require.Error(t, err)
-	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
+	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
 	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
-	t.Logf("Wasm gas: %d\n", cost)
+	t.Logf("Wasm gas: %d\n", gasReport.UsedInternally)
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
-	totalCost := cost + gasMeter2.GasConsumed()
+	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
@@ -663,7 +663,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0x138559c5c), cost)
+	assert.Equal(t, uint64(0x138559c5c), cost.UsedInternally)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -674,7 +674,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x1399177bc), cost)
+	assert.Equal(t, uint64(0x1399177bc), cost.UsedInternally)
 
 	// fail to execute store1 with mary
 	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x1218ff5d0)
@@ -922,7 +922,7 @@ func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress,
 	info := MockInfoBin(t, signer)
 	res, cost, err := Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	assert.Equal(t, gasExpected, cost)
+	assert.Equal(t, gasExpected, cost.UsedInternally)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
