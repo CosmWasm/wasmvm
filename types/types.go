@@ -115,6 +115,22 @@ func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
+type GasReport struct {
+	Limit          uint64
+	Remaining      uint64
+	UsedExternally uint64
+	UsedInternally uint64
+}
+
+func EmptyGasReport(limit uint64) GasReport {
+	return GasReport{
+		Limit:          limit,
+		Remaining:      limit,
+		UsedExternally: 0,
+		UsedInternally: 0,
+	}
+}
+
 // Contains static analysis info of the contract (the Wasm code to be precise).
 // This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
