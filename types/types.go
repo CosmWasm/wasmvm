@@ -94,6 +94,23 @@ type DenomUnit struct {
 	Aliases []string `json:"aliases"`
 }
 
+// A coin type with decimal amount.
+// Modeled after the Cosmos SDK's [DecCoin] type.
+// However, in contrast to the Cosmos SDK the `amount` string MUST always have a dot at JSON level,
+// see <https://github.com/cosmos/cosmos-sdk/issues/10863>.
+// Also if Cosmos SDK choses to migrate away from fixed point decimals
+// (as shown [here](https://github.com/cosmos/cosmos-sdk/blob/v0.47.4/x/group/internal/math/dec.go#L13-L21) and discussed [here](https://github.com/cosmos/cosmos-sdk/issues/11783)),
+// wasmd needs to truncate the decimal places to 18.
+//
+// [DecCoin]: (https://github.com/cosmos/cosmos-sdk/blob/v0.47.4/proto/cosmos/base/v1beta1/coin.proto#L28-L38)
+type DecCoin struct {
+	// An amount in the base denom of the distributed token.
+	//
+	// Some chains have choosen atto (10^-18) for their token's base denomination. If we used `Decimal` here, we could only store 340282366920938463463.374607431768211455atoken which is 340.28 TOKEN.
+	Amount string `json:"amount"`
+	Denom  string `json:"denom"`
+}
+
 // Simplified version of the cosmos-sdk PageRequest type
 type PageRequest struct {
 	// Key is a value returned in PageResponse.next_key to begin
