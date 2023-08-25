@@ -29,6 +29,24 @@ pub struct Iterator_vtable {
             *mut UnmanagedVector, // error message output
         ) -> i32,
     >,
+    pub next_key_db: Option<
+        extern "C" fn(
+            iterator_t,
+            *mut gas_meter_t,
+            *mut u64,
+            *mut UnmanagedVector, // key output
+            *mut UnmanagedVector, // error message output
+        ) -> i32,
+    >,
+    pub next_value_db: Option<
+        extern "C" fn(
+            iterator_t,
+            *mut gas_meter_t,
+            *mut u64,
+            *mut UnmanagedVector, // value output
+            *mut UnmanagedVector, // error message output
+        ) -> i32,
+    >,
 }
 
 #[repr(C)]
@@ -96,5 +114,61 @@ impl GoIter {
             None => Ok(None),
         };
         (result, gas_info)
+    }
+
+    pub fn next_key(&mut self) -> BackendResult<Option<Vec<u8>>> {
+        self.next_key_or_val(self.vtable.next_key_db)
+    }
+
+    pub fn next_value(&mut self) -> BackendResult<Option<Vec<u8>>> {
+        self.next_key_or_val(self.vtable.next_value_db)
+    }
+
+    #[inline(always)]
+    fn next_key_or_val(
+        &mut self,
+        next_fn: Option<
+            extern "C" fn(
+                iterator_t,
+                *mut gas_meter_t,
+                *mut u64,
+                *mut UnmanagedVector, // output
+                *mut UnmanagedVector, // error message output
+            ) -> i32,
+        >,
+    ) -> BackendResult<Option<Vec<u8>>> {
+        let next_db = match next_fn {
+            Some(f) => f,
+            None => {
+                let result = Err(BackendError::unknown("iterator vtable not set"));
+                return (result, GasInfo::free());
+            }
+        };
+
+        let mut output = UnmanagedVector::default();
+        let mut error_msg = UnmanagedVector::default();
+        let mut used_gas = 0_u64;
+        let go_result: GoError = (next_db)(
+            self.state,
+            self.gas_meter,
+            &mut used_gas as *mut u64,
+            &mut output as *mut UnmanagedVector,
+            &mut error_msg as *mut UnmanagedVector,
+        )
+        .into();
+        // We destruct the `UnmanagedVector`s here, no matter if we need the data.
+        let output = output.consume();
+
+        let gas_info = GasInfo::with_externally_used(used_gas);
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || "Failed to fetch next item from iterator".to_string();
+        unsafe {
+            if let Err(err) = go_result.into_result(error_msg, default) {
+                return (Err(err), gas_info);
+            }
+        }
+
+        (Ok(output), gas_info)
     }
 }
