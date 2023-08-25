@@ -260,6 +260,16 @@ typedef struct Iterator_vtable {
                      struct UnmanagedVector*,
                      struct UnmanagedVector*,
                      struct UnmanagedVector*);
+  int32_t (*next_key_db)(struct iterator_t,
+                         struct gas_meter_t*,
+                         uint64_t*,
+                         struct UnmanagedVector*,
+                         struct UnmanagedVector*);
+  int32_t (*next_value_db)(struct iterator_t,
+                           struct gas_meter_t*,
+                           uint64_t*,
+                           struct UnmanagedVector*,
+                           struct UnmanagedVector*);
 } Iterator_vtable;
 
 typedef struct GoIter {

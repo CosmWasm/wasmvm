@@ -116,6 +116,34 @@ impl Storage for GoStorage {
         iterator.next()
     }
 
+    fn next_key(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
+        let iterator = match self.iterators.get_mut(&iterator_id) {
+            Some(i) => i,
+            None => {
+                return (
+                    Err(BackendError::iterator_does_not_exist(iterator_id)),
+                    GasInfo::free(),
+                )
+            }
+        };
+
+        iterator.next_key()
+    }
+
+    fn next_value(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
+        let iterator = match self.iterators.get_mut(&iterator_id) {
+            Some(i) => i,
+            None => {
+                return (
+                    Err(BackendError::iterator_does_not_exist(iterator_id)),
+                    GasInfo::free(),
+                )
+            }
+        };
+
+        iterator.next_value()
+    }
+
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
