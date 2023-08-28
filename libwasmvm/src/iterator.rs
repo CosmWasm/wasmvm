@@ -66,14 +66,13 @@ impl GoIter {
     }
 
     pub fn next(&mut self) -> BackendResult<Option<Record>> {
-        let next = match self.vtable.next {
-            Some(f) => f,
-            None => {
-                let result = Err(BackendError::unknown(
-                    "iterator vtable function 'next' not set",
-                ));
-                return (result, GasInfo::free());
-            }
+        let next = if let Some(f) = self.vtable.next {
+            f
+        } else {
+            let result = Err(BackendError::unknown(
+                "iterator vtable function 'next' not set",
+            ));
+            return (result, GasInfo::free());
         };
 
         let mut output_key = UnmanagedVector::default();
@@ -140,14 +139,13 @@ impl GoIter {
         >,
         fn_name: &str,
     ) -> BackendResult<Option<Vec<u8>>> {
-        let next = match next_fn {
-            Some(f) => f,
-            None => {
-                let result = Err(BackendError::unknown(format!(
-                    "iterator vtable function '{fn_name}' not set"
-                )));
-                return (result, GasInfo::free());
-            }
+        let next = if let Some(f) = next_fn {
+            f
+        } else {
+            let result = Err(BackendError::unknown(format!(
+                "iterator vtable function '{fn_name}' not set"
+            )));
+            return (result, GasInfo::free());
         };
 
         let mut output = UnmanagedVector::default();
