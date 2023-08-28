@@ -74,7 +74,7 @@ impl Querier for GoQuerier {
         let bin_result: Vec<u8> = output.unwrap_or_default();
         let result = serde_json::from_slice(&bin_result).or_else(|e| {
             Ok(SystemResult::Err(SystemError::InvalidResponse {
-                error: format!("Parsing Go response: {}", e),
+                error: format!("Parsing Go response: {e}"),
                 response: bin_result.into(),
             }))
         });

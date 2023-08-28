@@ -64,7 +64,7 @@ impl BackendApi for GoApi {
         let gas_info = GasInfo::with_cost(used_gas);
 
         // return complete error message (reading from buffer for GoError::Other)
-        let default = || format!("Failed to canonicalize the address: {}", human);
+        let default = || format!("Failed to canonicalize the address: {human}");
         unsafe {
             if let Err(err) = go_error.into_result(error_msg, default) {
                 return (Err(err), gas_info);

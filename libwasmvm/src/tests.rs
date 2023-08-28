@@ -42,7 +42,7 @@ fn handle_cpu_loop_with_cache() {
     let res = call_instantiate_raw(&mut instance, &raw_env, &raw_info, b"{}");
     let gas_left = instance.get_gas_left();
     let gas_used = options.gas_limit - gas_left;
-    println!("Init gas left: {}, used: {}", gas_left, gas_used);
+    println!("Init gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_ok());
     let backend = instance.recycle().unwrap();
 
@@ -52,7 +52,7 @@ fn handle_cpu_loop_with_cache() {
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg);
     let gas_left = instance.get_gas_left();
     let gas_used = options.gas_limit - gas_left;
-    println!("Handle gas left: {}, used: {}", gas_left, gas_used);
+    println!("Handle gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_err());
     assert_eq!(gas_left, 0);
     let _ = instance.recycle();
@@ -71,7 +71,7 @@ fn handle_cpu_loop_no_cache() {
     let res = call_instantiate_raw(&mut instance, &raw_env, &raw_info, b"{}");
     let gas_left = instance.get_gas_left();
     let gas_used = gas_limit - gas_left;
-    println!("Init gas left: {}, used: {}", gas_left, gas_used);
+    println!("Init gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_ok());
 
     // execute
@@ -79,7 +79,7 @@ fn handle_cpu_loop_no_cache() {
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg);
     let gas_left = instance.get_gas_left();
     let gas_used = gas_limit - gas_left;
-    println!("Handle gas left: {}, used: {}", gas_left, gas_used);
+    println!("Handle gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_err());
     assert_eq!(gas_left, 0);
 }
