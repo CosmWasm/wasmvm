@@ -132,9 +132,9 @@ func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 }
 
 var iterator_vtable = C.Iterator_vtable{
-	next_db:       (C.next_db_fn)(C.cNext_cgo),
-	next_key_db:   (C.next_key_db_fn)(C.cNextKey_cgo),
-	next_value_db: (C.next_value_db_fn)(C.cNextValue_cgo),
+	next:       (C.next_db_fn)(C.cNext_cgo),
+	next_key:   (C.next_key_db_fn)(C.cNextKey_cgo),
+	next_value: (C.next_value_db_fn)(C.cNextValue_cgo),
 }
 
 // An iterator including referenced objects is 117 bytes large (calculated using https://github.com/DmitriyVTitov/size).
