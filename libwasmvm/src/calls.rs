@@ -432,7 +432,7 @@ fn call_2_args(
             )
         }))
         .unwrap_or_else(|err| {
-            eprintln!("Panic in do_call_2_args: {:?}", err);
+            eprintln!("Panic in do_call_2_args: {err:?}");
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -519,7 +519,7 @@ fn call_3_args(
             )
         }))
         .unwrap_or_else(|err| {
-            eprintln!("Panic in do_call_3_args: {:?}", err);
+            eprintln!("Panic in do_call_3_args: {err:?}");
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
