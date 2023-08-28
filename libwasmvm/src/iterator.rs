@@ -19,7 +19,7 @@ pub struct iterator_t {
 #[repr(C)]
 #[derive(Default)]
 pub struct Iterator_vtable {
-    pub next_db: Option<
+    pub next: Option<
         extern "C" fn(
             iterator_t,
             *mut gas_meter_t,
@@ -29,7 +29,7 @@ pub struct Iterator_vtable {
             *mut UnmanagedVector, // error message output
         ) -> i32,
     >,
-    pub next_key_db: Option<
+    pub next_key: Option<
         extern "C" fn(
             iterator_t,
             *mut gas_meter_t,
@@ -38,7 +38,7 @@ pub struct Iterator_vtable {
             *mut UnmanagedVector, // error message output
         ) -> i32,
     >,
-    pub next_value_db: Option<
+    pub next_value: Option<
         extern "C" fn(
             iterator_t,
             *mut gas_meter_t,
@@ -66,7 +66,7 @@ impl GoIter {
     }
 
     pub fn next(&mut self) -> BackendResult<Option<Record>> {
-        let next_db = match self.vtable.next_db {
+        let next = match self.vtable.next {
             Some(f) => f,
             None => {
                 let result = Err(BackendError::unknown("iterator vtable not set"));
@@ -78,7 +78,7 @@ impl GoIter {
         let mut output_value = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoError = (next_db)(
+        let go_result: GoError = (next)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
@@ -117,11 +117,11 @@ impl GoIter {
     }
 
     pub fn next_key(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        self.next_key_or_val(self.vtable.next_key_db)
+        self.next_key_or_val(self.vtable.next_key)
     }
 
     pub fn next_value(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        self.next_key_or_val(self.vtable.next_value_db)
+        self.next_key_or_val(self.vtable.next_value)
     }
 
     #[inline(always)]
@@ -137,7 +137,7 @@ impl GoIter {
             ) -> i32,
         >,
     ) -> BackendResult<Option<Vec<u8>>> {
-        let next_db = match next_fn {
+        let next = match next_fn {
             Some(f) => f,
             None => {
                 let result = Err(BackendError::unknown("iterator vtable not set"));
@@ -148,7 +148,7 @@ impl GoIter {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoError = (next_db)(
+        let go_result: GoError = (next)(
             self.state,
             self.gas_meter,
             &mut used_gas as *mut u64,
