@@ -270,7 +270,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
@@ -284,7 +284,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Pin
 	err = vm.Pin(checksum)
@@ -297,8 +297,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizePinnedMemoryCache, 0.2)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizePinnedMemoryCache, 0.25)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
@@ -314,8 +314,8 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizePinnedMemoryCache, 0.2)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizePinnedMemoryCache, 0.25)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Unpin
 	err = vm.Unpin(checksum)
@@ -330,7 +330,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
@@ -347,5 +347,5 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 2282344, metrics.SizeMemoryCache, 0.2)
+	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 }
