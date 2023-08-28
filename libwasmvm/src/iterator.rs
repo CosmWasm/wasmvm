@@ -116,34 +116,36 @@ impl GoIter {
     }
 
     pub fn next_key(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        self.next_key_or_val(self.vtable.next_key, "next_key")
+        let Some(next_key) = self.vtable.next_key else {
+            let result = Err(BackendError::unknown(
+                "iterator vtable function 'next_key' not set",
+            ));
+            return (result, GasInfo::free());
+        };
+        self.next_key_or_val(next_key)
     }
 
     pub fn next_value(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        self.next_key_or_val(self.vtable.next_value, "next_value")
+        let Some(next_value) = self.vtable.next_value else {
+            let result = Err(BackendError::unknown(
+                "iterator vtable function 'next_value' not set",
+            ));
+            return (result, GasInfo::free());
+        };
+        self.next_key_or_val(next_value)
     }
 
     #[inline(always)]
     fn next_key_or_val(
         &mut self,
-        next_fn: Option<
-            extern "C" fn(
-                iterator_t,
-                *mut gas_meter_t,
-                *mut u64,
-                *mut UnmanagedVector, // output
-                *mut UnmanagedVector, // error message output
-            ) -> i32,
-        >,
-        fn_name: &str,
+        next: extern "C" fn(
+            iterator_t,
+            *mut gas_meter_t,
+            *mut u64,
+            *mut UnmanagedVector, // output
+            *mut UnmanagedVector, // error message output
+        ) -> i32,
     ) -> BackendResult<Option<Vec<u8>>> {
-        let Some(next) = next_fn else {
-            let result = Err(BackendError::unknown(format!(
-                "iterator vtable function '{fn_name}' not set"
-            )));
-            return (result, GasInfo::free());
-        };
-
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
