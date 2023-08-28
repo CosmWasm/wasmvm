@@ -349,7 +349,7 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 		panic("Unable to retrieve iterator.")
 	}
 	if !iter.Valid() {
-		// end of iterator, return as no-op, nil key is considered end
+		// end of iterator, return as no-op, nil `output` is considered end
 		return C.GoError_None
 	}
 
