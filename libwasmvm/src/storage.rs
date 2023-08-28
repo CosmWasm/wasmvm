@@ -104,9 +104,7 @@ impl Storage for GoStorage {
     }
 
     fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
-        let iterator = if let Some(i) = self.iterators.get_mut(&iterator_id) {
-            i
-        } else {
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
             return (
                 Err(BackendError::iterator_does_not_exist(iterator_id)),
                 GasInfo::free(),
@@ -116,9 +114,7 @@ impl Storage for GoStorage {
     }
 
     fn next_key(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
-        let iterator = if let Some(i) = self.iterators.get_mut(&iterator_id) {
-            i
-        } else {
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
             return (
                 Err(BackendError::iterator_does_not_exist(iterator_id)),
                 GasInfo::free(),
@@ -129,9 +125,7 @@ impl Storage for GoStorage {
     }
 
     fn next_value(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
-        let iterator = if let Some(i) = self.iterators.get_mut(&iterator_id) {
-            i
-        } else {
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
             return (
                 Err(BackendError::iterator_does_not_exist(iterator_id)),
                 GasInfo::free(),

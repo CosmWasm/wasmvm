@@ -66,9 +66,7 @@ impl GoIter {
     }
 
     pub fn next(&mut self) -> BackendResult<Option<Record>> {
-        let next = if let Some(f) = self.vtable.next {
-            f
-        } else {
+        let Some(next) = self.vtable.next else {
             let result = Err(BackendError::unknown(
                 "iterator vtable function 'next' not set",
             ));
@@ -139,9 +137,7 @@ impl GoIter {
         >,
         fn_name: &str,
     ) -> BackendResult<Option<Vec<u8>>> {
-        let next = if let Some(f) = next_fn {
-            f
-        } else {
+        let Some(next) = next_fn else {
             let result = Err(BackendError::unknown(format!(
                 "iterator vtable function '{fn_name}' not set"
             )));
