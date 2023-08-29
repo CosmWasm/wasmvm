@@ -32,6 +32,7 @@ errno = "0.2"
 serde_json = "1.0.91"
 thiserror = "1.0.38"
 hex = "0.4.3"
+time = { version = "0.3.28", features = ["formatting"] }
 
 [dev-dependencies]
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
