@@ -2,6 +2,8 @@
 
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::time::SystemTime;
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
@@ -469,6 +471,16 @@ fn do_call_2_args(
         print_debug,
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
+
+    // If print_debug = false, use default debug handler from cosmwasm-vm, which discards messages
+    if print_debug {
+        instance.set_debug_handler(|msg, info| {
+            let t = now_rfc3339();
+            let gas = info.gas_remaining;
+            eprintln!("[{t}]: {msg} (gas remaining: {gas})");
+        });
+    }
+
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2);
     *gas_report = instance.create_gas_report().into();
@@ -557,9 +569,24 @@ fn do_call_3_args(
         print_debug,
     };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
+
+    // If print_debug = false, use default debug handler from cosmwasm-vm, which discards messages
+    if print_debug {
+        instance.set_debug_handler(|msg, info| {
+            let t = now_rfc3339();
+            let gas = info.gas_remaining;
+            eprintln!("[{t}]: {msg} (gas remaining: {gas})");
+        });
+    }
+
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_report = instance.create_gas_report().into();
     instance.recycle();
     Ok(res?)
+}
+
+fn now_rfc3339() -> String {
+    let dt = OffsetDateTime::from(SystemTime::now());
+    dt.format(&Rfc3339).unwrap_or_default()
 }
