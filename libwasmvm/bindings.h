@@ -254,12 +254,22 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct Iterator_vtable {
-  int32_t (*next_db)(struct iterator_t,
-                     struct gas_meter_t*,
-                     uint64_t*,
-                     struct UnmanagedVector*,
-                     struct UnmanagedVector*,
-                     struct UnmanagedVector*);
+  int32_t (*next)(struct iterator_t,
+                  struct gas_meter_t*,
+                  uint64_t*,
+                  struct UnmanagedVector*,
+                  struct UnmanagedVector*,
+                  struct UnmanagedVector*);
+  int32_t (*next_key)(struct iterator_t,
+                      struct gas_meter_t*,
+                      uint64_t*,
+                      struct UnmanagedVector*,
+                      struct UnmanagedVector*);
+  int32_t (*next_value)(struct iterator_t,
+                        struct gas_meter_t*,
+                        uint64_t*,
+                        struct UnmanagedVector*,
+                        struct UnmanagedVector*);
 } Iterator_vtable;
 
 typedef struct GoIter {
