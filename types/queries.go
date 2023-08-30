@@ -364,7 +364,14 @@ type Delegation struct {
 }
 
 type DistributionQuery struct {
+	// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L222-L230>
 	DelegatorWithdrawAddress *DelegatorWithdrawAddressQuery `json:"delegator_withdraw_address,omitempty"`
+	// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L157-L167>
+	DelegationRewards *DelegationRewardsQuery `json:"delegation_rewards,omitempty"`
+	// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L180-L187>
+	DelegationTotalRewards *DelegationTotalRewardsQuery `json:"delegation_total_rewards,omitempty"`
+	// See <https://github.com/cosmos/cosmos-sdk/blob/b0acf60e6c39f7ab023841841fc0b751a12c13ff/proto/cosmos/distribution/v1beta1/query.proto#L202-L210>
+	DelegatorValidators *DelegatorValidatorsQuery `json:"delegator_validators,omitempty"`
 }
 
 type DelegatorWithdrawAddressQuery struct {
@@ -373,6 +380,40 @@ type DelegatorWithdrawAddressQuery struct {
 
 type DelegatorWithdrawAddressResponse struct {
 	WithdrawAddress string `json:"withdraw_address"`
+}
+
+type DelegationRewardsQuery struct {
+	DelegatorAddress string `json:"delegator_address"`
+	ValidatorAddress string `json:"validator_address"`
+}
+
+// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L169-L178>
+type DelegationRewardsResponse struct {
+	Rewards []DecCoin `json:"rewards"`
+}
+
+type DelegationTotalRewardsQuery struct {
+	DelegatorAddress string `json:"delegator_address"`
+}
+
+// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L189-L200>
+type DelegationTotalRewardsResponse struct {
+	Rewards []DelegatorReward `json:"rewards"`
+	Total   []DecCoin         `json:"total"`
+}
+
+type DelegatorReward struct {
+	Reward           []DecCoin `json:"reward"`
+	ValidatorAddress string    `json:"validator_address"`
+}
+
+type DelegatorValidatorsQuery struct {
+	DelegatorAddress string `json:"delegator_address"`
+}
+
+// See <https://github.com/cosmos/cosmos-sdk/blob/b0acf60e6c39f7ab023841841fc0b751a12c13ff/proto/cosmos/distribution/v1beta1/query.proto#L212-L220>
+type DelegatorValidatorsResponse struct {
+	Validators []string `json:"validators"`
 }
 
 // DelegationResponse is the expected response to DelegationsQuery
