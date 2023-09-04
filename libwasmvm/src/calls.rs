@@ -484,7 +484,6 @@ fn do_call_2_args(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2);
     *gas_report = instance.create_gas_report().into();
-    instance.recycle();
     Ok(res?)
 }
 
@@ -582,7 +581,6 @@ fn do_call_3_args(
     // We only check this result after reporting gas usage and returning the instance into the cache.
     let res = vm_fn(&mut instance, arg1, arg2, arg3);
     *gas_report = instance.create_gas_report().into();
-    instance.recycle();
     Ok(res?)
 }
 
