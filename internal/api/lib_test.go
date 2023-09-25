@@ -2,11 +2,13 @@ package api
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -907,6 +909,10 @@ func createReflectContract(t *testing.T, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/reflect.wasm")
 }
 
+func createFloaty2(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+}
+
 func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
@@ -1054,4 +1060,99 @@ func TestCustomReflectQuerier(t *testing.T) {
 	err = json.Unmarshal(qres.Ok, &response)
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
+}
+
+// TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
+func TestFloats(t *testing.T) {
+	type Value struct {
+		U32 *uint32 `json:"u32,omitempty"`
+		U64 *uint64 `json:"u64,omitempty"`
+		F32 *uint32 `json:"f32,omitempty"`
+		F64 *uint64 `json:"f64,omitempty"`
+	}
+
+	// helper to print the value in the same format as Rust's Debug trait
+	debugStr := func(value Value) string {
+		if value.U32 != nil {
+			return fmt.Sprintf("U32(%d)", *value.U32)
+		} else if value.U64 != nil {
+			return fmt.Sprintf("U64(%d)", *value.U64)
+		} else if value.F32 != nil {
+			return fmt.Sprintf("F32(%d)", *value.F32)
+		} else if value.F64 != nil {
+			return fmt.Sprintf("F64(%d)", *value.F64)
+		} else {
+			t.FailNow()
+			return ""
+		}
+	}
+
+	cache, cleanup := withCache(t)
+	defer cleanup()
+	checksum := createFloaty2(t, cache)
+
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter := types.GasMeter(gasMeter)
+	// instantiate it with this store
+	store := NewLookup(gasMeter)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+
+	// query instructions
+	query := []byte(`{"instructions":{}}`)
+	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	var qres types.QueryResponse
+	err = json.Unmarshal(data, &qres)
+	require.NoError(t, err)
+	require.Equal(t, "", qres.Err)
+	var instructions []string
+	json.Unmarshal(qres.Ok, &instructions)
+	// little sanity check
+	require.Equal(t, 70, len(instructions))
+
+	hasher := sha256.New()
+	const RUNS_PER_INSTRUCTION = 150
+	for _, instr := range instructions {
+		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
+			// query some input values for the instruction
+			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			require.NoError(t, err)
+			err = json.Unmarshal(data, &qres)
+			require.NoError(t, err)
+			require.Equal(t, "", qres.Err)
+			var args []Value
+			json.Unmarshal(qres.Ok, &args)
+
+			// build the run message
+			argStr, err := json.Marshal(args)
+			require.NoError(t, err)
+			msg = fmt.Sprintf(`{"run":{"instruction":"%s","args":%s}}`, instr, argStr)
+
+			// run the instruction
+			// this might throw a runtime error (e.g. if the instruction traps)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			var result string
+			if err != nil {
+				assert.ErrorContains(t, err, "Error calling the VM: Error executing Wasm: ")
+				// remove the prefix to make the error message the same as in the cosmwasm-vm test
+				result = strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
+			} else {
+				err = json.Unmarshal(data, &qres)
+				require.NoError(t, err)
+				require.Equal(t, "", qres.Err)
+				var response Value
+				err = json.Unmarshal(qres.Ok, &response)
+				require.NoError(t, err)
+				result = debugStr(response)
+			}
+			// add the result to the hash
+			hasher.Write([]byte(fmt.Sprintf("%s%d%s", instr, seed, result)))
+		}
+	}
+
+	hash := hasher.Sum(nil)
+	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
 }
