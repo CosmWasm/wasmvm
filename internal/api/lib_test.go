@@ -1108,7 +1108,8 @@ func TestFloats(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", qres.Err)
 	var instructions []string
-	json.Unmarshal(qres.Ok, &instructions)
+	err = json.Unmarshal(qres.Ok, &instructions)
+	require.NoError(t, err)
 	// little sanity check
 	require.Equal(t, 70, len(instructions))
 
@@ -1124,7 +1125,8 @@ func TestFloats(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", qres.Err)
 			var args []Value
-			json.Unmarshal(qres.Ok, &args)
+			err = json.Unmarshal(qres.Ok, &args)
+			require.NoError(t, err)
 
 			// build the run message
 			argStr, err := json.Marshal(args)
