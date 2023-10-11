@@ -16,7 +16,7 @@ any machine that can run Docker can do the cross-compilation.
 
 **Version 0017:**
 
-- Update Rust to 1.70.0.
+- Update Rust to 1.73.0.
 
 **Version 0016:**
 
