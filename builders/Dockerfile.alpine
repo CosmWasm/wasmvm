@@ -4,7 +4,7 @@
 # For 2. we define the Go image here. For 1. we install Rust below.
 #
 # See also docs/COMPILER_VERSIONS.md
-FROM golang:1.19.7-alpine
+FROM golang:1.20.10-alpine
 
 ENV RUSTUP_HOME=/usr/local/rustup \
   CARGO_HOME=/usr/local/cargo \
