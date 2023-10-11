@@ -64,5 +64,5 @@ We currently use the following version:
 | Type                     | Rust version | Note                              |
 | ------------------------ | ------------ | --------------------------------- |
 | Production Rust compiler | 1.73.0       | Builders version 0017             |
-| Min Rust compiler        | 1.70.0       | Supports builder versions >= 0017 |
-| Tooling Rust compiler    | 1.70.0       |                                   |
+| Min Rust compiler        | 1.67.0       | Supports builder versions >= 0015 |
+| Tooling Rust compiler    | 1.69.0       |                                   |
