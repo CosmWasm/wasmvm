@@ -12,7 +12,17 @@ tricky. This folder contains build scripts and a Docker image to create all
 dynamic libraries from one host. In general this is set up for a Linux host, but
 any machine that can run Docker can do the cross-compilation.
 
+## Docker Hub images
+
+See https://hub.docker.com/r/cosmwasm/go-ext-builder/tags for all available
+versions of the builder images.
+
 ## Changelog
+
+**Version 0017:**
+
+- Update Rust to 1.73.0.
+- Update Go to 1.20.10 (for testing only).
 
 **Version 0016:**
 
