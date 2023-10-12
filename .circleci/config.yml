@@ -15,7 +15,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - run:
           name: Add Rust components
-          command: rustup component add clippy rustfmt
+          command: rustup component add rustfmt
       - restore_cache:
           keys:
             - cargocache-v3-libwasmvm_sanity-rust:1.67.0-{{ checksum "libwasmvm/Cargo.lock" }}
@@ -40,10 +40,6 @@ jobs:
           working_directory: libwasmvm
           command: cargo fmt -- --check
       - run:
-          name: Run linter
-          working_directory: libwasmvm
-          command: cargo clippy --all-targets -- -D warnings
-      - run:
           name: Run unit tests
           working_directory: libwasmvm
           command: cargo test
@@ -67,6 +63,39 @@ jobs:
             - libwasmvm/target/release/build
             - libwasmvm/target/release/deps
           key: cargocache-v3-libwasmvm_sanity-rust:1.67.0-{{ checksum "libwasmvm/Cargo.lock" }}
+
+  libwasmvm_clippy:
+    parameters:
+      rust-version:
+        type: string
+    docker:
+      - image: rust:<< parameters.rust-version >>
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: rustc --version && cargo --version
+      - restore_cache:
+          keys:
+            - v3-libwasmvm_clippy-rust:<< parameters.rust-version >>-{{ checksum "libwasmvm/Cargo.lock" }}
+            - v3-libwasmvm_clippy-rust:<< parameters.rust-version >>-
+      - run:
+          name: Add clippy component
+          command: rustup component add clippy
+      - run:
+          name: Run clippy
+          working_directory: libwasmvm
+          command: cargo clippy --all-targets -- -D warnings
+      - save_cache:
+          paths:
+            - ~/.cargo/registry
+            - libwasmvm/target/debug/.fingerprint
+            - libwasmvm/target/debug/build
+            - libwasmvm/target/debug/deps
+            - libwasmvm/target/release/.fingerprint
+            - libwasmvm/target/release/build
+            - libwasmvm/target/release/deps
+          key: v3-libwasmvm_clippy-rust:<< parameters.rust-version >>-{{ checksum "libwasmvm/Cargo.lock" }}
 
   # This performs all the Rust debug builds on Windows. Similar to libwasmvm_sanity
   # but avoids duplicating things that are not platform dependent.
@@ -387,6 +416,11 @@ workflows:
       - libwasmvm_sanity
       # Temporarily disabled. This check is still running on main.
       # - libwasmvm_sanity_windows
+      - libwasmvm_clippy:
+          matrix:
+            parameters:
+              # Run with MSRV and some modern stable Rust
+              rust-version: ["1.67.0", "1.73.0"]
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
