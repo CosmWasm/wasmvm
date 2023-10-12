@@ -137,10 +137,11 @@ test-alpine: release-build-alpine
 
 	@# Run the demo binary on Alpine machines
 	@# See https://de.wikipedia.org/wiki/Alpine_Linux#Versionen for supported versions
+	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.18 ./demo ./testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.17 ./demo ./testdata/hackatom.wasm
+	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.16 ./demo ./testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.15 ./demo ./testdata/hackatom.wasm
 	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.14 ./demo ./testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.13 ./demo ./testdata/hackatom.wasm
-	docker run --rm --read-only -v $(shell pwd):/mnt/testrun -w /mnt/testrun alpine:3.12 ./demo ./testdata/hackatom.wasm
 
 	@# Run binary locally if you are on Linux
 	@# ./demo ./testdata/hackatom.wasm
