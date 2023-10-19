@@ -127,7 +127,7 @@ func (vm *VM) Instantiate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.ContractResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -146,10 +146,7 @@ func (vm *VM) Instantiate(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if result.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", result.Err)
-	}
-	return result.Ok, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same Checksum is the
@@ -169,7 +166,7 @@ func (vm *VM) Execute(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.ContractResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -188,10 +185,7 @@ func (vm *VM) Execute(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if result.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", result.Err)
-	}
-	return result.Ok, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
@@ -207,7 +201,7 @@ func (vm *VM) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) ([]byte, uint64, error) {
+) (*types.QueryResponse, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -222,10 +216,7 @@ func (vm *VM) Query(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // Migrate will migrate an existing contract to a new code binary.
@@ -244,7 +235,7 @@ func (vm *VM) Migrate(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.ContractResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -259,10 +250,7 @@ func (vm *VM) Migrate(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // Sudo allows native Go modules to make priviledged (sudo) calls on the contract.
@@ -281,7 +269,7 @@ func (vm *VM) Sudo(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.ContractResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -296,10 +284,7 @@ func (vm *VM) Sudo(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // Reply allows the native Go wasm modules to make a priviledged call to return the result
@@ -316,7 +301,7 @@ func (vm *VM) Reply(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.Response, uint64, error) {
+) (*types.ContractResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -335,10 +320,7 @@ func (vm *VM) Reply(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
@@ -353,7 +335,7 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBC3ChannelOpenResponse, uint64, error) {
+) (*types.IBCChannelOpenResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -372,10 +354,7 @@ func (vm *VM) IBCChannelOpen(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
@@ -390,7 +369,7 @@ func (vm *VM) IBCChannelConnect(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -409,10 +388,7 @@ func (vm *VM) IBCChannelConnect(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
@@ -427,7 +403,7 @@ func (vm *VM) IBCChannelClose(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -446,10 +422,7 @@ func (vm *VM) IBCChannelClose(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
@@ -499,7 +472,7 @@ func (vm *VM) IBCPacketAck(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -518,10 +491,7 @@ func (vm *VM) IBCPacketAck(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
@@ -537,7 +507,7 @@ func (vm *VM) IBCPacketTimeout(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBCBasicResponse, uint64, error) {
+) (*types.IBCBasicResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -556,10 +526,7 @@ func (vm *VM) IBCPacketTimeout(
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	if resp.Err != "" {
-		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
-	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
