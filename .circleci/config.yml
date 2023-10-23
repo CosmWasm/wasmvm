@@ -222,15 +222,15 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.19.7
+      - image: cimg/go:1.21.3
     steps:
       - run:
           name: Install shfmt
-          command: GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@v3.4.0
+          command: GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@v3.7.0
       - checkout
       - run:
           name: Run shfmt
-          command: shfmt -d .
+          command: shfmt --diff .
 
   lint-scripts:
     docker:
