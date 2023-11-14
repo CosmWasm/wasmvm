@@ -103,8 +103,45 @@ type CosmosMsg struct {
 	Gov          *GovMsg          `json:"gov,omitempty"`
 	IBC          *IBCMsg          `json:"ibc,omitempty"`
 	Staking      *StakingMsg      `json:"staking,omitempty"`
-	Stargate     *StargateMsg     `json:"stargate,omitempty"`
+	Stargate     *StargateMsg     `json:"any,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
+}
+
+func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
+	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
+	type InternalCosmosMsg struct {
+		Bank         *BankMsg         `json:"bank,omitempty"`
+		Custom       json.RawMessage  `json:"custom,omitempty"`
+		Distribution *DistributionMsg `json:"distribution,omitempty"`
+		Gov          *GovMsg          `json:"gov,omitempty"`
+		IBC          *IBCMsg          `json:"ibc,omitempty"`
+		Staking      *StakingMsg      `json:"staking,omitempty"`
+		Any          *StargateMsg     `json:"any,omitempty"`
+		Wasm         *WasmMsg         `json:"wasm,omitempty"`
+		Stargate     *StargateMsg     `json:"stargate,omitempty"`
+	}
+	var tmp InternalCosmosMsg
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	// Use "Stargate" for both variants
+	if tmp.Stargate == nil && tmp.Any != nil {
+		tmp.Stargate = tmp.Any
+	}
+
+	*m = CosmosMsg{
+		Bank:         tmp.Bank,
+		Custom:       tmp.Custom,
+		Distribution: tmp.Distribution,
+		Gov:          tmp.Gov,
+		IBC:          tmp.IBC,
+		Staking:      tmp.Staking,
+		Stargate:     tmp.Stargate,
+		Wasm:         tmp.Wasm,
+	}
+	return nil
 }
 
 type BankMsg struct {
