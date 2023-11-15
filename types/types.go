@@ -2,8 +2,49 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 )
+
+// Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string
+type Uint64 uint64
+
+func (u Uint64) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.FormatUint(uint64(u), 10))
+}
+
+func (u *Uint64) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("cannot unmarshal %s into Uint64, expected string-encoded integer", data)
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal %s into Uint64, expected string-encoded integer", data)
+	}
+	*u = Uint64(v)
+	return nil
+}
+
+// Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string
+type Int64 int64
+
+func (i Int64) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.FormatInt(int64(i), 10))
+}
+
+func (i *Int64) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("cannot unmarshal %s into Int64, expected string-encoded integer", data)
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal %s into Int64, expected string-encoded integer", data)
+	}
+	*i = Int64(v)
+	return nil
+}
 
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
 type HumanAddress = string
