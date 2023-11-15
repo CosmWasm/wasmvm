@@ -103,7 +103,7 @@ type CosmosMsg struct {
 	Gov          *GovMsg          `json:"gov,omitempty"`
 	IBC          *IBCMsg          `json:"ibc,omitempty"`
 	Staking      *StakingMsg      `json:"staking,omitempty"`
-	Stargate     *StargateMsg     `json:"any,omitempty"`
+	Any          *AnyMsg          `json:"any,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
 }
 
@@ -116,9 +116,9 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		Gov          *GovMsg          `json:"gov,omitempty"`
 		IBC          *IBCMsg          `json:"ibc,omitempty"`
 		Staking      *StakingMsg      `json:"staking,omitempty"`
-		Any          *StargateMsg     `json:"any,omitempty"`
+		Any          *AnyMsg          `json:"any,omitempty"`
 		Wasm         *WasmMsg         `json:"wasm,omitempty"`
-		Stargate     *StargateMsg     `json:"stargate,omitempty"`
+		Stargate     *AnyMsg          `json:"stargate,omitempty"`
 	}
 	var tmp InternalCosmosMsg
 	err := json.Unmarshal(data, &tmp)
@@ -126,9 +126,9 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Use "Stargate" for both variants
-	if tmp.Stargate == nil && tmp.Any != nil {
-		tmp.Stargate = tmp.Any
+	// Use "Any" for both variants
+	if tmp.Any == nil && tmp.Stargate != nil {
+		tmp.Any = tmp.Stargate
 	}
 
 	*m = CosmosMsg{
@@ -138,7 +138,7 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		Gov:          tmp.Gov,
 		IBC:          tmp.IBC,
 		Staking:      tmp.Staking,
-		Stargate:     tmp.Stargate,
+		Any:          tmp.Any,
 		Wasm:         tmp.Wasm,
 	}
 	return nil
@@ -309,9 +309,9 @@ type FundCommunityPoolMsg struct {
 	Amount Coins `json:"amount"`
 }
 
-// StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
+// AnyMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
 // This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
-type StargateMsg struct {
+type AnyMsg struct {
 	TypeURL string `json:"type_url"`
 	Value   []byte `json:"value"`
 }

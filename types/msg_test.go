@@ -87,7 +87,7 @@ func TestAnyMsgSerialization(t *testing.T) {
 	err = json.Unmarshal(document1, &res)
 	require.NoError(t, err)
 	require.Equal(t, CosmosMsg{
-		Stargate: &StargateMsg{
+		Any: &AnyMsg{
 			TypeURL: "/cosmos.foo.v1beta.MsgBar",
 			Value:   expectedData,
 		},
