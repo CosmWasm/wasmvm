@@ -16,8 +16,8 @@ type Env struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
-	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
-	Time    uint64 `json:"time,string"`
+	// time in nanoseconds since unix epoch. Uses Uint64 to ensure JavaScript compatibility.
+	Time    Uint64 `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 
