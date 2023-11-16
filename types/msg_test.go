@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"testing"
 
@@ -74,6 +75,44 @@ func TestWasmMsgInstantiate2Serialization(t *testing.T) {
 	}, msg.Instantiate2.Funds)
 	require.Equal(t, "my instance", msg.Instantiate2.Label)
 	require.Equal(t, []byte{0x52, 0x43, 0x95, 0x6b, 0x38, 0x62, 0xc2, 0x8a}, msg.Instantiate2.Salt)
+}
+
+func TestAnyMsgSerialization(t *testing.T) {
+	expectedData, err := base64.StdEncoding.DecodeString("5yu/rQ+HrMcxH1zdga7P5hpGMLE=")
+	require.NoError(t, err)
+
+	// test backwards compatibility with old stargate variant
+	document1 := []byte(`{"stargate":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="}}`)
+	var res CosmosMsg
+	err = json.Unmarshal(document1, &res)
+	require.NoError(t, err)
+	require.Equal(t, CosmosMsg{
+		Any: &AnyMsg{
+			TypeURL: "/cosmos.foo.v1beta.MsgBar",
+			Value:   expectedData,
+		},
+	}, res)
+
+	// test new any variant
+	document2 := []byte(`{"any":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="}}`)
+	var res2 CosmosMsg
+	err = json.Unmarshal(document2, &res2)
+	require.NoError(t, err)
+	require.Equal(t, res, res2)
+
+	// serializing should use the new any variant
+	serialized, err := json.Marshal(res)
+	require.NoError(t, err)
+	require.Equal(t, document2, serialized)
+
+	// test providing both variants is rejected
+	document3 := []byte(`{
+		"stargate":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="},
+		"any":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="}
+	}`)
+	var res3 CosmosMsg
+	err = json.Unmarshal(document3, &res3)
+	require.Error(t, err)
 }
 
 func TestGovMsgVoteSerialization(t *testing.T) {
