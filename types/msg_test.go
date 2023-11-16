@@ -104,6 +104,15 @@ func TestAnyMsgSerialization(t *testing.T) {
 	serialized, err := json.Marshal(res)
 	require.NoError(t, err)
 	require.Equal(t, document2, serialized)
+
+	// test providing both variants is rejected
+	document3 := []byte(`{
+		"stargate":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="},
+		"any":{"type_url":"/cosmos.foo.v1beta.MsgBar","value":"5yu/rQ+HrMcxH1zdga7P5hpGMLE="}
+	}`)
+	var res3 CosmosMsg
+	err = json.Unmarshal(document3, &res3)
+	require.Error(t, err)
 }
 
 func TestGovMsgVoteSerialization(t *testing.T) {

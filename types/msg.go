@@ -126,8 +126,10 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Use "Any" for both variants
-	if tmp.Any == nil && tmp.Stargate != nil {
+	if tmp.Any != nil && tmp.Stargate != nil {
+		return fmt.Errorf("invalid CosmosMsg: both 'any' and 'stargate' fields are set")
+	} else if tmp.Any == nil && tmp.Stargate != nil {
+		// Use "Any" for both variants
 		tmp.Any = tmp.Stargate
 	}
 
