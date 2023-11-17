@@ -61,7 +61,11 @@ type SubMsg struct {
 	ReplyOn  replyOn   `json:"reply_on"`
 }
 
+// The result object returned to `reply`. We always get the ID from the submessage back and then must handle success and error cases ourselves.
 type Reply struct {
+	// The amount of gas used by the submessage, measured in [Cosmos SDK gas](https://github.com/CosmWasm/cosmwasm/blob/main/docs/GAS.md).
+	GasUsed uint64 `json:"gas_used"`
+	// The ID that the contract set when emitting the `SubMsg`. Use this to identify which submessage triggered the `reply`.
 	ID     uint64       `json:"id"`
 	Result SubMsgResult `json:"result"`
 }
