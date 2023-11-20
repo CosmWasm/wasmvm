@@ -36,6 +36,10 @@ func TestUint64JSON(t *testing.T) {
 	// test unquoted unmarshal
 	err = json.Unmarshal([]byte(`123`), &u)
 	require.EqualError(t, err, "cannot unmarshal 123 into Uint64, expected string-encoded integer")
+
+	// test empty string
+	err = json.Unmarshal([]byte(`""`), &u)
+	require.EqualError(t, err, "cannot unmarshal \"\" into Uint64, failed to parse integer")
 }
 
 func TestInt64JSON(t *testing.T) {
@@ -75,4 +79,8 @@ func TestInt64JSON(t *testing.T) {
 	// test unquoted unmarshal
 	err = json.Unmarshal([]byte(`-123`), &i)
 	require.EqualError(t, err, "cannot unmarshal -123 into Int64, expected string-encoded integer")
+
+	// test empty string
+	err = json.Unmarshal([]byte(`""`), &i)
+	require.EqualError(t, err, "cannot unmarshal \"\" into Int64, failed to parse integer")
 }
