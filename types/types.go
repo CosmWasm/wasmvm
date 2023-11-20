@@ -20,7 +20,7 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 	}
 	v, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal %s into Uint64, expected string-encoded integer", data)
+		return fmt.Errorf("cannot unmarshal %s into Uint64, failed to parse integer", data)
 	}
 	*u = Uint64(v)
 	return nil
@@ -40,7 +40,7 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 	}
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal %s into Int64, expected string-encoded integer", data)
+		return fmt.Errorf("cannot unmarshal %s into Int64, failed to parse integer", data)
 	}
 	*i = Int64(v)
 	return nil

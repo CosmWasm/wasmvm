@@ -92,5 +92,5 @@ func TestBlockInfoDeserialization(t *testing.T) {
 
 	// Empty string is not a valid uint64 string
 	err = json.Unmarshal([]byte(`{"height":0,"time":"","chain_id":""}`), &block)
-	require.ErrorContains(t, err, "cannot unmarshal \"\" into Uint64, expected string-encoded integer")
+	require.ErrorContains(t, err, "cannot unmarshal \"\" into Uint64, failed to parse integer")
 }
