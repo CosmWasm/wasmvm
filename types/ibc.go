@@ -180,7 +180,7 @@ func (t IBCTimeoutBlock) IsZero() bool {
 type IBCTimeout struct {
 	Block *IBCTimeoutBlock `json:"block"`
 	// Nanoseconds since UNIX epoch
-	Timestamp uint64 `json:"timestamp,string,omitempty"`
+	Timestamp *Uint64 `json:"timestamp,omitempty"`
 }
 
 type IBCAcknowledgement struct {
