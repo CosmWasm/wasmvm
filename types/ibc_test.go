@@ -9,13 +9,14 @@ import (
 )
 
 func TestIbcTimeoutSerialization(t *testing.T) {
+	ts := Uint64(1578939743_987654321)
 	// All set
 	timeout := IBCTimeout{
 		Block: &IBCTimeoutBlock{
 			Revision: 17,
 			Height:   42,
 		},
-		Timestamp: 1578939743_987654321,
+		Timestamp: &ts,
 	}
 	bz, err := json.Marshal(timeout)
 	require.NoError(t, err)
@@ -24,7 +25,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 	// Null block
 	timeout = IBCTimeout{
 		Block:     nil,
-		Timestamp: 1578939743_987654321,
+		Timestamp: &ts,
 	}
 	bz, err = json.Marshal(timeout)
 	require.NoError(t, err)
@@ -38,7 +39,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 			Revision: 17,
 			Height:   42,
 		},
-		Timestamp: 0,
+		Timestamp: nil,
 	}
 	bz, err = json.Marshal(timeout)
 	require.NoError(t, err)
@@ -47,6 +48,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 
 func TestIbcTimeoutDeserialization(t *testing.T) {
 	var err error
+	ts := Uint64(1578939743_987654321)
 
 	// All set
 	var timeout1 IBCTimeout
@@ -57,7 +59,7 @@ func TestIbcTimeoutDeserialization(t *testing.T) {
 			Revision: 17,
 			Height:   42,
 		},
-		Timestamp: 1578939743_987654321,
+		Timestamp: &ts,
 	}, timeout1)
 
 	// Null block
@@ -66,7 +68,7 @@ func TestIbcTimeoutDeserialization(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, IBCTimeout{
 		Block:     nil,
-		Timestamp: 1578939743_987654321,
+		Timestamp: &ts,
 	}, timeout2)
 
 	// Null timestamp
@@ -78,6 +80,6 @@ func TestIbcTimeoutDeserialization(t *testing.T) {
 			Revision: 17,
 			Height:   42,
 		},
-		Timestamp: 0,
+		Timestamp: nil,
 	}, timeout3)
 }
