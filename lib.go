@@ -245,12 +245,12 @@ func (vm *VM) Migrate(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.ContractResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.ContractResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // Sudo allows native Go modules to make priviledged (sudo) calls on the contract.
@@ -279,12 +279,12 @@ func (vm *VM) Sudo(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.ContractResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.ContractResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // Reply allows the native Go wasm modules to make a priviledged call to return the result
@@ -315,12 +315,12 @@ func (vm *VM) Reply(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.ContractResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.ContractResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
@@ -349,12 +349,12 @@ func (vm *VM) IBCChannelOpen(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCChannelOpenResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCChannelOpenResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
@@ -383,12 +383,12 @@ func (vm *VM) IBCChannelConnect(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCBasicResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
@@ -417,12 +417,12 @@ func (vm *VM) IBCChannelClose(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCBasicResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
@@ -451,12 +451,12 @@ func (vm *VM) IBCPacketReceive(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCReceiveResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCReceiveResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCPacketAck is available on IBC-enabled contracts and is called when an
@@ -486,12 +486,12 @@ func (vm *VM) IBCPacketAck(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCBasicResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
@@ -521,12 +521,12 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.IBCBasicResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
