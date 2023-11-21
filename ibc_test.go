@@ -105,18 +105,22 @@ func TestIBCHandshake(t *testing.T) {
 	init_msg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	ires, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(ires.Messages))
+	assert.NotNil(t, i.Ok)
+	iResponse := i.Ok
+	require.Equal(t, 0, len(iResponse.Messages))
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	o, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, ores)
+	require.NotNil(t, o.Ok)
+	oResponse := o.Ok
+	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, oResponse)
 
 	// channel connect
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -124,9 +128,11 @@ func TestIBCHandshake(t *testing.T) {
 	env = api.MockEnv()
 	// completes and dispatches message to create reflect contract
 	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	conn, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(res.Messages))
+	require.NotNil(t, conn.Ok)
+	connResponse := conn.Ok
+	require.Equal(t, 1, len(connResponse.Messages))
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -136,10 +142,10 @@ func TestIBCHandshake(t *testing.T) {
 			Value: "connect",
 		}},
 	}}
-	require.Equal(t, expected_events, res.Events)
+	require.Equal(t, expected_events, connResponse.Events)
 
 	// make sure it read the balance properly and we got 250 atoms
-	dispatch := res.Messages[0].Msg
+	dispatch := connResponse.Messages[0].Msg
 	require.NotNil(t, dispatch.Wasm, "%#v", dispatch)
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
 	init := dispatch.Wasm.Instantiate
@@ -179,19 +185,23 @@ func TestIBCPacketDispatch(t *testing.T) {
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	ores, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	o, _, err := vm.IBCChannelOpen(checksum, env, openMsg, store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, ores)
+	require.NotNil(t, o.Ok)
+	oResponse := o.Ok
+	require.Equal(t, &types.IBC3ChannelOpenResponse{Version: "ibc-reflect-v1"}, oResponse)
 
 	// channel connect
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter3)
 	// completes and dispatches message to create reflect contract
 	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
-	res, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT, deserCost)
+	conn, _, err := vm.IBCChannelConnect(checksum, env, connectMsg, store, *goapi, querier, gasMeter3, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(res.Messages))
-	id := res.Messages[0].ID
+	require.NotNil(t, conn.Ok)
+	connResponse := conn.Ok
+	require.Equal(t, 1, len(connResponse.Messages))
+	id := connResponse.Messages[0].ID
 
 	// mock reflect init callback (to store address)
 	gasMeter4 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -220,10 +230,12 @@ func TestIBCPacketDispatch(t *testing.T) {
 	queryMsg := IBCQueryMsg{
 		ListAccounts: &struct{}{},
 	}
-	qres, _, err := vm.Query(checksum, env, toBytes(t, queryMsg), store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT, deserCost)
+	q, _, err := vm.Query(checksum, env, toBytes(t, queryMsg), store, *goapi, querier, gasMeter4, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	require.NotNil(t, q.Ok)
+	qResponse := q.Ok
 	var accounts ListAccountsResponse
-	err = json.Unmarshal(qres, &accounts)
+	err = json.Unmarshal(qResponse, &accounts)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(accounts.Accounts))
 	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
@@ -246,11 +258,11 @@ func TestIBCPacketDispatch(t *testing.T) {
 	pr, _, err := vm.IBCPacketReceive(checksum, env, msg, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 	assert.NotNil(t, pr.Ok)
-	pres := pr.Ok
+	prResponse := pr.Ok
 
 	// assert app-level success
 	var ack AcknowledgeDispatch
-	err = json.Unmarshal(pres.Acknowledgement, &ack)
+	err = json.Unmarshal(prResponse.Acknowledgement, &ack)
 	require.NoError(t, err)
 	require.Empty(t, ack.Err)
 
@@ -259,10 +271,10 @@ func TestIBCPacketDispatch(t *testing.T) {
 	pr2, _, err := vm.IBCPacketReceive(checksum, env, msg2, store, *goapi, querier, gasMeter5, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 	assert.NotNil(t, pr.Ok)
-	pres2 := pr2.Ok
+	prResponse2 := pr2.Ok
 	// assert app-level failure
 	var ack2 AcknowledgeDispatch
-	err = json.Unmarshal(pres2.Acknowledgement, &ack2)
+	err = json.Unmarshal(prResponse2.Acknowledgement, &ack2)
 	require.NoError(t, err)
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
 
@@ -274,7 +286,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 			Value: "receive",
 		}},
 	}}
-	require.Equal(t, expected_events, pres2.Events)
+	require.Equal(t, expected_events, prResponse2.Events)
 }
 
 func TestAnalyzeCode(t *testing.T) {
