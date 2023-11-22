@@ -627,11 +627,11 @@ func TestMigrate(t *testing.T) {
 	query := []byte(`{"verifier":{}}`)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
-	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+	require.Equal(t, "", qResult.Err)
+	require.Equal(t, string(qResult.Ok), `{"verifier":"fred"}`)
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
@@ -641,11 +641,11 @@ func TestMigrate(t *testing.T) {
 	// should update verifier to alice
 	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres2 types.QueryResponse
-	err = json.Unmarshal(data, &qres2)
+	var qResult2 types.QueryResult
+	err = json.Unmarshal(data, &qResult2)
 	require.NoError(t, err)
-	require.Equal(t, "", qres2.Err)
-	require.Equal(t, `{"verifier":"alice"}`, string(qres2.Ok))
+	require.Equal(t, "", qResult2.Err)
+	require.Equal(t, `{"verifier":"alice"}`, string(qResult2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -856,10 +856,10 @@ func TestReplyAndQuery(t *testing.T) {
 	query := []byte(`{"sub_msg_result":{"id":1234}}`)
 	res, _, err = Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	qres := requireQueryOk(t, res)
+	qResult := requireQueryOk(t, res)
 
 	var stored types.Reply
-	err = json.Unmarshal(qres, &stored)
+	err = json.Unmarshal(qResult, &stored)
 	require.NoError(t, err)
 	assert.Equal(t, id, stored.ID)
 	require.NotNil(t, stored.Result.Ok)
@@ -877,7 +877,7 @@ func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
 }
 
 func requireQueryError(t *testing.T, res []byte) {
-	var result types.QueryResponse
+	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Empty(t, result.Ok)
@@ -885,7 +885,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
-	var result types.QueryResponse
+	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Empty(t, result.Err)
@@ -961,7 +961,7 @@ func TestQuery(t *testing.T) {
 	query := []byte(`{"Raw":{"val":"config"}}`)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var badResp types.QueryResponse
+	var badResp types.QueryResult
 	err = json.Unmarshal(data, &badResp)
 	require.NoError(t, err)
 	require.Contains(t, badResp.Err, "Error parsing into type hackatom::msg::QueryMsg: unknown variant `Raw`, expected one of")
@@ -973,11 +973,11 @@ func TestQuery(t *testing.T) {
 	query = []byte(`{"verifier":{}}`)
 	data, _, err = Query(cache, checksum, env, query, &igasMeter3, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
-	require.Equal(t, string(qres.Ok), `{"verifier":"fred"}`)
+	require.Equal(t, "", qResult.Err)
+	require.Equal(t, string(qResult.Ok), `{"verifier":"fred"}`)
 }
 
 func TestHackatomQuerier(t *testing.T) {
@@ -999,12 +999,12 @@ func TestHackatomQuerier(t *testing.T) {
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
+	require.Equal(t, "", qResult.Err)
 	var balances types.AllBalancesResponse
-	err = json.Unmarshal(qres.Ok, &balances)
+	err = json.Unmarshal(qResult.Ok, &balances)
 	require.NoError(t, err)
 	require.Equal(t, balances.Amount, initBalance)
 }
@@ -1051,13 +1051,13 @@ func TestCustomReflectQuerier(t *testing.T) {
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
+	require.Equal(t, "", qResult.Err)
 
 	var response CapitalizedResponse
-	err = json.Unmarshal(qres.Ok, &response)
+	err = json.Unmarshal(qResult.Ok, &response)
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
 }
@@ -1103,12 +1103,12 @@ func TestFloats(t *testing.T) {
 	query := []byte(`{"instructions":{}}`)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
+	require.Equal(t, "", qResult.Err)
 	var instructions []string
-	err = json.Unmarshal(qres.Ok, &instructions)
+	err = json.Unmarshal(qResult.Ok, &instructions)
 	require.NoError(t, err)
 	// little sanity check
 	require.Equal(t, 70, len(instructions))
@@ -1121,11 +1121,11 @@ func TestFloats(t *testing.T) {
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 			require.NoError(t, err)
-			err = json.Unmarshal(data, &qres)
+			err = json.Unmarshal(data, &qResult)
 			require.NoError(t, err)
-			require.Equal(t, "", qres.Err)
+			require.Equal(t, "", qResult.Err)
 			var args []Value
-			err = json.Unmarshal(qres.Ok, &args)
+			err = json.Unmarshal(qResult.Ok, &args)
 			require.NoError(t, err)
 
 			// build the run message
@@ -1142,11 +1142,11 @@ func TestFloats(t *testing.T) {
 				// remove the prefix to make the error message the same as in the cosmwasm-vm test
 				result = strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
 			} else {
-				err = json.Unmarshal(data, &qres)
+				err = json.Unmarshal(data, &qResult)
 				require.NoError(t, err)
-				require.Equal(t, "", qres.Err)
+				require.Equal(t, "", qResult.Err)
 				var response Value
-				err = json.Unmarshal(qres.Ok, &response)
+				err = json.Unmarshal(qResult.Ok, &response)
 				require.NoError(t, err)
 				result = debugStr(response)
 			}

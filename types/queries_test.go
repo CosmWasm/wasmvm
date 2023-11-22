@@ -63,30 +63,30 @@ func TestValidatorWithData(t *testing.T) {
 	assert.Equal(t, reval, val)
 }
 
-func TestQueryResponseWithEmptyData(t *testing.T) {
+func TestQueryResultWithEmptyData(t *testing.T) {
 	cases := map[string]struct {
-		req       QueryResponse
+		req       QueryResult
 		resp      string
 		unmarshal bool
 	}{
 		"ok with data": {
-			req: QueryResponse{Ok: []byte("foo")},
+			req: QueryResult{Ok: []byte("foo")},
 			// base64-encoded "foo"
 			resp:      `{"ok":"Zm9v"}`,
 			unmarshal: true,
 		},
 		"error": {
-			req:       QueryResponse{Err: "try again later"},
+			req:       QueryResult{Err: "try again later"},
 			resp:      `{"error":"try again later"}`,
 			unmarshal: true,
 		},
 		"ok with empty slice": {
-			req:       QueryResponse{Ok: []byte{}},
+			req:       QueryResult{Ok: []byte{}},
 			resp:      `{"ok":""}`,
 			unmarshal: true,
 		},
 		"nil data": {
-			req:  QueryResponse{},
+			req:  QueryResult{},
 			resp: `{"ok":""}`,
 			// Once converted to the Rust enum `ContractResult<Binary>` or
 			// its JSON serialization, we cannot differentiate between
@@ -105,7 +105,7 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 
 			// if unmarshall, make sure this comes back to the proper state
 			if tc.unmarshal {
-				var parsed QueryResponse
+				var parsed QueryResult
 				err = json.Unmarshal(data, &parsed)
 				require.NoError(t, err)
 				require.Equal(t, tc.req, parsed)

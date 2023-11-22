@@ -201,7 +201,7 @@ func (vm *VM) Query(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.QueryResponse, uint64, error) {
+) (*types.QueryResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -211,12 +211,12 @@ func (vm *VM) Query(
 		return nil, gasReport.UsedInternally, err
 	}
 
-	var resp types.QueryResponse
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &resp)
+	var result types.QueryResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
-	return &resp, gasReport.UsedInternally, nil
+	return &result, gasReport.UsedInternally, nil
 }
 
 // Migrate will migrate an existing contract to a new code binary.
