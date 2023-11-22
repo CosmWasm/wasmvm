@@ -961,10 +961,10 @@ func TestQuery(t *testing.T) {
 	query := []byte(`{"Raw":{"val":"config"}}`)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var badResp types.QueryResult
-	err = json.Unmarshal(data, &badResp)
+	var badResult types.QueryResult
+	err = json.Unmarshal(data, &badResult)
 	require.NoError(t, err)
-	require.Contains(t, badResp.Err, "Error parsing into type hackatom::msg::QueryMsg: unknown variant `Raw`, expected one of")
+	require.Contains(t, badResult.Err, "Error parsing into type hackatom::msg::QueryMsg: unknown variant `Raw`, expected one of")
 
 	// make a valid query
 	gasMeter3 := NewMockGasMeter(TESTING_GAS_LIMIT)
