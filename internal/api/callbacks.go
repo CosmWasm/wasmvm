@@ -6,19 +6,12 @@ package api
 /*
 #include "bindings.h"
 
-// typedefs for _cgo functions (db)
-typedef GoError (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
-typedef GoError (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
-typedef GoError (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
-typedef GoError (*scan_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
-// iterator
-typedef GoError (*db_next)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *val, UnmanagedVector *errOut);
-typedef GoError (*db_next_key)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *errOut);
-typedef GoError (*db_next_value)(iterator_t idx, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *val, UnmanagedVector *errOut);
-// and api
-typedef GoError (*humanize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
-typedef GoError (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
-typedef GoError (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+// All C function types in struct fields will be represented as a *[0]byte in Go and
+// we don't get any type safety on the signature. To express this fact in type conversions,
+// we create a single function pointer type here.
+// The only thing this is used for is casting between unsafe.Pointer and *[0]byte in Go.
+// See also https://github.com/golang/go/issues/19835
+typedef void (*any_function_t)();
 
 // forward declarations (db)
 GoError cGet_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -97,10 +90,10 @@ func recoverPanic(ret *C.GoError) {
 /****** DB ********/
 
 var db_vtable = C.Db_vtable{
-	read_db:   (C.read_db_fn)(C.cGet_cgo),
-	write_db:  (C.write_db_fn)(C.cSet_cgo),
-	remove_db: (C.remove_db_fn)(C.cDelete_cgo),
-	scan_db:   (C.scan_db_fn)(C.cScan_cgo),
+	read_db:   C.any_function_t(C.cGet_cgo),
+	write_db:  C.any_function_t(C.cSet_cgo),
+	remove_db: C.any_function_t(C.cDelete_cgo),
+	scan_db:   C.any_function_t(C.cScan_cgo),
 }
 
 type DBState struct {
@@ -132,9 +125,9 @@ func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 }
 
 var iterator_vtable = C.Iterator_vtable{
-	next:       (C.db_next)(C.cNext_cgo),
-	next_key:   (C.db_next_key)(C.cNextKey_cgo),
-	next_value: (C.db_next_value)(C.cNextValue_cgo),
+	next:       C.any_function_t(C.cNext_cgo),
+	next_key:   C.any_function_t(C.cNextKey_cgo),
+	next_value: C.any_function_t(C.cNextValue_cgo),
 }
 
 // An iterator including referenced objects is 117 bytes large (calculated using https://github.com/DmitriyVTitov/size).
@@ -366,8 +359,8 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 }
 
 var api_vtable = C.GoApi_vtable{
-	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo),
-	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo),
+	humanize_address:     C.any_function_t(C.cHumanAddress_cgo),
+	canonicalize_address: C.any_function_t(C.cCanonicalAddress_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -437,7 +430,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 /****** Go Querier ********/
 
 var querier_vtable = C.Querier_vtable{
-	query_external: (C.query_external_fn)(C.cQueryExternal_cgo),
+	query_external: C.any_function_t(C.cQueryExternal_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
