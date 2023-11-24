@@ -156,8 +156,9 @@ impl U8SliceView {
 ///     // …
 ///     # let mut error_msg = UnmanagedVector::default();
 ///     # let mut used_gas = 0_u64;
+///     # let read_db = db.vtable.read_db.unwrap();
 ///
-///     let go_error: GoError = (db.vtable.read_db)(
+///     let go_error: GoError = read_db(
 ///         db.state,
 ///         db.gas_meter,
 ///         &mut used_gas as *mut u64,

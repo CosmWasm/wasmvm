@@ -4,6 +4,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo};
 use crate::error::GoError;
 use crate::gas_meter::gas_meter_t;
 use crate::memory::UnmanagedVector;
+use crate::vtables::Vtable;
 
 // Iterator maintains integer references to some tables on the Go side
 #[repr(C)]
@@ -49,6 +50,8 @@ pub struct Iterator_vtable {
     >,
 }
 
+impl Vtable for Iterator_vtable {}
+
 #[repr(C)]
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
@@ -66,12 +69,10 @@ impl GoIter {
     }
 
     pub fn next(&mut self) -> BackendResult<Option<Record>> {
-        let Some(next) = self.vtable.next else {
-            let result = Err(BackendError::unknown(
-                "iterator vtable function 'next' not set",
-            ));
-            return (result, GasInfo::free());
-        };
+        let next = self
+            .vtable
+            .next
+            .expect("iterator vtable function 'next' not set");
 
         let mut output_key = UnmanagedVector::default();
         let mut output_value = UnmanagedVector::default();
@@ -116,22 +117,18 @@ impl GoIter {
     }
 
     pub fn next_key(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        let Some(next_key) = self.vtable.next_key else {
-            let result = Err(BackendError::unknown(
-                "iterator vtable function 'next_key' not set",
-            ));
-            return (result, GasInfo::free());
-        };
+        let next_key = self
+            .vtable
+            .next_key
+            .expect("iterator vtable function 'next_key' not set");
         self.next_key_or_val(next_key)
     }
 
     pub fn next_value(&mut self) -> BackendResult<Option<Vec<u8>>> {
-        let Some(next_value) = self.vtable.next_value else {
-            let result = Err(BackendError::unknown(
-                "iterator vtable function 'next_value' not set",
-            ));
-            return (result, GasInfo::free());
-        };
+        let next_value = self
+            .vtable
+            .next_value
+            .expect("iterator vtable function 'next_value' not set");
         self.next_key_or_val(next_value)
     }
 

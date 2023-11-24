@@ -3,6 +3,7 @@ use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
+use crate::Vtable;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -12,18 +13,22 @@ pub struct querier_t {
 }
 
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Querier_vtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external: extern "C" fn(
-        *const querier_t,
-        u64,
-        *mut u64,
-        U8SliceView,
-        *mut UnmanagedVector, // result output
-        *mut UnmanagedVector, // error message output
-    ) -> i32,
+    pub query_external: Option<
+        extern "C" fn(
+            *const querier_t,
+            u64,
+            *mut u64,
+            U8SliceView,
+            *mut UnmanagedVector, // result output
+            *mut UnmanagedVector, // error message output
+        ) -> i32,
+    >,
 }
+
+impl Vtable for Querier_vtable {}
 
 #[repr(C)]
 #[derive(Clone)]
@@ -44,7 +49,11 @@ impl Querier for GoQuerier {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoError = (self.vtable.query_external)(
+        let query_external = self
+            .vtable
+            .query_external
+            .expect("vtable function 'query_external' not set");
+        let go_result: GoError = query_external(
             self.state,
             gas_limit,
             &mut used_gas as *mut u64,

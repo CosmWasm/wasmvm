@@ -2,6 +2,7 @@ use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
+use crate::Vtable;
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -13,23 +14,29 @@ pub struct api_t {
 // These functions should return GoError but because we don't trust them here, we treat the return value as i32
 // and then check it when converting to GoError manually
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct GoApi_vtable {
-    pub humanize_address: extern "C" fn(
-        *const api_t,
-        U8SliceView,
-        *mut UnmanagedVector, // human output
-        *mut UnmanagedVector, // error message output
-        *mut u64,
-    ) -> i32,
-    pub canonicalize_address: extern "C" fn(
-        *const api_t,
-        U8SliceView,
-        *mut UnmanagedVector, // canonical output
-        *mut UnmanagedVector, // error message output
-        *mut u64,
-    ) -> i32,
+    pub humanize_address: Option<
+        extern "C" fn(
+            *const api_t,
+            U8SliceView,
+            *mut UnmanagedVector, // human output
+            *mut UnmanagedVector, // error message output
+            *mut u64,
+        ) -> i32,
+    >,
+    pub canonicalize_address: Option<
+        extern "C" fn(
+            *const api_t,
+            U8SliceView,
+            *mut UnmanagedVector, // canonical output
+            *mut UnmanagedVector, // error message output
+            *mut u64,
+        ) -> i32,
+    >,
 }
+
+impl Vtable for GoApi_vtable {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -50,7 +57,11 @@ impl BackendApi for GoApi {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.vtable.canonicalize_address)(
+        let canonicalize_address = self
+            .vtable
+            .canonicalize_address
+            .expect("vtable function 'canonicalize_address' not set");
+        let go_error: GoError = canonicalize_address(
             self.state,
             U8SliceView::new(Some(human.as_bytes())),
             &mut output as *mut UnmanagedVector,
@@ -79,7 +90,11 @@ impl BackendApi for GoApi {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.vtable.humanize_address)(
+        let humanize_address = self
+            .vtable
+            .humanize_address
+            .expect("vtable function 'humanize_address' not set");
+        let go_error: GoError = humanize_address(
             self.state,
             U8SliceView::new(Some(canonical)),
             &mut output as *mut UnmanagedVector,
