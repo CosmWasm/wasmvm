@@ -33,6 +33,10 @@
 /// }
 /// ```
 ///
+/// Or to say it in the words of [the Rust documentation](https://doc.rust-lang.org/nomicon/ffi.html#the-nullable-pointer-optimization):
+///
+/// > So `Option<extern "C" fn(c_int) -> c_int>` is a correct way to represent a nullable function pointer using the C ABI (corresponding to the C type `int (*)(int))`.
+///
 /// Since all vtable fields are nullable, we can easily demand them
 /// to have a Default implementation. This sometimes is handy when a
 /// type is created in Rust and then filled in Go.
