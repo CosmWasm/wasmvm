@@ -70,7 +70,7 @@ impl Storage for GoStorage {
         order: Order,
     ) -> BackendResult<u32> {
         let mut error_msg = UnmanagedVector::default();
-        let mut iter = GoIter::new(self.db.gas_meter);
+        let mut iter = GoIter::stub(self.db.gas_meter);
         let mut used_gas = 0_u64;
         let scan_db = self
             .db

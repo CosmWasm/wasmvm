@@ -60,7 +60,9 @@ pub struct GoIter {
 }
 
 impl GoIter {
-    pub fn new(gas_meter: *mut gas_meter_t) -> Self {
+    /// Creates an incomplete GoIter with unset `state` and `vtable``.
+    /// This is not ready to be used until those fields are set.
+    pub fn stub(gas_meter: *mut gas_meter_t) -> Self {
         GoIter {
             gas_meter,
             state: iterator_t::default(),
