@@ -263,8 +263,12 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 		return C.GoError_User
 	}
 
-	out.state = cIterator
-	out.vtable = iterator_vtable
+	*out = C.GoIter{
+		gas_meter: gasMeter,
+		state:     cIterator,
+		vtable:    iterator_vtable,
+	}
+
 	return C.GoError_None
 }
 

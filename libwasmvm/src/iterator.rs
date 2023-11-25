@@ -60,11 +60,14 @@ pub struct GoIter {
 }
 
 impl GoIter {
-    /// Creates an incomplete GoIter with unset `state` and `vtable``.
+    /// Creates an incomplete GoIter with unset fields.
     /// This is not ready to be used until those fields are set.
-    pub fn stub(gas_meter: *mut gas_meter_t) -> Self {
+    ///
+    /// This is needed to create a correct instance in Rust
+    /// which is then filled in Go (see `fn scan`).
+    pub fn stub() -> Self {
         GoIter {
-            gas_meter,
+            gas_meter: std::ptr::null_mut(),
             state: iterator_t::default(),
             vtable: IteratorVtable::default(),
         }
@@ -170,5 +173,27 @@ impl GoIter {
         }
 
         (Ok(output), gas_info)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn goiter_stub_works() {
+        // can be created and dropped
+        {
+            let _iter = GoIter::stub();
+        }
+
+        // creates an all null-instance
+        let iter = GoIter::stub();
+        assert!(iter.gas_meter.is_null());
+        assert_eq!(iter.state.call_id, 0);
+        assert_eq!(iter.state.iterator_index, 0);
+        assert!(iter.vtable.next.is_none());
+        assert!(iter.vtable.next_key.is_none());
+        assert!(iter.vtable.next_value.is_none());
     }
 }
