@@ -15,7 +15,7 @@ pub struct api_t {
 // and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub struct GoApi_vtable {
+pub struct GoApiVtable {
     pub humanize_address: Option<
         extern "C" fn(
             *const api_t,
@@ -36,13 +36,13 @@ pub struct GoApi_vtable {
     >,
 }
 
-impl Vtable for GoApi_vtable {}
+impl Vtable for GoApiVtable {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct GoApi {
     pub state: *const api_t,
-    pub vtable: GoApi_vtable,
+    pub vtable: GoApiVtable,
 }
 
 // We must declare that these are safe to Send, to use in wasm.

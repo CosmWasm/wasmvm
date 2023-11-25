@@ -13,7 +13,7 @@ pub struct db_t {
 // and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Default)]
-pub struct Db_vtable {
+pub struct DbVtable {
     pub read_db: Option<
         extern "C" fn(
             *mut db_t,
@@ -60,11 +60,11 @@ pub struct Db_vtable {
     >,
 }
 
-impl Vtable for Db_vtable {}
+impl Vtable for DbVtable {}
 
 #[repr(C)]
 pub struct Db {
     pub gas_meter: *mut gas_meter_t,
     pub state: *mut db_t,
-    pub vtable: Db_vtable,
+    pub vtable: DbVtable,
 }

@@ -89,7 +89,7 @@ func recoverPanic(ret *C.GoError) {
 
 /****** DB ********/
 
-var db_vtable = C.Db_vtable{
+var db_vtable = C.DbVtable{
 	read_db:   C.any_function_t(C.cGet_cgo),
 	write_db:  C.any_function_t(C.cSet_cgo),
 	remove_db: C.any_function_t(C.cDelete_cgo),
@@ -124,7 +124,7 @@ func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 	}
 }
 
-var iterator_vtable = C.Iterator_vtable{
+var iterator_vtable = C.IteratorVtable{
 	next:       C.any_function_t(C.cNext_cgo),
 	next_key:   C.any_function_t(C.cNextKey_cgo),
 	next_value: C.any_function_t(C.cNextValue_cgo),
@@ -358,7 +358,7 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 	return C.GoError_None
 }
 
-var api_vtable = C.GoApi_vtable{
+var api_vtable = C.GoApiVtable{
 	humanize_address:     C.any_function_t(C.cHumanAddress_cgo),
 	canonicalize_address: C.any_function_t(C.cCanonicalAddress_cgo),
 }
@@ -429,7 +429,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 
 /****** Go Querier ********/
 
-var querier_vtable = C.Querier_vtable{
+var querier_vtable = C.QuerierVtable{
 	query_external: C.any_function_t(C.cQueryExternal_cgo),
 }
 

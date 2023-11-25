@@ -21,15 +21,15 @@ mod vtables;
 // We only interact with this crate via `extern "C"` interfaces, not those public
 // exports. There are no guarantees those exports are stable.
 // We keep them here such that we can access them in the docs (`cargo doc`).
-pub use api::{GoApi, GoApi_vtable};
+pub use api::{GoApi, GoApiVtable};
 pub use cache::{cache_t, load_wasm};
-pub use db::{db_t, Db, Db_vtable};
+pub use db::{db_t, Db, DbVtable};
 pub use error::GoError;
 pub use gas_report::GasReport;
-pub use iterator::Iterator_vtable;
+pub use iterator::IteratorVtable;
 pub use memory::{
     destroy_unmanaged_vector, new_unmanaged_vector, ByteSliceView, U8SliceView, UnmanagedVector,
 };
-pub use querier::{GoQuerier, Querier_vtable};
+pub use querier::{GoQuerier, QuerierVtable};
 pub use storage::GoStorage;
 pub use vtables::Vtable;

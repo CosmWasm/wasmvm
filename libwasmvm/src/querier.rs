@@ -14,7 +14,7 @@ pub struct querier_t {
 
 #[repr(C)]
 #[derive(Clone, Default)]
-pub struct Querier_vtable {
+pub struct QuerierVtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
     pub query_external: Option<
         extern "C" fn(
@@ -28,13 +28,13 @@ pub struct Querier_vtable {
     >,
 }
 
-impl Vtable for Querier_vtable {}
+impl Vtable for QuerierVtable {}
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct GoQuerier {
     pub state: *const querier_t,
-    pub vtable: Querier_vtable,
+    pub vtable: QuerierVtable,
 }
 
 // TODO: check if we can do this safer...

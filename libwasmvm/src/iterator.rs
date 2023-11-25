@@ -19,7 +19,7 @@ pub struct iterator_t {
 // and then check it when converting to GoError manually
 #[repr(C)]
 #[derive(Default)]
-pub struct Iterator_vtable {
+pub struct IteratorVtable {
     pub next: Option<
         extern "C" fn(
             iterator_t,
@@ -50,13 +50,13 @@ pub struct Iterator_vtable {
     >,
 }
 
-impl Vtable for Iterator_vtable {}
+impl Vtable for IteratorVtable {}
 
 #[repr(C)]
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
     pub state: iterator_t,
-    pub vtable: Iterator_vtable,
+    pub vtable: IteratorVtable,
 }
 
 impl GoIter {
@@ -64,7 +64,7 @@ impl GoIter {
         GoIter {
             gas_meter,
             state: iterator_t::default(),
-            vtable: Iterator_vtable::default(),
+            vtable: IteratorVtable::default(),
         }
     }
 

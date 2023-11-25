@@ -18,7 +18,7 @@
 /// # use wasmvm::UnmanagedVector;
 /// # struct iterator_t;
 /// # struct gas_meter_t;
-/// pub struct Iterator_vtable {
+/// pub struct IteratorVtable {
 ///     pub next: Option<
 ///         extern "C" fn(
 ///             iterator_t,
