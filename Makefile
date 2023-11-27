@@ -63,7 +63,7 @@ test:
 
 test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
-	GODEBUG=cgocheck=2 go test -race -v -count=1 ./...
+	GOEXPERIMENT=cgocheck2 go test -race -v -count=1 ./...
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:

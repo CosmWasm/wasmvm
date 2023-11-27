@@ -1,6 +1,6 @@
 module github.com/CosmWasm/wasmvm
 
-go 1.18
+go 1.21
 
 require (
 	github.com/google/btree v1.0.0
