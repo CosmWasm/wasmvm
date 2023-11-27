@@ -2,8 +2,9 @@
 
 # Builds the Rust library libwasmvm
 BUILDERS_PREFIX := cosmwasm/go-ext-builder:0017
-# Contains a full Go dev environment in order to run Go tests on the built library
-ALPINE_TESTER := cosmwasm/go-ext-builder:0017-alpine
+# Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
+# This image is currently not published.
+ALPINE_TESTER := cosmwasm/alpine-tester:local
 
 USER_ID := $(shell id -u)
 USER_GROUP = $(shell id -g)
@@ -123,7 +124,11 @@ release-build:
 	make release-build-macos
 	make release-build-windows
 
-test-alpine: release-build-alpine
+.PHONY: create-tester-image
+create-tester-image:
+	docker build -t $(ALPINE_TESTER) - < ./Dockerfile.alpine_tester
+
+test-alpine: release-build-alpine create-tester-image
 # try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
 # Use package list mode to include all subdirectores. The -count=1 turns off caching.
