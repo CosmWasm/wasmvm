@@ -181,6 +181,9 @@ func Instantiate(
 	defer runtime.KeepAlive(info)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -221,6 +224,9 @@ func Execute(
 	defer runtime.KeepAlive(info)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -258,6 +264,9 @@ func Migrate(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -295,6 +304,9 @@ func Sudo(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -332,6 +344,9 @@ func Reply(
 	defer runtime.KeepAlive(env)
 	r := makeView(reply)
 	defer runtime.KeepAlive(reply)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -369,6 +384,9 @@ func Query(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -406,6 +424,9 @@ func IBCChannelOpen(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -443,6 +464,9 @@ func IBCChannelConnect(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -480,6 +504,9 @@ func IBCChannelClose(
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -517,6 +544,9 @@ func IBCPacketReceive(
 	defer runtime.KeepAlive(env)
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -554,6 +584,9 @@ func IBCPacketAck(
 	defer runtime.KeepAlive(env)
 	ac := makeView(ack)
 	defer runtime.KeepAlive(ack)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -591,6 +624,9 @@ func IBCPacketTimeout(
 	defer runtime.KeepAlive(env)
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
