@@ -21,12 +21,12 @@
 /// pub struct IteratorVtable {
 ///     pub next: Option<
 ///         extern "C" fn(
-///             iterator_t,
-///             *mut gas_meter_t,
-///             *mut u64,
-///             *mut UnmanagedVector, // key output
-///             *mut UnmanagedVector, // value output
-///             *mut UnmanagedVector, // error message output
+///             iterator: iterator_t,
+///             gas_meter: *mut gas_meter_t,
+///             gas_used: *mut u64,
+///             key_out: *mut UnmanagedVector,
+///             value_out: *mut UnmanagedVector,
+///             err_msg_out: *mut UnmanagedVector,
 ///         ) -> i32,
 ///     >,
 ///     // ...

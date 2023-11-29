@@ -22,30 +22,30 @@ pub struct iterator_t {
 pub struct IteratorVtable {
     pub next: Option<
         extern "C" fn(
-            iterator_t,
-            *mut gas_meter_t,
-            *mut u64,
-            *mut UnmanagedVector, // key output
-            *mut UnmanagedVector, // value output
-            *mut UnmanagedVector, // error message output
+            iterator: iterator_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            key_out: *mut UnmanagedVector,
+            value_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
     pub next_key: Option<
         extern "C" fn(
-            iterator_t,
-            *mut gas_meter_t,
-            *mut u64,
-            *mut UnmanagedVector, // key output
-            *mut UnmanagedVector, // error message output
+            iterator: iterator_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            key_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
     pub next_value: Option<
         extern "C" fn(
-            iterator_t,
-            *mut gas_meter_t,
-            *mut u64,
-            *mut UnmanagedVector, // value output
-            *mut UnmanagedVector, // error message output
+            iterator: iterator_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            value_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
 }
@@ -141,11 +141,11 @@ impl GoIter {
     fn next_key_or_val(
         &mut self,
         next: extern "C" fn(
-            iterator_t,
-            *mut gas_meter_t,
-            *mut u64,
-            *mut UnmanagedVector, // output
-            *mut UnmanagedVector, // error message output
+            iterator: iterator_t,
+            gas_meter: *mut gas_meter_t,
+            gas_limit: *mut u64,
+            result_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     ) -> BackendResult<Option<Vec<u8>>> {
         let mut output = UnmanagedVector::default();
