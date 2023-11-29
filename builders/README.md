@@ -19,6 +19,10 @@ versions of the builder images.
 
 ## Changelog
 
+**Unreleased**
+
+- Remove Go dev environment from `cosmwasm/go-ext-builder:XXXX-alpine`
+
 **Version 0017:**
 
 - Update Rust to 1.73.0.
