@@ -139,8 +139,9 @@ typedef struct ByteSliceView {
  *     // …
  *     # let mut error_msg = UnmanagedVector::default();
  *     # let mut used_gas = 0_u64;
+ *     # let read_db = db.vtable.read_db.unwrap();
  *
- *     let go_error: GoError = (db.vtable.read_db)(
+ *     let go_error: GoError = read_db(
  *         db.state,
  *         db.gas_meter,
  *         &mut used_gas as *mut u64,
@@ -253,7 +254,7 @@ typedef struct iterator_t {
   uint64_t iterator_index;
 } iterator_t;
 
-typedef struct Iterator_vtable {
+typedef struct IteratorVtable {
   int32_t (*next)(struct iterator_t,
                   struct gas_meter_t*,
                   uint64_t*,
@@ -270,15 +271,15 @@ typedef struct Iterator_vtable {
                         uint64_t*,
                         struct UnmanagedVector*,
                         struct UnmanagedVector*);
-} Iterator_vtable;
+} IteratorVtable;
 
 typedef struct GoIter {
   struct gas_meter_t *gas_meter;
   struct iterator_t state;
-  struct Iterator_vtable vtable;
+  struct IteratorVtable vtable;
 } GoIter;
 
-typedef struct Db_vtable {
+typedef struct DbVtable {
   int32_t (*read_db)(struct db_t*,
                      struct gas_meter_t*,
                      uint64_t*,
@@ -304,19 +305,19 @@ typedef struct Db_vtable {
                      int32_t,
                      struct GoIter*,
                      struct UnmanagedVector*);
-} Db_vtable;
+} DbVtable;
 
 typedef struct Db {
   struct gas_meter_t *gas_meter;
   struct db_t *state;
-  struct Db_vtable vtable;
+  struct DbVtable vtable;
 } Db;
 
 typedef struct api_t {
   uint8_t _private[0];
 } api_t;
 
-typedef struct GoApi_vtable {
+typedef struct GoApiVtable {
   int32_t (*humanize_address)(const struct api_t*,
                               struct U8SliceView,
                               struct UnmanagedVector*,
@@ -327,29 +328,29 @@ typedef struct GoApi_vtable {
                                   struct UnmanagedVector*,
                                   struct UnmanagedVector*,
                                   uint64_t*);
-} GoApi_vtable;
+} GoApiVtable;
 
 typedef struct GoApi {
   const struct api_t *state;
-  struct GoApi_vtable vtable;
+  struct GoApiVtable vtable;
 } GoApi;
 
 typedef struct querier_t {
   uint8_t _private[0];
 } querier_t;
 
-typedef struct Querier_vtable {
+typedef struct QuerierVtable {
   int32_t (*query_external)(const struct querier_t*,
                             uint64_t,
                             uint64_t*,
                             struct U8SliceView,
                             struct UnmanagedVector*,
                             struct UnmanagedVector*);
-} Querier_vtable;
+} QuerierVtable;
 
 typedef struct GoQuerier {
   const struct querier_t *state;
-  struct Querier_vtable vtable;
+  struct QuerierVtable vtable;
 } GoQuerier;
 
 typedef struct GasReport {
