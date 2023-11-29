@@ -457,7 +457,8 @@ workflows:
               only:
                 # long living branches
                 - main
-                - 0.14-dev
+                # Development
+                - no-go-in-builder
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
