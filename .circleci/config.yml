@@ -168,7 +168,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.19.7
+      - image: cimg/go:1.21.4
     steps:
       - run:
           name: Install gofumpt
@@ -186,7 +186,7 @@ jobs:
   # Build types and cosmwam package without cgo
   wasmvm_no_cgo:
     docker:
-      - image: cimg/go:1.19.7
+      - image: cimg/go:1.21.4
     steps:
       - checkout
       - run:
@@ -204,12 +204,12 @@ jobs:
 
   tidy-go:
     docker:
-      - image: cimg/go:1.19.7
+      - image: cimg/go:1.21.4
     steps:
       - checkout
       - run:
           name: Check go mod tidy
-          # Use --check or --exit-code when available (Go 1.19?)
+          # Use --check or --exit-code when available (Go 1.22?)
           # https://github.com/golang/go/issues/27005
           command: |
             go mod tidy
@@ -222,7 +222,7 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.21.3
+      - image: cimg/go:1.21.4
     steps:
       - run:
           name: Install shfmt
@@ -279,7 +279,7 @@ jobs:
   # Test the Go project
   wasmvm_test:
     docker:
-      - image: cimg/go:1.19.7
+      - image: cimg/go:1.21.4
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
@@ -458,7 +458,7 @@ workflows:
                 # long living branches
                 - main
                 # Development
-                - no-go-in-builder
+                - GoIter-creation
       # Run only on main, not on tags (auto-build on merge PR)
       - deploy_to_git:
           requires:
