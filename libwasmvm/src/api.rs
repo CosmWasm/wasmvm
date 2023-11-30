@@ -20,7 +20,7 @@ pub struct GoApiVtable {
         extern "C" fn(
             api: *const api_t,
             input: U8SliceView,
-            result_out: *mut UnmanagedVector,
+            humanized_address_out: *mut UnmanagedVector,
             err_msg_out: *mut UnmanagedVector,
             gas_used: *mut u64,
         ) -> i32,
@@ -29,7 +29,7 @@ pub struct GoApiVtable {
         extern "C" fn(
             api: *const api_t,
             input: U8SliceView,
-            result_out: *mut UnmanagedVector,
+            canonicalized_address_out: *mut UnmanagedVector,
             err_msg_out: *mut UnmanagedVector,
             gas_used: *mut u64,
         ) -> i32,

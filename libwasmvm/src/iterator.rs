@@ -144,7 +144,7 @@ impl GoIter {
             iterator: iterator_t,
             gas_meter: *mut gas_meter_t,
             gas_limit: *mut u64,
-            result_out: *mut UnmanagedVector,
+            key_or_value_out: *mut UnmanagedVector, // key if called from next_key; value if called from next_value
             err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     ) -> BackendResult<Option<Vec<u8>>> {

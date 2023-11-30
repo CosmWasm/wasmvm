@@ -20,7 +20,7 @@ pub struct DbVtable {
             gas_meter: *mut gas_meter_t,
             gas_used: *mut u64,
             key: U8SliceView,
-            result_out: *mut UnmanagedVector,
+            value_out: *mut UnmanagedVector,
             err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,

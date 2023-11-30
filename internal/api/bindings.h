@@ -284,7 +284,7 @@ typedef struct DbVtable {
                      struct gas_meter_t *gas_meter,
                      uint64_t *gas_used,
                      struct U8SliceView key,
-                     struct UnmanagedVector *result_out,
+                     struct UnmanagedVector *value_out,
                      struct UnmanagedVector *err_msg_out);
   int32_t (*write_db)(struct db_t *db,
                       struct gas_meter_t *gas_meter,
@@ -320,12 +320,12 @@ typedef struct api_t {
 typedef struct GoApiVtable {
   int32_t (*humanize_address)(const struct api_t *api,
                               struct U8SliceView input,
-                              struct UnmanagedVector *result_out,
+                              struct UnmanagedVector *humanized_address_out,
                               struct UnmanagedVector *err_msg_out,
                               uint64_t *gas_used);
   int32_t (*canonicalize_address)(const struct api_t *api,
                                   struct U8SliceView input,
-                                  struct UnmanagedVector *result_out,
+                                  struct UnmanagedVector *canonicalized_address_out,
                                   struct UnmanagedVector *err_msg_out,
                                   uint64_t *gas_used);
 } GoApiVtable;
