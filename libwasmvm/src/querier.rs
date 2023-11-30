@@ -22,7 +22,7 @@ pub struct QuerierVtable {
             gas_limit: u64,
             gas_used: *mut u64,
             request: U8SliceView,
-            result_out: *mut UnmanagedVector,
+            result_out: *mut UnmanagedVector, // A JSON encoded SystemResult<ContractResult<Binary>>
             err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
@@ -81,12 +81,12 @@ impl Querier for GoQuerier {
         }
 
         let bin_result: Vec<u8> = output.unwrap_or_default();
-        let result = serde_json::from_slice(&bin_result).or_else(|e| {
-            Ok(SystemResult::Err(SystemError::InvalidResponse {
+        let sys_result: SystemResult<_> = serde_json::from_slice(&bin_result).unwrap_or_else(|e| {
+            SystemResult::Err(SystemError::InvalidResponse {
                 error: format!("Parsing Go response: {e}"),
                 response: bin_result.into(),
-            }))
+            })
         });
-        (result, gas_info)
+        (Ok(sys_result), gas_info)
     }
 }
