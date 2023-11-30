@@ -16,31 +16,31 @@ pub struct db_t {
 pub struct DbVtable {
     pub read_db: Option<
         extern "C" fn(
-            *mut db_t,
-            *mut gas_meter_t,
-            *mut u64,
-            U8SliceView,
-            *mut UnmanagedVector, // result output
-            *mut UnmanagedVector, // error message output
+            db: *mut db_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            key: U8SliceView,
+            value_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
     pub write_db: Option<
         extern "C" fn(
-            *mut db_t,
-            *mut gas_meter_t,
-            *mut u64,
-            U8SliceView,
-            U8SliceView,
-            *mut UnmanagedVector, // error message output
+            db: *mut db_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            key: U8SliceView,
+            value: U8SliceView,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
     pub remove_db: Option<
         extern "C" fn(
-            *mut db_t,
-            *mut gas_meter_t,
-            *mut u64,
-            U8SliceView,
-            *mut UnmanagedVector, // error message output
+            db: *mut db_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            key: U8SliceView,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
     // order -> Ascending = 1, Descending = 2
@@ -48,14 +48,14 @@ pub struct DbVtable {
     // Since we have the pointer in rust already, we must set that manually
     pub scan_db: Option<
         extern "C" fn(
-            *mut db_t,
-            *mut gas_meter_t,
-            *mut u64,
-            U8SliceView,
-            U8SliceView,
-            i32,
-            *mut GoIter,
-            *mut UnmanagedVector, // error message output
+            db: *mut db_t,
+            gas_meter: *mut gas_meter_t,
+            gas_used: *mut u64,
+            start: U8SliceView,
+            end: U8SliceView,
+            order: i32,
+            iterator_out: *mut GoIter,
+            err_msg_out: *mut UnmanagedVector,
         ) -> i32,
     >,
 }

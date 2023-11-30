@@ -18,20 +18,20 @@ pub struct api_t {
 pub struct GoApiVtable {
     pub humanize_address: Option<
         extern "C" fn(
-            *const api_t,
-            U8SliceView,
-            *mut UnmanagedVector, // human output
-            *mut UnmanagedVector, // error message output
-            *mut u64,
+            api: *const api_t,
+            input: U8SliceView,
+            humanized_address_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
+            gas_used: *mut u64,
         ) -> i32,
     >,
     pub canonicalize_address: Option<
         extern "C" fn(
-            *const api_t,
-            U8SliceView,
-            *mut UnmanagedVector, // canonical output
-            *mut UnmanagedVector, // error message output
-            *mut u64,
+            api: *const api_t,
+            input: U8SliceView,
+            canonicalized_address_out: *mut UnmanagedVector,
+            err_msg_out: *mut UnmanagedVector,
+            gas_used: *mut u64,
         ) -> i32,
     >,
 }

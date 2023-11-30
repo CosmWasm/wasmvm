@@ -255,22 +255,22 @@ typedef struct iterator_t {
 } iterator_t;
 
 typedef struct IteratorVtable {
-  int32_t (*next)(struct iterator_t,
-                  struct gas_meter_t*,
-                  uint64_t*,
-                  struct UnmanagedVector*,
-                  struct UnmanagedVector*,
-                  struct UnmanagedVector*);
-  int32_t (*next_key)(struct iterator_t,
-                      struct gas_meter_t*,
-                      uint64_t*,
-                      struct UnmanagedVector*,
-                      struct UnmanagedVector*);
-  int32_t (*next_value)(struct iterator_t,
-                        struct gas_meter_t*,
-                        uint64_t*,
-                        struct UnmanagedVector*,
-                        struct UnmanagedVector*);
+  int32_t (*next)(struct iterator_t iterator,
+                  struct gas_meter_t *gas_meter,
+                  uint64_t *gas_used,
+                  struct UnmanagedVector *key_out,
+                  struct UnmanagedVector *value_out,
+                  struct UnmanagedVector *err_msg_out);
+  int32_t (*next_key)(struct iterator_t iterator,
+                      struct gas_meter_t *gas_meter,
+                      uint64_t *gas_used,
+                      struct UnmanagedVector *key_out,
+                      struct UnmanagedVector *err_msg_out);
+  int32_t (*next_value)(struct iterator_t iterator,
+                        struct gas_meter_t *gas_meter,
+                        uint64_t *gas_used,
+                        struct UnmanagedVector *value_out,
+                        struct UnmanagedVector *err_msg_out);
 } IteratorVtable;
 
 typedef struct GoIter {
@@ -280,31 +280,31 @@ typedef struct GoIter {
 } GoIter;
 
 typedef struct DbVtable {
-  int32_t (*read_db)(struct db_t*,
-                     struct gas_meter_t*,
-                     uint64_t*,
-                     struct U8SliceView,
-                     struct UnmanagedVector*,
-                     struct UnmanagedVector*);
-  int32_t (*write_db)(struct db_t*,
-                      struct gas_meter_t*,
-                      uint64_t*,
-                      struct U8SliceView,
-                      struct U8SliceView,
-                      struct UnmanagedVector*);
-  int32_t (*remove_db)(struct db_t*,
-                       struct gas_meter_t*,
-                       uint64_t*,
-                       struct U8SliceView,
-                       struct UnmanagedVector*);
-  int32_t (*scan_db)(struct db_t*,
-                     struct gas_meter_t*,
-                     uint64_t*,
-                     struct U8SliceView,
-                     struct U8SliceView,
-                     int32_t,
-                     struct GoIter*,
-                     struct UnmanagedVector*);
+  int32_t (*read_db)(struct db_t *db,
+                     struct gas_meter_t *gas_meter,
+                     uint64_t *gas_used,
+                     struct U8SliceView key,
+                     struct UnmanagedVector *value_out,
+                     struct UnmanagedVector *err_msg_out);
+  int32_t (*write_db)(struct db_t *db,
+                      struct gas_meter_t *gas_meter,
+                      uint64_t *gas_used,
+                      struct U8SliceView key,
+                      struct U8SliceView value,
+                      struct UnmanagedVector *err_msg_out);
+  int32_t (*remove_db)(struct db_t *db,
+                       struct gas_meter_t *gas_meter,
+                       uint64_t *gas_used,
+                       struct U8SliceView key,
+                       struct UnmanagedVector *err_msg_out);
+  int32_t (*scan_db)(struct db_t *db,
+                     struct gas_meter_t *gas_meter,
+                     uint64_t *gas_used,
+                     struct U8SliceView start,
+                     struct U8SliceView end,
+                     int32_t order,
+                     struct GoIter *iterator_out,
+                     struct UnmanagedVector *err_msg_out);
 } DbVtable;
 
 typedef struct Db {
@@ -318,16 +318,16 @@ typedef struct api_t {
 } api_t;
 
 typedef struct GoApiVtable {
-  int32_t (*humanize_address)(const struct api_t*,
-                              struct U8SliceView,
-                              struct UnmanagedVector*,
-                              struct UnmanagedVector*,
-                              uint64_t*);
-  int32_t (*canonicalize_address)(const struct api_t*,
-                                  struct U8SliceView,
-                                  struct UnmanagedVector*,
-                                  struct UnmanagedVector*,
-                                  uint64_t*);
+  int32_t (*humanize_address)(const struct api_t *api,
+                              struct U8SliceView input,
+                              struct UnmanagedVector *humanized_address_out,
+                              struct UnmanagedVector *err_msg_out,
+                              uint64_t *gas_used);
+  int32_t (*canonicalize_address)(const struct api_t *api,
+                                  struct U8SliceView input,
+                                  struct UnmanagedVector *canonicalized_address_out,
+                                  struct UnmanagedVector *err_msg_out,
+                                  uint64_t *gas_used);
 } GoApiVtable;
 
 typedef struct GoApi {
@@ -340,12 +340,12 @@ typedef struct querier_t {
 } querier_t;
 
 typedef struct QuerierVtable {
-  int32_t (*query_external)(const struct querier_t*,
-                            uint64_t,
-                            uint64_t*,
-                            struct U8SliceView,
-                            struct UnmanagedVector*,
-                            struct UnmanagedVector*);
+  int32_t (*query_external)(const struct querier_t *querier,
+                            uint64_t gas_limit,
+                            uint64_t *gas_used,
+                            struct U8SliceView request,
+                            struct UnmanagedVector *result_out,
+                            struct UnmanagedVector *err_msg_out);
 } QuerierVtable;
 
 typedef struct GoQuerier {
