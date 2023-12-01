@@ -183,6 +183,8 @@ func Instantiate(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -226,6 +228,8 @@ func Execute(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -266,6 +270,8 @@ func Migrate(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -306,6 +312,8 @@ func Sudo(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -346,6 +354,8 @@ func Reply(
 	defer runtime.KeepAlive(reply)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -386,6 +396,8 @@ func Query(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -426,6 +438,8 @@ func IBCChannelOpen(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -466,6 +480,8 @@ func IBCChannelConnect(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -506,6 +522,8 @@ func IBCChannelClose(
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -546,6 +564,8 @@ func IBCPacketReceive(
 	defer runtime.KeepAlive(packet)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -586,6 +606,8 @@ func IBCPacketAck(
 	defer runtime.KeepAlive(ack)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -626,6 +648,8 @@ func IBCPacketTimeout(
 	defer runtime.KeepAlive(packet)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
@@ -667,4 +691,36 @@ func errorWithMessage(err error, b C.UnmanagedVector) error {
 		return err
 	}
 	return fmt.Errorf("%s", string(msg))
+}
+
+// checkAndPinAPI checks and pins the API and relevant pointers inside of it.
+// All errors will result in panics as they indicate misuse of the wasmvm API and are not expected
+// to be caused by user data.
+func checkAndPinAPI(api *types.GoAPI, pinner runtime.Pinner) {
+	if api == nil {
+		panic("API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanAddress() and CanonicalAddress().")
+	}
+
+	// func cHumanAddress assumes this is set
+	if api.HumanAddress == nil {
+		panic("HumanAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanAddress() and CanonicalAddress().")
+	}
+
+	// func cCanonicalAddress assums this is set
+	if api.CanonicalAddress == nil {
+		panic("CanonicalAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanAddress() and CanonicalAddress().")
+	}
+
+	pinner.Pin(api) // this pointer is used in Rust (`state` in `C.GoApi`) and must not change
+}
+
+// checkAndPinQuerier checks and pins the querier.
+// All errors will result in panics as they indicate misuse of the wasmvm API and are not expected
+// to be caused by user data.
+func checkAndPinQuerier(querier *Querier, pinner runtime.Pinner) {
+	if querier == nil {
+		panic("Querier must not be nil. If you don't want to provide querier functionality, please create an instance that returns an error on every call to Query().")
+	}
+
+	pinner.Pin(querier) // this pointer is used in Rust (`state` in `C.GoQuerier`) and must not change
 }
