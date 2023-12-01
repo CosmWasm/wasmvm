@@ -22,6 +22,8 @@ versions of the builder images.
 **Unreleased**
 
 - Remove Go dev environment from `cosmwasm/go-ext-builder:XXXX-alpine`
+- Write x86_64 muslc output in `libwasmvm_muslc.x86_64.a` instead of
+  `libwasmvm_muslc.a`
 
 **Version 0017:**
 
