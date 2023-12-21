@@ -273,9 +273,8 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     }
 }
 
-fn set_to_csv(set: BTreeSet<impl ToString>) -> String {
-    let mut list: Vec<String> = set.into_iter().map(|e| e.to_string()).collect();
-    list.sort_unstable();
+fn set_to_csv(set: BTreeSet<impl AsRef<str>>) -> String {
+    let list: Vec<&str> = set.iter().map(|e| e.as_ref()).collect();
     list.join(",")
 }
 
