@@ -9,7 +9,6 @@ use cosmwasm_vm::{
 };
 
 static CYBERPUNK: &[u8] = include_bytes!("../../testdata/cyberpunk.wasm");
-const PRINT_DEBUG: bool = false;
 const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 const MEMORY_LIMIT: Size = Size::mebi(32);
 const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
@@ -17,17 +16,16 @@ const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
 #[test]
 fn handle_cpu_loop_with_cache() {
     let backend = mock_backend(&[]);
-    let options = CacheOptions {
-        base_dir: TempDir::new().unwrap().path().to_path_buf(),
-        available_capabilities: capabilities_from_csv("staking"),
-        memory_cache_size: MEMORY_CACHE_SIZE,
-        instance_memory_limit: MEMORY_LIMIT,
-    };
+    let options = CacheOptions::new(
+        TempDir::new().unwrap().path().to_path_buf(),
+        capabilities_from_csv("staking"),
+        MEMORY_CACHE_SIZE,
+        MEMORY_LIMIT,
+    );
     let cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
-        print_debug: PRINT_DEBUG,
     };
 
     // store code

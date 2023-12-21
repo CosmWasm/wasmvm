@@ -747,13 +747,13 @@ mod tests {
 
     #[test]
     fn set_to_csv_works() {
-        assert_eq!(set_to_csv(HashSet::new()), "");
+        assert_eq!(set_to_csv(BTreeSet::<String>::new()), "");
         assert_eq!(
-            set_to_csv(HashSet::from_iter(vec!["foo".to_string()])),
+            set_to_csv(BTreeSet::from_iter(vec!["foo".to_string()])),
             "foo",
         );
         assert_eq!(
-            set_to_csv(HashSet::from_iter(vec![
+            set_to_csv(BTreeSet::from_iter(vec![
                 "foo".to_string(),
                 "bar".to_string(),
                 "baz".to_string(),
@@ -761,7 +761,7 @@ mod tests {
             "bar,baz,foo",
         );
         assert_eq!(
-            set_to_csv(HashSet::from_iter(vec![
+            set_to_csv(BTreeSet::from_iter(vec![
                 "a".to_string(),
                 "aa".to_string(),
                 "b".to_string(),
