@@ -1,9 +1,10 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
 
-use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Checksum, Size};
+use cosmwasm_std::Checksum;
+use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Size};
 
 use crate::api::GoApi;
 use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
@@ -72,12 +73,12 @@ fn do_init_cache(
             .try_into()
             .expect("Cannot convert u32 to usize. What kind of system is this?"),
     );
-    let options = CacheOptions {
-        base_dir: dir_str.into(),
-        available_capabilities: capabilities,
+    let options = CacheOptions::new(
+        dir_str,
+        capabilities,
         memory_cache_size,
         instance_memory_limit,
-    };
+    );
     let cache = unsafe { Cache::new(options) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
@@ -243,7 +244,12 @@ fn do_unpin(
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct AnalysisReport {
+    /// `true` if and only if all required ibc exports exist as exported functions.
+    /// This does not guarantee they are functional or even have the correct signatures.
     pub has_ibc_entry_points: bool,
+    /// A UTF-8 encoded comma separated list of all entrypoints that
+    /// are exported by the contract.
+    pub entrypoints: UnmanagedVector,
     /// An UTF-8 encoded comma separated list of reqired capabilities.
     /// This is never None/nil.
     pub required_capabilities: UnmanagedVector,
@@ -254,18 +260,21 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
         let cosmwasm_vm::AnalysisReport {
             has_ibc_entry_points,
             required_capabilities,
+            entrypoints,
         } = report;
 
         let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
+        let entrypoints = set_to_csv(entrypoints).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
             required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
+            entrypoints: UnmanagedVector::new(Some(entrypoints)),
         }
     }
 }
 
-fn set_to_csv(set: HashSet<String>) -> String {
-    let mut list: Vec<String> = set.into_iter().collect();
+fn set_to_csv(set: BTreeSet<impl ToString>) -> String {
+    let mut list: Vec<String> = set.into_iter().map(|e| e.to_string()).collect();
     list.sort_unstable();
     list.join(",")
 }

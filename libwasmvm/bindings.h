@@ -202,7 +202,16 @@ typedef struct UnmanagedVector {
  * from Go this is done via `C.destroy_unmanaged_vector`.
  */
 typedef struct AnalysisReport {
+  /**
+   * `true` if and only if all required ibc exports exist as exported functions.
+   * This does not guarantee they are functional or even have the correct signatures.
+   */
   bool has_ibc_entry_points;
+  /**
+   * A UTF-8 encoded comma separated list of all entrypoints that
+   * are exported by the contract.
+   */
+  struct UnmanagedVector entrypoints;
   /**
    * An UTF-8 encoded comma separated list of reqired capabilities.
    * This is never None/nil.

@@ -281,6 +281,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
+	t.Log(metrics.SizeMemoryCache)
 	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 2
