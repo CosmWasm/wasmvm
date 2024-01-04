@@ -110,7 +110,7 @@ jobs:
     docker:
       # The audit tool might use a more modern Rust version than the build jobs. See
       # "Tooling Rust compiler" in docs/COMPILER_VERSIONS.md
-      - image: cimg/rust:1.69.0
+      - image: cimg/rust:1.75.0
     steps:
       - checkout
       - run:
