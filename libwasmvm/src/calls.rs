@@ -5,11 +5,12 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::time::SystemTime;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
+use cosmwasm_std::Checksum;
 use cosmwasm_vm::{
     call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
     call_ibc_channel_open_raw, call_ibc_packet_ack_raw, call_ibc_packet_receive_raw,
     call_ibc_packet_timeout_raw, call_instantiate_raw, call_migrate_raw, call_query_raw,
-    call_reply_raw, call_sudo_raw, Backend, Cache, Checksum, Instance, InstanceOptions, VmResult,
+    call_reply_raw, call_sudo_raw, Backend, Cache, Instance, InstanceOptions, VmResult,
 };
 
 use crate::api::GoApi;
@@ -466,11 +467,9 @@ fn do_call_2_args(
     let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
 
     let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
-        gas_limit,
-        print_debug,
-    };
-    let mut instance = cache.get_instance(&checksum, backend, options)?;
+    let options = InstanceOptions { gas_limit };
+    let mut instance: Instance<GoApi, GoStorage, GoQuerier> =
+        cache.get_instance(&checksum, backend, options)?;
 
     // If print_debug = false, use default debug handler from cosmwasm-vm, which discards messages
     if print_debug {
@@ -563,10 +562,7 @@ fn do_call_3_args(
     let arg3 = arg3.read().ok_or_else(|| Error::unset_arg(ARG3))?;
 
     let backend = into_backend(db, api, querier);
-    let options = InstanceOptions {
-        gas_limit,
-        print_debug,
-    };
+    let options = InstanceOptions { gas_limit };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
 
     // If print_debug = false, use default debug handler from cosmwasm-vm, which discards messages

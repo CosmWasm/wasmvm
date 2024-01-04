@@ -1,3 +1,4 @@
+use cosmwasm_std::ChecksumError;
 use cosmwasm_vm::VmError;
 use errno::{set_errno, Errno};
 #[cfg(feature = "backtraces")]
@@ -34,6 +35,11 @@ pub enum RustError {
     #[error("Null/Nil argument: {}", name)]
     UnsetArg {
         name: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
+    #[error("Checksum not of length 32")]
+    ChecksumError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
@@ -91,6 +97,13 @@ impl RustError {
             backtrace: Backtrace::capture(),
         }
     }
+
+    pub fn checksum_err() -> Self {
+        RustError::ChecksumError {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
 }
 
 impl From<VmError> for RustError {
@@ -99,6 +112,12 @@ impl From<VmError> for RustError {
             VmError::GasDepletion { .. } => RustError::out_of_gas(),
             _ => RustError::vm_err(source),
         }
+    }
+}
+
+impl From<ChecksumError> for RustError {
+    fn from(_: ChecksumError) -> Self {
+        RustError::checksum_err()
     }
 }
 
@@ -211,7 +230,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_vm::{BackendError, Checksum};
+    use cosmwasm_std::Checksum;
+    use cosmwasm_vm::BackendError;
     use errno::errno;
     use std::str;
 
