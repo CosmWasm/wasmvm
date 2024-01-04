@@ -272,6 +272,7 @@ jobs:
   test_alpine_build:
     machine:
       image: ubuntu-2004:2022.10.1
+    resource_class: xlarge
     steps:
       - checkout
       - run: make test-alpine
