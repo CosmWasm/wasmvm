@@ -15,5 +15,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// see https://github.com/CosmWasm/wasmvm/issues/459
-retract v1.4.0
+retract (
+	// see https://github.com/CosmWasm/wasmvm/issues/459
+	v1.4.0
+	// originally published without the CWA-2023-004 fix
+	v1.2.5
+)
