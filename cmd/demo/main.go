@@ -8,11 +8,12 @@ import (
 )
 
 const (
-	SUPPORTED_CAPABILITIES = "staking"
-	PRINT_DEBUG            = true
-	MEMORY_LIMIT           = 32  // MiB
-	CACHE_SIZE             = 100 // MiB
+	PRINT_DEBUG  = true
+	MEMORY_LIMIT = 32  // MiB
+	CACHE_SIZE   = 100 // MiB
 )
+
+var SUPPORTED_CAPABILITIES = []string{"staking"}
 
 // This is just a demo to ensure we can compile a static go binary
 func main() {

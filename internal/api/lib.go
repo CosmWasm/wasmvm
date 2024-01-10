@@ -7,6 +7,7 @@ import "C"
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/CosmWasm/wasmvm/types"
@@ -36,9 +37,9 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
 	dataDirBytes := []byte(dataDir)
-	supportedCapabilitiesBytes := []byte(supportedCapabilities)
+	supportedCapabilitiesBytes := []byte(strings.Join(supportedCapabilities, ","))
 
 	d := makeView(dataDirBytes)
 	defer runtime.KeepAlive(dataDirBytes)
