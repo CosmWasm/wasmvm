@@ -41,11 +41,6 @@ func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }
 
-// Deprecated: Renamed to StoreCode
-func (vm *VM) Create(code WasmCode) (Checksum, error) {
-	return vm.StoreCode(code)
-}
-
 // StoreCode will compile the Wasm code, and store the resulting compiled module
 // as well as the original code. Both can be referenced later via Checksum.
 // This must be done one time for given code, after which it can be
