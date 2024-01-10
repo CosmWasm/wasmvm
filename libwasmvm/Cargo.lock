@@ -254,8 +254,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.5.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.0#89891f0bb2de2c83d00600208695d0d5e1b617ac"
+version = "1.5.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.1#e2ad21352164dd4802ecf24dbe0e8f3523de5643"
 dependencies = [
  "digest 0.10.7",
  "ecdsa",
@@ -267,16 +267,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.5.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.0#89891f0bb2de2c83d00600208695d0d5e1b617ac"
+version = "1.5.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.1#e2ad21352164dd4802ecf24dbe0e8f3523de5643"
 dependencies = [
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.5.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.0#89891f0bb2de2c83d00600208695d0d5e1b617ac"
+version = "1.5.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.1#e2ad21352164dd4802ecf24dbe0e8f3523de5643"
 dependencies = [
  "base64",
  "bech32",
@@ -296,8 +296,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.5.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.0#89891f0bb2de2c83d00600208695d0d5e1b617ac"
+version = "1.5.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.1#e2ad21352164dd4802ecf24dbe0e8f3523de5643"
 dependencies = [
  "bitflags",
  "bytecheck",
@@ -2084,7 +2084,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
