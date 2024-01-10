@@ -14,3 +14,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// originally published without the CWA-2023-004 fix
+retract v1.2.5
