@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	TESTING_CAPABILITIES = "staking,stargate,iterator,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3"
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
 	TESTING_MEMORY_LIMIT = 32                      // MiB
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
+
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
@@ -61,7 +62,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	cache, err := InitCache(tmpdir, "", TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	cache, err := InitCache(tmpdir, []string{}, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
