@@ -84,9 +84,3 @@ type SubMsgResponse struct {
 	Events Events `json:"events"`
 	Data   []byte `json:"data,omitempty"`
 }
-
-// Deprecated: Renamed to SubMsgResult
-type SubcallResult = SubMsgResult
-
-// Deprecated: Renamed to SubMsgResponse
-type SubcallResponse = SubMsgResponse
