@@ -337,7 +337,7 @@ const (
 	CostHuman     uint64 = 550
 )
 
-func MockCanonicalAddress(human string) ([]byte, uint64, error) {
+func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 	if len(human) > CanonicalLength {
 		return nil, 0, fmt.Errorf("human encoding too long")
 	}
@@ -346,7 +346,7 @@ func MockCanonicalAddress(human string) ([]byte, uint64, error) {
 	return res, CostCanonical, nil
 }
 
-func MockHumanAddress(canon []byte) (string, uint64, error) {
+func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 	if len(canon) != CanonicalLength {
 		return "", 0, fmt.Errorf("wrong canonical length")
 	}
@@ -363,19 +363,19 @@ func MockHumanAddress(canon []byte) (string, uint64, error) {
 
 func NewMockAPI() *types.GoAPI {
 	return &types.GoAPI{
-		HumanAddress:     MockHumanAddress,
-		CanonicalAddress: MockCanonicalAddress,
+		HumanizeAddress:     MockHumanizeAddress,
+		CanonicalizeAddress: MockCanonicalizeAddress,
 	}
 }
 
 func TestMockApi(t *testing.T) {
 	human := "foobar"
-	canon, cost, err := MockCanonicalAddress(human)
+	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
 	assert.Equal(t, CostCanonical, cost)
 
-	recover, cost, err := MockHumanAddress(canon)
+	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
 	assert.Equal(t, recover, human)
 	assert.Equal(t, CostHuman, cost)

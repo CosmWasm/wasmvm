@@ -10,6 +10,6 @@ type (
 )
 
 type GoAPI struct {
-	HumanAddress     HumanizeAddressFunc
-	CanonicalAddress CanonicalizeAddressFunc
+	HumanizeAddress     HumanizeAddressFunc
+	CanonicalizeAddress CanonicalizeAddressFunc
 }

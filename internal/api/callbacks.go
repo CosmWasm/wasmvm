@@ -23,8 +23,8 @@ GoError cNext_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U
 GoError cNextKey_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *errOut);
 GoError cNextValue_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *val, UnmanagedVector *errOut);
 // api
-GoError cHumanAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
-GoError cCanonicalAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cHumanizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cCanonicalizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -363,8 +363,8 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 }
 
 var api_vtable = C.GoApiVtable{
-	humanize_address:     C.any_function_t(C.cHumanAddress_cgo),
-	canonicalize_address: C.any_function_t(C.cCanonicalAddress_cgo),
+	humanize_address:     C.any_function_t(C.cHumanizeAddress_cgo),
+	canonicalize_address: C.any_function_t(C.cCanonicalizeAddress_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -376,8 +376,8 @@ func buildAPI(api *types.GoAPI) C.GoApi {
 	}
 }
 
-//export cHumanAddress
-func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
+//export cHumanizeAddress
+func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if dest == nil || errOut == nil {
@@ -390,7 +390,7 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 	api := (*types.GoAPI)(unsafe.Pointer(ptr))
 	s := copyU8Slice(src)
 
-	h, cost, err := api.HumanAddress(s)
+	h, cost, err := api.HumanizeAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
@@ -398,14 +398,14 @@ func cHumanAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, err
 		return C.GoError_User
 	}
 	if len(h) == 0 {
-		panic(fmt.Sprintf("`api.HumanAddress()` returned an empty string for %q", s))
+		panic(fmt.Sprintf("`api.HumanizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector([]byte(h))
 	return C.GoError_None
 }
 
-//export cCanonicalAddress
-func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
+//export cCanonicalizeAddress
+func cCanonicalizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
 	if dest == nil || errOut == nil {
@@ -417,7 +417,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 
 	api := (*types.GoAPI)(unsafe.Pointer(ptr))
 	s := string(copyU8Slice(src))
-	c, cost, err := api.CanonicalAddress(s)
+	c, cost, err := api.CanonicalizeAddress(s)
 	*used_gas = cu64(cost)
 	if err != nil {
 		// store the actual error message in the return buffer
@@ -425,7 +425,7 @@ func cCanonicalAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector,
 		return C.GoError_User
 	}
 	if len(c) == 0 {
-		panic(fmt.Sprintf("`api.CanonicalAddress()` returned an empty string for %q", s))
+		panic(fmt.Sprintf("`api.CanonicalizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector(c)
 	return C.GoError_None
