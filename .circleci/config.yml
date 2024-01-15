@@ -403,11 +403,15 @@ jobs:
                   TAG="$CIRCLE_TAG"
                   TITLE="$TAG"
                   BODY="Build artifacts generated at this tag."
+                  # Check if tag is a version without suffix (e.g. -rc or -beta) and
+                  # set prerelease flag accordingly
+                  [[ "$TAG" =~ ^v[0-9]+.[0-9]+.[0-9]+$ ]] || PRERELEASE=-prerelease
                   ghr -t "$GITHUB_TOKEN" \
                     -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
                     -c "$CIRCLE_SHA1" \
                     -n "$TITLE" -b "$BODY" \
                     -delete \
+                    $PRERELEASE \
                     "$TAG" ./artifacts/
 
 workflows:
