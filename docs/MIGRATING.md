@@ -4,6 +4,8 @@
 
 - The `supportedCapabilities` argument in `NewVM` changed from a comma separated
   list to a list of type `[]string`.
+- The field `CodeInfoResponse.Checksum` is now explicitly marked as
+  non-optional. It has always been set to a 32 byte value in the past.
 
 ## Renamings
 
