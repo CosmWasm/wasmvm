@@ -486,7 +486,9 @@ type CodeInfoQuery struct {
 }
 
 type CodeInfoResponse struct {
-	CodeID   uint64   `json:"code_id"`
-	Creator  string   `json:"creator"`
-	Checksum Checksum `json:"checksum,omitempty"`
+	CodeID  uint64 `json:"code_id"`
+	Creator string `json:"creator"`
+	// Checksum is the hash of the Wasm blob. This field must always be set to a 32 byte value.
+	// Everything else is considered a bug.
+	Checksum Checksum `json:"checksum"`
 }
