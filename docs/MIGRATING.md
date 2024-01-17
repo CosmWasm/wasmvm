@@ -6,6 +6,17 @@
   list to a list of type `[]string`.
 - The field `CodeInfoResponse.Checksum` is now explicitly marked as
   non-optional. It has always been set to a 32 byte value in the past.
+- All entrypoint functions now return the full result with an `Ok` or `Err`
+  variant instead of just the data inside the `Ok`. This was previously only the
+  case for `IBCPacketReceive`. It is important to note that this means contract
+  errors are no longer returned in the `error` return value. Instead, the `Err`
+  field should be checked for errors.
+- The field `BlockInfo.Time` now uses a wrapper type `Uint64` instead of
+  `uint64` to ensure string serialization. You can use `uint64(u)` to get the
+  underlying value.
+- CosmWasm gas values were reduced by a factor of 1000, so each instruction now
+  consumes 150 CosmWasm gas instead of 150000. This should be taken into account
+  when converting between CosmWasm gas and Cosmos SDK gas.
 
 ## Renamings
 
@@ -22,5 +33,8 @@ where the old name was deprecated.
 | `CanonicalizeAddress`    | `CanonicalizeAddressFunc`   | Follow [best practice for naming function types][ft]        |
 | `GoAPI.HumanAddress`     | `GoAPI.HumanizeAddress`     | Perfer verbs for converters                                 |
 | `GoAPI.CanonicalAddress` | `GoAPI.CanonicalizeAddress` | Perfer verbs for converters                                 |
+| `CosmosMsg.Stargate`     | `Any`                       | The message has nothing to do with Stargate                 |
+| `StargateMsg`            | `AnyMsg`                    | The message has nothing to do with Stargate                 |
+| `QueryResponse`          | `QueryResult`               | Brings consistency with the naming of the other results     |
 
 [ft]: https://stackoverflow.com/a/60073310
