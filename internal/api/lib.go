@@ -11,6 +11,8 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/CosmWasm/wasmvm/types"
 )
 
@@ -55,7 +57,7 @@ func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32,
 		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
 	}
 
-	err = syscall.Flock(int(lockfile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 	}
@@ -81,7 +83,7 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 
 	// Release directory lock
-	_ = syscall.Flock(int(cache.lockfile.Fd()), syscall.LOCK_UN)
+	_ = unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN)
 	cache.lockfile.Close()
 }
 
