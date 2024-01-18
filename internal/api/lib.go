@@ -82,9 +82,7 @@ func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32,
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 
-	// Release directory lock
-	_ = unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN)
-	cache.lockfile.Close()
+	cache.lockfile.Close() // Also releases the file lock
 }
 
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
