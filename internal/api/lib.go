@@ -6,9 +6,12 @@ import "C"
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/CosmWasm/wasmvm/types"
 )
@@ -32,12 +35,33 @@ type (
 )
 
 type Cache struct {
-	ptr *C.cache_t
+	ptr      *C.cache_t
+	lockfile os.File
 }
 
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+	// libwasmvm would create this directory too but we need it earlier for the lockfile
+	err := os.MkdirAll(dataDir, 0o755)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not create base directory")
+	}
+
+	lockfile, err := os.OpenFile(dataDir+"/exclusive.lock", os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
+	}
+	_, err = lockfile.WriteString("This is a lockfile that prevent two VM instances to operate on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
+	if err != nil {
+		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
+	}
+
+	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
+	}
+
 	dataDirBytes := []byte(dataDir)
 	supportedCapabilitiesBytes := []byte(strings.Join(supportedCapabilities, ","))
 
@@ -52,11 +76,13 @@ func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32,
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
-	return Cache{ptr: ptr}, nil
+	return Cache{ptr: ptr, lockfile: *lockfile}, nil
 }
 
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
+
+	cache.lockfile.Close() // Also releases the file lock
 }
 
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {

@@ -17,6 +17,10 @@
 - CosmWasm gas values were reduced by a factor of 1000, so each instruction now
   consumes 150 CosmWasm gas instead of 150000. This should be taken into account
   when converting between CosmWasm gas and Cosmos SDK gas.
+- A new lockfile called `exclusive.lock` in the base directory ensures that no
+  two `VM` instances operate on the same directory in parallel. This was
+  unsupported before already but now leads to an error early on. When doing
+  parallel testing, use a different directory for each instance.
 
 ## Renamings
 

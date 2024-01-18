@@ -36,7 +36,8 @@ func NewVM(dataDir string, supportedCapabilities []string, memoryLimit uint32, p
 	return &VM{cache: cache, printDebug: printDebug}, nil
 }
 
-// Cleanup should be called when no longer using this to free resources on the rust-side
+// Cleanup should be called when no longer using this instances.
+// It frees resources in libwasmvm (the Rust part) and releases a lock in the base directory.
 func (vm *VM) Cleanup() {
 	api.ReleaseCache(vm.cache)
 }

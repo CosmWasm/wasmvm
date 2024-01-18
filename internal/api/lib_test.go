@@ -55,7 +55,49 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 	// On Unix we should not have permission to create this.
 	cannotBeCreated := "/foo:bar"
 	_, err := InitCache(cannotBeCreated, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
-	require.ErrorContains(t, err, "Error creating state directory")
+	require.ErrorContains(t, err, "Could not create base directory")
+}
+
+func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	cache1, err1 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err1)
+
+	_, err2 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+
+	ReleaseCache(cache1)
+
+	// Now we can try again
+	cache3, err3 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err3)
+	ReleaseCache(cache3)
+}
+
+func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
+	tmpdir1, err := os.MkdirTemp("", "wasmvm-testing1")
+	require.NoError(t, err)
+	tmpdir2, err := os.MkdirTemp("", "wasmvm-testing2")
+	require.NoError(t, err)
+	tmpdir3, err := os.MkdirTemp("", "wasmvm-testing3")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir1)
+	defer os.RemoveAll(tmpdir2)
+	defer os.RemoveAll(tmpdir3)
+
+	cache1, err1 := InitCache(tmpdir1, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err1)
+	cache2, err2 := InitCache(tmpdir2, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err2)
+	cache3, err3 := InitCache(tmpdir3, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err3)
+
+	ReleaseCache(cache1)
+	ReleaseCache(cache2)
+	ReleaseCache(cache3)
 }
 
 func TestInitCacheEmptyCapabilities(t *testing.T) {
