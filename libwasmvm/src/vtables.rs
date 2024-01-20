@@ -16,12 +16,12 @@
 ///
 /// ```
 /// # use wasmvm::UnmanagedVector;
-/// # struct iterator_t;
+/// # struct IteratorReference;
 /// # struct gas_meter_t;
 /// pub struct IteratorVtable {
 ///     pub next: Option<
 ///         extern "C" fn(
-///             iterator: iterator_t,
+///             iterator: IteratorReference,
 ///             gas_meter: *mut gas_meter_t,
 ///             gas_used: *mut u64,
 ///             key_out: *mut UnmanagedVector,
