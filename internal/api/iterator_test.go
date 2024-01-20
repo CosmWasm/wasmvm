@@ -34,7 +34,7 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 	return q.store.WithGasMeter(meter)
 }
 
-func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
+func setupQueueContractWithData(t testing.TB, cache Cache, values ...int) queueData {
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -267,6 +267,60 @@ func TestQueueIteratorRaces(t *testing.T) {
 
 	// when they finish, we should have removed all frames
 	assert.Equal(t, 0, syncMapLen(&iteratorFrames))
+}
+
+func BenchmarkConcurrentIterators(b *testing.B) {
+	cache, cleanup := withCache(b)
+	defer cleanup()
+	assert.Equal(b, 0, syncMapLen(&iteratorFrames))
+
+	contract1 := setupQueueContractWithData(b, cache, 17, 22)
+	contract2 := setupQueueContractWithData(b, cache, 1, 19, 6, 35, 8)
+	contract3 := setupQueueContractWithData(b, cache, 11, 6, 2)
+	env := MockEnvBin(b)
+
+	reduceQuery := func(t *testing.B, setup queueData, expected string) {
+		checksum, querier, api := setup.checksum, setup.querier, setup.api
+		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+		igasMeter := types.GasMeter(gasMeter)
+		store := setup.Store(gasMeter)
+
+		// query reduce (multiple iterators at once)
+		query := []byte(`{"reducer":{}}`)
+		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+		require.NoError(t, err)
+		var reduced types.QueryResult
+		err = json.Unmarshal(data, &reduced)
+		require.NoError(t, err)
+		require.Equal(t, "", reduced.Err)
+		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
+	}
+
+	for n := 0; n < b.N; n++ {
+		// Concurrent batches (in go routines) to simulate concurrent load
+		numBatches := 100
+
+		var wg sync.WaitGroup
+		// for each batch, query each of the 3 contracts - so the contract queries get mixed together
+		wg.Add(numBatches * 3)
+		for i := 0; i < numBatches; i++ {
+			go func() {
+				reduceQuery(b, contract1, "[[17,22],[22,0]]")
+				wg.Done()
+			}()
+			go func() {
+				reduceQuery(b, contract2, "[[1,68],[19,35],[6,62],[35,0],[8,54]]")
+				wg.Done()
+			}()
+			go func() {
+				reduceQuery(b, contract3, "[[11,0],[6,11],[2,17]]")
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
+
+	assert.Equal(b, 0, syncMapLen(&iteratorFrames))
 }
 
 func TestQueueIteratorLimit(t *testing.T) {
