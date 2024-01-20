@@ -264,7 +264,10 @@ typedef struct IteratorReference {
    * An ID assigned to this contract call
    */
   uint64_t call_id;
-  uint64_t iterator_index;
+  /**
+   * An ID assigned to this iterator
+   */
+  uint64_t iterator_id;
 } IteratorReference;
 
 typedef struct IteratorVtable {

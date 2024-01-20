@@ -139,13 +139,13 @@ const frameLenLimit = 32768
 // contract: original pointer/struct referenced must live longer than C.Db struct
 // since this is only used internally, we can verify the code that this is the case
 func buildIterator(callID uint64, it types.Iterator) (C.IteratorReference, error) {
-	idx, err := storeIterator(callID, it, frameLenLimit)
+	iteratorID, err := storeIterator(callID, it, frameLenLimit)
 	if err != nil {
 		return C.IteratorReference{}, err
 	}
 	return C.IteratorReference{
-		call_id:        cu64(callID),
-		iterator_index: cu64(idx),
+		call_id:     cu64(callID),
+		iterator_id: cu64(iteratorID),
 	}, nil
 }
 
@@ -291,7 +291,7 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	}
 
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
-	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_index))
+	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_id))
 	if iter == nil {
 		panic("Unable to retrieve iterator.")
 	}
@@ -342,7 +342,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	}
 
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
-	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_index))
+	iter := retrieveIterator(uint64(ref.call_id), uint64(ref.iterator_id))
 	if iter == nil {
 		panic("Unable to retrieve iterator.")
 	}

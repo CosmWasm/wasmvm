@@ -158,6 +158,12 @@ func TestRetrieveIterator(t *testing.T) {
 	require.Nil(t, iter)
 	iter = retrieveIterator(callID1, uint64(0))
 	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483647))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483648))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(18446744073709551615))
+	require.Nil(t, iter)
 
 	// Retrieve non-existent call ID
 	iter = retrieveIterator(callID1+1_234_567, index23)

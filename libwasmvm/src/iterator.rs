@@ -13,7 +13,8 @@ use crate::vtables::Vtable;
 pub struct IteratorReference {
     /// An ID assigned to this contract call
     pub call_id: u64,
-    pub iterator_index: u64,
+    /// An ID assigned to this iterator
+    pub iterator_id: u64,
 }
 
 // These functions should return GoError but because we don't trust them here, we treat the return value as i32
@@ -194,7 +195,7 @@ mod test {
         let iter = GoIter::stub();
         assert!(iter.gas_meter.is_null());
         assert_eq!(iter.reference.call_id, 0);
-        assert_eq!(iter.reference.iterator_index, 0);
+        assert_eq!(iter.reference.iterator_id, 0);
         assert!(iter.vtable.next.is_none());
         assert!(iter.vtable.next_key.is_none());
         assert!(iter.vtable.next_value.is_none());
