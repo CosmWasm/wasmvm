@@ -3,8 +3,9 @@ package cosmwasm
 import (
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmvm/types"
 )
 
 func TestCreateChecksum(t *testing.T) {
