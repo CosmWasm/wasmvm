@@ -255,27 +255,31 @@ typedef struct U8SliceView {
   uintptr_t len;
 } U8SliceView;
 
-typedef struct iterator_t {
+/**
+ * A reference to some tables on the Go side which allow accessing
+ * the actual iterator instance.
+ */
+typedef struct IteratorReference {
   /**
    * An ID assigned to this contract call
    */
   uint64_t call_id;
   uint64_t iterator_index;
-} iterator_t;
+} IteratorReference;
 
 typedef struct IteratorVtable {
-  int32_t (*next)(struct iterator_t iterator,
+  int32_t (*next)(struct IteratorReference iterator,
                   struct gas_meter_t *gas_meter,
                   uint64_t *gas_used,
                   struct UnmanagedVector *key_out,
                   struct UnmanagedVector *value_out,
                   struct UnmanagedVector *err_msg_out);
-  int32_t (*next_key)(struct iterator_t iterator,
+  int32_t (*next_key)(struct IteratorReference iterator,
                       struct gas_meter_t *gas_meter,
                       uint64_t *gas_used,
                       struct UnmanagedVector *key_out,
                       struct UnmanagedVector *err_msg_out);
-  int32_t (*next_value)(struct iterator_t iterator,
+  int32_t (*next_value)(struct IteratorReference iterator,
                         struct gas_meter_t *gas_meter,
                         uint64_t *gas_used,
                         struct UnmanagedVector *value_out,
@@ -284,7 +288,11 @@ typedef struct IteratorVtable {
 
 typedef struct GoIter {
   struct gas_meter_t *gas_meter;
-  struct iterator_t state;
+  /**
+   * A reference which identifies the iterator and allows finding and accessing the
+   * actual iterator instance in Go. Once fully initalized, this is immutable.
+   */
+  struct IteratorReference reference;
   struct IteratorVtable vtable;
 } GoIter;
 
