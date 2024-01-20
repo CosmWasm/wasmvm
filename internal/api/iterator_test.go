@@ -13,6 +13,16 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
+// This operation is slow, but good enough for tests. See https://github.com/golang/go/issues/20680
+func syncMapLen(m *sync.Map) int {
+	var length int
+	m.Range(func(_, _ interface{}) bool {
+		length++
+		return true
+	})
+	return length
+}
+
 type queueData struct {
 	checksum []byte
 	store    *Lookup
@@ -209,7 +219,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, 0, len(iteratorFrames))
+	assert.Equal(t, 0, syncMapLen(&iteratorFrames))
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -256,7 +266,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	wg.Wait()
 
 	// when they finish, we should have removed all frames
-	assert.Equal(t, 0, len(iteratorFrames))
+	assert.Equal(t, 0, syncMapLen(&iteratorFrames))
 }
 
 func TestQueueIteratorLimit(t *testing.T) {

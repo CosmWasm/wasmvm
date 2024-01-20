@@ -11,10 +11,7 @@ import (
 type frame []types.Iterator
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
-var (
-	iteratorFrames      = make(map[uint64]frame)
-	iteratorFramesMutex sync.Mutex
-)
+var iteratorFrames sync.Map
 
 // this is a global counter for creating call IDs
 var (
@@ -31,25 +28,17 @@ func startCall() uint64 {
 	return latestCallID
 }
 
-// removeFrame removes the frame with for the given call ID.
-// The result can be nil when the frame is not initialized,
-// i.e. when startCall() is called but no iterator is stored.
-func removeFrame(callID uint64) frame {
-	iteratorFramesMutex.Lock()
-	defer iteratorFramesMutex.Unlock()
-
-	remove := iteratorFrames[callID]
-	delete(iteratorFrames, callID)
-	return remove
-}
-
 // endCall is called at the end of a contract call to remove one item the iteratorFrames
 func endCall(callID uint64) {
-	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
-	remove := removeFrame(callID)
+	// The remove can be nil when the frame is not initialized,
+	// i.e. when startCall() is called but no iterator is stored.
+	removedFrame, didExist := iteratorFrames.LoadAndDelete(callID)
+
 	// free all iterators in the frame when we release it
-	for _, iter := range remove {
-		iter.Close()
+	if didExist {
+		for _, iter := range removedFrame.(frame) {
+			iter.Close()
+		}
 	}
 }
 
@@ -59,16 +48,26 @@ func endCall(callID uint64) {
 // We assign iterator IDs starting with 1 for historic reasons. This could be changed to 0
 // I guess.
 func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64, error) {
-	iteratorFramesMutex.Lock()
-	defer iteratorFramesMutex.Unlock()
+	// We load, change, store the frame for a given call ID here. If storeIterator
+	// is called twice for the same call ID, this is incorrect. But everything in a single
+	// call is serial.
 
-	new_index := len(iteratorFrames[callID])
+	loadedFrame, found := iteratorFrames.Load(callID)
+	var newFrame frame
+	if found {
+		newFrame = loadedFrame.(frame) // panics if wrong type was found
+	} else {
+		newFrame = make(frame, 0, 8)
+	}
+
+	new_index := len(newFrame)
 	if new_index >= frameLenLimit {
 		return 0, fmt.Errorf("Reached iterator limit (%d)", frameLenLimit)
 	}
 
 	// store at array position `new_index`
-	iteratorFrames[callID] = append(iteratorFrames[callID], it)
+	newFrame = append(newFrame, it)
+	iteratorFrames.Store(callID, newFrame)
 
 	iterator_id, ok := indexToIteratorID(new_index)
 	if !ok {
@@ -86,17 +85,17 @@ func retrieveIterator(callID uint64, iteratorID uint64) types.Iterator {
 		return nil
 	}
 
-	iteratorFramesMutex.Lock()
-	defer iteratorFramesMutex.Unlock()
-	myFrame := iteratorFrames[callID]
-	if myFrame == nil {
+	loadedFrame, found := iteratorFrames.Load(callID)
+	if found {
+		loadedFrmaeAsFrame := loadedFrame.(frame) // panics if wrong type was found
+		if indexInFrame >= len(loadedFrmaeAsFrame) {
+			// index out of range
+			return nil
+		}
+		return loadedFrmaeAsFrame[indexInFrame]
+	} else {
 		return nil
 	}
-	if indexInFrame >= len(myFrame) {
-		// index out of range
-		return nil
-	}
-	return myFrame[indexInFrame]
 }
 
 const (
