@@ -109,7 +109,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t *testing.T) (Cache, func()) {
+func withCache(t testing.TB) (Cache, func()) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
@@ -908,7 +908,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
+func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -933,27 +933,27 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t *testing.T, cache Cache) []byte {
+func createHackatomContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t *testing.T, cache Cache) []byte {
+func createCyberpunkContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t *testing.T, cache Cache) []byte {
+func createQueueContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t *testing.T, cache Cache) []byte {
+func createReflectContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t *testing.T, cache Cache) []byte {
+func createFloaty2(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
 	wasm, err := os.ReadFile(wasmFile)
 	require.NoError(t, err)
 	checksum, err := StoreCode(cache, wasm)
