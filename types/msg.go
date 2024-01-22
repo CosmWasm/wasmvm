@@ -182,11 +182,38 @@ type voteOption int
 
 type VoteMsg struct {
 	ProposalId uint64 `json:"proposal_id"`
-	// Vote is the vote option.
+	// Option is the vote option.
 	//
-	// This should be called "option" for consistency with Cosmos SDK. Sorry for that.
-	// See <https://github.com/CosmWasm/cosmwasm/issues/1571>.
-	Vote voteOption `json:"vote"`
+	// This used to be called "vote", but was changed for consistency with Cosmos SDK.
+	// The old name is still supported for backwards compatibility.
+	Option voteOption `json:"option"`
+}
+
+func (m *VoteMsg) UnmarshalJSON(data []byte) error {
+	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
+	type InternalVoteMsg struct {
+		ProposalId uint64      `json:"proposal_id"`
+		Option     *voteOption `json:"option"`
+		Vote       *voteOption `json:"vote"` // old version
+	}
+	var tmp InternalVoteMsg
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	if tmp.Option != nil && tmp.Vote != nil {
+		return fmt.Errorf("invalid VoteMsg: both 'option' and 'vote' fields are set")
+	} else if tmp.Option == nil && tmp.Vote != nil {
+		// Use "Option" for both variants
+		tmp.Option = tmp.Vote
+	}
+
+	*m = VoteMsg{
+		ProposalId: tmp.ProposalId,
+		Option:     *tmp.Option,
+	}
+	return nil
 }
 
 type VoteWeightedMsg struct {
