@@ -116,17 +116,24 @@ func TestAnyMsgSerialization(t *testing.T) {
 }
 
 func TestGovMsgVoteSerialization(t *testing.T) {
-	document := []byte(`{"vote":{"proposal_id":4,"vote":"no_with_veto"}}`)
+	oldDocument := []byte(`{"vote":{"proposal_id":4,"vote":"no_with_veto"}}`)
 
 	var msg GovMsg
-	err := json.Unmarshal(document, &msg)
+	err := json.Unmarshal(oldDocument, &msg)
 	require.NoError(t, err)
 
 	require.Nil(t, msg.VoteWeighted)
 	require.NotNil(t, msg.Vote)
 
 	require.Equal(t, uint64(4), msg.Vote.ProposalId)
-	require.Equal(t, NoWithVeto, msg.Vote.Vote)
+	require.Equal(t, NoWithVeto, msg.Vote.Option)
+
+	newDocument := []byte(`{"vote":{"proposal_id":4,"option":"no_with_veto"}}`)
+
+	var msg2 GovMsg
+	err2 := json.Unmarshal(newDocument, &msg2)
+	require.NoError(t, err2)
+	require.Equal(t, msg, msg2)
 }
 
 func TestGovMsgVoteWeightedSerialization(t *testing.T) {

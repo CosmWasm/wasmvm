@@ -37,8 +37,9 @@ where the old name was deprecated.
 | `CanonicalizeAddress`    | `CanonicalizeAddressFunc`   | Follow [best practice for naming function types][ft]        |
 | `GoAPI.HumanAddress`     | `GoAPI.HumanizeAddress`     | Perfer verbs for converters                                 |
 | `GoAPI.CanonicalAddress` | `GoAPI.CanonicalizeAddress` | Perfer verbs for converters                                 |
-| `CosmosMsg.Stargate`     | `Any`                       | The message has nothing to do with Stargate                 |
+| `CosmosMsg.Stargate`     | `CosmosMsg.Any`             | The message has nothing to do with Stargate                 |
 | `StargateMsg`            | `AnyMsg`                    | The message has nothing to do with Stargate                 |
 | `QueryResponse`          | `QueryResult`               | Brings consistency with the naming of the other results     |
+| `VoteMsg.Vote`           | `VoteMsg.Option`            | Brings consistency with Cosmos SDK naming                   |
 
 [ft]: https://stackoverflow.com/a/60073310
