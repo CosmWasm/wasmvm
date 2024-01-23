@@ -65,6 +65,11 @@ test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
 	GOEXPERIMENT=cgocheck2 go test -race -v -count=1 ./...
 
+# Run all Go benchmarks
+.PHONY: bench
+bench:
+	go test -bench . -benchtime=2s -run=^Benchmark ./...
+
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
 	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)

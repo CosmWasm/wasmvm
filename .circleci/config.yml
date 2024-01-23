@@ -276,7 +276,7 @@ jobs:
             - libwasmvm/target/release/deps
           key: cargocache-v3-build_shared_library-rust:1.70.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
-  # Test the Go project
+  # Test the Go project and run benchmarks
   wasmvm_test:
     docker:
       - image: cimg/go:1.21.4
@@ -291,12 +291,17 @@ jobs:
           name: Copy .so build
           command: cp /tmp/builds/libwasmvm.x86_64.so ./internal/api
       - run:
+          name: Build Go project
+          command: make build-go
+      - run:
           name: Go integration tests
           command: make test
       - run:
           name: Go tests with cgo and race condition safety checks
           command: make test-safety
-      - run: make build-go
+      - run:
+          name: Go benchmarks
+          command: make bench
 
   test_alpine_build:
     machine:

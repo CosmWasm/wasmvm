@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -109,7 +110,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t *testing.T) (Cache, func()) {
+func withCache(t testing.TB) (Cache, func()) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
@@ -576,26 +577,25 @@ func TestExecuteCpuLoop(t *testing.T) {
 func TestExecuteStorageLoop(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
-	checksum := createHackatomContract(t, cache)
+	checksum := createCyberpunkContract(t, cache)
 
-	maxGas := TESTING_GAS_LIMIT
-	gasMeter1 := NewMockGasMeter(maxGas)
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(`{}`)
 
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
 	// execute a storage loop
+	maxGas := uint64(40_000_000)
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
@@ -611,6 +611,85 @@ func TestExecuteStorageLoop(t *testing.T) {
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
 	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
 	require.Equal(t, int64(maxGas), int64(totalCost))
+}
+
+func BenchmarkContractCall(b *testing.B) {
+	cache, cleanup := withCache(b)
+	defer cleanup()
+
+	checksum := createCyberpunkContract(b, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := types.GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(b)
+	info := MockInfoBin(b, "creator")
+
+	msg := []byte(`{}`)
+
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(b, err)
+	requireOkResponse(b, res, 0)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+		igasMeter2 := types.GasMeter(gasMeter2)
+		store.SetGasMeter(gasMeter2)
+		info = MockInfoBin(b, "fred")
+		msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
+		res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+		require.NoError(b, err)
+		requireOkResponse(b, res, 0)
+	}
+}
+
+func Benchmark100ConcurrentContractCalls(b *testing.B) {
+	cache, cleanup := withCache(b)
+	defer cleanup()
+
+	checksum := createCyberpunkContract(b, cache)
+
+	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter1 := types.GasMeter(gasMeter1)
+	// instantiate it with this store
+	store := NewLookup(gasMeter1)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(b)
+	info := MockInfoBin(b, "creator")
+
+	msg := []byte(`{}`)
+
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(b, err)
+	requireOkResponse(b, res, 0)
+
+	const callCount = 100 // Calls per benchmark iteration
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		var wg sync.WaitGroup
+		wg.Add(callCount)
+		for i := 0; i < callCount; i++ {
+			go func() {
+				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
+				igasMeter2 := types.GasMeter(gasMeter2)
+				store.SetGasMeter(gasMeter2)
+				info = MockInfoBin(b, "fred")
+				msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
+				res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+				require.NoError(b, err)
+				requireOkResponse(b, res, 0)
+
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
 }
 
 func TestExecuteUserErrorsInApiCalls(t *testing.T) {
@@ -909,7 +988,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t *testing.T, res []byte, expectedMsgs int) {
+func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -934,27 +1013,27 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t *testing.T, cache Cache) []byte {
+func createHackatomContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t *testing.T, cache Cache) []byte {
+func createCyberpunkContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t *testing.T, cache Cache) []byte {
+func createQueueContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t *testing.T, cache Cache) []byte {
+func createReflectContract(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t *testing.T, cache Cache) []byte {
+func createFloaty2(t testing.TB, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
 	wasm, err := os.ReadFile(wasmFile)
 	require.NoError(t, err)
 	checksum, err := StoreCode(cache, wasm)
