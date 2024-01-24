@@ -21,6 +21,9 @@
   two `VM` instances operate on the same directory in parallel. This was
   unsupported before already but now leads to an error early on. When doing
   parallel testing, use a different directory for each instance.
+- `VM.StoreCode` now returns a `uint64` containing the gas cost in CosmWasm gas.
+  This was previously calculated in wasmd. The change brings consistency with
+  the other functions that cause gas usage.
 
 ## Renamings
 
