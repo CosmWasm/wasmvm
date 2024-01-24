@@ -44,7 +44,7 @@ func main() {
 		panic(err)
 	}
 
-	checksum, err := vm.StoreCode(bz)
+	checksum, _, err := vm.StoreCode(bz)
 	if err != nil {
 		panic(err)
 	}

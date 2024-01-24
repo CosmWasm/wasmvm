@@ -51,9 +51,10 @@ func (vm *VM) Cleanup() {
 // This function stores the code for that contract only once, but it can
 // be instantiated with custom inputs in the future.
 //
-// TODO: return gas cost? Add gas limit??? there is no metering here...
-func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
-	return api.StoreCode(vm.cache, code)
+// Returns both the checksum, as well as the gas cost of compilation (in CosmWasm Gas) or an error.
+func (vm *VM) StoreCode(code WasmCode) (Checksum, uint64, error) {
+	checksum, err := api.StoreCode(vm.cache, code)
+	return checksum, compileCosts(code), err
 }
 
 // StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
@@ -523,6 +524,15 @@ func (vm *VM) IBCPacketTimeout(
 		return nil, gasReport.UsedInternally, err
 	}
 	return &result, gasReport.UsedInternally, nil
+}
+
+func compileCosts(code WasmCode) uint64 {
+	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
+	// Benchmarks and numbers (in SDK Gas) were discussed in:
+	// https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
+	const CostPerByte uint64 = 3 * 140_000
+
+	return CostPerByte * uint64(len(code))
 }
 
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {

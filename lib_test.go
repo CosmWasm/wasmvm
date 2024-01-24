@@ -44,7 +44,7 @@ func withVM(t *testing.T) *VM {
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
-	checksum, err := vm.StoreCode(wasm)
+	checksum, _, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 	return checksum
 }
@@ -56,7 +56,7 @@ func TestStoreCode(t *testing.T) {
 	{
 		wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
 		require.NoError(t, err)
-		_, err = vm.StoreCode(wasm)
+		_, _, err = vm.StoreCode(wasm)
 		require.NoError(t, err)
 	}
 
@@ -64,7 +64,7 @@ func TestStoreCode(t *testing.T) {
 	{
 		wasm, err := os.ReadFile(CYBERPUNK_TEST_CONTRACT)
 		require.NoError(t, err)
-		_, err = vm.StoreCode(wasm)
+		_, _, err = vm.StoreCode(wasm)
 		require.NoError(t, err)
 	}
 
@@ -74,28 +74,28 @@ func TestStoreCode(t *testing.T) {
 		// hexdump -C < empty.wasm
 
 		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
-		_, err := vm.StoreCode(wasm)
+		_, _, err := vm.StoreCode(wasm)
 		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
 
 	// No Wasm
 	{
 		wasm := []byte("foobar")
-		_, err := vm.StoreCode(wasm)
+		_, _, err := vm.StoreCode(wasm)
 		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
-		_, err := vm.StoreCode(wasm)
+		_, _, err := vm.StoreCode(wasm)
 		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
 	}
 
 	// Nil
 	{
 		var wasm []byte = nil
-		_, err := vm.StoreCode(wasm)
+		_, _, err := vm.StoreCode(wasm)
 		require.ErrorContains(t, err, "Null/Nil argument: wasm")
 	}
 }
@@ -106,7 +106,7 @@ func TestStoreCodeAndGet(t *testing.T) {
 	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	checksum, err := vm.StoreCode(wasm)
+	checksum, _, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 
 	code, err := vm.GetCode(checksum)
@@ -120,7 +120,7 @@ func TestRemoveCode(t *testing.T) {
 	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
 
-	checksum, err := vm.StoreCode(wasm)
+	checksum, _, err := vm.StoreCode(wasm)
 	require.NoError(t, err)
 
 	err = vm.RemoveCode(checksum)
