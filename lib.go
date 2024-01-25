@@ -52,9 +52,14 @@ func (vm *VM) Cleanup() {
 // be instantiated with custom inputs in the future.
 //
 // Returns both the checksum, as well as the gas cost of compilation (in CosmWasm Gas) or an error.
-func (vm *VM) StoreCode(code WasmCode) (Checksum, uint64, error) {
+func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
+	gasCost := compileCosts(code)
+	if gasLimit < gasCost {
+		return nil, gasCost, fmt.Errorf("insufficient gas to store contract (%d bytes)", len(code))
+	}
+
 	checksum, err := api.StoreCode(vm.cache, code)
-	return checksum, compileCosts(code), err
+	return checksum, gasCost, err
 }
 
 // StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
