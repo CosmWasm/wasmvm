@@ -250,7 +250,7 @@ pub struct AnalysisReport {
     /// A UTF-8 encoded comma separated list of all entrypoints that
     /// are exported by the contract.
     pub entrypoints: UnmanagedVector,
-    /// An UTF-8 encoded comma separated list of reqired capabilities.
+    /// An UTF-8 encoded comma separated list of required capabilities.
     /// This is never None/nil.
     pub required_capabilities: UnmanagedVector,
 }
