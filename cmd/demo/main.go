@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	wasmvm "github.com/CosmWasm/wasmvm"
@@ -44,7 +45,7 @@ func main() {
 		panic(err)
 	}
 
-	checksum, err := vm.StoreCode(bz)
+	checksum, _, err := vm.StoreCode(bz, math.MaxUint64)
 	if err != nil {
 		panic(err)
 	}
