@@ -29,6 +29,10 @@
 - `VM.StoreCode` now returns a `uint64` containing the gas cost in CosmWasm gas
   and takes a gas limit as argument. This was previously calculated in wasmd.
   The change brings consistency with the other functions that cause gas usage.
+- `GoAPI` now requires an additional `ValidateAddress` function that validates
+  whether the given string is a valid address. This was previously done
+  internally using separate calls to `CanonicalizeAddress` and `HumanizeAddress`
+  but can be done more efficiently using a single call.
 
 ## Renamings
 
