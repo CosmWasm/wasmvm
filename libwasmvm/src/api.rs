@@ -34,6 +34,14 @@ pub struct GoApiVtable {
             gas_used: *mut u64,
         ) -> i32,
     >,
+    pub validate_address: Option<
+        extern "C" fn(
+            api: *const api_t,
+            input: U8SliceView,
+            err_msg_out: *mut UnmanagedVector,
+            gas_used: *mut u64,
+        ) -> i32,
+    >,
 }
 
 impl Vtable for GoApiVtable {}
@@ -53,7 +61,7 @@ pub struct GoApi {
 unsafe impl Send for GoApi {}
 
 impl BackendApi for GoApi {
-    fn canonical_address(&self, human: &str) -> BackendResult<Vec<u8>> {
+    fn addr_canonicalize(&self, human: &str) -> BackendResult<Vec<u8>> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -86,7 +94,7 @@ impl BackendApi for GoApi {
         (result, gas_info)
     }
 
-    fn human_address(&self, canonical: &[u8]) -> BackendResult<String> {
+    fn addr_humanize(&self, canonical: &[u8]) -> BackendResult<String> {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -123,6 +131,29 @@ impl BackendApi for GoApi {
         let result = output
             .ok_or_else(|| BackendError::unknown("Unset output"))
             .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
+        (result, gas_info)
+    }
+
+    fn addr_validate(&self, input: &str) -> BackendResult<()> {
+        let mut error_msg = UnmanagedVector::default();
+        let mut used_gas = 0_u64;
+        let validate_address = self
+            .vtable
+            .validate_address
+            .expect("vtable function 'validate_address' not set");
+        let go_error: GoError = validate_address(
+            self.state,
+            U8SliceView::new(Some(input.as_bytes())),
+            &mut error_msg as *mut UnmanagedVector,
+            &mut used_gas as *mut u64,
+        )
+        .into();
+
+        let gas_info = GasInfo::with_cost(used_gas);
+
+        // return complete error message (reading from buffer for GoError::Other)
+        let default = || format!("Failed to validate the address: {input}");
+        let result = unsafe { go_error.into_result(error_msg, default) };
         (result, gas_info)
     }
 }

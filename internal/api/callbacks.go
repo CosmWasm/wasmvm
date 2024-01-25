@@ -25,6 +25,7 @@ GoError cNextValue_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_g
 // api
 GoError cHumanizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cCanonicalizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cValidateAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
 GoError cQueryExternal_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -365,6 +366,7 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 var api_vtable = C.GoApiVtable{
 	humanize_address:     C.any_function_t(C.cHumanizeAddress_cgo),
 	canonicalize_address: C.any_function_t(C.cCanonicalizeAddress_cgo),
+	validate_address:     C.any_function_t(C.cValidateAddress_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -428,6 +430,30 @@ func cCanonicalizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVect
 		panic(fmt.Sprintf("`api.CanonicalizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector(c)
+	return C.GoError_None
+}
+
+//export cValidateAddress
+func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector, used_gas *cu64) (ret C.GoError) {
+	defer recoverPanic(&ret)
+
+	if errOut == nil {
+		return C.GoError_BadArgument
+	}
+	if !(*errOut).is_none {
+		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
+	}
+
+	api := (*types.GoAPI)(unsafe.Pointer(ptr))
+	s := string(copyU8Slice(src))
+	cost, err := api.ValidateAddress(s)
+
+	*used_gas = cu64(cost)
+	if err != nil {
+		// store the actual error message in the return buffer
+		*errOut = newUnmanagedVector([]byte(err.Error()))
+		return C.GoError_User
+	}
 	return C.GoError_None
 }
 
