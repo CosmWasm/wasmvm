@@ -53,7 +53,7 @@ func (vm *VM) Cleanup() {
 //
 // Returns both the checksum, as well as the gas cost of compilation (in CosmWasm Gas) or an error.
 func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
-	gasCost := compileCosts(code)
+	gasCost := compileCost(code)
 	if gasLimit < gasCost {
 		return nil, gasCost, fmt.Errorf("insufficient gas to store contract (%d bytes)", len(code))
 	}
@@ -531,7 +531,7 @@ func (vm *VM) IBCPacketTimeout(
 	return &result, gasReport.UsedInternally, nil
 }
 
-func compileCosts(code WasmCode) uint64 {
+func compileCost(code WasmCode) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
 	// https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
