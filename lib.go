@@ -55,7 +55,7 @@ func (vm *VM) Cleanup() {
 func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	gasCost := compileCost(code)
 	if gasLimit < gasCost {
-		return nil, gasCost, fmt.Errorf("insufficient gas to store contract (%d bytes)", len(code))
+		return nil, gasCost, types.OutOfGasError{}
 	}
 
 	checksum, err := api.StoreCode(vm.cache, code)
