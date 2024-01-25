@@ -112,7 +112,7 @@ impl U8SliceView {
 /// ### Transfer ownership from Rust to Go
 ///
 /// When an `UnmanagedVector` was created in Rust using [`UnmanagedVector::new`], [`UnmanagedVector::default`]
-/// or [`new_unmanaged_vector`], it can be passted to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
+/// or [`new_unmanaged_vector`], it can be passed to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
 /// Rust then has no chance to destroy the vector anymore, so ownership is transferred to Go.
 /// In Go, the data has to be copied to a garbage collected `[]byte`. Then the vector must be destroyed
 /// using [`destroy_unmanaged_vector`].
@@ -189,7 +189,7 @@ impl U8SliceView {
 /// assert_eq!(mutable, vec![0xAA]);
 ///
 /// // `input` is now gone and we cam do everything we want to `mutable`,
-/// // including operations that reallocate the underylying data.
+/// // including operations that reallocate the underlying data.
 ///
 /// mutable.push(0xBB);
 /// mutable.push(0xCC);
