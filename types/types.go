@@ -196,7 +196,7 @@ type AnalysisReport struct {
 	// Deprecated, use RequiredCapabilities. For now both fields contain the same value.
 	RequiredFeatures     string
 	RequiredCapabilities string
-	Entrypoints          string
+	Entrypoints          []string
 }
 
 type Metrics struct {

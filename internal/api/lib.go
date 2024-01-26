@@ -165,7 +165,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
 		RequiredFeatures:     requiredCapabilities,
 		RequiredCapabilities: requiredCapabilities,
-		Entrypoints:          entrypoints,
+		Entrypoints:          strings.Split(entrypoints, ","),
 	}
 	return &res, nil
 }
