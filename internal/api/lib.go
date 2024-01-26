@@ -163,7 +163,6 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
 	res := types.AnalysisReport{
 		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
-		RequiredFeatures:     requiredCapabilities,
 		RequiredCapabilities: requiredCapabilities,
 		Entrypoints:          strings.Split(entrypoints, ","),
 	}
