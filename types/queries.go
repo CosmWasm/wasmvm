@@ -106,6 +106,7 @@ type QueryRequest struct {
 	Staking      *StakingQuery      `json:"staking,omitempty"`
 	Distribution *DistributionQuery `json:"distribution,omitempty"`
 	Stargate     *StargateQuery     `json:"stargate,omitempty"`
+	Grpc         *GrpcQuery         `json:"grpc,omitempty"`
 	Wasm         *WasmQuery         `json:"wasm,omitempty"`
 }
 
@@ -435,14 +436,29 @@ type BondedDenomResponse struct {
 
 // StargateQuery is encoded the same way as abci_query, with path and protobuf encoded request data.
 // The format is defined in [ADR-21](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-021-protobuf-query-encoding.md).
-// The response is protobuf encoded data directly without a JSON response wrapper.
-// The caller is responsible for compiling the proper protobuf definitions for both requests and responses.
+// The response is supposed to always be protobuf encoded data, but is JSON encoded on some chains.
+// The caller is responsible for compiling the proper type definitions for both requests and responses.
 type StargateQuery struct {
-	// this is the fully qualified service path used for routing,
-	// eg. custom/cosmos_sdk.x.bank.v1.Query/QueryBalance
-	Path string `json:"path"`
-	// this is the expected protobuf message type (not any), binary encoded
+	// The expected protobuf message type (not [Any](https://protobuf.dev/programming-guides/proto3/#any)), binary encoded
 	Data []byte `json:"data"`
+	// The fully qualified endpoint path used for routing.
+	// It follows the format `/service_path/method_name`,
+	// eg. "/cosmos.authz.v1beta1.Query/Grants"
+	Path string `json:"path"`
+}
+
+// GrpcQuery queries the chain using a grpc query.
+// This allows to query information that is not exposed in our API.
+// The chain needs to allowlist the supported queries.
+//
+// The returned data is protobuf encoded. The protobuf type depends on the query.
+type GrpcQuery struct {
+	// The expected protobuf message type (not [Any](https://protobuf.dev/programming-guides/proto3/#any)), binary encoded
+	Data []byte `json:"data"`
+	// The fully qualified endpoint path used for routing.
+	// It follows the format `/service_path/method_name`,
+	// eg. "/cosmos.authz.v1beta1.Query/Grants"
+	Path string `json:"path"`
 }
 
 type WasmQuery struct {
