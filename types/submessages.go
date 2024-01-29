@@ -81,6 +81,12 @@ type SubMsgResult struct {
 // with full Cosmos SDK events.
 // This mirrors Rust's SubMsgResponse.
 type SubMsgResponse struct {
-	Events Events `json:"events"`
-	Data   []byte `json:"data,omitempty"`
+	Data         *[]byte       `json:"data,omitempty"`
+	Events       []Event       `json:"events"`
+	MsgResponses []MsgResponse `json:"msg_responses"`
+}
+
+type MsgResponse struct {
+	TypeURL string `json:"type_url"`
+	Value   []byte `json:"value"`
 }
