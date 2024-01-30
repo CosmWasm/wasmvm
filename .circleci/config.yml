@@ -389,9 +389,8 @@ jobs:
                   mkdir artifacts
 
                   # Static (from build)
-                  # TODO: Change this line to libwasmvm_muslc.x86_64.a when upgrading to builders 0018+
-                  cp ./internal/api/libwasmvm_muslc.a artifacts/libwasmvm_muslc.x86_64.a
-                  cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/libwasmvm_muslc.aarch64.a
+                  cp ./internal/api/libwasmvm_muslc.x86_64.a artifacts/
+                  cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/
                   cp ./internal/api/libwasmvmstatic_darwin.a artifacts/
 
                   # Shared (from git)
