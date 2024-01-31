@@ -21,6 +21,8 @@
   two `VM` instances operate on the same directory in parallel. This was
   unsupported before already but now leads to an error early on. When doing
   parallel testing, use a different directory for each instance.
+- `QueryRequest.Grpc` was added. It is similar to `QueryRequest.Stargate` but
+  unlike that, it should always return protobuf encoded responses on all chains.
 - `VM.StoreCode` now returns a `uint64` containing the gas cost in CosmWasm gas
   and takes a gas limit as argument. This was previously calculated in wasmd.
   The change brings consistency with the other functions that cause gas usage.
