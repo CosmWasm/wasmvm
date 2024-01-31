@@ -726,17 +726,22 @@ func errorWithMessage(err error, b C.UnmanagedVector) error {
 // to be caused by user data.
 func checkAndPinAPI(api *types.GoAPI, pinner runtime.Pinner) {
 	if api == nil {
-		panic("API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress() and CanonicalizeAddress().")
+		panic("API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
 	}
 
 	// func cHumanizeAddress assumes this is set
 	if api.HumanizeAddress == nil {
-		panic("HumanizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress() and CanonicalizeAddress().")
+		panic("HumanizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
 	}
 
 	// func cCanonicalizeAddress assumes this is set
 	if api.CanonicalizeAddress == nil {
-		panic("CanonicalizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress() and CanonicalizeAddress().")
+		panic("CanonicalizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
+	}
+
+	// func cValidateAddress assumes this is set
+	if api.ValidateAddress == nil {
+		panic("ValidateAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
 	}
 
 	pinner.Pin(api) // this pointer is used in Rust (`state` in `C.GoApi`) and must not change
