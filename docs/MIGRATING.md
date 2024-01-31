@@ -14,6 +14,9 @@
 - The field `BlockInfo.Time` now uses a wrapper type `Uint64` instead of
   `uint64` to ensure string serialization. You can use `uint64(u)` to get the
   underlying value.
+- The field `IBCReceiveResponse.Acknowledgement` can now be `nil`. In this case,
+  no acknowledgement must be written. Callers need to handle this case
+  separately from empty data.
 - CosmWasm gas values were reduced by a factor of 1000, so each instruction now
   consumes 150 CosmWasm gas instead of 150000. This should be taken into account
   when converting between CosmWasm gas and Cosmos SDK gas.

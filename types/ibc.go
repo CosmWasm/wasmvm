@@ -256,7 +256,9 @@ type IBCReceiveResult struct {
 // and not inform the calling chain).
 // This is the counterpart of (IbcReceiveResponse)(https://github.com/CosmWasm/cosmwasm/blob/v0.15.0/packages/std/src/ibc.rs#L247-L267).
 type IBCReceiveResponse struct {
-	// binary encoded data to be returned to calling chain as the acknowledgement
+	// Acknowledgement is binary encoded data to be returned to calling chain as the acknowledgement.
+	// If this field is nil, no acknowledgement must be written. For contracts before CosmWasm 2.0, this
+	// was always a non-nil value. See also https://github.com/CosmWasm/cosmwasm/pull/1892.
 	Acknowledgement []byte `json:"acknowledgement"`
 	// Messages comes directly from the contract and is it's request for action.
 	// If the ReplyOn value matches the result, the runtime will invoke this
