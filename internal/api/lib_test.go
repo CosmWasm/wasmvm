@@ -940,9 +940,9 @@ func TestReplyAndQuery(t *testing.T) {
 
 	var id uint64 = 1234
 	data := []byte("foobar")
-	events := types.Events{{
+	events := types.Array[types.Event]{{
 		Type: "message",
-		Attributes: types.EventAttributes{{
+		Attributes: types.Array[types.EventAttribute]{{
 			Key:   "signer",
 			Value: "caller-addr",
 		}},

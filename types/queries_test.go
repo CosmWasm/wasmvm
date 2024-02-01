@@ -9,19 +9,19 @@ import (
 )
 
 func TestDelegationWithEmptyArray(t *testing.T) {
-	var del Delegations
+	var del Array[Delegation]
 	bz, err := json.Marshal(&del)
 	require.NoError(t, err)
 	assert.Equal(t, string(bz), `[]`)
 
-	var redel Delegations
+	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
 	require.NoError(t, err)
 	assert.Nil(t, redel)
 }
 
 func TestDelegationWithData(t *testing.T) {
-	del := Delegations{{
+	del := Array[Delegation]{{
 		Validator: "foo",
 		Delegator: "bar",
 		Amount:    NewCoin(123, "stake"),
@@ -29,26 +29,26 @@ func TestDelegationWithData(t *testing.T) {
 	bz, err := json.Marshal(&del)
 	require.NoError(t, err)
 
-	var redel Delegations
+	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
 	require.NoError(t, err)
 	assert.Equal(t, redel, del)
 }
 
 func TestValidatorWithEmptyArray(t *testing.T) {
-	var val Validators
+	var val Array[Validator]
 	bz, err := json.Marshal(&val)
 	require.NoError(t, err)
 	assert.Equal(t, string(bz), `[]`)
 
-	var reval Validators
+	var reval Array[Validator]
 	err = json.Unmarshal(bz, &reval)
 	require.NoError(t, err)
 	assert.Nil(t, reval)
 }
 
 func TestValidatorWithData(t *testing.T) {
-	val := Validators{{
+	val := Array[Validator]{{
 		Address:       "1234567890",
 		Commission:    "0.05",
 		MaxCommission: "0.1",
@@ -57,7 +57,7 @@ func TestValidatorWithData(t *testing.T) {
 	bz, err := json.Marshal(&val)
 	require.NoError(t, err)
 
-	var reval Validators
+	var reval Array[Validator]
 	err = json.Unmarshal(bz, &reval)
 	require.NoError(t, err)
 	assert.Equal(t, reval, val)

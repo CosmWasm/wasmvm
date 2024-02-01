@@ -210,9 +210,9 @@ func TestIBCPacketDispatch(t *testing.T) {
 		ID: id,
 		Result: types.SubMsgResult{
 			Ok: &types.SubMsgResponse{
-				Events: types.Events{{
+				Events: types.Array[types.Event]{{
 					Type: "instantiate",
-					Attributes: types.EventAttributes{
+					Attributes: types.Array[types.EventAttribute]{
 						{
 							Key:   "_contract_address",
 							Value: REFLECT_ADDR,

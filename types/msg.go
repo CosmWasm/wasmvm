@@ -31,61 +31,9 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
-// Events must encode empty array as []
-type Events []Event
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (e Events) MarshalJSON() ([]byte, error) {
-	if len(e) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []Event = e
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (e *Events) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []Event
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*e = raw
-	return nil
-}
-
 type Event struct {
-	Type       string          `json:"type"`
-	Attributes EventAttributes `json:"attributes"`
-}
-
-// EventAttributes must encode empty array as []
-type EventAttributes []EventAttribute
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (a EventAttributes) MarshalJSON() ([]byte, error) {
-	if len(a) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []EventAttribute = a
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (a *EventAttributes) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []EventAttribute
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*a = raw
-	return nil
+	Type       string                `json:"type"`
+	Attributes Array[EventAttribute] `json:"attributes"`
 }
 
 // EventAttribute

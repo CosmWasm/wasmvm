@@ -192,59 +192,7 @@ type ListChannelsQuery struct {
 }
 
 type ListChannelsResponse struct {
-	Channels IBCChannels `json:"channels"`
-}
-
-// IBCChannels must JSON encode empty array as [] (not null) for consistency with Rust parser
-type IBCChannels []IBCChannel
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (e IBCChannels) MarshalJSON() ([]byte, error) {
-	if len(e) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []IBCChannel = e
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (e *IBCChannels) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []IBCChannel
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*e = raw
-	return nil
-}
-
-// IBCEndpoints must JSON encode empty array as [] (not null) for consistency with Rust parser
-type IBCEndpoints []IBCEndpoint
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (e IBCEndpoints) MarshalJSON() ([]byte, error) {
-	if len(e) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []IBCEndpoint = e
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (e *IBCEndpoints) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []IBCEndpoint
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*e = raw
-	return nil
+	Channels Array[IBCChannel] `json:"channels"`
 }
 
 type ChannelQuery struct {
@@ -270,33 +218,7 @@ type AllValidatorsQuery struct{}
 
 // AllValidatorsResponse is the expected response to AllValidatorsQuery
 type AllValidatorsResponse struct {
-	Validators Validators `json:"validators"`
-}
-
-// Validators must JSON encode empty array as []
-type Validators []Validator
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (v Validators) MarshalJSON() ([]byte, error) {
-	if len(v) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []Validator = v
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (v *Validators) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []Validator
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*v = raw
-	return nil
+	Validators Array[Validator] `json:"validators"`
 }
 
 type ValidatorQuery struct {
@@ -330,32 +252,7 @@ type DelegationQuery struct {
 
 // AllDelegationsResponse is the expected response to AllDelegationsQuery
 type AllDelegationsResponse struct {
-	Delegations Delegations `json:"delegations"`
-}
-
-type Delegations []Delegation
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (d Delegations) MarshalJSON() ([]byte, error) {
-	if len(d) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []Delegation = d
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (d *Delegations) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []Delegation
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*d = raw
-	return nil
+	Delegations Array[Delegation] `json:"delegations"`
 }
 
 type Delegation struct {
@@ -417,7 +314,7 @@ type DelegatorValidatorsResponse struct {
 	Validators []string `json:"validators"`
 }
 
-// DelegationResponse is the expected response to DelegationsQuery
+// DelegationResponse is the expected response to Array[Delegation]Query
 type DelegationResponse struct {
 	Delegation *FullDelegation `json:"delegation,omitempty"`
 }
