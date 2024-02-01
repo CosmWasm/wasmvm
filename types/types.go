@@ -184,7 +184,13 @@ type Metrics struct {
 	SizeMemoryCache uint64
 }
 
-// Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values
+// Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.
+// When unmarshaling, we get an empty slice for "[]" and "null".
+//
+// This is needed for fields that are "Vec<C>" on the Rust side because `null` values
+// will result in an error there.
+// Using this on a field with an "Option<Vec<C>>" type on the Rust side would
+// never result in a "None" value on the Rust side, making the "Option" pointless.
 type Array[C any] []C
 
 // MarshalJSON ensures that we get "[]" for nil arrays
@@ -196,15 +202,15 @@ func (a Array[C]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-// UnmarshalJSON ensures that we get nil for "[]" and "null"
+// UnmarshalJSON ensures that we get an empty slice for "[]" and "null"
 func (a *Array[C]) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
 	var raw []C
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
+	}
+	// make sure we deserialize [] back to empty slice
+	if len(raw) == 0 {
+		raw = []C{}
 	}
 	*a = raw
 	return nil

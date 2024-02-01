@@ -17,7 +17,7 @@ func TestDelegationWithEmptyArray(t *testing.T) {
 	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
 	require.NoError(t, err)
-	assert.Nil(t, redel)
+	assert.Equal(t, Array[Delegation]{}, redel)
 }
 
 func TestDelegationWithData(t *testing.T) {
@@ -44,7 +44,7 @@ func TestValidatorWithEmptyArray(t *testing.T) {
 	var reval Array[Validator]
 	err = json.Unmarshal(bz, &reval)
 	require.NoError(t, err)
-	assert.Nil(t, reval)
+	assert.Equal(t, Array[Validator]{}, reval)
 }
 
 func TestValidatorWithData(t *testing.T) {

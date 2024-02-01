@@ -47,9 +47,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 	require.Equal(t, "king", msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
 	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate.Msg)
-	require.Equal(t, Array[Coin]{
-		{"stones", "321"},
-	}, msg.Instantiate.Funds)
+	require.Equal(t, Array[Coin]{}, msg.Instantiate.Funds)
 	require.Equal(t, "my instance", msg.Instantiate.Label)
 }
 

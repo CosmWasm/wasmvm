@@ -34,10 +34,14 @@ func TestMessageInfoHandlesMissingCoins(t *testing.T) {
 	require.NoError(t, err)
 
 	// we can unmarshal it properly into struct
+	expected := MessageInfo{
+		Sender: "baz",
+		Funds:  []Coin{},
+	}
 	var recover MessageInfo
 	err = json.Unmarshal(bz, &recover)
 	require.NoError(t, err)
-	assert.Equal(t, info, recover)
+	assert.Equal(t, expected, recover)
 
 	// make sure "funds":[] is in JSON
 	var raw map[string]json.RawMessage

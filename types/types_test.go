@@ -91,7 +91,18 @@ func TestArraySerialization(t *testing.T) {
 	// unmarshal empty
 	err := json.Unmarshal([]byte(`[]`), &arr)
 	require.NoError(t, err)
-	require.Nil(t, arr)
+	require.Equal(t, Array[string]{}, arr)
+	err = json.Unmarshal([]byte(`[ ]`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+	err = json.Unmarshal([]byte(` []`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+
+	// unmarshal null
+	err = json.Unmarshal([]byte(`null`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
 
 	// unmarshal filled
 	err = json.Unmarshal([]byte(`["a","b"]`), &arr)
@@ -102,6 +113,11 @@ func TestArraySerialization(t *testing.T) {
 	bz, err := json.Marshal(arr)
 	require.NoError(t, err)
 	require.Equal(t, `["a","b"]`, string(bz))
+
+	// marshal null
+	bz, err = json.Marshal(Array[string](nil))
+	require.NoError(t, err)
+	require.Equal(t, `[]`, string(bz))
 
 	// marshal empty
 	bz, err = json.Marshal(Array[uint64]{})
