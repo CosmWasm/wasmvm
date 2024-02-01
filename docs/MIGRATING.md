@@ -33,6 +33,9 @@
   whether the given string is a valid address. This was previously done
   internally using separate calls to `CanonicalizeAddress` and `HumanizeAddress`
   but can be done more efficiently using a single call.
+- The IBC `TransferMsg` now includes an optional `Memo` field.
+- `SubMsgResponse` now has an additional `MsgResponses` field, mirroring the
+  Cosmos SDK
 
 ## Renamings
 
