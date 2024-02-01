@@ -123,4 +123,14 @@ func TestArraySerialization(t *testing.T) {
 	bz, err = json.Marshal(Array[uint64]{})
 	require.NoError(t, err)
 	require.Equal(t, `[]`, string(bz))
+
+	// unmarshal elements
+	var arr2 Array[uint64]
+	err = json.Unmarshal([]byte(`[1,2]`), &arr2)
+	require.NoError(t, err)
+	require.Equal(t, Array[uint64]{1, 2}, arr2)
+	// unmarshal null into the same pointer
+	err = json.Unmarshal([]byte(`null`), &arr2)
+	require.NoError(t, err)
+	require.Equal(t, Array[uint64]{}, arr2)
 }
