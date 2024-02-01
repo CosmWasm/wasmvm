@@ -84,3 +84,27 @@ func TestInt64JSON(t *testing.T) {
 	err = json.Unmarshal([]byte(`""`), &i)
 	require.EqualError(t, err, "cannot unmarshal \"\" into Int64, failed to parse integer")
 }
+
+func TestArraySerialization(t *testing.T) {
+	var arr Array[string]
+
+	// unmarshal empty
+	err := json.Unmarshal([]byte(`[]`), &arr)
+	require.NoError(t, err)
+	require.Nil(t, arr)
+
+	// unmarshal filled
+	err = json.Unmarshal([]byte(`["a","b"]`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{"a", "b"}, arr)
+
+	// marshal filled
+	bz, err := json.Marshal(arr)
+	require.NoError(t, err)
+	require.Equal(t, `["a","b"]`, string(bz))
+
+	// marshal empty
+	bz, err = json.Marshal(Array[uint64]{})
+	require.NoError(t, err)
+	require.Equal(t, `[]`, string(bz))
+}
