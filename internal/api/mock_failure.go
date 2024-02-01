@@ -16,9 +16,14 @@ func MockFailureHumanizeAddress(canon []byte) (string, uint64, error) {
 	return "", 0, fmt.Errorf("mock failure - human_address")
 }
 
+func MockFailureValidateAddress(human string) (uint64, error) {
+	return 0, fmt.Errorf("mock failure - validate_address")
+}
+
 func NewMockFailureAPI() *types.GoAPI {
 	return &types.GoAPI{
 		HumanizeAddress:     MockFailureHumanizeAddress,
 		CanonicalizeAddress: MockFailureCanonicalizeAddress,
+		ValidateAddress:     MockFailureValidateAddress,
 	}
 }

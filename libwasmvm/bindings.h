@@ -337,6 +337,10 @@ typedef struct GoApiVtable {
                                   struct UnmanagedVector *canonicalized_address_out,
                                   struct UnmanagedVector *err_msg_out,
                                   uint64_t *gas_used);
+  int32_t (*validate_address)(const struct api_t *api,
+                              struct U8SliceView input,
+                              struct UnmanagedVector *err_msg_out,
+                              uint64_t *gas_used);
 } GoApiVtable;
 
 typedef struct GoApi {

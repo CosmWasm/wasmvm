@@ -29,6 +29,10 @@
 - `VM.StoreCode` now returns a `uint64` containing the gas cost in CosmWasm gas
   and takes a gas limit as argument. This was previously calculated in wasmd.
   The change brings consistency with the other functions that cause gas usage.
+- `GoAPI` now requires an additional `ValidateAddress` function that validates
+  whether the given string is a valid address. This was previously done
+  internally using separate calls to `CanonicalizeAddress` and `HumanizeAddress`
+  but can be done more efficiently using a single call.
 
 ## Renamings
 
@@ -36,18 +40,19 @@ This section contains renamed symbols that do not require any further
 explanation. Some of the new names may be available in 1.x already in cases
 where the old name was deprecated.
 
-| Old name                 | New name                    | Note                                                        |
-| ------------------------ | --------------------------- | ----------------------------------------------------------- |
-| `VM.Create`              | `VM.StoreCode`              | StoreCode brings consistency with wasmd naming              |
-| `SubcallResult`          | `SubMsgResult`              | Contracts do not "call" each other but send messages around |
-| `SubcallResponse`        | `SubMsgResponse`            | Contracts do not "call" each other but send messages around |
-| `HumanizeAddress`        | `HumanizeAddressFunc`       | Follow [best practice for naming function types][ft]        |
-| `CanonicalizeAddress`    | `CanonicalizeAddressFunc`   | Follow [best practice for naming function types][ft]        |
-| `GoAPI.HumanAddress`     | `GoAPI.HumanizeAddress`     | Perfer verbs for converters                                 |
-| `GoAPI.CanonicalAddress` | `GoAPI.CanonicalizeAddress` | Perfer verbs for converters                                 |
-| `CosmosMsg.Stargate`     | `CosmosMsg.Any`             | The message has nothing to do with Stargate                 |
-| `StargateMsg`            | `AnyMsg`                    | The message has nothing to do with Stargate                 |
-| `QueryResponse`          | `QueryResult`               | Brings consistency with the naming of the other results     |
-| `VoteMsg.Vote`           | `VoteMsg.Option`            | Brings consistency with Cosmos SDK naming                   |
+| Old name                          | New name                              | Note                                                         |
+| --------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `VM.Create`                       | `VM.StoreCode`                        | StoreCode brings consistency with wasmd naming               |
+| `AnalysisReport.RequiredFeatures` | `AnalysisReport.RequiredCapabilities` | Renamed for a long time, but now the old version was removed |
+| `SubcallResult`                   | `SubMsgResult`                        | Contracts do not "call" each other but send messages around  |
+| `SubcallResponse`                 | `SubMsgResponse`                      | Contracts do not "call" each other but send messages around  |
+| `HumanizeAddress`                 | `HumanizeAddressFunc`                 | Follow [best practice for naming function types][ft]         |
+| `CanonicalizeAddress`             | `CanonicalizeAddressFunc`             | Follow [best practice for naming function types][ft]         |
+| `GoAPI.HumanAddress`              | `GoAPI.HumanizeAddress`               | Perfer verbs for converters                                  |
+| `GoAPI.CanonicalAddress`          | `GoAPI.CanonicalizeAddress`           | Perfer verbs for converters                                  |
+| `CosmosMsg.Stargate`              | `CosmosMsg.Any`                       | The message has nothing to do with Stargate                  |
+| `StargateMsg`                     | `AnyMsg`                              | The message has nothing to do with Stargate                  |
+| `QueryResponse`                   | `QueryResult`                         | Brings consistency with the naming of the other results      |
+| `VoteMsg.Vote`                    | `VoteMsg.Option`                      | Brings consistency with Cosmos SDK naming                    |
 
 [ft]: https://stackoverflow.com/a/60073310

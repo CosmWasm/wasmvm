@@ -192,10 +192,9 @@ func EmptyGasReport(limit uint64) GasReport {
 // Contains static analysis info of the contract (the Wasm code to be precise).
 // This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
-	HasIBCEntryPoints bool
-	// Deprecated, use RequiredCapabilities. For now both fields contain the same value.
-	RequiredFeatures     string
+	HasIBCEntryPoints    bool
 	RequiredCapabilities string
+	Entrypoints          []string
 }
 
 type Metrics struct {

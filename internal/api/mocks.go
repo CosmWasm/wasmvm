@@ -361,10 +361,29 @@ func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 	return human, CostHuman, nil
 }
 
+func MockValidateAddress(input string) (gasCost uint64, _ error) {
+	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(input)
+	gasCost += gasCostCanonicalize
+	if err != nil {
+		return gasCost, err
+	}
+	humanized, gasCostHumanize, err := MockHumanizeAddress(canonicalized)
+	gasCost += gasCostHumanize
+	if err != nil {
+		return gasCost, err
+	}
+	if humanized != strings.ToLower(input) {
+		return gasCost, fmt.Errorf("address validation failed")
+	}
+
+	return gasCost, nil
+}
+
 func NewMockAPI() *types.GoAPI {
 	return &types.GoAPI{
 		HumanizeAddress:     MockHumanizeAddress,
 		CanonicalizeAddress: MockCanonicalizeAddress,
+		ValidateAddress:     MockValidateAddress,
 	}
 }
 

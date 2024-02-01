@@ -16,6 +16,7 @@ GoError cNextValue(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, 
 // imports (api)
 GoError cHumanizeAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 GoError cCanonicalizeAddress(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError cValidateAddress(api_t *ptr, U8SliceView src, UnmanagedVector *errOut, uint64_t *used_gas);
 // imports (querier)
 GoError cQueryExternal(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
@@ -50,6 +51,9 @@ GoError cCanonicalizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *d
 }
 GoError cHumanizeAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas) {
     return cHumanizeAddress(ptr, src, dest, errOut, used_gas);
+}
+GoError cValidateAddress_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *errOut, uint64_t *used_gas) {
+    return cValidateAddress(ptr, src, errOut, used_gas);
 }
 
 // Gateway functions (querier)
