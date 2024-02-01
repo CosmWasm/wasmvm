@@ -31,61 +31,9 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
-// Events must encode empty array as []
-type Events []Event
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (e Events) MarshalJSON() ([]byte, error) {
-	if len(e) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []Event = e
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (e *Events) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []Event
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*e = raw
-	return nil
-}
-
 type Event struct {
-	Type       string          `json:"type"`
-	Attributes EventAttributes `json:"attributes"`
-}
-
-// EventAttributes must encode empty array as []
-type EventAttributes []EventAttribute
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (a EventAttributes) MarshalJSON() ([]byte, error) {
-	if len(a) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []EventAttribute = a
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (a *EventAttributes) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []EventAttribute
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*a = raw
-	return nil
+	Type       string                `json:"type"`
+	Attributes Array[EventAttribute] `json:"attributes"`
 }
 
 // EventAttribute
@@ -154,15 +102,15 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	ToAddress string `json:"to_address"`
-	Amount    Coins  `json:"amount"`
+	ToAddress string      `json:"to_address"`
+	Amount    Array[Coin] `json:"amount"`
 }
 
 // BurnMsg will burn the given coins from the contract's account.
 // There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper.
 // Important if a contract controls significant token supply that must be retired.
 type BurnMsg struct {
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 type IBCMsg struct {
@@ -277,6 +225,7 @@ type TransferMsg struct {
 	ToAddress string     `json:"to_address"`
 	Amount    Coin       `json:"amount"`
 	Timeout   IBCTimeout `json:"timeout"`
+	Memo      string     `json:"memo,omitempty"`
 }
 
 type SendPacketMsg struct {
@@ -335,7 +284,7 @@ type WithdrawDelegatorRewardMsg struct {
 // `depositor` is automatically filled with the current contract's address
 type FundCommunityPoolMsg struct {
 	// Amount is the list of coins to be send to the community pool
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 // AnyMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
@@ -369,7 +318,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 }
 
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
@@ -381,7 +330,7 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
@@ -397,7 +346,7 @@ type Instantiate2Msg struct {
 	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address

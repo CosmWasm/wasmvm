@@ -26,7 +26,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 	require.Equal(t, "", msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
 	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate.Msg)
-	require.Equal(t, Coins{
+	require.Equal(t, Array[Coin]{
 		{"stones", "321"},
 	}, msg.Instantiate.Funds)
 	require.Equal(t, "my instance", msg.Instantiate.Label)
@@ -47,9 +47,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 	require.Equal(t, "king", msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
 	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate.Msg)
-	require.Equal(t, Coins{
-		{"stones", "321"},
-	}, msg.Instantiate.Funds)
+	require.Equal(t, Array[Coin]{}, msg.Instantiate.Funds)
 	require.Equal(t, "my instance", msg.Instantiate.Label)
 }
 
@@ -70,7 +68,7 @@ func TestWasmMsgInstantiate2Serialization(t *testing.T) {
 	require.Equal(t, "", msg.Instantiate2.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate2.CodeID)
 	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate2.Msg)
-	require.Equal(t, Coins{
+	require.Equal(t, Array[Coin]{
 		{"stones", "321"},
 	}, msg.Instantiate2.Funds)
 	require.Equal(t, "my instance", msg.Instantiate2.Label)
@@ -161,5 +159,5 @@ func TestMsgFundCommunityPoolSerialization(t *testing.T) {
 	err := json.Unmarshal(document, &msg)
 	require.NoError(t, err)
 
-	require.Equal(t, Coins{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
+	require.Equal(t, Array[Coin]{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
 }

@@ -13,10 +13,10 @@ func TestReplySerialization(t *testing.T) {
 		ID:      75,
 		Result: SubMsgResult{
 			Ok: &SubMsgResponse{
-				Events: []Event{
+				Events: Array[Event]{
 					{
 						Type: "hi",
-						Attributes: []EventAttribute{
+						Attributes: Array[EventAttribute]{
 							{
 								Key:   "si",
 								Value: "claro",
@@ -25,10 +25,30 @@ func TestReplySerialization(t *testing.T) {
 					},
 				},
 				Data: []byte{0x3f, 0x00, 0xaa, 0x5c, 0xab},
+				MsgResponses: Array[MsgResponse]{
+					MsgResponse{
+						TypeURL: "/cosmos.bank.v1beta1.MsgSendResponse",
+						Value:   []byte{},
+					},
+				},
 			},
 		},
 	}
 	serialized, err := json.Marshal(&reply1)
 	require.NoError(t, err)
-	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"ok":{"events":[{"type":"hi","attributes":[{"key":"si","value":"claro"}]}],"data":"PwCqXKs="}}}`, string(serialized))
+	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"ok":{"events":[{"type":"hi","attributes":[{"key":"si","value":"claro"}]}],"data":"PwCqXKs=","msg_responses":[{"type_url":"/cosmos.bank.v1beta1.MsgSendResponse","value":""}]}}}`, string(serialized))
+}
+
+func TestSubMsgResponseSerialization(t *testing.T) {
+	response := SubMsgResponse{}
+	document, err := json.Marshal(response)
+	require.NoError(t, err)
+	require.Equal(t, `{"events":[],"msg_responses":[]}`, string(document))
+
+	// we really only care about marshal, but let's test unmarshal too
+	document2 := []byte(`{}`)
+	var response2 SubMsgResponse
+	err = json.Unmarshal(document2, &response2)
+	require.NoError(t, err)
+	require.Equal(t, response, response2)
 }

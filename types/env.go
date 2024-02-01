@@ -39,5 +39,5 @@ type MessageInfo struct {
 	// Bech32 encoded sdk.AccAddress executing the contract
 	Sender HumanAddress `json:"sender"`
 	// Amount of funds send to the contract along with this message
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 }

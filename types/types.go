@@ -55,7 +55,7 @@ type CanonicalAddress = []byte
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
 type Coin struct {
 	Denom  string `json:"denom"`  // type, eg. "ATOM"
-	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
+	Amount string `json:"amount"` // string encoding of decimal value, eg. "12.3456"
 }
 
 func NewCoin(amount uint64, denom string) Coin {
@@ -63,32 +63,6 @@ func NewCoin(amount uint64, denom string) Coin {
 		Denom:  denom,
 		Amount: strconv.FormatUint(amount, 10),
 	}
-}
-
-// Coins handles properly serializing empty amounts
-type Coins []Coin
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (c Coins) MarshalJSON() ([]byte, error) {
-	if len(c) == 0 {
-		return []byte("[]"), nil
-	}
-	var d []Coin = c
-	return json.Marshal(d)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (c *Coins) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var d []Coin
-	if err := json.Unmarshal(data, &d); err != nil {
-		return err
-	}
-	*c = d
-	return nil
 }
 
 // Replicating the cosmos-sdk bank module Metadata type
@@ -208,4 +182,36 @@ type Metrics struct {
 	SizePinnedMemoryCache uint64
 	// Cumulative size of all elements in memory cache (in bytes)
 	SizeMemoryCache uint64
+}
+
+// Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.
+// When unmarshaling, we get an empty slice for "[]" and "null".
+//
+// This is needed for fields that are "Vec<C>" on the Rust side because `null` values
+// will result in an error there.
+// Using this on a field with an "Option<Vec<C>>" type on the Rust side would
+// never result in a "None" value on the Rust side, making the "Option" pointless.
+type Array[C any] []C
+
+// MarshalJSON ensures that we get "[]" for nil arrays
+func (a Array[C]) MarshalJSON() ([]byte, error) {
+	if len(a) == 0 {
+		return []byte("[]"), nil
+	}
+	var raw []C = a
+	return json.Marshal(raw)
+}
+
+// UnmarshalJSON ensures that we get an empty slice for "[]" and "null"
+func (a *Array[C]) UnmarshalJSON(data []byte) error {
+	var raw []C
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	// make sure we deserialize [] back to empty slice
+	if len(raw) == 0 {
+		raw = []C{}
+	}
+	*a = raw
+	return nil
 }

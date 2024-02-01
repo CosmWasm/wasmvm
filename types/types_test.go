@@ -84,3 +84,53 @@ func TestInt64JSON(t *testing.T) {
 	err = json.Unmarshal([]byte(`""`), &i)
 	require.EqualError(t, err, "cannot unmarshal \"\" into Int64, failed to parse integer")
 }
+
+func TestArraySerialization(t *testing.T) {
+	var arr Array[string]
+
+	// unmarshal empty
+	err := json.Unmarshal([]byte(`[]`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+	err = json.Unmarshal([]byte(`[ ]`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+	err = json.Unmarshal([]byte(` []`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+
+	// unmarshal null
+	err = json.Unmarshal([]byte(`null`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{}, arr)
+
+	// unmarshal filled
+	err = json.Unmarshal([]byte(`["a","b"]`), &arr)
+	require.NoError(t, err)
+	require.Equal(t, Array[string]{"a", "b"}, arr)
+
+	// marshal filled
+	bz, err := json.Marshal(arr)
+	require.NoError(t, err)
+	require.Equal(t, `["a","b"]`, string(bz))
+
+	// marshal null
+	bz, err = json.Marshal(Array[string](nil))
+	require.NoError(t, err)
+	require.Equal(t, `[]`, string(bz))
+
+	// marshal empty
+	bz, err = json.Marshal(Array[uint64]{})
+	require.NoError(t, err)
+	require.Equal(t, `[]`, string(bz))
+
+	// unmarshal elements
+	var arr2 Array[uint64]
+	err = json.Unmarshal([]byte(`[1,2]`), &arr2)
+	require.NoError(t, err)
+	require.Equal(t, Array[uint64]{1, 2}, arr2)
+	// unmarshal null into the same pointer
+	err = json.Unmarshal([]byte(`null`), &arr2)
+	require.NoError(t, err)
+	require.Equal(t, Array[uint64]{}, arr2)
+}

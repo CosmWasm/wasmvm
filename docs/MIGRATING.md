@@ -33,6 +33,15 @@
   whether the given string is a valid address. This was previously done
   internally using separate calls to `CanonicalizeAddress` and `HumanizeAddress`
   but can be done more efficiently using a single call.
+- The IBC `TransferMsg` now includes an optional `Memo` field.
+- `SubMsgResponse` now has an additional `MsgResponses` field, mirroring the
+  Cosmos SDK
+- The types `Events`, `EventAttributes`, `Delegations`, `IBCChannels`,
+  `Validators`, `MsgResponses` and `Coins` were replaced with a generic
+  `Array[C]` type. This new type is a wrapper around a `[]C`. One difference to
+  the old behavior is that the new type will unmarshal to an empty slice when
+  the JSON value is `null` or `[]`. Previously, both cases resulted in a `nil`
+  value.
 
 ## Renamings
 

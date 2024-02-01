@@ -92,3 +92,28 @@ func TestIbcTimeoutDeserialization(t *testing.T) {
 		Timestamp: 0,
 	}, timeout4)
 }
+
+func TestIbcReceiveResponseDeserialization(t *testing.T) {
+	var err error
+
+	// without acknowledgement
+	var resp IBCReceiveResponse
+	err = json.Unmarshal([]byte(`{"acknowledgement":null,"messages":[],"attributes":[],"events":[]}`), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, IBCReceiveResponse{
+		Acknowledgement: nil,
+		Messages:        []SubMsg{},
+		Attributes:      []EventAttribute{},
+		Events:          []Event{},
+	}, resp)
+
+	// with acknowledgement
+	err = json.Unmarshal([]byte(`{"acknowledgement":"YWNr","messages":[],"attributes":[],"events":[]}`), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, IBCReceiveResponse{
+		Acknowledgement: []byte("ack"),
+		Messages:        []SubMsg{},
+		Attributes:      []EventAttribute{},
+		Events:          []Event{},
+	}, resp)
+}
