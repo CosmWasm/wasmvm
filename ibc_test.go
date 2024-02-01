@@ -96,7 +96,7 @@ func TestIBCHandshake(t *testing.T) {
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Coins{}
+	balance := types.Array[types.Coin]{}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
 	// instantiate
@@ -169,7 +169,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Coins{}
+	balance := types.Array[types.Coin]{}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
 	// instantiate
@@ -249,7 +249,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 			Msgs: []types.CosmosMsg{{
 				Bank: &types.BankMsg{Send: &types.SendMsg{
 					ToAddress: "my-friend",
-					Amount:    types.Coins{types.NewCoin(12345678, "uatom")},
+					Amount:    types.Array[types.Coin]{types.NewCoin(12345678, "uatom")},
 				}},
 			}},
 		},

@@ -139,7 +139,7 @@ func TestHappyPath(t *testing.T) {
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
 	// instantiate
@@ -184,7 +184,7 @@ func TestEnv(t *testing.T) {
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
 	// instantiate
@@ -264,7 +264,7 @@ func TestGetMetrics(t *testing.T) {
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
 	env := api.MockEnv()

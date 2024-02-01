@@ -102,15 +102,15 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	ToAddress string `json:"to_address"`
-	Amount    Coins  `json:"amount"`
+	ToAddress string      `json:"to_address"`
+	Amount    Array[Coin] `json:"amount"`
 }
 
 // BurnMsg will burn the given coins from the contract's account.
 // There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper.
 // Important if a contract controls significant token supply that must be retired.
 type BurnMsg struct {
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 type IBCMsg struct {
@@ -284,7 +284,7 @@ type WithdrawDelegatorRewardMsg struct {
 // `depositor` is automatically filled with the current contract's address
 type FundCommunityPoolMsg struct {
 	// Amount is the list of coins to be send to the community pool
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 // AnyMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
@@ -318,7 +318,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 }
 
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
@@ -330,7 +330,7 @@ type InstantiateMsg struct {
 	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
@@ -346,7 +346,7 @@ type Instantiate2Msg struct {
 	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address

@@ -143,7 +143,7 @@ type AllBalancesQuery struct {
 
 // AllBalancesResponse is the expected response to AllBalancesQuery
 type AllBalancesResponse struct {
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 type DenomMetadataQuery struct {
@@ -320,11 +320,11 @@ type DelegationResponse struct {
 }
 
 type FullDelegation struct {
-	Delegator          string `json:"delegator"`
-	Validator          string `json:"validator"`
-	Amount             Coin   `json:"amount"`
-	AccumulatedRewards Coins  `json:"accumulated_rewards"`
-	CanRedelegate      Coin   `json:"can_redelegate"`
+	Delegator          string      `json:"delegator"`
+	Validator          string      `json:"validator"`
+	Amount             Coin        `json:"amount"`
+	AccumulatedRewards Array[Coin] `json:"accumulated_rewards"`
+	CanRedelegate      Coin        `json:"can_redelegate"`
 }
 
 type BondedDenomResponse struct {

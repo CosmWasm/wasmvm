@@ -292,7 +292,7 @@ func TestGetMetrics(t *testing.T) {
 	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -397,7 +397,7 @@ func TestInstantiate(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -424,7 +424,7 @@ func TestExecute(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -489,7 +489,7 @@ func TestExecutePanic(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -518,7 +518,7 @@ func TestExecuteUnreachable(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -702,7 +702,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	igasMeter1 := types.GasMeter(gasMeter1)
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -733,7 +733,7 @@ func TestMigrate(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -778,7 +778,7 @@ func TestMultipleInstances(t *testing.T) {
 	igasMeter1 := types.GasMeter(gasMeter1)
 	store1 := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "regen")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -832,7 +832,7 @@ func TestSudo(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Coins{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
@@ -862,7 +862,7 @@ func TestSudo(t *testing.T) {
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
 	assert.Equal(t, "community-pool", send.ToAddress)
-	expectedPayout := types.Coins{types.NewCoin(700, "gold")}
+	expectedPayout := types.Array[types.Coin]{types.NewCoin(700, "gold")}
 	assert.Equal(t, expectedPayout, send.Amount)
 }
 
@@ -891,7 +891,7 @@ func TestDispatchSubmessage(t *testing.T) {
 		ID: id,
 		Msg: types.CosmosMsg{Bank: &types.BankMsg{Send: &types.SendMsg{
 			ToAddress: "friend",
-			Amount:    types.Coins{types.NewCoin(1, "token")},
+			Amount:    types.Array[types.Coin]{types.NewCoin(1, "token")},
 		}}},
 		ReplyOn: types.ReplyAlways,
 	}
@@ -1067,7 +1067,7 @@ func TestQuery(t *testing.T) {
 	igasMeter1 := types.GasMeter(gasMeter1)
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -1110,7 +1110,7 @@ func TestHackatomQuerier(t *testing.T) {
 	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	initBalance := types.Coins{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
+	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
 	querier := DefaultQuerier("foobar", initBalance)
 
 	// make a valid query to the other address
@@ -1153,7 +1153,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	initBalance := types.Coins{types.NewCoin(1234, "ATOM")}
+	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, initBalance)
 	// we need this to handle the custom requests from the reflect contract
 	innerQuerier := querier.(*MockQuerier)
