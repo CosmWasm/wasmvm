@@ -33,10 +33,11 @@ func TestReplySerialization(t *testing.T) {
 				},
 			},
 		},
+		Payload: []byte("payload"),
 	}
 	serialized, err := json.Marshal(&reply1)
 	require.NoError(t, err)
-	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"ok":{"events":[{"type":"hi","attributes":[{"key":"si","value":"claro"}]}],"data":"PwCqXKs=","msg_responses":[{"type_url":"/cosmos.bank.v1beta1.MsgSendResponse","value":""}]}}}`, string(serialized))
+	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"ok":{"events":[{"type":"hi","attributes":[{"key":"si","value":"claro"}]}],"data":"PwCqXKs=","msg_responses":[{"type_url":"/cosmos.bank.v1beta1.MsgSendResponse","value":""}]}},"payload":"cGF5bG9hZA=="}`, string(serialized))
 }
 
 func TestSubMsgResponseSerialization(t *testing.T) {

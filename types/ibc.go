@@ -222,6 +222,13 @@ type IBCBasicResult struct {
 	Err string            `json:"error,omitempty"`
 }
 
+func (r *IBCBasicResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
+}
+
 // IBCBasicResponse defines the return value on a successful processing.
 // This is the counterpart of [IbcBasicResponse](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L194-L216).
 type IBCBasicResponse struct {
@@ -247,6 +254,13 @@ type IBCBasicResponse struct {
 type IBCReceiveResult struct {
 	Ok  *IBCReceiveResponse `json:"ok,omitempty"`
 	Err string              `json:"error,omitempty"`
+}
+
+func (r *IBCReceiveResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
 }
 
 // IBCReceiveResponse defines the return value on packet response processing.
