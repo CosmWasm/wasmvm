@@ -4,6 +4,8 @@ package cosmwasm
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"os"
 	"testing"
 
@@ -367,4 +369,44 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 2832576, metrics.SizeMemoryCache, 0.25)
+}
+
+func TestLongPayloadDeserialization(t *testing.T) {
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	gasReport := types.GasReport{}
+
+	// Create a valid payload
+	validPayload := make([]byte, 128*1024)
+	validPayloadJSON, err := json.Marshal(validPayload)
+	require.NoError(t, err)
+	resultJson := []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON))
+
+	// Test that a valid payload can be deserialized
+	var result types.ContractResult
+	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &result)
+	require.NoError(t, err)
+	require.Equal(t, validPayload, result.Ok.Messages[0].Payload)
+
+	// Create an invalid payload (too large)
+	invalidPayload := make([]byte, 128*1024+1)
+	invalidPayloadJSON, err := json.Marshal(invalidPayload)
+	require.NoError(t, err)
+	resultJson = []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON))
+
+	// Test that an invalid payload cannot be deserialized
+	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &result)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "payload")
+
+	// Test that an invalid payload cannot be deserialized to IBCBasicResult
+	var ibcResult types.IBCBasicResult
+	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &ibcResult)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "payload")
+
+	// Test that an invalid payload cannot be deserialized to IBCReceiveResult
+	var ibcReceiveResult types.IBCReceiveResult
+	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &ibcReceiveResult)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "payload")
 }

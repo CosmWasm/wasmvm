@@ -14,6 +14,13 @@ type ContractResult struct {
 	Err string    `json:"error,omitempty"`
 }
 
+func (r *ContractResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
+}
+
 // Response defines the return value on a successful instantiate/execute/migrate.
 // This is the counterpart of [Response](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/results/response.rs#L73-L88)
 type Response struct {

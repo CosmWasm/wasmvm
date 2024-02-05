@@ -540,6 +540,11 @@ func compileCost(code WasmCode) uint64 {
 	return CostPerByte * uint64(len(code))
 }
 
+// hasSubMessages is an interface for contract results that can contain sub-messages.
+type hasSubMessages interface {
+	SubMessages() []types.SubMsg
+}
+
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
@@ -551,6 +556,17 @@ func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *
 	err := json.Unmarshal(data, response)
 	if err != nil {
 		return err
+	}
+
+	// All responses that have sub-messages need their payload size to be checked
+	const ReplyPayloadMaxBytes = 128 * 1024 // 128 KiB
+	if response, ok := response.(hasSubMessages); ok {
+		for _, m := range response.SubMessages() {
+			// each payload needs to be below maximum size
+			if len(m.Payload) > ReplyPayloadMaxBytes {
+				return fmt.Errorf("reply payload larger than %d bytes: %d bytes", ReplyPayloadMaxBytes, len(m.Payload))
+			}
+		}
 	}
 
 	return nil
