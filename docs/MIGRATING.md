@@ -42,6 +42,9 @@
   the old behavior is that the new type will unmarshal to an empty slice when
   the JSON value is `null` or `[]`. Previously, both cases resulted in a `nil`
   value.
+- `SubMsg` and `Reply` now have a new `Payload` field. This contains arbitrary
+  bytes from the contract that should be passed through to the corresponding
+  `Reply` call.
 
 ## Renamings
 
