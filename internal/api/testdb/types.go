@@ -3,7 +3,7 @@ package testdb
 import (
 	"errors"
 
-	"github.com/CosmWasm/wasmvm/types"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 var (
