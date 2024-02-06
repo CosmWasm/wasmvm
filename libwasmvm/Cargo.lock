@@ -134,9 +134,9 @@ dependencies = [
 
 [[package]]
 name = "bnum"
-version = "0.8.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab9008b6bb9fc80b5277f2fe481c09e828743d9151203e804583eb4c9e15b31d"
+checksum = "56953345e39537a3e18bdaeba4cb0c58a78c1f61f361dc0fa7c5c7340ae87c5f"
 
 [[package]]
 name = "bumpalo"
@@ -263,11 +263,10 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.0.0-beta.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-beta.1#6b987d508fffdc2ba40dd8661797e8c27a6c9544"
+version = "2.0.0-rc.0"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-rc.0#7533a213c3dd171328c0e4f50a72d7daeff52fe8"
 dependencies = [
  "digest 0.10.7",
- "ecdsa",
  "ed25519-zebra",
  "k256",
  "rand_core 0.6.4",
@@ -276,16 +275,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.0.0-beta.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-beta.1#6b987d508fffdc2ba40dd8661797e8c27a6c9544"
+version = "2.0.0-rc.0"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-rc.0#7533a213c3dd171328c0e4f50a72d7daeff52fe8"
 dependencies = [
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.0.0-beta.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-beta.1#6b987d508fffdc2ba40dd8661797e8c27a6c9544"
+version = "2.0.0-rc.0"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-rc.0#7533a213c3dd171328c0e4f50a72d7daeff52fe8"
 dependencies = [
  "base64",
  "bech32",
@@ -305,8 +304,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.0.0-beta.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-beta.1#6b987d508fffdc2ba40dd8661797e8c27a6c9544"
+version = "2.0.0-rc.0"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.0.0-rc.0#7533a213c3dd171328c0e4f50a72d7daeff52fe8"
 dependencies = [
  "bech32",
  "bitflags 1.3.2",
