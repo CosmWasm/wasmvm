@@ -93,7 +93,7 @@ type Reply struct {
 	// Unset/nil/null cannot be differentiated from empty data.
 	//
 	// On chains running CosmWasm 1.x this field is never filled.
-	Payload []byte `json:"payload"`
+	Payload []byte `json:"payload,omitempty"`
 }
 
 // SubMsgResult is the raw response we return from wasmd after executing a SubMsg.
