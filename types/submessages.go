@@ -71,7 +71,7 @@ type SubMsg struct {
 	// Unset/nil/null cannot be differentiated from empty data.
 	//
 	// On chains running CosmWasm 1.x this field will be ignored.
-	Payload []byte `json:"payload"`
+	Payload []byte `json:"payload,omitempty"`
 	// Gas limit measured in [Cosmos SDK gas](https://github.com/CosmWasm/cosmwasm/blob/main/docs/GAS.md).
 	//
 	// Setting this to `None` means unlimited. Then the submessage execution can consume all gas of
