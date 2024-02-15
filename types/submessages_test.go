@@ -48,8 +48,7 @@ func TestReplySerialization(t *testing.T) {
 	}
 	serialized2, err := json.Marshal(&withoutPayload)
 	require.NoError(t, err)
-	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"error": "some error"}}`, string(serialized2))
-
+	require.Equal(t, `{"gas_used":4312324,"id":75,"result":{"error":"some error"}}`, string(serialized2))
 }
 
 func TestSubMsgResponseSerialization(t *testing.T) {
