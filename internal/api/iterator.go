@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
@@ -99,15 +100,10 @@ func retrieveIterator(callID uint64, iteratorID uint64) types.Iterator {
 	return myFrame[indexInFrame]
 }
 
-const (
-	INT32_MAX_AS_UINT64 uint64 = 2147483647
-	INT32_MAX_AS_INT    int    = 2147483647
-)
-
 // iteratorIdToIndex converts an iterator ID to an index in the frame.
 // The second value marks if the conversion succeeded.
 func iteratorIdToIndex(id uint64) (int, bool) {
-	if id < 1 || id > INT32_MAX_AS_UINT64 {
+	if id < 1 || id > math.MaxInt32 {
 		return 777777777, false
 	}
 
@@ -118,7 +114,7 @@ func iteratorIdToIndex(id uint64) (int, bool) {
 // indexToIteratorID converts an index in the frame to an iterator ID.
 // The second value marks if the conversion succeeded.
 func indexToIteratorID(index int) (uint64, bool) {
-	if index < 0 || index > INT32_MAX_AS_INT {
+	if index < 0 || index > math.MaxInt32 {
 		return 888888888, false
 	}
 
