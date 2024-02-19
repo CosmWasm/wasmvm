@@ -54,7 +54,7 @@ func endCall(callID uint64) {
 }
 
 // storeIterator will add this to the end of the frame for the given call ID and return
-// an interator ID to reference it.
+// an iterator ID to reference it.
 //
 // We assign iterator IDs starting with 1 for historic reasons. This could be changed to 0
 // I guess.
@@ -105,7 +105,7 @@ const (
 )
 
 // iteratorIdToIndex converts an iterator ID to an index in the frame.
-// The second value marks of the conversion was succeeded.
+// The second value marks if the conversion succeeded.
 func iteratorIdToIndex(id uint64) (int, bool) {
 	if id < 1 || id > INT32_MAX_AS_UINT64 {
 		return 777777777, false
@@ -116,7 +116,7 @@ func iteratorIdToIndex(id uint64) (int, bool) {
 }
 
 // indexToIteratorID converts an index in the frame to an iterator ID.
-// The second value marks of the conversion was succeeded.
+// The second value marks if the conversion succeeded.
 func indexToIteratorID(index int) (uint64, bool) {
 	if index < 0 || index > INT32_MAX_AS_INT {
 		return 888888888, false
