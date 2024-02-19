@@ -104,6 +104,7 @@ func retrieveIterator(callID uint64, iteratorID uint64) types.Iterator {
 // The second value marks if the conversion succeeded.
 func iteratorIdToIndex(id uint64) (int, bool) {
 	if id < 1 || id > math.MaxInt32 {
+		// If success is false, the int value is undefined. We use an arbitrary constant for potential debugging purposes.
 		return 777777777, false
 	}
 
@@ -115,6 +116,7 @@ func iteratorIdToIndex(id uint64) (int, bool) {
 // The second value marks if the conversion succeeded.
 func indexToIteratorID(index int) (uint64, bool) {
 	if index < 0 || index > math.MaxInt32 {
+		// If success is false, the return value is undefined. We use an arbitrary constant for potential debugging purposes.
 		return 888888888, false
 	}
 
