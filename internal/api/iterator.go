@@ -74,7 +74,7 @@ func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64,
 	if !ok {
 		// This error case is not expected to happen since the above code ensures the
 		// index is in the range [0, frameLenLimit-1]
-		return 0, fmt.Errorf("Could not convert index to iterator ID")
+		return 0, fmt.Errorf("could not convert index to iterator ID")
 	}
 	return iterator_id, nil
 }
