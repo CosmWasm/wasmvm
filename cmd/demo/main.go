@@ -5,7 +5,7 @@ import (
 	"math"
 	"os"
 
-	wasmvm "github.com/CosmWasm/wasmvm"
+	wasmvm "github.com/CosmWasm/wasmvm/v2"
 )
 
 const (
