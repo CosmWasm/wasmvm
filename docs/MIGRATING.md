@@ -45,6 +45,9 @@
 - `SubMsg` and `Reply` now have a new `Payload` field. This contains arbitrary
   bytes from the contract that should be passed through to the corresponding
   `Reply` call.
+- If you link statically against `wasmvm_muslc`, you should not rename the
+  downloaded library anymore, as wasmvm now directly links against
+  `wasmvm_muslc.x86_64` / `wasmvm_muslc.aarch64` instead of `wasmvm_muslc`.
 
 ## Renamings
 
