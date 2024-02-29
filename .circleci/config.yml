@@ -505,3 +505,4 @@ workflows:
               only:
                 - main
                 - /^release\/.*/
+                - ibc-callbacks # added temporarily
