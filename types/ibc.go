@@ -148,6 +148,26 @@ type IBCPacketTimeoutMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
+// The type of IBC callback that is being called.
+//
+// IBC callbacks are needed for cases where your contract triggers the sending of an IBC packet
+// through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether
+// or not the packet was successfully received on the other chain. A prominent example is the
+// [`IbcMsg::Transfer`] message.
+// Without callbacks, you cannot know whether the transfer was successful or not.
+//
+// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks:
+//   - The contract must implement the `ibc_source_chain_callback` entrypoint.
+//   - The module that sends the packet must be wrapped by an `IBCMiddleware`
+//     (i.e. the source chain needs to support callbacks for the message you are sending).
+//   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
+//     For `IbcMsg::Transfer`, this is the `memo` field.
+//   - The receiver of the callback must also be the sender of the message.
+type IBCSourceChainCallbackMsg struct {
+	Acknowledgement *IBCPacketAckMsg     `json:"Acknowledgement,omitempty"`
+	Timeout         *IBCPacketTimeoutMsg `json:"Timeout,omitempty"`
+}
+
 // TODO: test what the sdk Order.String() represents and how to parse back
 // Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
 // Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
