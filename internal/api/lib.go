@@ -700,6 +700,48 @@ func IBCPacketTimeout(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+func IBCSourceChainCallback(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	msg []byte,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, types.GasReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	ac := makeView(msg)
+	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasReport C.GasReport
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.ibc_source_chain_callback(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
 func convertGasReport(report C.GasReport) types.GasReport {
 	return types.GasReport{
 		Limit:          uint64(report.limit),
