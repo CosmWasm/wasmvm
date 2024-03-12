@@ -131,7 +131,7 @@ func TestRetrieveIterator(t *testing.T) {
 	var err error
 
 	iter, _ = store.Iterator(nil, nil)
-	index11, err := storeIterator(callID1, iter, limit)
+	iteratorID11, err := storeIterator(callID1, iter, limit)
 	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID1, iter, limit)
@@ -140,27 +140,33 @@ func TestRetrieveIterator(t *testing.T) {
 	_, err = storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
-	index22, err := storeIterator(callID2, iter, limit)
+	iteratorID22, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 	iter, err = store.Iterator(nil, nil)
 	require.NoError(t, err)
-	index23, err := storeIterator(callID2, iter, limit)
+	iteratorID23, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 
 	// Retrieve existing
-	iter = retrieveIterator(callID1, index11)
+	iter = retrieveIterator(callID1, iteratorID11)
 	require.NotNil(t, iter)
-	iter = retrieveIterator(callID2, index22)
+	iter = retrieveIterator(callID2, iteratorID22)
 	require.NotNil(t, iter)
 
-	// Retrieve non-existent index
-	iter = retrieveIterator(callID1, index23)
+	// Retrieve with non-existent iterator ID
+	iter = retrieveIterator(callID1, iteratorID23)
 	require.Nil(t, iter)
 	iter = retrieveIterator(callID1, uint64(0))
 	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483647))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483648))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(18446744073709551615))
+	require.Nil(t, iter)
 
-	// Retrieve non-existent call ID
-	iter = retrieveIterator(callID1+1_234_567, index23)
+	// Retrieve with non-existent call ID
+	iter = retrieveIterator(callID1+1_234_567, iteratorID23)
 	require.Nil(t, iter)
 
 	endCall(callID1)

@@ -6,13 +6,15 @@ use crate::gas_meter::gas_meter_t;
 use crate::memory::UnmanagedVector;
 use crate::vtables::Vtable;
 
-// Iterator maintains integer references to some tables on the Go side
+/// A reference to some tables on the Go side which allow accessing
+/// the actual iterator instance.
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
-pub struct iterator_t {
+pub struct IteratorReference {
     /// An ID assigned to this contract call
     pub call_id: u64,
-    pub iterator_index: u64,
+    /// An ID assigned to this iterator
+    pub iterator_id: u64,
 }
 
 // These functions should return GoError but because we don't trust them here, we treat the return value as i32
@@ -22,7 +24,7 @@ pub struct iterator_t {
 pub struct IteratorVtable {
     pub next: Option<
         extern "C" fn(
-            iterator: iterator_t,
+            iterator: IteratorReference,
             gas_meter: *mut gas_meter_t,
             gas_used: *mut u64,
             key_out: *mut UnmanagedVector,
@@ -32,7 +34,7 @@ pub struct IteratorVtable {
     >,
     pub next_key: Option<
         extern "C" fn(
-            iterator: iterator_t,
+            iterator: IteratorReference,
             gas_meter: *mut gas_meter_t,
             gas_used: *mut u64,
             key_out: *mut UnmanagedVector,
@@ -41,7 +43,7 @@ pub struct IteratorVtable {
     >,
     pub next_value: Option<
         extern "C" fn(
-            iterator: iterator_t,
+            iterator: IteratorReference,
             gas_meter: *mut gas_meter_t,
             gas_used: *mut u64,
             value_out: *mut UnmanagedVector,
@@ -55,7 +57,9 @@ impl Vtable for IteratorVtable {}
 #[repr(C)]
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
-    pub state: iterator_t,
+    /// A reference which identifies the iterator and allows finding and accessing the
+    /// actual iterator instance in Go. Once fully initalized, this is immutable.
+    pub reference: IteratorReference,
     pub vtable: IteratorVtable,
 }
 
@@ -67,8 +71,8 @@ impl GoIter {
     /// which is then filled in Go (see `fn scan`).
     pub fn stub() -> Self {
         GoIter {
+            reference: IteratorReference::default(),
             gas_meter: std::ptr::null_mut(),
-            state: iterator_t::default(),
             vtable: IteratorVtable::default(),
         }
     }
@@ -84,7 +88,7 @@ impl GoIter {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoError = (next)(
-            self.state,
+            self.reference,
             self.gas_meter,
             &mut used_gas as *mut u64,
             &mut output_key as *mut UnmanagedVector,
@@ -141,7 +145,7 @@ impl GoIter {
     fn next_key_or_val(
         &mut self,
         next: extern "C" fn(
-            iterator: iterator_t,
+            iterator: IteratorReference,
             gas_meter: *mut gas_meter_t,
             gas_limit: *mut u64,
             key_or_value_out: *mut UnmanagedVector, // key if called from next_key; value if called from next_value
@@ -152,7 +156,7 @@ impl GoIter {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let go_result: GoError = (next)(
-            self.state,
+            self.reference,
             self.gas_meter,
             &mut used_gas as *mut u64,
             &mut output as *mut UnmanagedVector,
@@ -190,8 +194,8 @@ mod test {
         // creates an all null-instance
         let iter = GoIter::stub();
         assert!(iter.gas_meter.is_null());
-        assert_eq!(iter.state.call_id, 0);
-        assert_eq!(iter.state.iterator_index, 0);
+        assert_eq!(iter.reference.call_id, 0);
+        assert_eq!(iter.reference.iterator_id, 0);
         assert!(iter.vtable.next.is_none());
         assert!(iter.vtable.next_key.is_none());
         assert!(iter.vtable.next_value.is_none());
