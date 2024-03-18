@@ -189,6 +189,15 @@ type Metrics struct {
 	SizeMemoryCache uint64
 }
 
+type PerModuleMetrics struct {
+	Hits uint32
+	Size uint64
+}
+
+type PinnedMetrics struct {
+	PerModule PerModuleMetrics `json:"per_module"`
+}
+
 // Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.
 // When unmarshaling, we get an empty slice for "[]" and "null".
 //

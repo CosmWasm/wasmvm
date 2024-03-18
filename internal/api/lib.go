@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Value types
@@ -188,6 +189,21 @@ func GetMetrics(cache Cache) (*types.Metrics, error) {
 		SizePinnedMemoryCache:     uint64(metrics.size_pinned_memory_cache),
 		SizeMemoryCache:           uint64(metrics.size_memory_cache),
 	}, nil
+}
+
+func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
+	errmsg := uninitializedUnmanagedVector()
+	metrics, err := C.get_pinned_metrics(cache.ptr, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	var pinnedMetrics types.PinnedMetrics
+	if err := msgpack.Unmarshal(copyAndDestroyUnmanagedVector(metrics), &pinnedMetrics); err != nil {
+		return nil, err
+	}
+
+	return &pinnedMetrics, nil
 }
 
 func Instantiate(
