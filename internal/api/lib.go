@@ -13,8 +13,9 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/vmihailenco/msgpack/v5"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 // Value types
