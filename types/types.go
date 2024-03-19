@@ -192,8 +192,8 @@ type Metrics struct {
 }
 
 type PerModuleMetrics struct {
-	Hits uint32
-	Size uint64
+	Hits uint32 `msgpack:"hits"`
+	Size uint64 `msgpack:"size"`
 }
 
 type PinnedMetrics struct {

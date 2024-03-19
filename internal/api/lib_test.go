@@ -389,7 +389,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 1
 	metrics, err := GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.PinnedMetrics{PerModule: nil}, metrics)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: make(map[string]types.PerModuleMetrics, 0)}, metrics)
 
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
@@ -417,7 +417,9 @@ func TestGetPinnedMetrics(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
 	assert.Equal(t, uint32(0), metrics.PerModule[checksumStr].Hits)
+	assert.NotEqual(t, uint32(0), metrics.PerModule[checksumStr].Size)
 	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
+	assert.NotEqual(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Size)
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -434,9 +436,11 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 3
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(metrics.PerModule))
+	assert.Equal(t, 2, len(metrics.PerModule))
 	assert.Equal(t, uint32(1), metrics.PerModule[checksumStr].Hits)
+	assert.NotEqual(t, uint32(0), metrics.PerModule[checksumStr].Size)
 	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
+	assert.NotEqual(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Size)
 }
 
 func TestInstantiate(t *testing.T) {
