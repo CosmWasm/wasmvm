@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::str::from_utf8;
@@ -433,7 +433,7 @@ impl From<cosmwasm_vm::PerModuleMetrics> for PerModuleMetrics {
 
 #[derive(Serialize)]
 struct PinnedMetrics {
-    per_module: HashMap<Checksum, PerModuleMetrics>,
+    per_module: Vec<(Checksum, PerModuleMetrics)>,
 }
 
 impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
@@ -441,8 +441,7 @@ impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
         Self {
             per_module: value
                 .per_module
-                .iter()
-                .cloned()
+                .into_iter()
                 .map(|(checksum, metrics)| (checksum, metrics.into()))
                 .collect(),
         }

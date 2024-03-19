@@ -196,8 +196,13 @@ type PerModuleMetrics struct {
 	Size uint64 `msgpack:"size"`
 }
 
+type PerModuleEntry struct {
+	Name    string
+	Metrics PerModuleMetrics
+}
+
 type PinnedMetrics struct {
-	PerModule map[string]PerModuleMetrics `msgpack:"per_module"`
+	PerModule []PerModuleEntry `msgpack:"per_module,as_array"`
 }
 
 func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {

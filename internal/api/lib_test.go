@@ -389,7 +389,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 1
 	metrics, err := GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.PinnedMetrics{PerModule: make(map[string]types.PerModuleMetrics, 0)}, metrics)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: make([]types.PerModuleEntry, 0)}, metrics)
 
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
@@ -409,17 +409,34 @@ func TestGetPinnedMetrics(t *testing.T) {
 	err = Pin(cache, cyberpunkChecksum)
 	require.NoError(t, err)
 
-	checksumStr := types.Checksum(checksum).EncodeHex()
-	cyberpunkChecksumStr := types.Checksum(cyberpunkChecksum).EncodeHex()
+	checksumStr := types.Checksum(checksum).String()
+	cyberpunkChecksumStr := types.Checksum(cyberpunkChecksum).String()
+
+	findMetrics := func(list []types.PerModuleEntry, checksum string) *types.PerModuleMetrics {
+		found := (*types.PerModuleMetrics)(nil)
+
+		for _, structure := range list {
+			if structure.Name == checksum {
+				found = &structure.Metrics
+				break
+			}
+		}
+
+		return found
+	}
 
 	// GetMetrics 2
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
-	assert.Equal(t, uint32(0), metrics.PerModule[checksumStr].Hits)
-	assert.NotEqual(t, uint32(0), metrics.PerModule[checksumStr].Size)
-	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
-	assert.NotEqual(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Size)
+
+	hackatomMetrics := findMetrics(metrics.PerModule, checksumStr)
+	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksumStr)
+
+	assert.Equal(t, uint32(0), hackatomMetrics.Hits)
+	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -437,10 +454,14 @@ func TestGetPinnedMetrics(t *testing.T) {
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
-	assert.Equal(t, uint32(1), metrics.PerModule[checksumStr].Hits)
-	assert.NotEqual(t, uint32(0), metrics.PerModule[checksumStr].Size)
-	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
-	assert.NotEqual(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Size)
+
+	hackatomMetrics = findMetrics(metrics.PerModule, checksumStr)
+	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksumStr)
+
+	assert.Equal(t, uint32(1), hackatomMetrics.Hits)
+	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
 }
 
 func TestInstantiate(t *testing.T) {

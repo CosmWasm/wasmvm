@@ -10,7 +10,7 @@ import (
 // The length of a checksum must always be ChecksumLen.
 type Checksum []byte
 
-func (cs Checksum) EncodeHex() string {
+func (cs Checksum) String() string {
 	return hex.EncodeToString(cs)
 }
 
