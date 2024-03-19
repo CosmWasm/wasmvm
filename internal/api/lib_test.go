@@ -416,8 +416,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
-	assert.Equal(t, 0, metrics.PerModule[checksumStr].Hits)
-	assert.Equal(t, 0, metrics.PerModule[cyberpunkChecksumStr].Hits)
+	assert.Equal(t, uint32(0), metrics.PerModule[checksumStr].Hits)
+	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -435,8 +435,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(metrics.PerModule))
-	assert.Equal(t, 1, metrics.PerModule[checksumStr].Hits)
-	assert.Equal(t, 0, metrics.PerModule[cyberpunkChecksumStr].Hits)
+	assert.Equal(t, uint32(1), metrics.PerModule[checksumStr].Hits)
+	assert.Equal(t, uint32(0), metrics.PerModule[cyberpunkChecksumStr].Hits)
 }
 
 func TestInstantiate(t *testing.T) {
