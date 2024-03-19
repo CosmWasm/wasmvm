@@ -197,7 +197,7 @@ type PerModuleMetrics struct {
 }
 
 type PinnedMetrics struct {
-	PerModule PerModuleMetrics `json:"per_module"`
+	PerModule map[string]PerModuleMetrics `json:"per_module"`
 }
 
 func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {

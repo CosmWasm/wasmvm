@@ -382,6 +382,63 @@ func TestGetMetrics(t *testing.T) {
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 }
 
+func TestGetPinnedMetrics(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	// GetMetrics 1
+	metrics, err := GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: make(map[string]types.PerModuleMetrics, 0)}, metrics)
+
+	// Store contract 1
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+
+	// Store contract 2
+	cyberpunkWasm, err := os.ReadFile("../../testdata/cyberpunk.wasm")
+	require.NoError(t, err)
+	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, cyberpunkChecksum)
+	require.NoError(t, err)
+
+	checksumStr := types.Checksum(checksum).EncodeHex()
+	cyberpunkChecksumStr := types.Checksum(cyberpunkChecksum).EncodeHex()
+
+	// GetMetrics 2
+	metrics, err = GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, len(metrics.PerModule), 2)
+	assert.Equal(t, metrics.PerModule[checksumStr].Hits, 0)
+	assert.Equal(t, metrics.PerModule[cyberpunkChecksumStr].Hits, 0)
+
+	// Instantiate 1
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter := types.GasMeter(gasMeter)
+	store := NewLookup(gasMeter)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	_, _, err = Instantiate(cache, checksum, env, info, msg1, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+
+	// GetMetrics 3
+	metrics, err = GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, len(metrics.PerModule), 1)
+	assert.Equal(t, metrics.PerModule[checksumStr].Hits, 1)
+	assert.Equal(t, metrics.PerModule[cyberpunkChecksumStr].Hits, 0)
+}
+
 func TestInstantiate(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
