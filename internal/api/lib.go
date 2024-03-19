@@ -13,8 +13,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/vmihailenco/msgpack/v5"
-
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
@@ -200,7 +198,7 @@ func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
 	}
 
 	var pinnedMetrics types.PinnedMetrics
-	if err := msgpack.Unmarshal(copyAndDestroyUnmanagedVector(metrics), &pinnedMetrics); err != nil {
+	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
 		return nil, err
 	}
 

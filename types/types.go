@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string
@@ -196,6 +198,10 @@ type PerModuleMetrics struct {
 
 type PinnedMetrics struct {
 	PerModule PerModuleMetrics `json:"per_module"`
+}
+
+func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
+	return msgpack.Unmarshal(data, pm)
 }
 
 // Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.
