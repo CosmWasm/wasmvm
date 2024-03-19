@@ -389,7 +389,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 1
 	metrics, err := GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.PinnedMetrics{PerModule: make(map[string]types.PerModuleMetrics, 0)}, metrics)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: nil}, metrics)
 
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
