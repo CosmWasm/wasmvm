@@ -90,6 +90,13 @@ go build .
 CGO_ENABLED=0 go build .
 ```
 
+In the case that it may be desirable to compile with cgo, but with libwasmvm linking disabled an additional build tag is available.
+
+```sh
+# Build with CGO, but with libwasmvm linking disabled
+go build -tags "nolink_libwasmvm"
+```
+
 ## Supported Platforms
 
 See [COMPILER_VERSIONS.md](docs/COMPILER_VERSIONS.md) for information on Go and
