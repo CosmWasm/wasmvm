@@ -1,4 +1,4 @@
-//go:build cgo
+//go:build cgo && !nolink_libwasmvm
 
 // This file contains the part of the API that is exposed when cgo is enabled.
 
