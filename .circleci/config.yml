@@ -209,13 +209,13 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Build package "types" without cgo
+          name: Build package "types" with libwasmvm linking disabled
           command: go build -tags "nolink_libwasmvm" ./types
       - run:
-          name: Build package "cosmwasm" without cgo
+          name: Build package "cosmwasm" with libwasmvm linking disabled
           command: go build -tags "nolink_libwasmvm" .
       - run:
-          name: Test package "types" without cgo
+          name: Test package "types" with libwasmvm linking disabled
           command: go test -tags "nolink_libwasmvm" ./types
       - run:
           name: Test package "cosmwasm" with libwasmvm linking disabled
