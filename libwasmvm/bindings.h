@@ -426,6 +426,8 @@ struct AnalysisReport analyze_code(struct cache_t *cache,
 
 struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector get_pinned_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
+
 /**
  * frees a cache reference
  *

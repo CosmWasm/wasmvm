@@ -26,9 +26,13 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.0.0", features = ["staking", "stargate", "iterator"] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.0.0", features = ["staking", "stargate", "iterator"] }
+#cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.0.0", features = ["staking", "stargate", "iterator"] }
+#cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.0.0", features = ["staking", "stargate", "iterator"] }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "f1fa4bb35a1fc8ad5f48d079c1d29e5b2a1d4018", features = ["staking", "stargate", "iterator"] }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "f1fa4bb35a1fc8ad5f48d079c1d29e5b2a1d4018", features = ["staking", "stargate", "iterator"] }
 errno = "0.3.8"
+rmp-serde = "1.1.2"
+serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1.0.91"
 thiserror = "1.0.38"
 hex = "0.4.3"

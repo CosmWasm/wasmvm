@@ -5,8 +5,19 @@ import (
 	"math"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestChecksumString(t *testing.T) {
+	// SHA-256 hash of "lucyna kushinada"
+
+	hexRepr := "cd6ff9ff3faea9b3d0224a7e0d1133e6eae1b7800e8392441200056986c358a9"
+	rawBytes := []byte{0xCD, 0x6F, 0xF9, 0xFF, 0x3F, 0xAE, 0xA9, 0xB3, 0xD0, 0x22, 0x4A, 0x7E, 0x0D, 0x11, 0x33, 0xE6, 0xEA, 0xE1, 0xB7, 0x80, 0x0E, 0x83, 0x92, 0x44, 0x12, 0x00, 0x05, 0x69, 0x86, 0xC3, 0x58, 0xA9}
+	checksumRepr := Checksum(rawBytes).String()
+
+	assert.Equal(t, hexRepr, checksumRepr)
+}
 
 func TestUint64JSON(t *testing.T) {
 	var u Uint64

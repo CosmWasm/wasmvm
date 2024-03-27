@@ -22,6 +22,12 @@ pub enum RustError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
+    #[error("Cannot serialize to MessagePack: {msg}")]
+    MessagePack {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
     #[error("Ran out of gas")]
     OutOfGas {
         #[cfg(feature = "backtraces")]
@@ -62,6 +68,14 @@ impl RustError {
 
     pub fn invalid_utf8<S: ToString>(msg: S) -> Self {
         RustError::InvalidUtf8 {
+            msg: msg.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn message_pack<S: ToString>(msg: S) -> Self {
+        RustError::MessagePack {
             msg: msg.to_string(),
             #[cfg(feature = "backtraces")]
             backtrace: Backtrace::capture(),
@@ -118,6 +132,12 @@ impl From<VmError> for RustError {
 impl From<ChecksumError> for RustError {
     fn from(_: ChecksumError) -> Self {
         RustError::checksum_err()
+    }
+}
+
+impl From<rmp_serde::encode::Error> for RustError {
+    fn from(source: rmp_serde::encode::Error) -> Self {
+        RustError::message_pack(source)
     }
 }
 
