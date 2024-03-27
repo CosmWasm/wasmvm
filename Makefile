@@ -86,7 +86,8 @@ release-build-linux:
 	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
 	rm -rf libwasmvm/target/x86_64-unknown-linux-gnu/release
 	rm -rf libwasmvm/target/aarch64-unknown-linux-gnu/release
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7 build_linux.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7 build_gnu_x86_64.sh
+	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
 	make update-bindings
