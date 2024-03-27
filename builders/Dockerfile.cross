@@ -1,4 +1,4 @@
-FROM rust:1.73.0-bullseye
+FROM rust:1.77.0-bullseye
 
 # Install build dependencies
 RUN apt-get update \
@@ -26,7 +26,7 @@ RUN git clone https://github.com/tpoechtrager/osxcross \
   # Don't change file name when downloading because osxcross auto-detects the version from the name
   && wget -nc https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz \
   && mv MacOSX11.3.sdk.tar.xz tarballs/ \
-  && UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh \
+  && UNATTENDED=yes OSX_VERSION_MIN=10.15 ./build.sh \
   # Cleanups before Docker layer is finalized
   && rm -r tarballs/
 RUN chmod +rx /opt/osxcross
