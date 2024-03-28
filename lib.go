@@ -1,6 +1,7 @@
 //go:build cgo && !nolink_libwasmvm
 
-// This file contains the part of the API that is exposed when cgo is enabled.
+// This file contains the part of the API that is exposed when libwasmvm
+// is available (i.e. cgo is enabled and nolink_libwasmvm is not set).
 
 package cosmwasm
 

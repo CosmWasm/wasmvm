@@ -1,4 +1,5 @@
-// This file contains the part of the API that is exposed when cgo is disabled.
+// This file contains the part of the API that is exposed no matter if libwasmvm
+// is available or not. Symbols from lib.go are added conditionally.
 
 package cosmwasm
 
