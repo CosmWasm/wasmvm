@@ -201,6 +201,25 @@ jobs:
       - run:
           name: Test package "cosmwasm" without cgo
           command: CGO_ENABLED=0 go test .
+      
+  # Build types and cosmwasm with libwasmvm linking disabled
+  nolink_libwasmvm:
+    docker:
+      - image: cimg/go:1.21.4
+    steps:
+      - checkout
+      - run:
+          name: Build package "types" with libwasmvm linking disabled
+          command: go build -tags "nolink_libwasmvm" ./types
+      - run:
+          name: Build package "cosmwasm" with libwasmvm linking disabled
+          command: go build -tags "nolink_libwasmvm" .
+      - run:
+          name: Test package "types" with libwasmvm linking disabled
+          command: go test -tags "nolink_libwasmvm" ./types
+      - run:
+          name: Test package "cosmwasm" with libwasmvm linking disabled
+          command: go test -tags "nolink_libwasmvm" .
 
   tidy-go:
     docker:
@@ -433,6 +452,7 @@ workflows:
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
+      - nolink_libwasmvm
       - tidy-go
       - format-scripts
       - lint-scripts
