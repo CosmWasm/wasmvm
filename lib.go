@@ -52,7 +52,7 @@ func CreateChecksum(wasm []byte) (Checksum, error) {
 	// magic number for Wasm is "\0asm"
 	// See https://webassembly.github.io/spec/core/binary/modules.html#binary-module
 	if !bytes.Equal(wasm[:4], []byte("\x00\x61\x73\x6D")) {
-		return Checksum{}, fmt.Errorf("Wasm bytes do not not start with Wasm magic number")
+		return Checksum{}, fmt.Errorf("Wasm bytes do not start with Wasm magic number")
 	}
 	hash := sha256.Sum256(wasm)
 	return Checksum(hash[:]), nil
