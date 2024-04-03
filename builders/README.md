@@ -21,6 +21,8 @@ versions of the builder images.
 
 **Unreleased**
 
+**Version 0019:**
+
 - Bump `OSX_VERSION_MIN` to 10.15.
 - Update Rust to 1.77.0.
 
