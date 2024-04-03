@@ -134,7 +134,6 @@ create-tester-image:
 	docker build -t $(ALPINE_TESTER) - < ./Dockerfile.alpine_tester
 
 test-alpine: release-build-alpine create-tester-image
-	@[ "$(shell uname -m)" = "x86_64" ] || (echo "This test is only working on x86_64. See https://github.com/CosmWasm/wasmvm/issues/483."; exit 78)
 # try running go tests using this lib with muslc
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd):/mnt/testrun -w /mnt/testrun $(ALPINE_TESTER) go build -tags muslc ./...
 # Use package list mode to include all subdirectores. The -count=1 turns off caching.
