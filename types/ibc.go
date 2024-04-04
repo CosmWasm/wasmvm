@@ -168,6 +168,23 @@ type IBCSourceChainCallbackMsg struct {
 	Timeout         *IBCPacketTimeoutMsg `json:"Timeout,omitempty"`
 }
 
+// The message type of the IBC destination chain callback.
+// This is just an alias for [`IbcPacketReceiveMsg`] to add some documentation.
+//
+// The IBC destination chain callback is needed for cases where someone triggers the sending of an
+// IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and
+// your contract needs to know that it received this.
+// A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know
+// that someone sent you IBC coins.
+//
+// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks:
+//   - The contract must implement the `ibc_destination_chain_callback` entrypoint.
+//   - The module that receives the packet must be wrapped by an `IBCMiddleware`
+//     (i.e. the destination chain needs to support callbacks for the message you are being sent).
+//   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
+//     For `IbcMsg::Transfer`, this is the `memo` field.
+type IBCDestinationChainCallbackMsg = IBCPacketReceiveMsg
+
 // TODO: test what the sdk Order.String() represents and how to parse back
 // Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
 // Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
