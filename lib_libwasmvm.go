@@ -588,7 +588,7 @@ func (vm *VM) IBCDestinationChainCallback(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.IBCSourceChainCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.IBCDestinationChainCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
