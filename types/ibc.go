@@ -169,11 +169,11 @@ type IBCSourceChainCallbackMsg struct {
 }
 
 // The message type of the IBC destination chain callback.
-// This is just an alias for [`IbcPacketReceiveMsg`] to add some documentation.
 //
 // The IBC destination chain callback is needed for cases where someone triggers the sending of an
 // IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and
 // your contract needs to know that it received this.
+// The callback is called after the packet was successfully acknowledged on the destination chain.
 // A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know
 // that someone sent you IBC coins.
 //
@@ -183,7 +183,10 @@ type IBCSourceChainCallbackMsg struct {
 //     (i.e. the destination chain needs to support callbacks for the message you are being sent).
 //   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
 //     For `IbcMsg::Transfer`, this is the `memo` field.
-type IBCDestinationChainCallbackMsg = IBCPacketReceiveMsg
+type IBCDestinationChainCallbackMsg struct {
+	Ack    IBCAcknowledgement `json:"ack"`
+	Packet IBCPacket          `json:"packet"`
+}
 
 // TODO: test what the sdk Order.String() represents and how to parse back
 // Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
