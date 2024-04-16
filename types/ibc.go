@@ -164,8 +164,8 @@ type IBCPacketTimeoutMsg struct {
 //     For `IbcMsg::Transfer`, this is the `memo` field.
 //   - The receiver of the callback must also be the sender of the message.
 type IBCSourceChainCallbackMsg struct {
-	Acknowledgement *IBCPacketAckMsg     `json:"Acknowledgement,omitempty"`
-	Timeout         *IBCPacketTimeoutMsg `json:"Timeout,omitempty"`
+	Acknowledgement *IBCPacketAckMsg     `json:"acknowledgement,omitempty"`
+	Timeout         *IBCPacketTimeoutMsg `json:"timeout,omitempty"`
 }
 
 // The message type of the IBC destination chain callback.
@@ -184,8 +184,16 @@ type IBCSourceChainCallbackMsg struct {
 //   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
 //     For `IbcMsg::Transfer`, this is the `memo` field.
 type IBCDestinationChainCallbackMsg struct {
-	Ack    IBCAcknowledgement `json:"ack"`
-	Packet IBCPacket          `json:"packet"`
+	Ack    IBCFullAcknowledgement `json:"ack"`
+	Packet IBCPacket              `json:"packet"`
+}
+
+// The acknowledgement written by the module on the destination chain. It is different from the [`crate::IbcAcknowledgement`] as it can be unsuccessful.
+type IBCFullAcknowledgement struct {
+	// The acknowledgement data returned by the module.
+	Data []byte `json:"data"`
+	// Whether the acknowledgement was successful or not.
+	Success bool `json:"success"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
