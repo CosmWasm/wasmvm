@@ -148,24 +148,25 @@ type IBCPacketTimeoutMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
-// The type of IBC callback that is being called.
+// The type of IBC source chain callback that is being called.
 //
-// IBC callbacks are needed for cases where your contract triggers the sending of an IBC packet
-// through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether
-// or not the packet was successfully received on the other chain. A prominent example is the
-// [`IbcMsg::Transfer`] message.
-// Without callbacks, you cannot know whether the transfer was successful or not.
+// IBC source chain callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
 //
-// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks:
-//   - The contract must implement the `ibc_source_chain_callback` entrypoint.
-//   - The module that sends the packet must be wrapped by an `IBCMiddleware`
-//     (i.e. the source chain needs to support callbacks for the message you are sending).
-//   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
-//     For `IbcMsg::Transfer`, this is the `memo` field.
-//   - The receiver of the callback must also be the sender of the message.
+// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks: - The contract must implement the `ibc_source_chain_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
 type IBCSourceChainCallbackMsg struct {
-	Acknowledgement *IBCPacketAckMsg     `json:"acknowledgement,omitempty"`
-	Timeout         *IBCPacketTimeoutMsg `json:"timeout,omitempty"`
+	Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
+	Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
+}
+
+type IBCAckCallbackMsg struct {
+	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
+	OriginalPacket  IBCPacket          `json:"original_packet"`
+	Relayer         string             `json:"relayer"`
+}
+
+type IBCTimeoutCallbackMsg struct {
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer"`
 }
 
 // The message type of the IBC destination chain callback.
