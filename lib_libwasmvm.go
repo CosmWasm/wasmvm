@@ -532,13 +532,13 @@ func (vm *VM) IBCPacketTimeout(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBCSourceChainCallback is available on IBC-enabled contracts with the corresponding entrypoint
+// IBCSourceCallback is available on IBC-enabled contracts with the corresponding entrypoint
 // and should be called when the response (ack or timeout) for an outgoing callbacks-enabled packet
 // (previously sent by this contract) is received.
-func (vm *VM) IBCSourceChainCallback(
+func (vm *VM) IBCSourceCallback(
 	checksum Checksum,
 	env types.Env,
-	msg types.IBCSourceChainCallbackMsg,
+	msg types.IBCSourceCallbackMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -554,7 +554,7 @@ func (vm *VM) IBCSourceChainCallback(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.IBCSourceChainCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.IBCSourceCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
@@ -567,12 +567,12 @@ func (vm *VM) IBCSourceChainCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBCDestinationChainCallback is available on IBC-enabled contracts with the corresponding entrypoint
+// IBCDestinationCallback is available on IBC-enabled contracts with the corresponding entrypoint
 // and should be called when an incoming callbacks-enabled IBC packet is received.
-func (vm *VM) IBCDestinationChainCallback(
+func (vm *VM) IBCDestinationCallback(
 	checksum Checksum,
 	env types.Env,
-	msg types.IBCDestinationChainCallbackMsg,
+	msg types.IBCDestinationCallbackMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -588,7 +588,7 @@ func (vm *VM) IBCDestinationChainCallback(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.IBCDestinationChainCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.IBCDestinationCallback(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}

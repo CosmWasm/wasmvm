@@ -148,12 +148,12 @@ type IBCPacketTimeoutMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
-// The type of IBC source chain callback that is being called.
+// The type of IBC source callback that is being called.
 //
-// IBC source chain callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
+// IBC source callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
 //
-// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks: - The contract must implement the `ibc_source_chain_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
-type IBCSourceChainCallbackMsg struct {
+// Note that there are some prerequisites that need to be fulfilled to receive source callbacks: - The contract must implement the `ibc_source_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
+type IBCSourceCallbackMsg struct {
 	Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
 	Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
 }
@@ -169,32 +169,24 @@ type IBCTimeoutCallbackMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
-// The message type of the IBC destination chain callback.
+// The message type of the IBC destination callback.
 //
-// The IBC destination chain callback is needed for cases where someone triggers the sending of an
+// The IBC destination callback is needed for cases where someone triggers the sending of an
 // IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and
 // your contract needs to know that it received this.
 // The callback is called after the packet was successfully acknowledged on the destination chain.
 // A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know
 // that someone sent you IBC coins.
 //
-// Note that there are some prerequisites that need to be fulfilled to receive source chain callbacks:
-//   - The contract must implement the `ibc_destination_chain_callback` entrypoint.
+// Note that there are some prerequisites that need to be fulfilled to receive source callbacks:
+//   - The contract must implement the `ibc_destination_callback` entrypoint.
 //   - The module that receives the packet must be wrapped by an `IBCMiddleware`
 //     (i.e. the destination chain needs to support callbacks for the message you are being sent).
 //   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
 //     For `IbcMsg::Transfer`, this is the `memo` field.
-type IBCDestinationChainCallbackMsg struct {
-	Ack    IBCFullAcknowledgement `json:"ack"`
-	Packet IBCPacket              `json:"packet"`
-}
-
-// The acknowledgement written by the module on the destination chain. It is different from the [`crate::IbcAcknowledgement`] as it can be unsuccessful.
-type IBCFullAcknowledgement struct {
-	// The acknowledgement data returned by the module.
-	Data []byte `json:"data"`
-	// Whether the acknowledgement was successful or not.
-	Success bool `json:"success"`
+type IBCDestinationCallbackMsg struct {
+	Ack    IBCAcknowledgement `json:"ack"`
+	Packet IBCPacket          `json:"packet"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
