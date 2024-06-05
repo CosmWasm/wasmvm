@@ -546,6 +546,14 @@ type hasSubMessages interface {
 	SubMessages() []types.SubMsg
 }
 
+// make sure the types implement the interface
+// cannot put these next to the types, as the interface is private
+var (
+	_ hasSubMessages = (*types.IBCBasicResult)(nil)
+	_ hasSubMessages = (*types.IBCReceiveResult)(nil)
+	_ hasSubMessages = (*types.ContractResult)(nil)
+)
+
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
