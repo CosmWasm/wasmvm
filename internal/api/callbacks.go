@@ -157,7 +157,8 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*val).is_none || !(*errOut).is_none {
+	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
+	if !(*val).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -185,9 +186,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
-		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
-	}
+	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
 
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
@@ -210,9 +209,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceV
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
-		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
-	}
+	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
 
 	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
 	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
@@ -286,7 +283,8 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*key).is_none || !(*val).is_none || !(*errOut).is_none {
+	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
+	if !(*key).is_none || !(*val).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -337,7 +335,8 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*output).is_none || !(*errOut).is_none {
+	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
+	if !(*output).is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
