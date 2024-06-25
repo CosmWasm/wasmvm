@@ -405,32 +405,19 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#3a6613fe902f1e55bb1c13f3a8901d176e8874ed"
-dependencies = [
- "base64 0.22.1",
- "bnum",
- "cosmwasm-crypto",
- "derive_more",
- "hex",
- "schemars",
- "serde",
- "sha2",
- "static_assertions",
- "thiserror",
-]
+version = "2.1.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.0-rc.1#7b0d0c70f26862c4594fec0e9e06ebd5c8350239"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#3a6613fe902f1e55bb1c13f3a8901d176e8874ed"
+version = "2.1.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.0-rc.1#7b0d0c70f26862c4594fec0e9e06ebd5c8350239"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ff",
  "ark-serialize",
- "cfg-if",
- "derive_more",
+ "cosmwasm-core",
  "digest",
  "ecdsa",
  "ed25519-zebra",
@@ -445,8 +432,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#3a6613fe902f1e55bb1c13f3a8901d176e8874ed"
+version = "2.1.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.0-rc.1#7b0d0c70f26862c4594fec0e9e06ebd5c8350239"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -455,11 +442,12 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#3a6613fe902f1e55bb1c13f3a8901d176e8874ed"
+version = "2.1.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.0-rc.1#7b0d0c70f26862c4594fec0e9e06ebd5c8350239"
 dependencies = [
  "base64 0.22.1",
  "bech32",
+ "bnum",
  "cosmwasm-core",
  "cosmwasm-crypto",
  "cosmwasm-derive",
@@ -470,17 +458,19 @@ dependencies = [
  "serde",
  "serde-json-wasm",
  "sha2",
+ "static_assertions",
  "thiserror",
 ]
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#3a6613fe902f1e55bb1c13f3a8901d176e8874ed"
+version = "2.1.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.0-rc.1#7b0d0c70f26862c4594fec0e9e06ebd5c8350239"
 dependencies = [
  "bech32",
  "bytes",
  "clru",
+ "cosmwasm-core",
  "cosmwasm-crypto",
  "cosmwasm-std",
  "crc32fast",
