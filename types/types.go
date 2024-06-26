@@ -197,7 +197,7 @@ type PerModuleMetrics struct {
 }
 
 type PerModuleEntry struct {
-	Name    string
+	Checksum    Checksum
 	Metrics PerModuleMetrics
 }
 
