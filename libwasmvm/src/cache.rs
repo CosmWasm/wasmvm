@@ -433,7 +433,7 @@ impl From<cosmwasm_vm::PerModuleMetrics> for PerModuleMetrics {
 
 #[derive(Serialize)]
 struct PinnedMetrics {
-    // TODO: Remove the array usage as soon as the metrics have a stable wire format
+    // TODO: Remove the array usage as soon as `Checksum` has a stable wire format in msgpack
     per_module: Vec<([u8; 32], PerModuleMetrics)>,
 }
 
