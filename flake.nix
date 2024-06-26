@@ -29,6 +29,7 @@
             go
             gofumpt
             golangci-lint
+            rust-bin.stable.latest.default
           ];
         };
       }
