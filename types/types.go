@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/vmihailenco/msgpack/v5"
+	"github.com/shamaton/msgpack/v2"
 )
 
 // Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string
@@ -202,11 +202,11 @@ type PerModuleEntry struct {
 }
 
 type PinnedMetrics struct {
-	PerModule []PerModuleEntry `msgpack:"per_module,as_array"`
+	PerModule []PerModuleEntry `msgpack:"per_module"`
 }
 
 func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
-	return msgpack.Unmarshal(data, pm)
+	return msgpack.UnmarshalAsArray(data, pm)
 }
 
 // Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.

@@ -470,7 +470,7 @@ fn do_get_pinned_metrics(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
 ) -> Result<UnmanagedVector, Error> {
     let pinned_metrics = PinnedMetrics::from(cache.pinned_metrics());
-    let edgerunner = rmp_serde::to_vec_named(&pinned_metrics)?;
+    let edgerunner = rmp_serde::to_vec(&pinned_metrics)?;
     Ok(UnmanagedVector::new(Some(edgerunner)))
 }
 
