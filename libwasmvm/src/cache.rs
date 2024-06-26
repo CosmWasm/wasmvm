@@ -433,7 +433,8 @@ impl From<cosmwasm_vm::PerModuleMetrics> for PerModuleMetrics {
 
 #[derive(Serialize)]
 struct PinnedMetrics {
-    per_module: Vec<(Checksum, PerModuleMetrics)>,
+    // TODO: Remove the array usage as soon as the metrics have a stable wire format
+    per_module: Vec<([u8; 32], PerModuleMetrics)>,
 }
 
 impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
@@ -442,7 +443,7 @@ impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
             per_module: value
                 .per_module
                 .into_iter()
-                .map(|(checksum, metrics)| (checksum, metrics.into()))
+                .map(|(checksum, metrics)| (*checksum.as_ref(), metrics.into()))
                 .collect(),
         }
     }
