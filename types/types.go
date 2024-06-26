@@ -197,8 +197,8 @@ type PerModuleMetrics struct {
 }
 
 type PerModuleEntry struct {
-	Checksum    Checksum
-	Metrics PerModuleMetrics
+	Checksum Checksum
+	Metrics  PerModuleMetrics
 }
 
 type PinnedMetrics struct {

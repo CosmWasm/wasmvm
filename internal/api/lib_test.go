@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -409,14 +410,11 @@ func TestGetPinnedMetrics(t *testing.T) {
 	err = Pin(cache, cyberpunkChecksum)
 	require.NoError(t, err)
 
-	checksumStr := types.Checksum(checksum).String()
-	cyberpunkChecksumStr := types.Checksum(cyberpunkChecksum).String()
-
-	findMetrics := func(list []types.PerModuleEntry, checksum string) *types.PerModuleMetrics {
+	findMetrics := func(list []types.PerModuleEntry, checksum types.Checksum) *types.PerModuleMetrics {
 		found := (*types.PerModuleMetrics)(nil)
 
 		for _, structure := range list {
-			if structure.Checksum == checksum {
+			if bytes.Equal(structure.Checksum, checksum) {
 				found = &structure.Metrics
 				break
 			}
@@ -430,8 +428,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
 
-	hackatomMetrics := findMetrics(metrics.PerModule, checksumStr)
-	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksumStr)
+	hackatomMetrics := findMetrics(metrics.PerModule, checksum)
+	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksum)
 
 	assert.Equal(t, uint32(0), hackatomMetrics.Hits)
 	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
@@ -455,8 +453,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(metrics.PerModule))
 
-	hackatomMetrics = findMetrics(metrics.PerModule, checksumStr)
-	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksumStr)
+	hackatomMetrics = findMetrics(metrics.PerModule, checksum)
+	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksum)
 
 	assert.Equal(t, uint32(1), hackatomMetrics.Hits)
 	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
