@@ -796,11 +796,13 @@ func convertGasReport(report C.GasReport) types.GasReport {
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.UnmanagedVector) error {
+	// we always destroy the unmanaged vector to avoid a memory leak
+	msg := copyAndDestroyUnmanagedVector(b)
+
 	// this checks for out of gas as a special case
 	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 		return types.OutOfGasError{}
 	}
-	msg := copyAndDestroyUnmanagedVector(b)
 	if msg == nil {
 		return err
 	}
