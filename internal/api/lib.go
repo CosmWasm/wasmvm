@@ -161,10 +161,12 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	}
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+
 	res := types.AnalysisReport{
-		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
-		RequiredCapabilities: requiredCapabilities,
-		Entrypoints:          strings.Split(entrypoints, ","),
+		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		RequiredCapabilities:   requiredCapabilities,
+		Entrypoints:            strings.Split(entrypoints, ","),
+		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
 	}
 	return &res, nil
 }

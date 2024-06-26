@@ -195,6 +195,14 @@ typedef struct UnmanagedVector {
 } UnmanagedVector;
 
 /**
+ * A version of `Option<u64>` that can be used safely in FFI.
+ */
+typedef struct OptionalU64 {
+  bool is_some;
+  uint64_t value;
+} OptionalU64;
+
+/**
  * The result type of the FFI function analyze_code.
  *
  * Please note that the unmanaged vector in `required_capabilities`
@@ -217,6 +225,13 @@ typedef struct AnalysisReport {
    * This is never None/nil.
    */
   struct UnmanagedVector required_capabilities;
+  /**
+   * The migrate version of the contract.
+   * This is None if the contract does not have a migrate version and the `migrate` entrypoint
+   * needs to be called for every migration (if present).
+   * If it is `Some(version)`, it only needs to be called if the `version` increased.
+   */
+  struct OptionalU64 contract_migrate_version;
 } AnalysisReport;
 
 typedef struct Metrics {

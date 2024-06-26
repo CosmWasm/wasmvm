@@ -169,6 +169,11 @@ type AnalysisReport struct {
 	HasIBCEntryPoints    bool
 	RequiredCapabilities string
 	Entrypoints          []string
+	// ContractMigrateVersion is the migrate version of the contract
+	// This is nil if the contract does not have a migrate version and the `migrate` entrypoint
+	// needs to be called for every migration (if present).
+	// If it is some number, the entrypoint only needs to be called if it increased.
+	ContractMigrateVersion *uint64
 }
 
 type Metrics struct {

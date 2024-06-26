@@ -302,6 +302,7 @@ func TestAnalyzeCode(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
 	require.Equal(t, "", report.RequiredCapabilities)
+	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
 
 	// Store IBC contract
 	wasm2, err := os.ReadFile(IBC_TEST_CONTRACT)
@@ -313,6 +314,7 @@ func TestAnalyzeCode(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
 	require.Equal(t, "iterator,stargate", report2.RequiredCapabilities)
+	require.Nil(t, report2.ContractMigrateVersion)
 }
 
 func TestIBCMsgGetChannel(t *testing.T) {

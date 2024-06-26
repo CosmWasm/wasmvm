@@ -253,6 +253,11 @@ pub struct AnalysisReport {
     /// An UTF-8 encoded comma separated list of required capabilities.
     /// This is never None/nil.
     pub required_capabilities: UnmanagedVector,
+    /// The migrate version of the contract.
+    /// This is None if the contract does not have a migrate version and the `migrate` entrypoint
+    /// needs to be called for every migration (if present).
+    /// If it is `Some(version)`, it only needs to be called if the `version` increased.
+    pub contract_migrate_version: OptionalU64,
 }
 
 impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
@@ -261,6 +266,8 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
             has_ibc_entry_points,
             required_capabilities,
             entrypoints,
+            contract_migrate_version,
+            ..
         } = report;
 
         let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
@@ -269,6 +276,30 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
             has_ibc_entry_points,
             required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
             entrypoints: UnmanagedVector::new(Some(entrypoints)),
+            contract_migrate_version: contract_migrate_version.into(),
+        }
+    }
+}
+
+/// A version of `Option<u64>` that can be used safely in FFI.
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
+#[repr(C)]
+pub struct OptionalU64 {
+    is_some: bool,
+    value: u64,
+}
+
+impl From<Option<u64>> for OptionalU64 {
+    fn from(opt: Option<u64>) -> Self {
+        match opt {
+            None => OptionalU64 {
+                is_some: false,
+                value: 0, // value is ignored
+            },
+            Some(value) => OptionalU64 {
+                is_some: true,
+                value,
+            },
         }
     }
 }
@@ -732,6 +763,8 @@ mod tests {
             hackatom_report.required_capabilities.consume().unwrap(),
             b""
         );
+        assert!(hackatom_report.contract_migrate_version.is_some);
+        assert_eq!(hackatom_report.contract_migrate_version.value, 42);
 
         let mut error_msg = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
@@ -944,7 +977,7 @@ mod tests {
         assert_eq!(elements_memory_cache, 0);
         assert_approx_eq!(
             size_pinned_memory_cache,
-            2282344,
+            3400000,
             "0.2",
             "size_pinned_memory_cache: {size_pinned_memory_cache}"
         );
