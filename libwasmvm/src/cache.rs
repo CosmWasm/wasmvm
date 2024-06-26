@@ -763,7 +763,7 @@ mod tests {
             hackatom_report.required_capabilities.consume().unwrap(),
             b""
         );
-        assert_eq!(hackatom_report.contract_migrate_version.is_some, true);
+        assert!(hackatom_report.contract_migrate_version.is_some);
         assert_eq!(hackatom_report.contract_migrate_version.value, 42);
 
         let mut error_msg = UnmanagedVector::default();
