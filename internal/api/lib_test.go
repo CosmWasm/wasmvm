@@ -416,7 +416,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 		found := (*types.PerModuleMetrics)(nil)
 
 		for _, structure := range list {
-			if structure.Name == checksum {
+			if structure.Checksum == checksum {
 				found = &structure.Metrics
 				break
 			}
