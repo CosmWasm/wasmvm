@@ -5,6 +5,7 @@ use std::str::from_utf8;
 
 use cosmwasm_std::Checksum;
 use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Size};
+use serde::Serialize;
 
 use crate::api::GoApi;
 use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
@@ -413,6 +414,64 @@ pub extern "C" fn get_metrics(
 #[allow(clippy::unnecessary_wraps)] // Keep unused Result for consistent boilerplate for all fn do_*
 fn do_get_metrics(cache: &mut Cache<GoApi, GoStorage, GoQuerier>) -> Result<Metrics, Error> {
     Ok(cache.metrics().into())
+}
+
+#[derive(Serialize)]
+struct PerModuleMetrics {
+    hits: u32,
+    size: usize,
+}
+
+impl From<cosmwasm_vm::PerModuleMetrics> for PerModuleMetrics {
+    fn from(value: cosmwasm_vm::PerModuleMetrics) -> Self {
+        Self {
+            hits: value.hits,
+            size: value.size,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct PinnedMetrics {
+    // TODO: Remove the array usage as soon as `Checksum` has a stable wire format in msgpack
+    per_module: Vec<([u8; 32], PerModuleMetrics)>,
+}
+
+impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
+    fn from(value: cosmwasm_vm::PinnedMetrics) -> Self {
+        Self {
+            per_module: value
+                .per_module
+                .into_iter()
+                .map(|(checksum, metrics)| (*checksum.as_ref(), metrics.into()))
+                .collect(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_pinned_metrics(
+    cache: *mut cache_t,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> UnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => {
+            catch_unwind(AssertUnwindSafe(move || do_get_pinned_metrics(c))).unwrap_or_else(|err| {
+                eprintln!("Panic in do_get_pinned_metrics: {err:?}");
+                Err(Error::panic())
+            })
+        }
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_get_pinned_metrics(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+) -> Result<UnmanagedVector, Error> {
+    let pinned_metrics = PinnedMetrics::from(cache.pinned_metrics());
+    let edgerunner = rmp_serde::to_vec(&pinned_metrics)?;
+    Ok(UnmanagedVector::new(Some(edgerunner)))
 }
 
 /// frees a cache reference

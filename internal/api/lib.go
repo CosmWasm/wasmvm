@@ -190,6 +190,21 @@ func GetMetrics(cache Cache) (*types.Metrics, error) {
 	}, nil
 }
 
+func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
+	errmsg := uninitializedUnmanagedVector()
+	metrics, err := C.get_pinned_metrics(cache.ptr, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	var pinnedMetrics types.PinnedMetrics
+	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
+		return nil, err
+	}
+
+	return &pinnedMetrics, nil
+}
+
 func Instantiate(
 	cache Cache,
 	checksum []byte,

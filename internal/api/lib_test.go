@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -380,6 +381,85 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+}
+
+func TestGetPinnedMetrics(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	// GetMetrics 1
+	metrics, err := GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: make([]types.PerModuleEntry, 0)}, metrics)
+
+	// Store contract 1
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+
+	// Store contract 2
+	cyberpunkWasm, err := os.ReadFile("../../testdata/cyberpunk.wasm")
+	require.NoError(t, err)
+	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm)
+	require.NoError(t, err)
+
+	err = Pin(cache, cyberpunkChecksum)
+	require.NoError(t, err)
+
+	findMetrics := func(list []types.PerModuleEntry, checksum types.Checksum) *types.PerModuleMetrics {
+		found := (*types.PerModuleMetrics)(nil)
+
+		for _, structure := range list {
+			if bytes.Equal(structure.Checksum, checksum) {
+				found = &structure.Metrics
+				break
+			}
+		}
+
+		return found
+	}
+
+	// GetMetrics 2
+	metrics, err = GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(metrics.PerModule))
+
+	hackatomMetrics := findMetrics(metrics.PerModule, checksum)
+	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksum)
+
+	assert.Equal(t, uint32(0), hackatomMetrics.Hits)
+	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
+
+	// Instantiate 1
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter := types.GasMeter(gasMeter)
+	store := NewLookup(gasMeter)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	_, _, err = Instantiate(cache, checksum, env, info, msg1, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+
+	// GetMetrics 3
+	metrics, err = GetPinnedMetrics(cache)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(metrics.PerModule))
+
+	hackatomMetrics = findMetrics(metrics.PerModule, checksum)
+	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksum)
+
+	assert.Equal(t, uint32(1), hackatomMetrics.Hits)
+	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
 }
 
 func TestInstantiate(t *testing.T) {
