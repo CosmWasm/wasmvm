@@ -72,9 +72,6 @@ bench:
 
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
-	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
-	rm -rf libwasmvm/target/aarch64-unknown-linux-musl/release
-	rm -rf libwasmvm/target/x86_64-unknown-linux-musl/release
 	# build the muslc *.a file
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
@@ -83,9 +80,6 @@ release-build-alpine:
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
-	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
-	rm -rf libwasmvm/target/x86_64-unknown-linux-gnu/release
-	rm -rf libwasmvm/target/aarch64-unknown-linux-gnu/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-centos7 build_linux.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
@@ -93,28 +87,20 @@ release-build-linux:
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
-	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
-	rm -rf libwasmvm/target/x86_64-apple-darwin/release
-	rm -rf libwasmvm/target/aarch64-apple-darwin/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
 	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the static library for macOS (.a)
 release-build-macos-static:
-	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
-	rm -rf libwasmvm/target/x86_64-apple-darwin/release
-	rm -rf libwasmvm/target/aarch64-apple-darwin/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:
-	# Builders should not write their target folder into the host file system (https://github.com/CosmWasm/wasmvm/issues/437)
-	rm -rf libwasmvm/target/x86_64-pc-windows-gnu/release
 	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
-	cp libwasmvm/target/x86_64-pc-windows-gnu/release/wasmvm.dll internal/api
+	cp libwasmvm/artifacts/wasmvm.dll internal/api
 	make update-bindings
 
 update-bindings:
