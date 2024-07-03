@@ -111,6 +111,12 @@ func (vm *VM) GetMetrics() (*types.Metrics, error) {
 	return api.GetMetrics(vm.cache)
 }
 
+// GetPinnedMetrics returns some internal metrics of pinned contracts for monitoring purposes.
+// The order of entries is non-deterministic.
+func (vm *VM) GetPinnedMetrics() (*types.PinnedMetrics, error) {
+	return api.GetPinnedMetrics(vm.cache)
+}
+
 // Instantiate will create a new contract based on the given Checksum.
 // We can set the initMsg (contract "genesis") here, and it then receives
 // an account and address and can be invoked (Execute) many times.
