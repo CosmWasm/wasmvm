@@ -112,7 +112,7 @@ func (vm *VM) GetMetrics() (*types.Metrics, error) {
 }
 
 // GetPinnedMetrics returns some internal metrics of pinned contracts for monitoring purposes.
-// The order of entries is non-deterministic.
+// The order of entries is non-deterministic and the values are node-specific. Don't use this in consensus-critical contexts.
 func (vm *VM) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return api.GetPinnedMetrics(vm.cache)
 }
