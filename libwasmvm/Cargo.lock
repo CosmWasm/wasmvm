@@ -2445,7 +2445,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "2.1.0-rc.1"
+version = "2.1.0-rc.2"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
