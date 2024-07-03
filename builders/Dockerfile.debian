@@ -1,4 +1,7 @@
-FROM --platform=linux/amd64 debian:12-slim
+# Use a debian version that is old enough to lead to a low
+# glibc requirement of builds.
+# Debian 11 "Bullseye" has long-term support until August 31st, 2026
+FROM --platform=linux/amd64 debian:11-slim
 
 RUN apt update -y \
   && apt install -y gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget
