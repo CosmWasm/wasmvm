@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "2.1.0-rc.2"
+version = "2.1.0"
 publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
@@ -26,8 +26,16 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.1.0-rc.1", features = ["staking", "stargate", "iterator"] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.1.0-rc.1", features = ["staking", "stargate", "iterator"] }
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.1.0", features = [
+  "staking",
+  "stargate",
+  "iterator",
+] }
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.1.0", features = [
+  "staking",
+  "stargate",
+  "iterator",
+] }
 errno = "0.3.8"
 rmp-serde = "1.1.2"
 serde = { version = "1.0.103", features = ["derive"] }
