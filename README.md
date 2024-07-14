@@ -90,7 +90,8 @@ go build .
 CGO_ENABLED=0 go build .
 ```
 
-In the case that it may be desirable to compile with cgo, but with libwasmvm linking disabled an additional build tag is available.
+In the case that it may be desirable to compile with cgo, but with libwasmvm
+linking disabled an additional build tag is available.
 
 ```sh
 # Build with CGO, but with libwasmvm linking disabled
@@ -106,8 +107,8 @@ The Rust implementation of the VM is compiled to a library called libwasmvm.
 This is then linked to the Go code when the final binary is built. For that
 reason not all systems supported by Go are supported by this project.
 
-Linux (tested on Ubuntu, Debian, and CentOS7, Alpine) and macOS is supported. We
-are working on Windows (#288).
+Linux (tested on Ubuntu, Debian, Alpine) and macOS is supported. We are working
+on Windows support with very low priority (#288).
 
 [#288]: https://github.com/CosmWasm/wasmvm/pull/288
 
