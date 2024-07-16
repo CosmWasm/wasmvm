@@ -25,6 +25,7 @@ See those DockerHub repos for all available versions of the builder images.
 
 - Rename builder image from cosmwasm/go-ext-builder to
   cosmwasm/libwasmvm-builder
+- Replace CentOS with Debian image for GNU linux builds
 
 **Version 0019:**
 
