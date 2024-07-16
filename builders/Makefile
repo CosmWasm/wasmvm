@@ -1,6 +1,6 @@
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
 # See builders/README.md
-BUILDERS_PREFIX := cosmwasm/go-ext-builder:0019
+BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0020-dev
 
 .PHONY: docker-image-debian
 docker-image-debian:
