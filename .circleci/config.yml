@@ -309,6 +309,13 @@ jobs:
       - run:
           name: Copy .so build
           command: cp /tmp/builds/libwasmvm.x86_64.so ./internal/api
+      # Debugging step to better understand what is linked here
+      - run:
+          name: Check .so files
+          command: |
+            ls -lA ./internal/api/libwasmvm.*.so
+            sha256sum ./internal/api/libwasmvm.*.so
+            ldd ./internal/api/libwasmvm.x86_64.so
       - run:
           name: Build Go project
           command: make build-go

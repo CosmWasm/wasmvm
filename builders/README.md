@@ -14,12 +14,20 @@ any machine that can run Docker can do the cross-compilation.
 
 ## Docker Hub images
 
-See https://hub.docker.com/r/cosmwasm/go-ext-builder/tags for all available
-versions of the builder images.
+See those DockerHub repos for all available versions of the builder images.
+
+- From version 0100: https://hub.docker.com/r/cosmwasm/libwasmvm-builder/tags
+- Before version 0100: https://hub.docker.com/r/cosmwasm/go-ext-builder/tags
 
 ## Changelog
 
 **Unreleased**
+
+**Version 0100:**
+
+- Rename builder image from cosmwasm/go-ext-builder to
+  cosmwasm/libwasmvm-builder
+- Replace CentOS with Debian image for GNU linux builds
 
 **Version 0019:**
 

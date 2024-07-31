@@ -45,7 +45,7 @@ ensure we can switch between compiler versions in some range.
 ## Production Rust compiler
 
 This is the version set in the builders: `builders/Dockerfile.alpine`,
-`builders/Dockerfile.centos7` and `Dockerfile.cross`.
+`builders/Dockerfile.debian` and `Dockerfile.cross`.
 
 ## Min Rust compiler
 
