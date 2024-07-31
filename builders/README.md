@@ -28,7 +28,12 @@ See those DockerHub repos for all available versions of the builder images.
 - Rename builder image from cosmwasm/go-ext-builder to
   cosmwasm/libwasmvm-builder
 - Replace CentOS with Debian image for GNU linux builds
+- Avoid using a target folder in the host system. Instead the folder /target in
+  the guest is used. Due to this change we can now drop the argument
+  `-u $(USER_ID):$(USER_GROUP)` when using builders. ([#437])
 - Build all images with `--platform=linux/amd64` to avoid accidental ARM builds
+
+[#437]: https://github.com/CosmWasm/wasmvm/issues/437
 
 **Version 0019:**
 

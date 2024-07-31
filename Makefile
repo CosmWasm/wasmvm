@@ -69,34 +69,34 @@ bench:
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
 	# build the muslc *.a file
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for glibc Linux (.so)
 release-build-linux:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_x86_64.sh
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_x86_64.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-debian build_gnu_aarch64.sh
 	cp libwasmvm/artifacts/libwasmvm.x86_64.so internal/api
 	cp libwasmvm/artifacts/libwasmvm.aarch64.so internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for macOS (.dylib)
 release-build-macos:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos.sh
 	cp libwasmvm/artifacts/libwasmvm.dylib internal/api
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the static library for macOS (.a)
 release-build-macos-static:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos_static.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_macos_static.sh
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
 # Creates a release build in a containerized build environment of the shared library for Windows (.dll)
 release-build-windows:
-	docker run --rm -u $(USER_ID):$(USER_GROUP) -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
+	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
 	cp libwasmvm/artifacts/wasmvm.dll internal/api
 	make update-bindings
 
