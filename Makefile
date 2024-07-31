@@ -44,14 +44,10 @@ build-rust-debug:
 	make update-bindings
 
 # use release build to actually ship - smaller and much faster
-#
-# See https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-880616953 for two approaches to
-# enable stripping through cargo (if that is desired).
 build-rust-release:
 	(cd libwasmvm && cargo build --release)
 	cp libwasmvm/target/release/$(SHARED_LIB_SRC) internal/api/$(SHARED_LIB_DST)
 	make update-bindings
-	@ #this pulls out ELF symbols, 80% size reduction!
 
 build-go:
 	go build ./...
