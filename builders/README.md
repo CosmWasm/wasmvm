@@ -28,6 +28,7 @@ See those DockerHub repos for all available versions of the builder images.
 - Rename builder image from cosmwasm/go-ext-builder to
   cosmwasm/libwasmvm-builder
 - Replace CentOS with Debian image for GNU linux builds
+- Build all images with `--platform=linux/amd64` to avoid accidental ARM builds
 
 **Version 0019:**
 
@@ -131,8 +132,9 @@ See those DockerHub repos for all available versions of the builder images.
 
 ## Usage
 
-Create a local docker image, capable of cross-compling linux and macos dynamic
-libs:
+Create the Docker images, capable of cross-compling Linux and MacOS dynamic
+libs. As the builder images are all x86_64, it can be slow and memory intense to
+do this on a different architecture:
 
 ```sh
 (cd builders && make docker-images)
