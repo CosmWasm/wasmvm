@@ -125,6 +125,8 @@ type IBCMsg struct {
 	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
 	WriteAcknowledgement *WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 	CloseChannel         *CloseChannelMsg         `json:"close_channel,omitempty"`
+	PayPacketFee         *PayPacketFeeMsg         `json:"pay_packet_fee,omitempty"`
+	PayPacketFeeAsync    *PayPacketFeeAsyncMsg    `json:"pay_packet_fee_async,omitempty"`
 }
 
 type GovMsg struct {
@@ -253,6 +255,26 @@ type WriteAcknowledgementMsg struct {
 
 type CloseChannelMsg struct {
 	ChannelID string `json:"channel_id"`
+}
+
+type PayPacketFeeMsg struct {
+	Fee IBCFee `json:"fee"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+	Src      IBCEndpoint   `json:"src"`
+}
+type PayPacketFeeAsyncMsg struct {
+	Fee IBCFee `json:"fee"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+	Sequence uint64        `json:"sequence"`
+	Src      IBCEndpoint   `json:"src"`
+}
+
+type IBCFee struct {
+	AckFee     Array[Coin] `json:"ack_fee"`
+	RecvFee    Array[Coin] `json:"recv_fee"`
+	TimeoutFee Array[Coin] `json:"timeout_fee"`
 }
 
 type StakingMsg struct {
