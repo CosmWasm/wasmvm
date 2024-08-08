@@ -128,9 +128,9 @@ dependencies = [
 
 [[package]]
 name = "bnum"
-version = "0.8.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "128a44527fc0d6abf05f9eda748b9027536e12dff93f5acc8449f51583309350"
+checksum = "56953345e39537a3e18bdaeba4cb0c58a78c1f61f361dc0fa7c5c7340ae87c5f"
 
 [[package]]
 name = "bumpalo"
@@ -254,11 +254,10 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "1.5.2"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.2#a3d0df3c2938bb4837385e49c71abd22ec4dde4b"
+version = "1.5.6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.6#1d8b47f90bde73d8e49d96b0f0b6a45e682ad284"
 dependencies = [
  "digest 0.10.7",
- "ecdsa",
  "ed25519-zebra",
  "k256",
  "rand_core 0.6.4",
@@ -267,16 +266,16 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "1.5.2"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.2#a3d0df3c2938bb4837385e49c71abd22ec4dde4b"
+version = "1.5.6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.6#1d8b47f90bde73d8e49d96b0f0b6a45e682ad284"
 dependencies = [
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "1.5.2"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.2#a3d0df3c2938bb4837385e49c71abd22ec4dde4b"
+version = "1.5.6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.6#1d8b47f90bde73d8e49d96b0f0b6a45e682ad284"
 dependencies = [
  "base64",
  "bech32",
@@ -296,8 +295,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "1.5.2"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.2#a3d0df3c2938bb4837385e49c71abd22ec4dde4b"
+version = "1.5.6"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v1.5.6#1d8b47f90bde73d8e49d96b0f0b6a45e682ad284"
 dependencies = [
  "bitflags",
  "bytecheck",
@@ -674,9 +673,9 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "elliptic-curve"
-version = "0.13.5"
+version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "968405c8fdc9b3bf4df0a6638858cc0b52462836ab6b1c87377785dd09cf1c0b"
+checksum = "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47"
 dependencies = [
  "base16ct",
  "crypto-bigint",
@@ -998,9 +997,9 @@ dependencies = [
 
 [[package]]
 name = "k256"
-version = "0.13.1"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cadb76004ed8e97623117f3df85b17aaa6626ab0b0831e6573f104df16cd1bcc"
+checksum = "956ff9b67e26e1a6a866cb758f12c6f8746208489e3e4a4b5580802f2f0a587b"
 dependencies = [
  "cfg-if",
  "ecdsa",
@@ -1143,9 +1142,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "opaque-debug"
@@ -1479,9 +1478,9 @@ dependencies = [
 
 [[package]]
 name = "serde-json-wasm"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16a62a1fad1e1828b24acac8f2b468971dade7b8c3c2e672bcadefefb1f8c137"
+checksum = "9e9213a07d53faa0b8dd81e767a54a8188a242fdb9be99ab75ec576a774bfdd7"
 dependencies = [
  "serde",
 ]
@@ -2267,6 +2266,6 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.6.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0956f1ba7c7909bfb66c2e9e4124ab6f6482560f6628b5aaeba39207c9aad9"
+checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
