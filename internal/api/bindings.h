@@ -1,4 +1,4 @@
-/* (c) 2019 Confio OÜ. Licensed under Apache-2.0 */
+/* Licensed under Apache-2.0. Copyright see https://github.com/CosmWasm/wasmvm/blob/main/NOTICE. */
 
 /* Generated with cbindgen:0.27.0 */
 
