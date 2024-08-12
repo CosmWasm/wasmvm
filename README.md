@@ -26,7 +26,7 @@ library that can be used via FFI. It is compiled like this:
 
 # Create release build for your current system. Uses whatever default Rust
 # version you have installed.
-make build-rust
+make build-libwasmvm
 
 # Create reproducible release builds for other systems (slow, don't use for development)
 make release-build-alpine
@@ -135,7 +135,7 @@ which for example excludes all 32 bit systems.
 | macOS           | x86_64  | static  | ✅​libwasmvmstatic_darwin.a  | Fat/universal library with multiple archs ([#407])                                                                                     |
 | macOS           | aarch64 | shared  | ✅​libwasmvm.dylib           | Fat/universal library with multiple archs ([#294])                                                                                     |
 | macOS           | aarch64 | static  | ✅​libwasmvmstatic_darwin.a  | Fat/universal library with multiple archs ([#407])                                                                                     |
-| Windows (mingw) | x86_64  | shared  | 🏗​wasmvm.dll                 | Shared library linking not working on Windows ([#389])                                                                                 |
+| Windows (mingw) | x86_64  | shared  | 🏗​wasmvm.dll                | Shared library linking not working on Windows ([#389])                                                                                 |
 | Windows (mingw) | x86_64  | static  | 🚫​                          | Unclear if this can work using a cross compiler; needs research on .lib (MSVC toolchain) vs. .a (GNU toolchain). ([#389])              |
 | Windows (mingw) | aarch64 | shared  | 🚫​                          | Shared library linking not working on Windows ([#389])                                                                                 |
 | Windows (mingw) | aarch64 | static  | 🚫​                          | Unclear if this can work using a cross compiler; needs research on .lib (MSVC toolchain) vs. .a (GNU toolchain). ([#389])              |
@@ -171,6 +171,6 @@ import this code freely. If it is not present you will have to build it for your
 system, and ideally add it to this repo with a PR (on your fork). We will set up
 a proper CI system for building these binaries, but we are not there yet.
 
-To build the rust side, try `make build-rust` and wait for it to compile. This
-depends on `cargo` being installed with `rustc` version 1.47+. Generally, you
-can just use `rustup` to install all this with no problems.
+To build the rust side, try `make build-libwasmvm` and wait for it to compile.
+This depends on `cargo` being installed with `rustc` version 1.47+. Generally,
+you can just use `rustup` to install all this with no problems.

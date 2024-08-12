@@ -279,7 +279,7 @@ jobs:
             - cargocache-v3-build_shared_library-rust:1.74.0-
       - run:
           name: Create release build of libwasmvm
-          command: make build-rust
+          command: make build-libwasmvm
       - persist_to_workspace:
           root: ./internal/api
           paths:
