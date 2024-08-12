@@ -258,22 +258,30 @@ type CloseChannelMsg struct {
 }
 
 type PayPacketFeeMsg struct {
-	Fee IBCFee `json:"fee"`
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
 	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
 	Relayers Array[string] `json:"relayers"`
-	Src      IBCEndpoint   `json:"src"`
 }
+
 type PayPacketFeeAsyncMsg struct {
-	Fee IBCFee `json:"fee"`
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
 	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
 	Relayers Array[string] `json:"relayers"`
-	Sequence uint64        `json:"sequence"`
-	Src      IBCEndpoint   `json:"src"`
+	// The sequence number of the packet that should be incentivized.
+	Sequence uint64 `json:"sequence"`
 }
 
 type IBCFee struct {
 	AckFee     Array[Coin] `json:"ack_fee"`
-	RecvFee    Array[Coin] `json:"recv_fee"`
+	ReceiveFee Array[Coin] `json:"receive_fee"`
 	TimeoutFee Array[Coin] `json:"timeout_fee"`
 }
 
