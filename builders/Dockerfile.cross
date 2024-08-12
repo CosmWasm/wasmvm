@@ -49,6 +49,6 @@ RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY guest/cargo-config /.cargo/config
+COPY guest/cargo-config.toml /.cargo/config.toml
 
 CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_macos.sh) to docker run' && exit 1"]

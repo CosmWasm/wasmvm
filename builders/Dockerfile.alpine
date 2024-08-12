@@ -28,6 +28,6 @@ RUN chmod +x /opt/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY guest/cargo-config /.cargo/config
+COPY guest/cargo-config.toml /.cargo/config.toml
 
 CMD ["/opt/build_muslc.sh"]
