@@ -23,6 +23,11 @@ See those DockerHub repos for all available versions of the builder images.
 
 **Unreleased**
 
+- Update Rust to 1.80.0.
+- Update Dockerfile.cross from Debian Bullseye to Bookworm ([#533])
+
+[#533]: https://github.com/CosmWasm/wasmvm/issues/533
+
 **Version 0100:**
 
 - Rename builder image from cosmwasm/go-ext-builder to
