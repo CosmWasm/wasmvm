@@ -1,5 +1,3 @@
-.PHONY: all build build-rust build-go test
-
 # Builds the Rust library libwasmvm
 BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0100
 # Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
@@ -30,33 +28,37 @@ test-filenames:
 	echo $(SHARED_LIB_DST)
 	echo $(SHARED_LIB_SRC)
 
-all: build test
-
-build: build-rust build-go
-
-build-rust: build-rust-release
+.PHONY: build
+build:
+	make build-libwasmvm
+	make build-go
 
 # Use debug build for quick testing.
 # In order to use "--features backtraces" here we need a Rust nightly toolchain, which we don't have by default
-build-rust-debug:
+.PHONY: build-libwasmvm-debug
+build-libwasmvm-debug:
 	(cd libwasmvm && cargo build)
 	cp libwasmvm/target/debug/$(SHARED_LIB_SRC) internal/api/$(SHARED_LIB_DST)
 	make update-bindings
 
 # use release build to actually ship - smaller and much faster
-build-rust-release:
+.PHONY: build-libwasmvm
+build-libwasmvm:
 	(cd libwasmvm && cargo build --release)
 	cp libwasmvm/target/release/$(SHARED_LIB_SRC) internal/api/$(SHARED_LIB_DST)
 	make update-bindings
 
+.PHONY: build-go
 build-go:
 	go build ./...
 	go build -o build/demo ./cmd/demo
 
+.PHONY: test
 test:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
 	RUST_BACKTRACE=1 go test -v -count=1 ./...
 
+.PHONY: test-safety
 test-safety:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
 	GOEXPERIMENT=cgocheck2 go test -race -v -count=1 ./...
