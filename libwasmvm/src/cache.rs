@@ -1,14 +1,13 @@
 use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::str::from_utf8;
 
 use cosmwasm_std::Checksum;
-use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Size};
+use cosmwasm_vm::Cache;
 use serde::Serialize;
 
 use crate::api::GoApi;
-use crate::args::{AVAILABLE_CAPABILITIES_ARG, CACHE_ARG, CHECKSUM_ARG, DATA_DIR_ARG, WASM_ARG};
+use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
@@ -28,59 +27,20 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 
 #[no_mangle]
 pub extern "C" fn init_cache(
-    data_dir: ByteSliceView,
-    available_capabilities: ByteSliceView,
-    cache_size: u32,            // in MiB
-    instance_memory_limit: u32, // in MiB
+    config: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> *mut cache_t {
-    let r = catch_unwind(|| {
-        do_init_cache(
-            data_dir,
-            available_capabilities,
-            cache_size,
-            instance_memory_limit,
-        )
-    })
-    .unwrap_or_else(|err| {
+    let r = catch_unwind(|| do_init_cache(config)).unwrap_or_else(|err| {
         eprintln!("Panic in do_init_cache: {err:?}");
         Err(Error::panic())
     });
     handle_c_error_ptr(r, error_msg) as *mut cache_t
 }
 
-fn do_init_cache(
-    data_dir: ByteSliceView,
-    available_capabilities: ByteSliceView,
-    cache_size: u32,            // in MiB
-    instance_memory_limit: u32, // in MiB
-) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    let dir = data_dir
-        .read()
-        .ok_or_else(|| Error::unset_arg(DATA_DIR_ARG))?;
-    let dir_str = String::from_utf8(dir.to_vec())?;
+fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
+    let config = rmp_serde::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
     // parse the supported capabilities
-    let capabilities_bin = available_capabilities
-        .read()
-        .ok_or_else(|| Error::unset_arg(AVAILABLE_CAPABILITIES_ARG))?;
-    let capabilities = capabilities_from_csv(from_utf8(capabilities_bin)?);
-    let memory_cache_size = Size::mebi(
-        cache_size
-            .try_into()
-            .expect("Cannot convert u32 to usize. What kind of system is this?"),
-    );
-    let instance_memory_limit = Size::mebi(
-        instance_memory_limit
-            .try_into()
-            .expect("Cannot convert u32 to usize. What kind of system is this?"),
-    );
-    let options = CacheOptions::new(
-        dir_str,
-        capabilities,
-        memory_cache_size,
-        instance_memory_limit,
-    );
-    let cache = unsafe { Cache::new(options) }?;
+    let cache = unsafe { Cache::new_with_config(config) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
 }
@@ -493,7 +453,10 @@ mod tests {
     use crate::assert_approx_eq;
 
     use super::*;
-    use std::{cmp::Ordering, iter::FromIterator};
+    use cosmwasm_vm::{CacheOptions, Config, Size};
+    use std::{
+        cmp::Ordering, collections::HashSet, iter::FromIterator, path::PathBuf, str::FromStr,
+    };
     use tempfile::TempDir;
 
     static HACKATOM: &[u8] = include_bytes!("../../testdata/hackatom.wasm");
@@ -502,16 +465,17 @@ mod tests {
     #[test]
     fn init_cache_and_release_cache_work() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -521,16 +485,17 @@ mod tests {
     #[test]
     fn init_cache_writes_error() {
         let dir: String = String::from("broken\0dir"); // null bytes are valid UTF8 but not allowed in FS paths
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(cache_ptr.is_null());
         assert!(error_msg.is_some());
         let msg = String::from_utf8(error_msg.consume().unwrap()).unwrap();
@@ -543,16 +508,17 @@ mod tests {
     #[test]
     fn save_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -572,16 +538,17 @@ mod tests {
     #[test]
     fn remove_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -627,16 +594,17 @@ mod tests {
     #[test]
     fn load_wasm_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -668,16 +636,17 @@ mod tests {
     #[test]
     fn pin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -717,16 +686,17 @@ mod tests {
     #[test]
     fn unpin_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -775,16 +745,17 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking,stargate,iterator";
+        let capabilities = "staking,stargate,iterator".to_string();
 
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -966,17 +937,18 @@ mod tests {
     #[test]
     fn get_metrics_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = b"staking";
+        let capabilities = "staking".to_string();
 
         // Init cache
         let mut error_msg = UnmanagedVector::default();
-        let cache_ptr = init_cache(
-            ByteSliceView::new(dir.as_bytes()),
-            ByteSliceView::new(capabilities),
-            512,
-            32,
-            Some(&mut error_msg),
-        );
+        let config = Config::new(CacheOptions::new(
+            &dir,
+            [capabilities],
+            Size::mebi(512),
+            Size::mebi(32),
+        ));
+        let config = rmp_serde::to_vec(&config).unwrap();
+        let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
 
@@ -1071,5 +1043,48 @@ mod tests {
         );
 
         release_cache(cache_ptr);
+    }
+
+    #[test]
+    fn test_config_msgpack() {
+        // see companion test "TestConfigMsgPack" on the Go side
+        const BYTES: &[u8] = &[
+            0x82, 0xab, 0x77, 0x61, 0x73, 0x6d, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x73, 0x87,
+            0xb1, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x6c,
+            0x69, 0x6d, 0x69, 0x74, 0xf, 0xb0, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x73, 0x69,
+            0x7a, 0x65, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x14, 0xab, 0x6d, 0x61, 0x78, 0x5f,
+            0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x73, 0x64, 0xad, 0x6d, 0x61, 0x78, 0x5f, 0x66,
+            0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0xc0, 0xb3, 0x6d, 0x61, 0x78, 0x5f,
+            0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d,
+            0x73, 0x0, 0xb9, 0x6d, 0x61, 0x78, 0x5f, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x5f, 0x66,
+            0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73,
+            0xc0, 0xb4, 0x6d, 0x61, 0x78, 0x5f, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+            0x5f, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x73, 0xc0, 0xa5, 0x63, 0x61, 0x63, 0x68,
+            0x65, 0x84, 0xa8, 0x62, 0x61, 0x73, 0x65, 0x5f, 0x64, 0x69, 0x72, 0xa4, 0x2f, 0x74,
+            0x6d, 0x70, 0xb6, 0x61, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x63,
+            0x61, 0x70, 0x61, 0x62, 0x69, 0x6c, 0x69, 0x74, 0x69, 0x65, 0x73, 0x92, 0xa1, 0x61,
+            0xa1, 0x62, 0xb1, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x63, 0x61, 0x63, 0x68,
+            0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x64, 0xb5, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e,
+            0x63, 0x65, 0x5f, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x6c, 0x69, 0x6d, 0x69,
+            0x74, 0x64,
+        ];
+
+        let config: Config = rmp_serde::from_slice(BYTES).unwrap();
+
+        assert_eq!(config.wasm_limits.memory_page_limit(), 15);
+        assert_eq!(config.wasm_limits.table_size_limit(), 20);
+        assert_eq!(config.wasm_limits.max_imports(), 100);
+        assert_eq!(config.wasm_limits.max_function_params(), 0);
+
+        // unset values have default values
+        assert_eq!(config.wasm_limits.max_total_function_params(), 10_000);
+
+        assert_eq!(config.cache.base_dir, PathBuf::from("/tmp"));
+        assert_eq!(
+            config.cache.available_capabilities,
+            HashSet::from_iter(["a".to_string(), "b".to_string()])
+        );
+        assert_eq!(config.cache.memory_cache_size, Size::new(100));
+        assert_eq!(config.cache.instance_memory_limit, Size::new(100));
     }
 }

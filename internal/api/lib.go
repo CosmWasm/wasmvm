@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/shamaton/msgpack/v2"
 )
 
 // Value types
@@ -41,14 +42,14 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+func InitCache(config types.Config) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile
-	err := os.MkdirAll(dataDir, 0o755)
+	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not create base directory")
 	}
 
-	lockfile, err := os.OpenFile(dataDir+"/exclusive.lock", os.O_WRONLY|os.O_CREATE, 0o666)
+	lockfile, err := os.OpenFile(config.Cache.BaseDir+"/exclusive.lock", os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
 	}
@@ -62,17 +63,16 @@ func InitCache(dataDir string, supportedCapabilities []string, cacheSize uint32,
 		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 	}
 
-	dataDirBytes := []byte(dataDir)
-	supportedCapabilitiesBytes := []byte(strings.Join(supportedCapabilities, ","))
-
-	d := makeView(dataDirBytes)
-	defer runtime.KeepAlive(dataDirBytes)
-	capabilitiesView := makeView(supportedCapabilitiesBytes)
-	defer runtime.KeepAlive(supportedCapabilitiesBytes)
+	configBytes, err := msgpack.Marshal(config)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not serialize config")
+	}
+	configView := makeView(configBytes)
+	defer runtime.KeepAlive(configBytes)
 
 	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, capabilitiesView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
+	ptr, err := C.init_cache(configView, &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
