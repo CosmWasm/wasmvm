@@ -33,7 +33,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	config := types.Config{
+	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -54,7 +54,7 @@ func TestInitCacheWorksForNonExistentDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
-	config := types.Config{
+	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               createMe,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -72,7 +72,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 	// https://gist.github.com/doctaphred/d01d05291546186941e1b7ddc02034d3
 	// On Unix we should not have permission to create this.
 	cannotBeCreated := "/foo:bar"
-	config := types.Config{
+	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               cannotBeCreated,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -89,7 +89,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	config1 := types.Config{
+	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -100,7 +100,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 	cache1, err1 := InitCache(config1)
 	require.NoError(t, err1)
 
-	config2 := types.Config{
+	config2 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -114,7 +114,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 	ReleaseCache(cache1)
 
 	// Now we can try again
-	config3 := types.Config{
+	config3 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -138,7 +138,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 	defer os.RemoveAll(tmpdir2)
 	defer os.RemoveAll(tmpdir3)
 
-	config1 := types.Config{
+	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir1,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -148,7 +148,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 	}
 	cache1, err1 := InitCache(config1)
 	require.NoError(t, err1)
-	config2 := types.Config{
+	config2 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir2,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -158,7 +158,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 	}
 	cache2, err2 := InitCache(config2)
 	require.NoError(t, err2)
-	config3 := types.Config{
+	config3 := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir3,
 			AvailableCapabilities: TESTING_CAPABILITIES,
@@ -178,7 +178,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	config := types.Config{
+	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: []string{},
@@ -194,7 +194,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 func withCache(t testing.TB) (Cache, func()) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	config := types.Config{
+	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               tmpdir,
 			AvailableCapabilities: TESTING_CAPABILITIES,

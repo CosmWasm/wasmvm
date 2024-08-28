@@ -31,7 +31,7 @@ type VM struct {
 // `deserCost` sets the gas cost of deserializing one byte of data.
 func NewVM(dataDir string, supportedCapabilities []string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	// TODO: expose config variant of NewVM
-	cache, err := api.InitCache(types.Config{
+	cache, err := api.InitCache(types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               dataDir,
 			AvailableCapabilities: supportedCapabilities,

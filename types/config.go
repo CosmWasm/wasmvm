@@ -4,13 +4,13 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type Config struct {
+type VMConfig struct {
 	WasmLimits WasmLimits   `msgpack:"wasm_limits"`
 	Cache      CacheOptions `msgpack:"cache"`
 }
 
 type WasmLimits struct {
-	MemoryPageLimit        *uint32 `msgpack:"memory_page_limit"`
+	InitialMemoryLimit     *uint32 `msgpack:"initial_memory_limit"`
 	TableSizeLimit         *uint32 `msgpack:"table_size_limit"`
 	MaxImports             *uint32 `msgpack:"max_imports"`
 	MaxFunctions           *uint32 `msgpack:"max_functions"`

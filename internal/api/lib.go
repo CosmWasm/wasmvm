@@ -42,7 +42,7 @@ type Cache struct {
 
 type Querier = types.Querier
 
-func InitCache(config types.Config) (Cache, error) {
+func InitCache(config types.VMConfig) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
