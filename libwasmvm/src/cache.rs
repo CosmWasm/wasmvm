@@ -38,7 +38,8 @@ pub extern "C" fn init_cache(
 }
 
 fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    let config = rmp_serde::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
+    let config =
+        serde_json::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
     // parse the supported capabilities
     let cache = unsafe { Cache::new_with_config(config) }?;
     let out = Box::new(cache);
@@ -430,7 +431,7 @@ fn do_get_pinned_metrics(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
 ) -> Result<UnmanagedVector, Error> {
     let pinned_metrics = PinnedMetrics::from(cache.pinned_metrics());
-    let edgerunner = rmp_serde::to_vec(&pinned_metrics)?;
+    let edgerunner = serde_json::to_vec(&pinned_metrics)?;
     Ok(UnmanagedVector::new(Some(edgerunner)))
 }
 
@@ -474,7 +475,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -494,7 +495,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(cache_ptr.is_null());
         assert!(error_msg.is_some());
@@ -517,7 +518,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -547,7 +548,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -603,7 +604,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -645,7 +646,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -695,7 +696,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -745,16 +746,16 @@ mod tests {
     #[test]
     fn analyze_code_works() {
         let dir: String = TempDir::new().unwrap().path().to_str().unwrap().to_owned();
-        let capabilities = "staking,stargate,iterator".to_string();
+        let capabilities = ["staking", "stargate", "iterator"].map(|c| c.to_string());
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
             &dir,
-            [capabilities],
+            capabilities,
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -796,7 +797,7 @@ mod tests {
         assert!(hackatom_report.contract_migrate_version.is_some);
         assert_eq!(hackatom_report.contract_migrate_version.value, 42);
 
-        let mut error_msg = UnmanagedVector::default();
+        let mut error_msg: UnmanagedVector = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
             cache_ptr,
             ByteSliceView::new(&checksum_ibc_reflect),
@@ -947,7 +948,7 @@ mod tests {
             Size::mebi(512),
             Size::mebi(32),
         ));
-        let config = rmp_serde::to_vec(&config).unwrap();
+        let config = serde_json::to_vec(&config).unwrap();
         let cache_ptr = init_cache(ByteSliceView::new(config.as_slice()), Some(&mut error_msg));
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -1048,29 +1049,9 @@ mod tests {
     #[test]
     fn test_config_msgpack() {
         // see companion test "TestConfigMsgPack" on the Go side
-        const BYTES: &[u8] = &[
-            0x82, 0xab, 0x77, 0x61, 0x73, 0x6d, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x73, 0x87,
-            0xb4, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x5f, 0x6d, 0x65, 0x6d, 0x6f, 0x72,
-            0x79, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0xce, 0x0, 0x0, 0x0, 0xf, 0xb0, 0x74, 0x61,
-            0x62, 0x6c, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74,
-            0xce, 0x0, 0x0, 0x0, 0x14, 0xab, 0x6d, 0x61, 0x78, 0x5f, 0x69, 0x6d, 0x70, 0x6f, 0x72,
-            0x74, 0x73, 0xce, 0x0, 0x0, 0x0, 0x64, 0xad, 0x6d, 0x61, 0x78, 0x5f, 0x66, 0x75, 0x6e,
-            0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0xc0, 0xb3, 0x6d, 0x61, 0x78, 0x5f, 0x66, 0x75,
-            0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0xce,
-            0x0, 0x0, 0x0, 0x0, 0xb9, 0x6d, 0x61, 0x78, 0x5f, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x5f,
-            0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d,
-            0x73, 0xc0, 0xb4, 0x6d, 0x61, 0x78, 0x5f, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f,
-            0x6e, 0x5f, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x73, 0xc0, 0xa5, 0x63, 0x61, 0x63,
-            0x68, 0x65, 0x84, 0xa8, 0x62, 0x61, 0x73, 0x65, 0x5f, 0x64, 0x69, 0x72, 0xa4, 0x2f,
-            0x74, 0x6d, 0x70, 0xb6, 0x61, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x5f,
-            0x63, 0x61, 0x70, 0x61, 0x62, 0x69, 0x6c, 0x69, 0x74, 0x69, 0x65, 0x73, 0x92, 0xa1,
-            0x61, 0xa1, 0x62, 0xb1, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x63, 0x61, 0x63,
-            0x68, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x64, 0xb5, 0x69, 0x6e, 0x73, 0x74, 0x61,
-            0x6e, 0x63, 0x65, 0x5f, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x5f, 0x6c, 0x69, 0x6d,
-            0x69, 0x74, 0x64,
-        ];
+        const JSON: &str = r#"{"wasm_limits":{"initial_memory_limit":15,"table_size_limit":20,"max_imports":100,"max_function_params":0},"cache":{"base_dir":"/tmp","available_capabilities":["a","b"],"memory_cache_size":100,"instance_memory_limit":100}}"#;
 
-        let config: Config = rmp_serde::from_slice(BYTES).unwrap();
+        let config: Config = serde_json::from_str(JSON).unwrap();
 
         assert_eq!(config.wasm_limits.initial_memory_limit(), 15);
         assert_eq!(config.wasm_limits.table_size_limit(), 20);

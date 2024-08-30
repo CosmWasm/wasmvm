@@ -22,8 +22,14 @@ pub enum RustError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
-    #[error("Cannot serialize to / deserialize from MessagePack: {msg}")]
+    #[error("Cannot deserialize from MessagePack: {msg}")]
     MessagePack {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
+    #[error("Cannot serialize to / deserialize from JSON: {msg}")]
+    Json {
         msg: String,
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
@@ -132,6 +138,16 @@ impl From<VmError> for RustError {
 impl From<ChecksumError> for RustError {
     fn from(_: ChecksumError) -> Self {
         RustError::checksum_err()
+    }
+}
+
+impl From<serde_json::Error> for RustError {
+    fn from(source: serde_json::Error) -> Self {
+        RustError::Json {
+            msg: source.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
     }
 }
 

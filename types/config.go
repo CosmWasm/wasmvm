@@ -1,35 +1,35 @@
 package types
 
 import (
-	"github.com/vmihailenco/msgpack/v5"
+	"encoding/json"
 )
 
 type VMConfig struct {
-	WasmLimits WasmLimits   `msgpack:"wasm_limits"`
-	Cache      CacheOptions `msgpack:"cache"`
+	WasmLimits WasmLimits   `json:"wasm_limits"`
+	Cache      CacheOptions `json:"cache"`
 }
 
 type WasmLimits struct {
-	InitialMemoryLimit     *uint32 `msgpack:"initial_memory_limit"`
-	TableSizeLimit         *uint32 `msgpack:"table_size_limit"`
-	MaxImports             *uint32 `msgpack:"max_imports"`
-	MaxFunctions           *uint32 `msgpack:"max_functions"`
-	MaxFunctionParams      *uint32 `msgpack:"max_function_params"`
-	MaxTotalFunctionParams *uint32 `msgpack:"max_total_function_params"`
-	MaxFunctionResults     *uint32 `msgpack:"max_function_results"`
+	InitialMemoryLimit     *uint32 `json:"initial_memory_limit,omitempty"`
+	TableSizeLimit         *uint32 `json:"table_size_limit,omitempty"`
+	MaxImports             *uint32 `json:"max_imports,omitempty"`
+	MaxFunctions           *uint32 `json:"max_functions,omitempty"`
+	MaxFunctionParams      *uint32 `json:"max_function_params,omitempty"`
+	MaxTotalFunctionParams *uint32 `json:"max_total_function_params,omitempty"`
+	MaxFunctionResults     *uint32 `json:"max_function_results,omitempty"`
 }
 
 type CacheOptions struct {
-	BaseDir               string   `msgpack:"base_dir"`
-	AvailableCapabilities []string `msgpack:"available_capabilities"`
-	MemoryCacheSize       Size     `msgpack:"memory_cache_size"`
-	InstanceMemoryLimit   Size     `msgpack:"instance_memory_limit"`
+	BaseDir               string   `json:"base_dir"`
+	AvailableCapabilities []string `json:"available_capabilities"`
+	MemoryCacheSize       Size     `json:"memory_cache_size"`
+	InstanceMemoryLimit   Size     `json:"instance_memory_limit"`
 }
 
 type Size struct{ uint32 }
 
-func (s Size) EncodeMsgpack(enc *msgpack.Encoder) error {
-	return enc.EncodeUint(uint64(s.uint32))
+func (s Size) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.uint32)
 }
 
 func NewSize(v uint32) Size {
