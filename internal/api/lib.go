@@ -5,6 +5,7 @@ package api
 import "C"
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -14,7 +15,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
-	"github.com/shamaton/msgpack/v2"
 )
 
 // Value types
@@ -63,7 +63,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 	}
 
-	configBytes, err := msgpack.Marshal(config)
+	configBytes, err := json.Marshal(config)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not serialize config")
 	}
