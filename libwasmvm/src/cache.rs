@@ -1047,8 +1047,8 @@ mod tests {
     }
 
     #[test]
-    fn test_config_msgpack() {
-        // see companion test "TestConfigMsgPack" on the Go side
+    fn test_config_json() {
+        // see companion test "TestConfigJSON" on the Go side
         const JSON: &str = r#"{"wasm_limits":{"initial_memory_limit":15,"table_size_limit":20,"max_imports":100,"max_function_params":0},"cache":{"base_dir":"/tmp","available_capabilities":["a","b"],"memory_cache_size":100,"instance_memory_limit":100}}"#;
 
         let config: Config = serde_json::from_str(JSON).unwrap();

@@ -13,8 +13,8 @@ func Ptr[T any](v T) *T {
 	return &v
 }
 
-func TestConfigMsgPack(t *testing.T) {
-	// see companion test "test_config_msgpack" on the Rust side
+func TestConfigJSON(t *testing.T) {
+	// see companion test "test_config_json" on the Rust side
 	config := VMConfig{
 		WasmLimits: WasmLimits{
 			InitialMemoryLimit: Ptr(uint32(15)),
