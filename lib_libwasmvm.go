@@ -30,18 +30,14 @@ type VM struct {
 // `cacheSize` sets the size in MiB of an in-memory cache for e.g. module caching. Set to 0 to disable.
 // `deserCost` sets the gas cost of deserializing one byte of data.
 func NewVM(dataDir string, supportedCapabilities []string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
-	cache, err := api.InitCache(types.VMConfig{
+	return NewVMWithConfig(types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:               dataDir,
 			AvailableCapabilities: supportedCapabilities,
 			MemoryCacheSize:       types.NewSizeMebi(cacheSize),
 			InstanceMemoryLimit:   types.NewSizeMebi(memoryLimit),
 		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &VM{cache: cache, printDebug: printDebug}, nil
+	}, printDebug)
 }
 
 // NewVMWithConfig creates a new VM with a custom configuration.
