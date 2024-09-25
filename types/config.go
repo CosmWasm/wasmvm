@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 )
 
+// VMConfig defines the configuration for the VM.
+// For full documentation see the Rust side:
+// https://github.com/CosmWasm/cosmwasm/blob/main/packages/vm/src/config.rs#L27
 type VMConfig struct {
 	WasmLimits WasmLimits   `json:"wasm_limits"`
 	Cache      CacheOptions `json:"cache"`

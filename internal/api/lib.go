@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -49,7 +50,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 		return Cache{}, fmt.Errorf("Could not create base directory")
 	}
 
-	lockfile, err := os.OpenFile(config.Cache.BaseDir+"/exclusive.lock", os.O_WRONLY|os.O_CREATE, 0o666)
+	lockfile, err := os.OpenFile(filepath.Join(config.Cache.BaseDir, "exclusive.lock"), os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
 	}
