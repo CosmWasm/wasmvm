@@ -6,12 +6,15 @@ import (
 
 // VMConfig defines the configuration for the VM.
 // For full documentation see the Rust side:
-// https://github.com/CosmWasm/cosmwasm/blob/main/packages/vm/src/config.rs#L27
+// https://docs.rs/cosmwasm-vm/2.2.0-rc.1/cosmwasm_vm/struct.Config.html
 type VMConfig struct {
 	WasmLimits WasmLimits   `json:"wasm_limits"`
 	Cache      CacheOptions `json:"cache"`
 }
 
+// WasmLimits defines limits for static validation of wasm code that is stored on chain.
+// For full documentation see the Rust side:
+// https://docs.rs/cosmwasm-vm/2.2.0-rc.1/cosmwasm_vm/struct.WasmLimits.html
 type WasmLimits struct {
 	InitialMemoryLimit     *uint32 `json:"initial_memory_limit,omitempty"`
 	TableSizeLimit         *uint32 `json:"table_size_limit,omitempty"`
