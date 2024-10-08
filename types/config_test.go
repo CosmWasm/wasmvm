@@ -33,5 +33,4 @@ func TestConfigJSON(t *testing.T) {
 	bz, err := json.Marshal(config)
 	require.NoError(t, err)
 	assert.Equal(t, expected, string(bz))
-
 }

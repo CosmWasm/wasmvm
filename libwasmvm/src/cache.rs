@@ -455,9 +455,7 @@ mod tests {
 
     use super::*;
     use cosmwasm_vm::{CacheOptions, Config, Size};
-    use std::{
-        cmp::Ordering, collections::HashSet, iter::FromIterator, path::PathBuf, str::FromStr,
-    };
+    use std::{cmp::Ordering, collections::HashSet, iter::FromIterator, path::PathBuf};
     use tempfile::TempDir;
 
     static HACKATOM: &[u8] = include_bytes!("../../testdata/hackatom.wasm");
@@ -470,7 +468,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -490,7 +488,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -513,7 +511,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -543,7 +541,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -599,7 +597,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -641,7 +639,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -691,7 +689,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
@@ -750,7 +748,7 @@ mod tests {
 
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             capabilities,
             Size::mebi(512),
             Size::mebi(32),
@@ -943,7 +941,7 @@ mod tests {
         // Init cache
         let mut error_msg = UnmanagedVector::default();
         let config = Config::new(CacheOptions::new(
-            &dir,
+            dir,
             [capabilities],
             Size::mebi(512),
             Size::mebi(32),
