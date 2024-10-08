@@ -217,18 +217,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
-
-[[package]]
-name = "arrayvec"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -292,16 +280,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "blake3"
-version = "1.5.4"
+name = "blake2"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d82033247fd8e890df8f740e407ad4d038debb9eb1f40533fffb32e7d17dc6f7"
+checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
 dependencies = [
- "arrayref",
- "arrayvec",
- "cc",
- "cfg-if",
- "constant_time_eq",
+ "digest",
 ]
 
 [[package]]
@@ -439,12 +423,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
-name = "constant_time_eq"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
-
-[[package]]
 name = "corosensei"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -459,13 +437,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -487,8 +465,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -497,8 +475,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 dependencies = [
  "base64",
  "bech32",
@@ -520,11 +498,11 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 dependencies = [
  "bech32",
- "blake3",
+ "blake2",
  "bytes",
  "clru",
  "cosmwasm-core",
@@ -549,10 +527,10 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.1#37126d3e847e69196f91003c4b9fe69ecd7474aa"
+version = "2.2.0-rc.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0-rc.2#f13b0a7cfcac12e187f7fcb48ce76e29223f1b66"
 dependencies = [
- "blake3",
+ "blake2",
  "proc-macro2",
  "quote",
  "syn 2.0.79",
