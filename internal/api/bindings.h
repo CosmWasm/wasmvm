@@ -491,6 +491,19 @@ struct UnmanagedVector migrate(struct cache_t *cache,
                                struct GasReport *gas_report,
                                struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector migrate_with_info(struct cache_t *cache,
+                                         struct ByteSliceView checksum,
+                                         struct ByteSliceView env,
+                                         struct ByteSliceView msg,
+                                         struct ByteSliceView migrate_info,
+                                         struct Db db,
+                                         struct GoApi api,
+                                         struct GoQuerier querier,
+                                         uint64_t gas_limit,
+                                         bool print_debug,
+                                         struct GasReport *gas_report,
+                                         struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector sudo(struct cache_t *cache,
                             struct ByteSliceView checksum,
                             struct ByteSliceView env,

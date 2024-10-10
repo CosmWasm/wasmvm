@@ -262,6 +262,50 @@ func (vm *VM) Migrate(
 	return &result, gasReport.UsedInternally, nil
 }
 
+// MigrateWithInfo will migrate an existing contract to a new code binary.
+// This takes storage of the data from the original contract and the Checksum of the new contract that should
+// replace it. This allows it to run a migration step if needed, or return an error if unable to migrate
+// the given data.
+//
+// MigrateMsg has some data on how to perform the migration.
+//
+// MigrateWithInfo takes one more argument - `migateInfo`. It consist of an additional data
+// related to the on-chain current contract's state version.
+func (vm *VM) MigrateWithInfo(
+	checksum Checksum,
+	env types.Env,
+	migrateMsg []byte,
+	migrateInfo types.MigrateInfo,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.ContractResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	migrateBin, err := json.Marshal(migrateInfo)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	data, gasReport, err := api.MigrateWithInfo(vm.cache, checksum, envBin, migrateMsg, migrateBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.ContractResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 // Sudo allows native Go modules to make priviledged (sudo) calls on the contract.
 // The contract can expose entry points that cannot be triggered by any transaction, but only via
 // native Go modules, and delegate the access control to the system.

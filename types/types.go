@@ -218,6 +218,21 @@ func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
 // never result in a "None" value on the Rust side, making the "Option" pointless.
 type Array[C any] []C
 
+// The structure contains additional information related to the
+// contract's migration procedure - the sender address and
+// the contract's migrate version currently stored on the blockchain.
+// The `OldMigrateVersion` is optional, since there is no guarantee
+// that the currently stored contract's binary contains that information.
+type MigrateInfo struct {
+	// Address of the sender.
+	//
+	// This is the `sender` field from [`MsgMigrateContract`](https://github.com/CosmWasm/wasmd/blob/v0.53.0/proto/cosmwasm/wasm/v1/tx.proto#L217-L233).
+	Sender HumanAddress `json:"sender"`
+	// Migrate version of the previous contract. It's optional, since
+	// adding the version number to the binary is not a mandatory feature.
+	OldMigrateVersion *uint64 `json:"old_migrate_version"`
+}
+
 // MarshalJSON ensures that we get "[]" for nil arrays
 func (a Array[C]) MarshalJSON() ([]byte, error) {
 	if len(a) == 0 {
