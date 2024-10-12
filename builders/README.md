@@ -1,6 +1,6 @@
 # Cross Compilation Scripts
 
-As this library is targetting go developers, we cannot assume a properly set up
+As this library is targeting go developers, we cannot assume a properly set up
 rust environment on their system. Further, when importing this library, there is
 no clean way to add a `libwasmvm.{so,dll,dylib}`. It needs to be committed with
 the tagged (go) release in order to be easily usable.
@@ -23,7 +23,7 @@ See those DockerHub repos for all available versions of the builder images.
 
 **Unreleased**
 
-- Update Rust to 1.80.0.
+- Update Rust to 1.81.0.
 - Update Dockerfile.cross from Debian Bullseye to Bookworm ([#533])
 - Rename `.cargo/config` to `.cargo/config.toml` to silence warning
 
