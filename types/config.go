@@ -16,20 +16,20 @@ type VMConfig struct {
 // For full documentation see the Rust side:
 // https://docs.rs/cosmwasm-vm/2.2.0-rc.1/cosmwasm_vm/struct.WasmLimits.html
 type WasmLimits struct {
-	InitialMemoryLimit     *uint32 `json:"initial_memory_limit,omitempty"`
-	TableSizeLimit         *uint32 `json:"table_size_limit,omitempty"`
-	MaxImports             *uint32 `json:"max_imports,omitempty"`
-	MaxFunctions           *uint32 `json:"max_functions,omitempty"`
-	MaxFunctionParams      *uint32 `json:"max_function_params,omitempty"`
-	MaxTotalFunctionParams *uint32 `json:"max_total_function_params,omitempty"`
-	MaxFunctionResults     *uint32 `json:"max_function_results,omitempty"`
+	InitialMemoryLimitPages *uint32 `json:"initial_memory_limit_pages,omitempty"`
+	TableSizeLimitElements  *uint32 `json:"table_size_limit_elements,omitempty"`
+	MaxImports              *uint32 `json:"max_imports,omitempty"`
+	MaxFunctions            *uint32 `json:"max_functions,omitempty"`
+	MaxFunctionParams       *uint32 `json:"max_function_params,omitempty"`
+	MaxTotalFunctionParams  *uint32 `json:"max_total_function_params,omitempty"`
+	MaxFunctionResults      *uint32 `json:"max_function_results,omitempty"`
 }
 
 type CacheOptions struct {
-	BaseDir               string   `json:"base_dir"`
-	AvailableCapabilities []string `json:"available_capabilities"`
-	MemoryCacheSize       Size     `json:"memory_cache_size"`
-	InstanceMemoryLimit   Size     `json:"instance_memory_limit"`
+	BaseDir                  string   `json:"base_dir"`
+	AvailableCapabilities    []string `json:"available_capabilities"`
+	MemoryCacheSizeBytes     Size     `json:"memory_cache_size_bytes"`
+	InstanceMemoryLimitBytes Size     `json:"instance_memory_limit_bytes"`
 }
 
 type Size struct{ uint32 }

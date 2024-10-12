@@ -32,10 +32,10 @@ type VM struct {
 func NewVM(dataDir string, supportedCapabilities []string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*VM, error) {
 	return NewVMWithConfig(types.VMConfig{
 		Cache: types.CacheOptions{
-			BaseDir:               dataDir,
-			AvailableCapabilities: supportedCapabilities,
-			MemoryCacheSize:       types.NewSizeMebi(cacheSize),
-			InstanceMemoryLimit:   types.NewSizeMebi(memoryLimit),
+			BaseDir:                  dataDir,
+			AvailableCapabilities:    supportedCapabilities,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(cacheSize),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(memoryLimit),
 		},
 	}, printDebug)
 }
