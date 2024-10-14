@@ -23,6 +23,8 @@ See those DockerHub repos for all available versions of the builder images.
 
 **Unreleased**
 
+**Version 0101:**
+
 - Update Rust to 1.81.0.
 - Update Dockerfile.cross from Debian Bullseye to Bookworm ([#533])
 - Rename `.cargo/config` to `.cargo/config.toml` to silence warning
