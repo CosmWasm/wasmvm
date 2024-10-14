@@ -33,7 +33,15 @@ func TestInitAndReleaseCache(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache, err := InitCache(config)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -46,7 +54,15 @@ func TestInitCacheWorksForNonExistentDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
-	cache, err := InitCache(createMe, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  createMe,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache, err := InitCache(config)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -56,7 +72,15 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 	// https://gist.github.com/doctaphred/d01d05291546186941e1b7ddc02034d3
 	// On Unix we should not have permission to create this.
 	cannotBeCreated := "/foo:bar"
-	_, err := InitCache(cannotBeCreated, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  cannotBeCreated,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	_, err := InitCache(config)
 	require.ErrorContains(t, err, "Could not create base directory")
 }
 
@@ -65,16 +89,40 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	cache1, err1 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config1 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache1, err1 := InitCache(config1)
 	require.NoError(t, err1)
 
-	_, err2 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config2 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	_, err2 := InitCache(config2)
 	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
 
 	ReleaseCache(cache1)
 
 	// Now we can try again
-	cache3, err3 := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config3 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache3, err3 := InitCache(config3)
 	require.NoError(t, err3)
 	ReleaseCache(cache3)
 }
@@ -90,11 +138,35 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 	defer os.RemoveAll(tmpdir2)
 	defer os.RemoveAll(tmpdir3)
 
-	cache1, err1 := InitCache(tmpdir1, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config1 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir1,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache1, err1 := InitCache(config1)
 	require.NoError(t, err1)
-	cache2, err2 := InitCache(tmpdir2, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config2 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir2,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache2, err2 := InitCache(config2)
 	require.NoError(t, err2)
-	cache3, err3 := InitCache(tmpdir3, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config3 := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir3,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache3, err3 := InitCache(config3)
 	require.NoError(t, err3)
 
 	ReleaseCache(cache1)
@@ -106,7 +178,15 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	cache, err := InitCache(tmpdir, []string{}, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    []string{},
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache, err := InitCache(config)
 	require.NoError(t, err)
 	ReleaseCache(cache)
 }
@@ -114,7 +194,15 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 func withCache(t testing.TB) (Cache, func()) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tmpdir,
+			AvailableCapabilities:    TESTING_CAPABILITIES,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(TESTING_CACHE_SIZE),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(TESTING_MEMORY_LIMIT),
+		},
+	}
+	cache, err := InitCache(config)
 	require.NoError(t, err)
 
 	cleanup := func() {

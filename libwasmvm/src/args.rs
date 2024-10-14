@@ -1,6 +1,5 @@
 // store some common string for argument names
-pub const DATA_DIR_ARG: &str = "data_dir";
-pub const AVAILABLE_CAPABILITIES_ARG: &str = "available_capabilities";
+pub const CONFIG_ARG: &str = "config";
 pub const CACHE_ARG: &str = "cache";
 pub const WASM_ARG: &str = "wasm";
 pub const CHECKSUM_ARG: &str = "checksum";
