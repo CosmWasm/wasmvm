@@ -7,6 +7,9 @@
 
 # no static libraries (35MB+)
 /internal/api/lib*.a
+/internal/api/lib*.so
+/internal/api/lib*.dylib
+/internal/api/libwasmvm.x86_64.so
 
 # artifacts from compile tests
 /build/

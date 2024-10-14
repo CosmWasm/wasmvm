@@ -380,6 +380,12 @@ jobs:
             git add ./internal/api
             git commit --allow-empty -m '[skip ci] Built release libraries'
             git push origin $CIRCLE_BRANCH
+            git rm --cached internal/api/libwasmvm.x86_64.so 
+            git rm --cached internal/api/libwasmvm.aarch64.so
+            git rm --cached internal/api/libwasmvm.dylib
+            git add ./internal/api
+            git commit -m '[skip ci] Ignore generated artifacts'
+            git push origin $CIRCLE_BRANCH
 
   build_static_lib:
     machine:
