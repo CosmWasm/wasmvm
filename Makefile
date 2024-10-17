@@ -48,6 +48,11 @@ build-libwasmvm:
 	cp libwasmvm/target/release/$(SHARED_LIB_SRC) internal/api/$(SHARED_LIB_DST)
 	make update-bindings
 
+# build and show the Rust documentation of the wasmvm
+.PHONY: doc-rust
+doc-rust:
+	(cd libwasmvm && cargo doc --no-deps --open)
+
 .PHONY: build-go
 build-go:
 	go build ./...
