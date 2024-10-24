@@ -1,5 +1,5 @@
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0101
+BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0102
 # Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
 # This image is currently not published.
 ALPINE_TESTER := cosmwasm/alpine-tester:local

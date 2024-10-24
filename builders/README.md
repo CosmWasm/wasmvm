@@ -23,6 +23,10 @@ See those DockerHub repos for all available versions of the builder images.
 
 **Unreleased**
 
+**Version 0102:**
+
+- Update Rust to 1.82.0.
+
 **Version 0101:**
 
 - Update Rust to 1.81.0.
