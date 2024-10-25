@@ -1,6 +1,6 @@
 # Versioned by a simple counter that is not bound to a specific CosmWasm version
 # See builders/README.md
-BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0101
+BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0102
 
 .PHONY: docker-image-debian
 docker-image-debian:
