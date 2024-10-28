@@ -58,11 +58,11 @@ func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 }
 
-func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.save_wasm(cache.ptr, w, cbool(false), &errmsg)
+	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(persist), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -73,7 +73,7 @@ func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.save_wasm(cache.ptr, w, cbool(true), &errmsg)
+	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(true), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}

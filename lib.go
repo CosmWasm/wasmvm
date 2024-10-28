@@ -57,7 +57,14 @@ func (vm *VM) Create(code WasmCode) (Checksum, error) {
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
 func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
-	return api.StoreCode(vm.cache, code)
+	return api.StoreCode(vm.cache, code, true)
+}
+
+// SimulateStoreCode is the same as StoreCode but does not actually store the code.
+// This is useful for simulating all the validations happening in StoreCode without actually
+// writing anything to disk.
+func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, error) {
+	return api.StoreCode(vm.cache, code, false)
 }
 
 // StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
