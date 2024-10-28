@@ -86,35 +86,35 @@ fn do_init_cache(
 }
 
 #[no_mangle]
-pub extern "C" fn save_wasm(
+pub extern "C" fn store_code(
     cache: *mut cache_t,
     wasm: ByteSliceView,
-    unchecked: bool,
+    checked: bool,
+    persist: bool,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
-        Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm, unchecked)))
-            .unwrap_or_else(|err| {
-                eprintln!("Panic in do_save_wasm: {err:?}");
-                Err(Error::panic())
-            }),
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_store_code(c, wasm, checked, persist)
+        }))
+        .unwrap_or_else(|err| {
+            eprintln!("Panic in do_save_wasm: {err:?}");
+            Err(Error::panic())
+        }),
         None => Err(Error::unset_arg(CACHE_ARG)),
     };
     let checksum = handle_c_error_binary(r, error_msg);
     UnmanagedVector::new(Some(checksum))
 }
 
-fn do_save_wasm(
+fn do_store_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
-    unchecked: bool,
+    checked: bool,
+    persist: bool,
 ) -> Result<Checksum, Error> {
     let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    let checksum = if unchecked {
-        cache.save_wasm_unchecked(wasm)?
-    } else {
-        cache.save_wasm(wasm)?
-    };
+    let checksum = cache.store_code(wasm, checked, persist)?;
     Ok(checksum)
 }
 
@@ -557,10 +557,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        save_wasm(
+        store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -586,10 +587,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum = save_wasm(
+        let checksum = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -641,10 +643,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum = save_wasm(
+        let checksum = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -682,10 +685,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum = save_wasm(
+        let checksum = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -731,10 +735,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum = save_wasm(
+        let checksum = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -789,10 +794,11 @@ mod tests {
         let _ = error_msg.consume();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum_hackatom = save_wasm(
+        let checksum_hackatom = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -800,10 +806,11 @@ mod tests {
         let checksum_hackatom = checksum_hackatom.consume().unwrap_or_default();
 
         let mut error_msg = UnmanagedVector::default();
-        let checksum_ibc_reflect = save_wasm(
+        let checksum_ibc_reflect = store_code(
             cache_ptr,
             ByteSliceView::new(IBC_REFLECT),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
@@ -988,10 +995,11 @@ mod tests {
 
         // Save wasm
         let mut error_msg = UnmanagedVector::default();
-        let checksum_hackatom = save_wasm(
+        let checksum_hackatom = store_code(
             cache_ptr,
             ByteSliceView::new(HACKATOM),
             false,
+            true,
             Some(&mut error_msg),
         );
         assert!(error_msg.is_none());
