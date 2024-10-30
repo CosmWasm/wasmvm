@@ -19,6 +19,7 @@ use crate::args::{ARG1, ARG2, ARG3, CACHE_ARG, CHECKSUM_ARG, GAS_REPORT_ARG};
 use crate::cache::{cache_t, to_cache};
 use crate::db::Db;
 use crate::error::{handle_c_error_binary, Error};
+use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -529,6 +530,7 @@ fn call_2_args(
         }))
         .unwrap_or_else(|err| {
             eprintln!("Panic in do_call_2_args: {err:?}");
+            handle_vm_panic();
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -623,6 +625,7 @@ fn call_3_args(
         }))
         .unwrap_or_else(|err| {
             eprintln!("Panic in do_call_3_args: {err:?}");
+            handle_vm_panic();
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
