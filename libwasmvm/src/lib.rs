@@ -9,6 +9,7 @@ mod db;
 mod error;
 mod gas_meter;
 mod gas_report;
+mod handle_vm_panic;
 mod iterator;
 mod memory;
 mod querier;

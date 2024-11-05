@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
+use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
@@ -31,7 +32,7 @@ pub extern "C" fn init_cache(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> *mut cache_t {
     let r = catch_unwind(|| do_init_cache(config)).unwrap_or_else(|err| {
-        eprintln!("Panic in do_init_cache: {err:?}");
+        handle_vm_panic("do_init_cache", err);
         Err(Error::panic())
     });
     handle_c_error_ptr(r, error_msg) as *mut cache_t
@@ -56,7 +57,7 @@ pub extern "C" fn save_wasm(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_save_wasm(c, wasm, unchecked)))
             .unwrap_or_else(|err| {
-                eprintln!("Panic in do_save_wasm: {err:?}");
+                handle_vm_panic("do_save_wasm", err);
                 Err(Error::panic())
             }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -88,7 +89,7 @@ pub extern "C" fn remove_wasm(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_remove_wasm(c, checksum)))
             .unwrap_or_else(|err| {
-                eprintln!("Panic in do_remove_wasm: {err:?}");
+                handle_vm_panic("do_remove_wasm", err);
                 Err(Error::panic())
             }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -117,7 +118,7 @@ pub extern "C" fn load_wasm(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
             .unwrap_or_else(|err| {
-                eprintln!("Panic in do_load_wasm: {err:?}");
+                handle_vm_panic("do_load_wasm", err);
                 Err(Error::panic())
             }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -147,7 +148,7 @@ pub extern "C" fn pin(
     let r = match to_cache(cache) {
         Some(c) => {
             catch_unwind(AssertUnwindSafe(move || do_pin(c, checksum))).unwrap_or_else(|err| {
-                eprintln!("Panic in do_pin: {err:?}");
+                handle_vm_panic("do_pin", err);
                 Err(Error::panic())
             })
         }
@@ -177,7 +178,7 @@ pub extern "C" fn unpin(
     let r = match to_cache(cache) {
         Some(c) => {
             catch_unwind(AssertUnwindSafe(move || do_unpin(c, checksum))).unwrap_or_else(|err| {
-                eprintln!("Panic in do_unpin: {err:?}");
+                handle_vm_panic("do_unpin", err);
                 Err(Error::panic())
             })
         }
@@ -285,7 +286,7 @@ pub extern "C" fn analyze_code(
     let r = match to_cache(cache) {
         Some(c) => catch_unwind(AssertUnwindSafe(move || do_analyze_code(c, checksum)))
             .unwrap_or_else(|err| {
-                eprintln!("Panic in do_analyze_code: {err:?}");
+                handle_vm_panic("do_analyze_code", err);
                 Err(Error::panic())
             }),
         None => Err(Error::unset_arg(CACHE_ARG)),
@@ -363,7 +364,7 @@ pub extern "C" fn get_metrics(
     let r = match to_cache(cache) {
         Some(c) => {
             catch_unwind(AssertUnwindSafe(move || do_get_metrics(c))).unwrap_or_else(|err| {
-                eprintln!("Panic in do_get_metrics: {err:?}");
+                handle_vm_panic("do_get_metrics", err);
                 Err(Error::panic())
             })
         }
@@ -418,7 +419,7 @@ pub extern "C" fn get_pinned_metrics(
     let r = match to_cache(cache) {
         Some(c) => {
             catch_unwind(AssertUnwindSafe(move || do_get_pinned_metrics(c))).unwrap_or_else(|err| {
-                eprintln!("Panic in do_get_pinned_metrics: {err:?}");
+                handle_vm_panic("do_get_pinned_metrics", err);
                 Err(Error::panic())
             })
         }
