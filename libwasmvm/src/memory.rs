@@ -216,10 +216,14 @@ impl UnmanagedVector {
         match source {
             Some(data) => {
                 let (ptr, len, cap) = {
-                    // Can be replaced with Vec::into_raw_parts when stable
-                    // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.into_raw_parts
-                    let mut data = mem::ManuallyDrop::new(data);
-                    (data.as_mut_ptr(), data.len(), data.capacity())
+                    if data.capacity() == 0 {
+                        (std::ptr::null_mut::<u8>(), 0, 0)
+                    } else {
+                        // Can be replaced with Vec::into_raw_parts when stable
+                        // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.into_raw_parts
+                        let mut data = mem::ManuallyDrop::new(data);
+                        (data.as_mut_ptr(), data.len(), data.capacity())
+                    }
                 };
                 Self {
                     is_none: false,
@@ -260,6 +264,8 @@ impl UnmanagedVector {
     pub fn consume(self) -> Option<Vec<u8>> {
         if self.is_none {
             None
+        } else if self.cap == 0 {
+            Some(Vec::new())
         } else {
             Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
         }
@@ -348,7 +354,7 @@ mod test {
         // Empty data
         let x = UnmanagedVector::new(Some(vec![]));
         assert!(!x.is_none);
-        assert_eq!(x.ptr as usize, 0x01); // We probably don't get any guarantee for this, but good to know where the 0x01 marker pointer can come from
+        assert_eq!(x.ptr as usize, 0);
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
 
@@ -372,7 +378,7 @@ mod test {
         // Empty data
         let x = UnmanagedVector::some(vec![]);
         assert!(!x.is_none);
-        assert_eq!(x.ptr as usize, 0x01); // We probably don't get any guarantee for this, but good to know where the 0x01 marker pointer can come from
+        assert_eq!(x.ptr as usize, 0);
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
     }
