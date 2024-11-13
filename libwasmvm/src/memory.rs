@@ -218,6 +218,10 @@ impl UnmanagedVector {
             Some(data) => {
                 let (ptr, len, cap) = {
                     if data.capacity() == 0 {
+                        // we need to explicitly use a null pointer here, since `as_mut_ptr`
+                        // always returns a dangling pointer (e.g. 0x01) on an empty Vec,
+                        // which trips up Go's pointer checks.
+                        // This is safe because the Vec has not allocated, so no memory is leaked.
                         (std::ptr::null_mut::<u8>(), 0, 0)
                     } else {
                         // Can be replaced with Vec::into_raw_parts when stable
@@ -266,6 +270,10 @@ impl UnmanagedVector {
         if self.is_none {
             None
         } else if self.cap == 0 {
+            // capacity 0 means the vector was never allocated and
+            // the ptr field does not point to an actual byte buffer
+            // (we normalize to `null` in `UnmanagedVector::new`),
+            // so no memory is leaked by ignoring the ptr field here.
             Some(Vec::new())
         } else {
             Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
