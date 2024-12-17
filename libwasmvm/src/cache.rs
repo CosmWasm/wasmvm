@@ -72,12 +72,7 @@ fn do_save_wasm(
     unchecked: bool,
 ) -> Result<Checksum, Error> {
     let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    let checksum = if unchecked {
-        cache.save_wasm_unchecked(wasm)?
-    } else {
-        cache.save_wasm(wasm)?
-    };
-    Ok(checksum)
+    Ok(cache.store_code(wasm, !unchecked, true)?)
 }
 
 #[no_mangle]
