@@ -163,7 +163,7 @@ typedef struct ByteSliceView {
  * ```
  *
  *
- * If you want to mutate data, you need to comsume the vector and create a new one:
+ * If you want to mutate data, you need to consume the vector and create a new one:
  *
  * ```rust
  * # use wasmvm::{UnmanagedVector};
