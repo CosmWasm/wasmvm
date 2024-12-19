@@ -1210,7 +1210,7 @@ func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier types.Querier, gasExpected uint64) types.ContractResult {
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -1326,7 +1326,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	// we need this to handle the custom requests from the reflect contract
 	innerQuerier := querier.(*MockQuerier)
 	innerQuerier.Custom = ReflectCustom{}
-	querier = Querier(innerQuerier)
+	querier = types.Querier(innerQuerier)
 
 	// make a valid query to the other address
 	queryMsg := QueryMsg{
