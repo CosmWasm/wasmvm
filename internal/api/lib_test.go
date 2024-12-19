@@ -219,7 +219,7 @@ func TestStoreCodeAndGetCode(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 	expectedChecksum := sha256.Sum256(wasm)
 	require.Equal(t, expectedChecksum[:], checksum)
@@ -236,7 +236,7 @@ func TestRemoveCode(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	// First removal works
@@ -253,7 +253,7 @@ func TestStoreCodeFailsWithBadData(t *testing.T) {
 	defer cleanup()
 
 	wasm := []byte("some invalid data")
-	_, err := StoreCode(cache, wasm)
+	_, err := StoreCode(cache, wasm, true)
 	require.Error(t, err)
 }
 
@@ -281,7 +281,7 @@ func TestPin(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -324,7 +324,7 @@ func TestUnpin(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -368,7 +368,7 @@ func TestGetMetrics(t *testing.T) {
 	// Store contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	// GetMetrics 2
@@ -483,7 +483,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -492,7 +492,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// Store contract 2
 	cyberpunkWasm, err := os.ReadFile("../../testdata/cyberpunk.wasm")
 	require.NoError(t, err)
-	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm)
+	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, cyberpunkChecksum)
@@ -557,7 +557,7 @@ func TestInstantiate(t *testing.T) {
 	// create contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -1204,7 +1204,7 @@ func createFloaty2(t testing.TB, cache Cache) []byte {
 func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
 	wasm, err := os.ReadFile(wasmFile)
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 	return checksum
 }

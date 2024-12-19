@@ -102,6 +102,41 @@ func TestStoreCode(t *testing.T) {
 	}
 }
 
+func TestSimulateStoreCode(t *testing.T) {
+	vm := withVM(t)
+
+	hackatom, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	specs := map[string]struct {
+		wasm []byte
+		err  string
+	}{
+		"valid hackatom contract": {
+			wasm: hackatom,
+		},
+		"no wasm": {
+			wasm: []byte("foobar"),
+			err:  "Wasm bytecode could not be deserialized",
+		},
+	}
+
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			checksum, _, err := vm.SimulateStoreCode(spec.wasm, TESTING_GAS_LIMIT)
+
+			if spec.err != "" {
+				assert.ErrorContains(t, err, spec.err)
+			} else {
+				assert.NoError(t, err)
+
+				_, err = vm.GetCode(checksum)
+				assert.ErrorContains(t, err, "Error opening Wasm file for reading")
+			}
+		})
+	}
+}
+
 func TestStoreCodeAndGet(t *testing.T) {
 	vm := withVM(t)
 
