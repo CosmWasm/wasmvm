@@ -48,15 +48,17 @@ func (w *WazeroRuntime) ReleaseCache(handle any) {
 	w.runtime.Close(context.Background())
 }
 
-func (w *WazeroRuntime) StoreCode(code []byte) ([]byte, error) {
+// StoreCode compiles the given Wasm code if not already present.
+// If 'persist' is true, it's also added to the in-memory codeCache.
+func (w *WazeroRuntime) StoreCode(cache api.Cache, code []byte, persist bool) ([]byte, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	checksum := sha256.Sum256(code)
 	csHex := hex.EncodeToString(checksum[:])
 
+	// If we already have a compiled module for this code, just return the checksum.
 	if _, exists := w.compiledModules[csHex]; exists {
-		// already stored
 		return checksum[:], nil
 	}
 
@@ -65,9 +67,20 @@ func (w *WazeroRuntime) StoreCode(code []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to compile module: %w", err)
 	}
 
-	w.codeCache[csHex] = code
+	// If persist is true, store the raw bytecode in our cache map.
+	if persist {
+		w.codeCache[csHex] = code
+	}
+
 	w.compiledModules[csHex] = compiled
+
 	return checksum[:], nil
+}
+
+// StoreCodeUnchecked always treats the code as if persist=true,
+// adding the compiled module and its raw bytecode to the cache.
+func (w *WazeroRuntime) StoreCodeUnchecked(code []byte) ([]byte, error) {
+	return w.StoreCode(nil, code, true)
 }
 
 func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {

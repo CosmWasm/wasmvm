@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/shamaton/msgpack/v2"
@@ -255,3 +256,5 @@ func (a *Array[C]) UnmarshalJSON(data []byte) error {
 	*a = raw
 	return nil
 }
+
+// Cache stores a reference to the runtime-specific cache handle and the lockfile.

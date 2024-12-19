@@ -11,7 +11,8 @@ type WasmRuntime interface {
 	ReleaseCache(handle any)
 
 	// Compilation and code storage
-	StoreCode(code []byte) ([]byte, error)
+	StoreCode(code []byte) ([]byte, error, bool)
+	StoreCodeUnchecked(code []byte) ([]byte, error)
 	GetCode(checksum []byte) ([]byte, error)
 	RemoveCode(checksum []byte) error
 	Pin(checksum []byte) error

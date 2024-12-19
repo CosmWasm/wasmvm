@@ -20,7 +20,6 @@ func init() {
 	currentRuntime = r
 }
 
-// Cache stores a reference to the runtime-specific cache handle and the lockfile.
 type Cache struct {
 	handle   any
 	lockfile os.File
@@ -59,7 +58,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 		return Cache{}, fmt.Errorf("failed to init cache: %w", err)
 	}
 
-	return Cache{handle: handle, lockfile: *lockfile}, nil
+	return types.Cache{handle: handle, lockfile: *lockfile}, nil
 }
 
 func ReleaseCache(cache Cache) {
@@ -67,11 +66,11 @@ func ReleaseCache(cache Cache) {
 	cache.lockfile.Close()
 }
 
-func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte) ([]byte, error, bool) {
 	return currentRuntime.StoreCode(wasm)
 }
 
-func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error, bool) {
 	return currentRuntime.StoreCode(wasm)
 }
 
