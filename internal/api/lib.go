@@ -63,10 +63,12 @@ func InitCache(config types.VMConfig) (Cache, error) {
 
 func ReleaseCache(cache Cache) {
 	currentRuntime.ReleaseCache(cache.handle)
-	cache.lockfile.Close()
 }
 
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
+	if cache.handle == nil {
+		return nil, fmt.Errorf("cache handle is nil")
+	}
 	checksum, err, _ := currentRuntime.StoreCode(wasm)
 	return checksum, err
 }

@@ -99,7 +99,7 @@ func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
 
 	mod, ok := w.compiledModules[csHex]
 	if !ok {
-		return errors.New("wasm file does not exist")
+		return errors.New("Wasm file does not exist")
 	}
 	mod.Close(context.Background())
 	delete(w.compiledModules, csHex)
@@ -108,12 +108,28 @@ func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
 }
 
 func (w *WazeroRuntime) Pin(checksum []byte) error {
-	// no-op for wazero
+	if len(checksum) != 32 {
+		return errors.New("Checksum not of length 32")
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if _, ok := w.codeCache[hex.EncodeToString(checksum)]; !ok {
+		return errors.New("Error opening Wasm file for reading")
+	}
+	// no-op on success
 	return nil
 }
 
 func (w *WazeroRuntime) Unpin(checksum []byte) error {
-	// no-op for wazero
+	if len(checksum) != 32 {
+		return errors.New("Checksum not of length 32")
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if _, ok := w.codeCache[hex.EncodeToString(checksum)]; !ok {
+		return errors.New("Error opening Wasm file for reading")
+	}
+	// no-op on success
 	return nil
 }
 
@@ -194,7 +210,9 @@ func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
 }
 
 func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
-	return &types.PinnedMetrics{}, nil
+	return &types.PinnedMetrics{
+		PerModule: []types.PerModuleEntry{},
+	}, nil
 }
 
 func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
