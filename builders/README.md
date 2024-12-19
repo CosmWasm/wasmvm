@@ -149,7 +149,7 @@ See those DockerHub repos for all available versions of the builder images.
 
 ## Usage
 
-Create the Docker images, capable of cross-compling Linux and MacOS dynamic
+Create the Docker images, capable of cross-compiling Linux and MacOS dynamic
 libs. As the builder images are all x86_64, it can be slow and memory intense to
 do this on a different architecture:
 
