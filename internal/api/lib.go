@@ -63,6 +63,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 
 	return Cache{handle: handle, lockfile: *lockfile}, nil
 }
+
 func ReleaseCache(cache Cache) {
 	currentRuntime.ReleaseCache(cache.handle)
 }
