@@ -1,17 +1,10 @@
 package api
 
-/*
-#include "bindings.h"
-*/
-import "C"
+// Just define a constant version here
+const wasmvmVersion = "6.9.0"
 
+// LibwasmvmVersion returns the version of this library as a string.
 func LibwasmvmVersion() (string, error) {
-	version_ptr, err := C.version_str()
-	if err != nil {
-		return "", err
-	}
-	// For C.GoString documentation see https://pkg.go.dev/cmd/cgo and
-	// https://gist.github.com/helinwang/2c7bd2867ea5110f70e6431a7c80cd9b
-	version_copy := C.GoString(version_ptr)
-	return version_copy, nil
+	// Since we're no longer using cgo, we return the hardcoded version.
+	return wasmvmVersion, nil
 }
