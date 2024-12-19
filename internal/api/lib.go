@@ -58,7 +58,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 		return Cache{}, fmt.Errorf("failed to init cache: %w", err)
 	}
 
-	return types.Cache{handle: handle, lockfile: *lockfile}, nil
+	return Cache{handle: handle, lockfile: *lockfile}, nil
 }
 
 func ReleaseCache(cache Cache) {
@@ -66,12 +66,14 @@ func ReleaseCache(cache Cache) {
 	cache.lockfile.Close()
 }
 
-func StoreCode(cache Cache, wasm []byte) ([]byte, error, bool) {
-	return currentRuntime.StoreCode(wasm)
+func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
+	checksum, err, _ := currentRuntime.StoreCode(wasm)
+	return checksum, err
 }
 
-func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error, bool) {
-	return currentRuntime.StoreCode(wasm)
+func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
+	checksum, err := currentRuntime.StoreCodeUnchecked(wasm)
+	return checksum, err
 }
 
 func RemoveCode(cache Cache, checksum []byte) error {

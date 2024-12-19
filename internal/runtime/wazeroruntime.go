@@ -1,4 +1,4 @@
-// file: internal/runtime/wazero_runtime.go
+// file: internal/runtime/wazeroruntime.go
 package runtime
 
 import (
@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 type WazeroRuntime struct {
@@ -48,39 +49,35 @@ func (w *WazeroRuntime) ReleaseCache(handle any) {
 	w.runtime.Close(context.Background())
 }
 
-// StoreCode compiles the given Wasm code if not already present.
-// If 'persist' is true, it's also added to the in-memory codeCache.
-func (w *WazeroRuntime) StoreCode(cache api.Cache, code []byte, persist bool) ([]byte, error) {
+// StoreCode stores the given WASM code in the runtime cache
+func (w *WazeroRuntime) StoreCode(code []byte) ([]byte, error, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	checksum := sha256.Sum256(code)
 	csHex := hex.EncodeToString(checksum[:])
 
-	// If we already have a compiled module for this code, just return the checksum.
+	// If we already have a compiled module for this code, just return the checksum
 	if _, exists := w.compiledModules[csHex]; exists {
-		return checksum[:], nil
+		return checksum[:], nil, true
 	}
 
 	compiled, err := w.runtime.CompileModule(context.Background(), code)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile module: %w", err)
+		return nil, fmt.Errorf("failed to compile module: %w", err), false
 	}
 
-	// If persist is true, store the raw bytecode in our cache map.
-	if persist {
-		w.codeCache[csHex] = code
-	}
-
+	// Always persist for unchecked store
+	w.codeCache[csHex] = code
 	w.compiledModules[csHex] = compiled
 
-	return checksum[:], nil
+	return checksum[:], nil, true
 }
 
-// StoreCodeUnchecked always treats the code as if persist=true,
-// adding the compiled module and its raw bytecode to the cache.
+// StoreCodeUnchecked always treats the code as if persist=true
 func (w *WazeroRuntime) StoreCodeUnchecked(code []byte) ([]byte, error) {
-	return w.StoreCode(nil, code, true)
+	checksum, err, _ := w.StoreCode(code)
+	return checksum, err
 }
 
 func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {

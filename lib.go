@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
@@ -28,6 +29,11 @@ type Querier = types.Querier
 
 // GasMeter is a read-only version of the sdk gas meter
 type GasMeter = types.GasMeter
+
+// Cache represents a cache instance used for storing Wasm code
+type Cache struct {
+	api.Cache
+}
 
 // LibwasmvmVersion returns the version of the loaded library
 // at runtime. This can be used for debugging to verify the loaded version
