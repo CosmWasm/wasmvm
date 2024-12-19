@@ -60,7 +60,7 @@ pub extern "C" fn store_code(
             do_store_code(c, wasm, checked, persist)
         }))
         .unwrap_or_else(|err| {
-            handle_vm_panic("do_save_wasm", err);
+            handle_vm_panic("do_store_code", err);
             Err(Error::panic())
         }),
         None => Err(Error::unset_arg(CACHE_ARG)),
