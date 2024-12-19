@@ -58,7 +58,7 @@ impl Vtable for IteratorVtable {}
 pub struct GoIter {
     pub gas_meter: *mut gas_meter_t,
     /// A reference which identifies the iterator and allows finding and accessing the
-    /// actual iterator instance in Go. Once fully initalized, this is immutable.
+    /// actual iterator instance in Go. Once fully initialized, this is immutable.
     pub reference: IteratorReference,
     pub vtable: IteratorVtable,
 }

@@ -6,7 +6,7 @@
 /// In fact, in Go we create a single global vtable variable holding and owning the
 /// function the vtables in Rust point to.
 ///
-/// The `Vtable` trait is created to find those vtables troughout the codebase.
+/// The `Vtable` trait is created to find those vtables throughout the codebase.
 ///
 /// ## Nullability
 ///

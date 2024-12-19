@@ -40,7 +40,7 @@ func LibwasmvmVersion() (string, error) {
 
 // CreateChecksum performs the hashing of Wasm bytes to obtain the CosmWasm checksum.
 //
-// Ony Wasm blobs are allowed as inputs and a magic byte check will be performed
+// Only Wasm blobs are allowed as inputs and a magic byte check will be performed
 // to avoid accidental misusage.
 func CreateChecksum(wasm []byte) (Checksum, error) {
 	if len(wasm) == 0 {

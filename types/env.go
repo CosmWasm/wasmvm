@@ -4,7 +4,7 @@ package types
 
 // Env defines the state of the blockchain environment this contract is
 // running in. This must contain only trusted data - nothing from the Tx itself
-// that has not been verfied (like Signer).
+// that has not been verified (like Signer).
 //
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {

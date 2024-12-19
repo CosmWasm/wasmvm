@@ -64,8 +64,8 @@ where the old name was deprecated.
 | `SubcallResponse`                 | `SubMsgResponse`                      | Contracts do not "call" each other but send messages around  |
 | `HumanizeAddress`                 | `HumanizeAddressFunc`                 | Follow [best practice for naming function types][ft]         |
 | `CanonicalizeAddress`             | `CanonicalizeAddressFunc`             | Follow [best practice for naming function types][ft]         |
-| `GoAPI.HumanAddress`              | `GoAPI.HumanizeAddress`               | Perfer verbs for converters                                  |
-| `GoAPI.CanonicalAddress`          | `GoAPI.CanonicalizeAddress`           | Perfer verbs for converters                                  |
+| `GoAPI.HumanAddress`              | `GoAPI.HumanizeAddress`               | Prefer verbs for converters                                  |
+| `GoAPI.CanonicalAddress`          | `GoAPI.CanonicalizeAddress`           | Prefer verbs for converters                                  |
 | `CosmosMsg.Stargate`              | `CosmosMsg.Any`                       | The message has nothing to do with Stargate                  |
 | `StargateMsg`                     | `AnyMsg`                              | The message has nothing to do with Stargate                  |
 | `QueryResponse`                   | `QueryResult`                         | Brings consistency with the naming of the other results      |

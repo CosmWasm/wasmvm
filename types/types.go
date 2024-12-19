@@ -115,7 +115,7 @@ type DenomUnit struct {
 // Modeled after the Cosmos SDK's [DecCoin] type.
 // However, in contrast to the Cosmos SDK the `amount` string MUST always have a dot at JSON level,
 // see <https://github.com/cosmos/cosmos-sdk/issues/10863>.
-// Also if Cosmos SDK choses to migrate away from fixed point decimals
+// Also if Cosmos SDK chooses to migrate away from fixed point decimals
 // (as shown [here](https://github.com/cosmos/cosmos-sdk/blob/v0.47.4/x/group/internal/math/dec.go#L13-L21) and discussed [here](https://github.com/cosmos/cosmos-sdk/issues/11783)),
 // wasmd needs to truncate the decimal places to 18.
 //
@@ -210,7 +210,7 @@ func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
 }
 
 // Array is a wrapper around a slice that ensures that we get "[]" JSON for nil values.
-// When unmarshaling, we get an empty slice for "[]" and "null".
+// When unmarshalling, we get an empty slice for "[]" and "null".
 //
 // This is needed for fields that are "Vec<C>" on the Rust side because `null` values
 // will result in an error there.
