@@ -109,7 +109,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 
 	ReleaseCache(cache1)
 

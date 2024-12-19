@@ -54,6 +54,10 @@ func (w *WazeroRuntime) StoreCode(code []byte) ([]byte, error, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	if len(code) == 0 {
+		return nil, errors.New("Wasm bytecode could not be deserialized"), false
+	}
+
 	checksum := sha256.Sum256(code)
 	csHex := hex.EncodeToString(checksum[:])
 
