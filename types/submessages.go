@@ -29,15 +29,15 @@ var toReplyOn = map[string]replyOn{
 	"never":   ReplyNever,
 }
 
-func (r replyOn) String() string {
-	return fromReplyOn[r]
+func (s replyOn) String() string {
+	return fromReplyOn[s]
 }
 
-func (s replyOn) MarshalJSON() ([]byte, error) {
+func (s replyOn) MarshalJSON() ([]byte, error) { //nolint:revive
 	return json.Marshal(s.String())
 }
 
-func (s *replyOn) UnmarshalJSON(b []byte) error {
+func (s *replyOn) UnmarshalJSON(b []byte) error { //nolint:revive
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {

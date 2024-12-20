@@ -28,7 +28,7 @@ var (
 func startCall() uint64 {
 	latestCallIDMutex.Lock()
 	defer latestCallIDMutex.Unlock()
-	latestCallID += 1
+	latestCallID++
 	return latestCallID
 }
 
@@ -65,7 +65,7 @@ func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64,
 
 	new_index := len(iteratorFrames[callID])
 	if new_index >= frameLenLimit {
-		return 0, fmt.Errorf("Reached iterator limit (%d)", frameLenLimit)
+		return 0, fmt.Errorf("reached iterator limit (%d)", frameLenLimit)
 	}
 
 	// store at array position `new_index`

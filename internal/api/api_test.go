@@ -5,9 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateAddressFailure(t *testing.T) {
@@ -24,7 +23,7 @@ func TestValidateAddressFailure(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 

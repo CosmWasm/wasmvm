@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,10 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 const (
@@ -81,7 +81,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 		},
 	}
 	_, err := InitCache(config)
-	require.ErrorContains(t, err, "Could not create base directory")
+	require.ErrorContains(t, err, "could not create base directory")
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
@@ -109,7 +109,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "could not lock exclusive.lock")
 
 	ReleaseCache(cache1)
 
@@ -381,7 +381,7 @@ func TestGetMetrics(t *testing.T) {
 	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -501,9 +501,9 @@ func TestGetPinnedMetrics(t *testing.T) {
 	findMetrics := func(list []types.PerModuleEntry, checksum types.Checksum) *types.PerModuleMetrics {
 		found := (*types.PerModuleMetrics)(nil)
 
-		for _, structure := range list {
-			if bytes.Equal(structure.Checksum, checksum) {
-				found = &structure.Metrics
+		for i := range list {
+			if bytes.Equal(list[i].Checksum, checksum) {
+				found = &list[i].Metrics
 				break
 			}
 		}
@@ -529,7 +529,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	igasMeter := types.GasMeter(gasMeter)
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -565,7 +565,7 @@ func TestInstantiate(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -593,7 +593,7 @@ func TestExecute(t *testing.T) {
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -658,7 +658,7 @@ func TestExecutePanic(t *testing.T) {
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -687,7 +687,7 @@ func TestExecuteUnreachable(t *testing.T) {
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -714,7 +714,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -752,7 +752,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -778,6 +778,9 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
 	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
+	if totalCost > math.MaxInt64 {
+		t.Fatal("gas cost overflow")
+	}
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
@@ -792,7 +795,7 @@ func BenchmarkContractCall(b *testing.B) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(b)
 	info := MockInfoBin(b, "creator")
 
@@ -826,7 +829,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(b)
 	info := MockInfoBin(b, "creator")
 
@@ -871,13 +874,13 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
-	defaultApi := NewMockAPI()
+	defaultAPI := NewMockAPI()
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, defaultApi, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, defaultAPI, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -885,8 +888,8 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
-	failingApi := NewMockFailureAPI()
-	res, _, err = Execute(cache, checksum, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, TESTING_PRINT_DEBUG)
+	failingAPI := NewMockFailureAPI()
+	res, _, err = Execute(cache, checksum, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingAPI, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 }
@@ -902,7 +905,7 @@ func TestMigrate(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -946,7 +949,7 @@ func TestMultipleInstances(t *testing.T) {
 	igasMeter1 := types.GasMeter(gasMeter1)
 	store1 := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "regen")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -1001,7 +1004,7 @@ func TestSudo(t *testing.T) {
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
+	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -1044,7 +1047,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -1097,7 +1100,7 @@ func TestReplyAndQuery(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -1156,7 +1159,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
+func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) { //nolint:unparam // expectedMsgs always receives 0 but that could change
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1235,7 +1238,7 @@ func TestQuery(t *testing.T) {
 	igasMeter1 := types.GasMeter(gasMeter1)
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
@@ -1322,7 +1325,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM")}
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, initBalance)
+	querier := DefaultQuerier(MockContractAddr, initBalance)
 	// we need this to handle the custom requests from the reflect contract
 	innerQuerier := querier.(*MockQuerier)
 	innerQuerier.Custom = ReflectCustom{}
@@ -1361,17 +1364,17 @@ func TestFloats(t *testing.T) {
 
 	// helper to print the value in the same format as Rust's Debug trait
 	debugStr := func(value Value) string {
-		if value.U32 != nil {
+		switch {
+		case value.U32 != nil:
 			return fmt.Sprintf("U32(%d)", *value.U32)
-		} else if value.U64 != nil {
+		case value.U64 != nil:
 			return fmt.Sprintf("U64(%d)", *value.U64)
-		} else if value.F32 != nil {
+		case value.F32 != nil:
 			return fmt.Sprintf("F32(%d)", *value.F32)
-		} else if value.F64 != nil {
+		case value.F64 != nil:
 			return fmt.Sprintf("F64(%d)", *value.F64)
-		} else {
-			t.FailNow()
-			return ""
+		default:
+			return "None"
 		}
 	}
 
@@ -1384,7 +1387,7 @@ func TestFloats(t *testing.T) {
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
 
 	// query instructions

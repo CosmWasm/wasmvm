@@ -6,11 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type queueData struct {
@@ -31,7 +30,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{}`)
@@ -116,7 +115,7 @@ func TestStoreIteratorHitsLimit(t *testing.T) {
 
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID, iter, limit)
-	require.ErrorContains(t, err, "Reached iterator limit (2)")
+	require.ErrorContains(t, err, "reached iterator limit (2)")
 
 	endCall(callID)
 }
@@ -217,6 +216,9 @@ func TestQueueIteratorRaces(t *testing.T) {
 	env := MockEnvBin(t)
 
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
+		callID := startCall()
+		defer endCall(callID)
+
 		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter := types.GasMeter(gasMeter)
@@ -292,5 +294,5 @@ func TestQueueIteratorLimit(t *testing.T) {
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
 	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "Reached iterator limit (32768)")
+	require.ErrorContains(t, err, "reached iterator limit (32768)")
 }

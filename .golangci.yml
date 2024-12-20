@@ -1,10 +1,59 @@
+run:
+  tests: true
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+
 linters:
-  # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default
+  disable-all: true
   enable:
+    - copyloopvar
+    - dogsled
+    - errcheck
+    - gci
+    - goconst
+    - gocritic
     - gofumpt
-    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - maintidx
+    - misspell
+    - nakedret
+    - nolintlint
+    #   - revive
+    - staticcheck
+    #    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+
+# TODO: fix the sdkerrors.Wrap deprecation warning and re-enable staticcheck
+# TODO: fix the use of deprecated gov style
+
+issues:
+  max-issues-per-linter: 10000
+  max-same-issues: 10000
 
 linters-settings:
-  goimports:
-    local-prefixes: github.com/CosmWasm/wasmvm
+  revive:
+    rules:
+      - name: var-naming
+        severity: warning
+        disabled: false
+        exclude: [""]
+        arguments:
+          - ["ID"] # AllowList
+          - ["VM"] # DenyList
+          - - upperCaseConst: true # Extra parameter (upperCaseConst|skipPackageNameChecks)
+  dogsled:
+    max-blank-identifiers: 3
+  maligned:
+    # print struct with more effective memory layout or not, false by default
+    suggest-new: true
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: true
+    require-explanation: false
+    require-specific: false

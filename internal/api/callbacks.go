@@ -108,6 +108,7 @@ type DBState struct {
 //	state := buildDBState(kv, callID)
 //	db := buildDB(&state, &gasMeter)
 //	// then pass db into some FFI function
+
 func buildDBState(kv types.KVStore, callID uint64) DBState {
 	return DBState{
 		Store:  kv,
@@ -231,7 +232,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -384,7 +385,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -412,7 +413,7 @@ func cCanonicalizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVect
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -439,7 +440,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	if errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -479,7 +480,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*result).is_none || !(*errOut).is_none {
+	if !result.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 

@@ -9,11 +9,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -77,21 +76,21 @@ func TestStoreCode(t *testing.T) {
 
 		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
+		require.ErrorContains(t, err, "Error calling the VM: Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
 
 	// No Wasm
 	{
 		wasm := []byte("foobar")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "bytecode could not be deserialized")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "bytecode could not be deserialized")
 	}
 
 	// Nil
@@ -177,7 +176,7 @@ func TestHappyPath(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
@@ -222,7 +221,7 @@ func TestEnv(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
@@ -302,7 +301,7 @@ func TestGetMetrics(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)

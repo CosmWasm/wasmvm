@@ -3,9 +3,8 @@ package cosmwasm
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCreateChecksum(t *testing.T) {
@@ -29,5 +28,5 @@ func TestCreateChecksum(t *testing.T) {
 
 	// Text file fails
 	_, err = CreateChecksum([]byte("Hello world"))
-	require.ErrorContains(t, err, "do not start with Wasm magic number")
+	require.ErrorContains(t, err, "do not start with wasm magic number")
 }

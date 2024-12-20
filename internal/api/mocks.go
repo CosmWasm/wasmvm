@@ -8,16 +8,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /** helper constructors **/
 
-const MOCK_CONTRACT_ADDR = "contract"
+const (
+	MockContractAddr = "contract"
+	Foobar           = "foobar"
+)
 
 func MockEnv() types.Env {
 	return types.Env{
@@ -30,7 +32,7 @@ func MockEnv() types.Env {
 			Index: 4,
 		},
 		Contract: types.ContractInfo{
-			Address: MOCK_CONTRACT_ADDR,
+			Address: MockContractAddr,
 		},
 	}
 }
@@ -247,6 +249,8 @@ func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
 // Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
+//
+
 const (
 	GetPrice    uint64 = 99000
 	SetPrice    uint64 = 187000
@@ -387,8 +391,8 @@ func NewMockAPI() *types.GoAPI {
 	}
 }
 
-func TestMockApi(t *testing.T) {
-	human := "foobar"
+func TestMockAPI(t *testing.T) {
+	human := "Foobar"
 	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
@@ -402,7 +406,7 @@ func TestMockApi(t *testing.T) {
 
 /**** MockQuerier ****/
 
-const DEFAULT_QUERIER_GAS_LIMIT = 1_000_000
+const DefaultQuerierGasLimit = 1_000_000
 
 type MockQuerier struct {
 	Bank    BankQuerier
@@ -423,7 +427,9 @@ func DefaultQuerier(contractAddr string, coins types.Array[types.Coin]) types.Qu
 	}
 }
 
-func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
+// Query is a mock implementation of the Querier interface.  It takes a request and a gas limit.
+// It returns the marshaled request and an error if the request is not supported.
+func (q *MockQuerier) Query(request types.QueryRequest, _ uint64) ([]byte, error) {
 	marshaled, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -526,17 +532,17 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	var resp CustomResponse
-	if query.Ping != nil {
+	if query.Ping != nil { //nolint:gocritic
 		resp.Msg = "PONG"
 	} else if query.Capitalized != nil {
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
 	} else {
-		return nil, errors.New("Unsupported query")
+		return nil, errors.New("unsupported query")
 	}
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"
@@ -551,7 +557,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp)
@@ -566,7 +572,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp2)
@@ -588,7 +594,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.BalanceResponse
 	err = json.Unmarshal(res, &resp)
@@ -604,7 +610,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.BalanceResponse
 	err = json.Unmarshal(res, &resp2)
@@ -620,7 +626,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req3, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req3, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp3 types.BalanceResponse
 	err = json.Unmarshal(res, &resp3)

@@ -123,7 +123,7 @@ func TestGovMsgVoteSerialization(t *testing.T) {
 	require.Nil(t, msg.VoteWeighted)
 	require.NotNil(t, msg.Vote)
 
-	require.Equal(t, uint64(4), msg.Vote.ProposalId)
+	require.Equal(t, uint64(4), msg.Vote.ProposalID)
 	require.Equal(t, NoWithVeto, msg.Vote.Option)
 
 	newDocument := []byte(`{"vote":{"proposal_id":4,"option":"no_with_veto"}}`)
@@ -144,7 +144,7 @@ func TestGovMsgVoteWeightedSerialization(t *testing.T) {
 	require.Nil(t, msg.Vote)
 	require.NotNil(t, msg.VoteWeighted)
 
-	require.Equal(t, uint64(25), msg.VoteWeighted.ProposalId)
+	require.Equal(t, uint64(25), msg.VoteWeighted.ProposalID)
 	require.Equal(t, []WeightedVoteOption{
 		{Yes, "0.25"},
 		{No, "0.25"},
