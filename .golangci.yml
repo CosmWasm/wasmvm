@@ -4,6 +4,9 @@ linters:
   enable:
     - gofumpt
     - goimports
+    - errcheck
+    - testifylint
+    - revive
 
 linters-settings:
   goimports:

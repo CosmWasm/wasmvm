@@ -44,9 +44,10 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	requireOkResponse(t, res, 0)
 
 	for _, value := range values {
-		var gasMeter2 types.GasMeter = NewMockGasMeter(testingGasLimit)
+		gasMeter2 := NewMockGasMeter(testingGasLimit)
+		igasMeter2 := types.GasMeter(gasMeter2)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
-		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, testingGasLimit, testingPrintDebug)
+		res, _, err = Execute(cache, checksum, env, info, push, &igasMeter2, store, api, &querier, testingGasLimit, testingPrintDebug)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
 	}
@@ -183,8 +184,7 @@ func TestRetrieveIterator(t *testing.T) {
 }
 
 func TestQueueIteratorSimple(t *testing.T) {
-	cache, cleanup := withCache(t)
-	t.Cleanup(cleanup)
+	cache, _ := withCache(t) // No need for t.Cleanup(cleanup)
 
 	setup := setupQueueContract(t, cache)
 	checksum, querier, api := setup.checksum, setup.querier, setup.api
@@ -216,8 +216,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 }
 
 func TestQueueIteratorRaces(t *testing.T) {
-	cache, cleanup := withCache(t)
-	t.Cleanup(cleanup)
+	cache, _ := withCache(t) // No need for t.Cleanup(cleanup)
 
 	assert.Equal(t, 0, len(iteratorFrames))
 
@@ -269,18 +268,13 @@ func TestQueueIteratorRaces(t *testing.T) {
 }
 
 func TestQueueIteratorLimit(t *testing.T) {
-	cache, cleanup := withCache(t)
-	t.Cleanup(cleanup)
+	cache, _ := withCache(t) // No need for t.Cleanup(cleanup)
 
 	setup := setupQueueContract(t, cache)
 	checksum, querier, api := setup.checksum, setup.querier, setup.api
 
-	var err error
-	var qResult types.QueryResult
-	var gasLimit uint64
-
 	// Open 5000 iterators
-	gasLimit = testingGasLimit
+	gasLimit := testingGasLimit
 	gasMeter := NewMockGasMeter(gasLimit)
 	igasMeter := types.GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
@@ -288,6 +282,7 @@ func TestQueueIteratorLimit(t *testing.T) {
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, testingPrintDebug)
 	require.NoError(t, err)
+	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult.Err)

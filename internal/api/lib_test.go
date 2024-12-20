@@ -624,7 +624,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
 	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, testingPrintDebug)
-	diff = time.Since(start)
+	diff := time.Since(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
 	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())

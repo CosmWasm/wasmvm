@@ -11,9 +11,8 @@ import (
 )
 
 func TestValidateAddressFailure(t *testing.T) {
-	// Set up cache and ensure cleanup after test
-	cache, cleanup := withCache(t)
-	t.Cleanup(cleanup)
+	// Set up cache; no need to call t.Cleanup here because withCache does it for you
+	cache, _ := withCache(t)
 
 	// Create contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
@@ -28,7 +27,6 @@ func TestValidateAddressFailure(t *testing.T) {
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
-	// If the human address is larger than 32 bytes, it triggers an error in address validation
 	longName := "long123456789012345678901234567890long"
 	msg := []byte(`{"verifier":"` + longName + `","beneficiary":"bob"}`)
 
@@ -40,7 +38,6 @@ func TestValidateAddressFailure(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 
-	// The contract call succeeds at the VM level but returns a JSON error inside ContractResult
 	require.Nil(t, result.Ok)
 	require.Equal(t, "Generic error: addr_validate errored: human encoding too long", result.Err)
 }
