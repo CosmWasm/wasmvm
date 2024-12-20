@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -21,26 +20,12 @@ const (
 )
 
 // RuntimeEnvironment holds the environment for contract execution
-type RuntimeEnvironment struct {
-	DB      types.KVStore
-	API     *types.GoAPI
-	Querier types.Querier
-	Memory  *MemoryAllocator
-	Gas     types.GasMeter
-	GasUsed types.Gas // Track gas usage internally
-
-	// Iterator management
-	iteratorsMutex sync.RWMutex
-	iterators      map[uint64]map[uint64]types.Iterator
-	nextIterID     uint64
-	nextCallID     uint64
-}
 
 // NewRuntimeEnvironment creates a new runtime environment
 func NewRuntimeEnvironment(db types.KVStore, api *types.GoAPI, querier types.Querier) *RuntimeEnvironment {
 	return &RuntimeEnvironment{
 		DB:        db,
-		API:       api,
+		API:       *api,
 		Querier:   querier,
 		iterators: make(map[uint64]map[uint64]types.Iterator),
 	}
@@ -218,7 +203,7 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 		panic(fmt.Sprintf("failed to allocate memory: %v", err))
 	}
 
-	if err := WriteMemory(mem, offset, []byte(canonical)); err != nil {
+	if err := WriteMemory(mem, offset, canonical); err != nil {
 		panic(fmt.Sprintf("failed to write canonicalized address: %v", err))
 	}
 

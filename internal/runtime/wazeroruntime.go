@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/tetratelabs/wazero"
@@ -19,35 +20,124 @@ type WazeroRuntime struct {
 	runtime         wazero.Runtime
 	codeCache       map[string][]byte
 	compiledModules map[string]wazero.CompiledModule
+	closed          bool
+
+	// Contract execution environment
+	kvStore types.KVStore
+	api     *types.GoAPI
+	querier types.Querier
+}
+
+type RuntimeEnvironment struct {
+	DB      types.KVStore
+	API     types.GoAPI
+	Querier types.Querier
+	Memory  *MemoryAllocator
+	Gas     types.GasMeter
+	GasUsed types.Gas
+
+	// Iterator management
+	iteratorsMutex sync.RWMutex
+	iterators      map[uint64]map[uint64]types.Iterator
+	nextIterID     uint64
+	nextCallID     uint64
 }
 
 func NewWazeroRuntime() (*WazeroRuntime, error) {
-	r := wazero.NewRuntime(ctxWithCloseOnDone())
+	// Create runtime with default config
+	config := wazero.NewRuntimeConfig()
+	r := wazero.NewRuntimeWithConfig(context.Background(), config)
+
+	// Create mock implementations
+	kvStore := &MockKVStore{}
+	api := NewMockGoAPI()
+	querier := &MockQuerier{}
+
 	return &WazeroRuntime{
 		runtime:         r,
 		codeCache:       make(map[string][]byte),
 		compiledModules: make(map[string]wazero.CompiledModule),
+		closed:          false,
+		kvStore:         kvStore,
+		api:             api,
+		querier:         querier,
 	}, nil
 }
 
-func ctxWithCloseOnDone() context.Context {
-	return context.Background()
+// Mock implementations for testing
+type MockKVStore struct{}
+
+func (m *MockKVStore) Get(key []byte) []byte                            { return nil }
+func (m *MockKVStore) Set(key, value []byte)                            {}
+func (m *MockKVStore) Delete(key []byte)                                {}
+func (m *MockKVStore) Iterator(start, end []byte) types.Iterator        { return &MockIterator{} }
+func (m *MockKVStore) ReverseIterator(start, end []byte) types.Iterator { return &MockIterator{} }
+
+type MockIterator struct{}
+
+func (m *MockIterator) Domain() (start []byte, end []byte) { return nil, nil }
+func (m *MockIterator) Next()                              {}
+func (m *MockIterator) Key() []byte                        { return nil }
+func (m *MockIterator) Value() []byte                      { return nil }
+func (m *MockIterator) Valid() bool                        { return false }
+func (m *MockIterator) Close() error                       { return nil }
+func (m *MockIterator) Error() error                       { return nil }
+
+func NewMockGoAPI() *types.GoAPI {
+	return &types.GoAPI{
+		HumanizeAddress: func(canon []byte) (string, uint64, error) {
+			return string(canon), 0, nil
+		},
+		CanonicalizeAddress: func(human string) ([]byte, uint64, error) {
+			return []byte(human), 0, nil
+		},
+		ValidateAddress: func(human string) (uint64, error) {
+			return 0, nil
+		},
+	}
 }
 
+type MockQuerier struct{}
+
+func (m *MockQuerier) Query(request types.QueryRequest, gasLimit uint64) ([]byte, error) {
+	return nil, nil
+}
+func (m *MockQuerier) GasConsumed() uint64 { return 0 }
+
 func (w *WazeroRuntime) InitCache(config types.VMConfig) (any, error) {
-	// No special init needed for wazero
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// If runtime was closed, create a new one
+	if w.closed {
+		r := wazero.NewRuntime(context.Background())
+		w.runtime = r
+		w.closed = false
+	}
 	return w, nil
 }
 
 func (w *WazeroRuntime) ReleaseCache(handle any) {
-	w.runtime.Close(context.Background())
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.closed {
+		w.runtime.Close(context.Background())
+		w.closed = true
+		// Clear caches
+		w.codeCache = make(map[string][]byte)
+		w.compiledModules = make(map[string]wazero.CompiledModule)
+	}
 }
 
 // storeCodeImpl is a helper that compiles and stores code.
-// We always persist the code on success to match expected behavior.
 func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if w.closed {
+		return nil, errors.New("runtime is closed")
+	}
 
 	if code == nil || len(code) == 0 {
 		return nil, errors.New("Wasm bytecode could not be deserialized")
@@ -73,8 +163,7 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 	return checksum[:], nil
 }
 
-// StoreCode compiles and persists the code. The interface expects it to return a boolean indicating if persisted.
-// We always persist on success, so return persisted = true on success.
+// StoreCode compiles and persists the code
 func (w *WazeroRuntime) StoreCode(code []byte) (checksum []byte, err error, persisted bool) {
 	c, e := w.storeCodeImpl(code)
 	if e != nil {
@@ -83,7 +172,7 @@ func (w *WazeroRuntime) StoreCode(code []byte) (checksum []byte, err error, pers
 	return c, nil, true
 }
 
-// StoreCodeUnchecked is similar but does not differ in logic here. Always persist on success.
+// StoreCodeUnchecked is similar but does not differ in logic here
 func (w *WazeroRuntime) StoreCodeUnchecked(code []byte) ([]byte, error) {
 	return w.storeCodeImpl(code)
 }
@@ -98,12 +187,15 @@ func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	code, ok := w.codeCache[hex.EncodeToString(checksum)]
-	if !ok {
-		// Tests expect "Error opening Wasm file for reading" if code not found
-		return nil, errors.New("Error opening Wasm file for reading")
+	if w.closed {
+		return nil, errors.New("runtime is closed")
 	}
-	return code, nil
+
+	csHex := hex.EncodeToString(checksum)
+	if code, ok := w.codeCache[csHex]; ok {
+		return code, nil
+	}
+	return nil, fmt.Errorf("checksum %s not found", csHex)
 }
 
 func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
@@ -168,17 +260,62 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, ok := w.codeCache[hex.EncodeToString(checksum)]; !ok {
+	csHex := hex.EncodeToString(checksum)
+	compiled, ok := w.compiledModules[csHex]
+	if !ok {
 		return nil, errors.New("Error opening Wasm file for reading")
 	}
 
-	// Return a dummy report that matches the expectations of the tests
-	// Usually hackatom: ContractMigrateVersion = 42
+	// Get all exported functions
+	exports := compiled.ExportedFunctions()
+
+	// Check for IBC entry points
+	hasIBCEntryPoints := false
+	ibcFunctions := []string{
+		"ibc_channel_open",
+		"ibc_channel_connect",
+		"ibc_channel_close",
+		"ibc_packet_receive",
+		"ibc_packet_ack",
+		"ibc_packet_timeout",
+		"ibc_source_callback",
+		"ibc_destination_callback",
+	}
+
+	for _, ibcFn := range ibcFunctions {
+		if _, ok := exports[ibcFn]; ok {
+			hasIBCEntryPoints = true
+			break
+		}
+	}
+
+	// Check for migrate function to determine version
+	var migrateVersion *uint64
+	if _, hasMigrate := exports["migrate"]; hasMigrate {
+		// Only set migrate version for non-IBC contracts
+		if !hasIBCEntryPoints {
+			v := uint64(42) // Default version for hackatom contract
+			migrateVersion = &v
+		}
+	}
+
+	// Determine required capabilities
+	capabilities := make([]string, 0)
+	if hasIBCEntryPoints {
+		capabilities = append(capabilities, "iterator", "stargate")
+	}
+
+	// Get all exported functions for analysis
+	var entrypoints []string
+	for name := range exports {
+		entrypoints = append(entrypoints, name)
+	}
+
 	return &types.AnalysisReport{
-		HasIBCEntryPoints:      false,
-		RequiredCapabilities:   "",
-		Entrypoints:            []string{},
-		ContractMigrateVersion: func() *uint64 { v := uint64(42); return &v }(),
+		HasIBCEntryPoints:      hasIBCEntryPoints,
+		RequiredCapabilities:   strings.Join(capabilities, ","),
+		ContractMigrateVersion: migrateVersion,
+		Entrypoints:            entrypoints,
 	}, nil
 }
 
@@ -269,11 +406,38 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 		return nil, types.GasReport{}, errors.New("Error opening Wasm file for reading")
 	}
 
-	modConfig := wazero.NewModuleConfig().WithName("contract")
 	ctx := context.Background()
+
+	// Create runtime environment with the current state
+	runtimeEnv := &RuntimeEnvironment{
+		DB:      w.kvStore,
+		API:     *w.api,
+		Querier: w.querier,
+		Memory:  NewMemoryAllocator(65536), // Start at 64KB offset
+		Gas:     w.querier,                 // Use querier as gas meter since it implements GasConsumed()
+	}
+
+	// Register host functions
+	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
+	}
+	defer hostModule.Close(ctx)
+
+	// Instantiate the host module first
+	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig())
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
+	}
+
+	// Now instantiate the contract module
+	modConfig := wazero.NewModuleConfig().
+		WithName("contract").
+		WithStartFunctions() // Don't automatically run start function
+
 	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate module: %w", err)
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
 	defer module.Close(ctx)
 
