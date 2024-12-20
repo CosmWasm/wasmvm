@@ -329,7 +329,7 @@ func TestExecute(t *testing.T) {
 
 	start := time.Now()
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	diff := time.Now().Sub(start)
+	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1432036ec), cost)
@@ -343,7 +343,7 @@ func TestExecute(t *testing.T) {
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	diff = time.Now().Sub(start)
+	diff = time.Since(start)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x2335827f0), cost)
 	t.Logf("Time (%d gas): %s\n", cost, diff)
@@ -393,7 +393,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 
 	start := time.Now()
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	diff := time.Now().Sub(start)
+	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	assert.Equal(t, uint64(0x1432036ec), cost)
@@ -406,8 +406,8 @@ func TestExecuteCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	diff = time.Now().Sub(start)
+	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	diff = time.Since(start)
 	require.Error(t, err)
 	assert.Equal(t, cost, maxGas)
 	t.Logf("CPULoop Time (%d gas): %s\n", cost, diff)
@@ -431,7 +431,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
-	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -441,8 +441,8 @@ func TestExecuteStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	diff := time.Now().Sub(start)
+	_, cost, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	diff := time.Since(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", cost, diff)
 	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
@@ -516,7 +516,7 @@ func TestMigrate(t *testing.T) {
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
-	res, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
@@ -710,8 +710,8 @@ func TestReplyAndQuery(t *testing.T) {
 	}}
 	reply := types.Reply{
 		ID: id,
-		Result: types.SubcallResult{
-			Ok: &types.SubcallResponse{
+		Result: types.SubcallResult{ //nolint:staticcheck
+			Ok: &types.SubcallResponse{ //nolint:staticcheck
 				Events: events,
 				Data:   data,
 			},
