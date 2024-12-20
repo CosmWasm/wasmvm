@@ -139,7 +139,7 @@ type GovMsg struct {
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64 `json:"proposal_id"`
+	ProposalID uint64 `json:"proposal_id"`
 	// Option is the vote option.
 	//
 	// This used to be called "vote", but was changed for consistency with Cosmos SDK.
@@ -150,7 +150,7 @@ type VoteMsg struct {
 func (m *VoteMsg) UnmarshalJSON(data []byte) error {
 	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
 	type InternalVoteMsg struct {
-		ProposalId uint64      `json:"proposal_id"`
+		ProposalID uint64      `json:"proposal_id"`
 		Option     *voteOption `json:"option"`
 		Vote       *voteOption `json:"vote"` // old version
 	}
@@ -168,7 +168,7 @@ func (m *VoteMsg) UnmarshalJSON(data []byte) error {
 	}
 
 	*m = VoteMsg{
-		ProposalId: tmp.ProposalId,
+		ProposalID: tmp.ProposalID,
 		Option:     *tmp.Option,
 	}
 	return nil

@@ -440,7 +440,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	if errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 

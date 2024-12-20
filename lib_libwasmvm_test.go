@@ -76,21 +76,21 @@ func TestStoreCode(t *testing.T) {
 
 		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
+		require.ErrorContains(t, err, "Error calling the VM: Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
 
 	// No Wasm
 	{
 		wasm := []byte("foobar")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "bytecode could not be deserialized")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "bytecode could not be deserialized")
 	}
 
 	// Nil

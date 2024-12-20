@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 		},
 	}
 	_, err := InitCache(config)
-	require.ErrorContains(t, err, "Could not create base directory")
+	require.ErrorContains(t, err, "could not create base directory")
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
@@ -108,7 +109,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "could not lock exclusive.lock")
 
 	ReleaseCache(cache1)
 
@@ -777,6 +778,9 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
 	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
+	if totalCost > math.MaxInt64 {
+		t.Fatal("gas cost overflow")
+	}
 	require.Equal(t, int64(maxGas), int64(totalCost))
 }
 
