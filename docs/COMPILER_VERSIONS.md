@@ -54,7 +54,7 @@ supported by cosmwasm-std/cosmwasm-vm.
 
 ## Tooling Rust compiler
 
-This Rust version is not related to our codebase directy. It's sufficiently
+This Rust version is not related to our codebase directly. It's sufficiently
 modern to install and execute tools like `cargo-audit`.
 
 ## Versions in use
