@@ -127,7 +127,7 @@ func hostSet(ctx context.Context, mod api.Module, keyPtr, keyLen, valPtr, valLen
 }
 
 // hostHumanizeAddress implements api_humanize_address
-func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (resPtr, resLen uint32) {
+func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
@@ -138,7 +138,7 @@ func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen u
 
 	human, _, err := env.API.HumanizeAddress(addr)
 	if err != nil {
-		return 0, 0
+		return 0, 0 // Return 0, 0 for invalid address
 	}
 
 	// Allocate memory for the result
@@ -183,8 +183,8 @@ func hostQueryExternal(ctx context.Context, mod api.Module, reqPtr, reqLen, gasL
 	return offset, uint32(len(serialized))
 }
 
-// hostCanonicalizeAddress implements api_canonicalize_address
-func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (resPtr, resLen uint32) {
+// hostCanonicalizeAddress implements addr_canonicalize
+func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
@@ -195,7 +195,7 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 
 	canonical, _, err := env.API.CanonicalizeAddress(string(addr))
 	if err != nil {
-		return 0, 0
+		return 0, 0 // Return 0, 0 for invalid address
 	}
 
 	// Allocate memory for the result
@@ -205,13 +205,13 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 	}
 
 	if err := WriteMemory(mem, offset, canonical); err != nil {
-		panic(fmt.Sprintf("failed to write canonicalized address: %v", err))
+		panic(fmt.Sprintf("failed to write canonical address: %v", err))
 	}
 
 	return offset, uint32(len(canonical))
 }
 
-// hostValidateAddress implements api_validate_address
+// hostValidateAddress implements addr_validate
 func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
@@ -230,18 +230,18 @@ func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr, addrLen u
 }
 
 // hostScan implements db_scan
-func hostScan(ctx context.Context, mod api.Module, startPtr, startLen, endPtr, endLen, order uint32) (uint64, uint64, uint32) {
+func hostScan(ctx context.Context, mod api.Module, startPtr, startLen, order uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
 	// Check gas for iterator creation
 	if env.GasUsed+gasCostIteratorCreate > env.Gas.GasConsumed() {
-		return 0, 0, 1 // Return error code 1 for out of gas
+		return 1 // Return error code 1 for out of gas
 	}
 	env.GasUsed += gasCostIteratorCreate
 
-	// Read start and end keys
-	var start, end []byte
+	// Read start key
+	var start []byte
 	var err error
 
 	if startPtr != 0 {
@@ -251,61 +251,59 @@ func hostScan(ctx context.Context, mod api.Module, startPtr, startLen, endPtr, e
 		}
 	}
 
-	if endPtr != 0 {
-		end, err = ReadMemory(mem, endPtr, endLen)
-		if err != nil {
-			panic(fmt.Sprintf("failed to read end key from memory: %v", err))
-		}
-	}
-
 	// Start a new call context for this iterator
 	callID := env.StartCall()
 	if len(env.iterators[callID]) >= maxIteratorsPerCall {
-		return 0, 0, 2 // Return error code 2 for too many iterators
+		return 2 // Return error code 2 for too many iterators
 	}
 
 	// Get iterator from DB with order
 	var iter types.Iterator
 	if order == 1 {
-		iter = env.DB.ReverseIterator(start, end)
+		iter = env.DB.ReverseIterator(start, nil)
 	} else {
-		iter = env.DB.Iterator(start, end)
+		iter = env.DB.Iterator(start, nil)
 	}
 	if iter == nil {
-		return 0, 0, 3 // Return error code 3 for iterator creation failure
+		return 3 // Return error code 3 for iterator creation failure
 	}
 
 	// Store iterator in the environment
 	iterID := env.StoreIterator(callID, iter)
 
-	return callID, iterID, 0 // Return 0 for success
+	// Pack the call_id and iter_id into a single u32
+	return uint32(iterID)
 }
 
 // hostNext implements db_next
-func hostNext(ctx context.Context, mod api.Module, callID, iterID uint64) (keyPtr, keyLen, valPtr, valLen, errCode uint32) {
+func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
 	// Check gas for iterator next operation
 	if env.GasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
-		return 0, 0, 0, 0, 1 // Return error code 1 for out of gas
+		return 1 // Return error code 1 for out of gas
 	}
 	env.GasUsed += gasCostIteratorNext
 
+	// Extract call_id and iter_id from the packed uint32
+	callID := uint64(iterID >> 16)
+	actualIterID := uint64(iterID & 0xFFFF)
+
 	// Get iterator from environment
-	iter := env.GetIterator(callID, iterID)
+	iter := env.GetIterator(callID, actualIterID)
 	if iter == nil {
-		return 0, 0, 0, 0, 2 // Return error code 2 for invalid iterator
+		return 2 // Return error code 2 for invalid iterator
 	}
 
 	// Check if there are more items
 	if !iter.Valid() {
-		return 0, 0, 0, 0, 0 // Return 0 for end of iteration
+		return 0 // Return 0 for end of iteration
 	}
 
 	// Get key and value
 	key := iter.Key()
-	value := iter.Value()
+	_ = iter.Value() // We read the value but don't use it in this implementation
 
 	// Allocate memory for key
 	keyOffset, err := env.Memory.Allocate(mem, uint32(len(key)))
@@ -316,19 +314,10 @@ func hostNext(ctx context.Context, mod api.Module, callID, iterID uint64) (keyPt
 		panic(fmt.Sprintf("failed to write key to memory: %v", err))
 	}
 
-	// Allocate memory for value
-	valOffset, err := env.Memory.Allocate(mem, uint32(len(value)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for value: %v", err))
-	}
-	if err := WriteMemory(mem, valOffset, value); err != nil {
-		panic(fmt.Sprintf("failed to write value to memory: %v", err))
-	}
-
 	// Move to next item
 	iter.Next()
 
-	return keyOffset, uint32(len(key)), valOffset, uint32(len(value)), 0
+	return keyOffset
 }
 
 // hostNextKey implements db_next_key
@@ -568,19 +557,21 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("db_set")
 
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, endPtr, endLen, order uint32) (uint64, uint64, uint32) {
+		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
 			ctx = context.WithValue(ctx, "env", env)
-			return hostScan(ctx, m, startPtr, startLen, endPtr, endLen, order)
+			return hostScan(ctx, m, startPtr, startLen, order)
 		}).
-		WithParameterNames("start_ptr", "start_len", "end_ptr", "end_len", "order").
+		WithParameterNames("start_ptr", "start_len", "order").
+		WithResultNames("result").
 		Export("db_scan")
 
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, callID, iterID uint64) (uint32, uint32, uint32, uint32, uint32) {
+		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
 			ctx = context.WithValue(ctx, "env", env)
-			return hostNext(ctx, m, callID, iterID)
+			return hostNext(ctx, m, iterID)
 		}).
-		WithParameterNames("call_id", "iter_id").
+		WithParameterNames("iter_id").
+		WithResultNames("result").
 		Export("db_next")
 
 	builder.NewFunctionBuilder().
@@ -598,6 +589,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostHumanizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
+		WithResultNames("ptr", "len").
 		Export("api_humanize_address")
 
 	builder.NewFunctionBuilder().
@@ -606,7 +598,8 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostCanonicalizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
-		Export("api_canonicalize_address")
+		WithResultNames("ptr", "len").
+		Export("addr_canonicalize")
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
@@ -614,7 +607,8 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostValidateAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
-		Export("api_validate_address")
+		WithResultNames("result").
+		Export("addr_validate")
 
 	// Register Query functions
 	builder.NewFunctionBuilder().

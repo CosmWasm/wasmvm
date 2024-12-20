@@ -22,6 +22,11 @@ type WazeroRuntime struct {
 	compiledModules map[string]wazero.CompiledModule
 	closed          bool
 
+	// Pinned modules tracking
+	pinnedModules map[string]struct{}
+	moduleHits    map[string]uint32
+	moduleSizes   map[string]uint64
+
 	// Contract execution environment
 	kvStore types.KVStore
 	api     *types.GoAPI
@@ -58,6 +63,9 @@ func NewWazeroRuntime() (*WazeroRuntime, error) {
 		codeCache:       make(map[string][]byte),
 		compiledModules: make(map[string]wazero.CompiledModule),
 		closed:          false,
+		pinnedModules:   make(map[string]struct{}),
+		moduleHits:      make(map[string]uint32),
+		moduleSizes:     make(map[string]uint64),
 		kvStore:         kvStore,
 		api:             api,
 		querier:         querier,
@@ -211,7 +219,7 @@ func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {
 	if code, ok := w.codeCache[csHex]; ok {
 		return code, nil
 	}
-	return nil, fmt.Errorf("checksum %s not found", csHex)
+	return nil, errors.New("Error opening Wasm file for reading")
 }
 
 func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
@@ -246,8 +254,14 @@ func (w *WazeroRuntime) Pin(checksum []byte) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, ok := w.codeCache[hex.EncodeToString(checksum)]; !ok {
+	csHex := hex.EncodeToString(checksum)
+	if _, ok := w.codeCache[csHex]; !ok {
 		return errors.New("Error opening Wasm file for reading")
+	}
+
+	w.pinnedModules[csHex] = struct{}{}
+	if _, exists := w.moduleSizes[csHex]; !exists {
+		w.moduleSizes[csHex] = uint64(len(w.codeCache[csHex]))
 	}
 	return nil
 }
@@ -262,9 +276,8 @@ func (w *WazeroRuntime) Unpin(checksum []byte) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, ok := w.codeCache[hex.EncodeToString(checksum)]; !ok {
-		return errors.New("Error opening Wasm file for reading")
-	}
+	csHex := hex.EncodeToString(checksum)
+	delete(w.pinnedModules, csHex)
 	return nil
 }
 
@@ -402,10 +415,30 @@ func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
 }
 
 func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
-	// Return an empty pinned metrics array
-	return &types.PinnedMetrics{
-		PerModule: []types.PerModuleEntry{},
-	}, nil
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	metrics := &types.PinnedMetrics{
+		PerModule: make([]types.PerModuleEntry, 0, len(w.pinnedModules)),
+	}
+
+	for csHex := range w.pinnedModules {
+		checksum, err := hex.DecodeString(csHex)
+		if err != nil {
+			continue
+		}
+
+		entry := types.PerModuleEntry{
+			Checksum: checksum,
+			Metrics: types.PerModuleMetrics{
+				Hits: w.moduleHits[csHex],
+				Size: w.moduleSizes[csHex],
+			},
+		}
+		metrics.PerModule = append(metrics.PerModule, entry)
+	}
+
+	return metrics, nil
 }
 
 func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
@@ -416,8 +449,12 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 	}
 
 	w.mu.Lock()
-	compiled, ok := w.compiledModules[hex.EncodeToString(checksum)]
+	csHex := hex.EncodeToString(checksum)
+	compiled, ok := w.compiledModules[csHex]
+	// Track module hits
+	w.moduleHits[csHex]++
 	w.mu.Unlock()
+
 	if !ok {
 		return nil, types.GasReport{}, errors.New("Error opening Wasm file for reading")
 	}

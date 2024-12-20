@@ -40,6 +40,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
 	}
 
+	// Write the lockfile content
 	_, err = lockfile.WriteString("This is a lockfile that prevents two VM instances from operating on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
 	if err != nil {
 		lockfile.Close()
@@ -49,23 +50,34 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	// Try to acquire the lock
 	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
 	if err != nil {
-		// **Important**: Return the exact error message the test expects
 		lockfile.Close()
 		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 	}
 
-	// Initialize runtime cache
+	// Initialize the runtime with the config
 	handle, err := currentRuntime.InitCache(config)
 	if err != nil {
+		unix.Flock(int(lockfile.Fd()), unix.LOCK_UN)
 		lockfile.Close()
-		return Cache{}, fmt.Errorf("failed to init cache: %w", err)
+		return Cache{}, err
 	}
 
-	return Cache{handle: handle, lockfile: *lockfile}, nil
+	return Cache{
+		handle:   handle,
+		lockfile: *lockfile,
+	}, nil
 }
 
 func ReleaseCache(cache Cache) {
-	currentRuntime.ReleaseCache(cache.handle)
+	if cache.handle != nil {
+		currentRuntime.ReleaseCache(cache.handle)
+	}
+
+	// Release the file lock and close the lockfile
+	if cache.lockfile != (os.File{}) {
+		unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN)
+		cache.lockfile.Close()
+	}
 }
 
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
