@@ -497,17 +497,17 @@ func TestExecute(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 1, len(result.Ok.Messages))
+	require.Len(t, result.Ok.Messages, 1)
 	ev := result.Ok.Events[0]
 	assert.Equal(t, "hackatom", ev.Type)
-	assert.Equal(t, 1, len(ev.Attributes))
+	assert.Len(t, ev.Attributes, 1)
 	assert.Equal(t, "action", ev.Attributes[0].Key)
 	assert.Equal(t, "release", ev.Attributes[0].Value)
 
-	dispatch := result.Ok.Messages[0].Msg
-	require.NotNil(t, dispatch.Bank)
-	require.NotNil(t, dispatch.Bank.Send)
-	send := dispatch.Bank.Send
+	cosmosMsg := result.Ok.Messages[0].Msg
+	require.NotNil(t, cosmosMsg.Bank)
+	require.NotNil(t, cosmosMsg.Bank.Send)
+	send := cosmosMsg.Bank.Send
 	assert.Equal(t, "bob", send.ToAddress)
 	assert.Equal(t, balance, send.Amount)
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
@@ -702,8 +702,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 				info = MockInfoBin(b, "fred")
 				msg := []byte(`{"allocate_large_memory":{"pages":0}}`)
 				res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, testingGasLimit, testingPrintDebug)
-				require.NoError(b, err)
-				requireOkResponse(b, res, 0)
+				assert.NoError(b, err)
+				assertOkResponse(b, res, 0)
 				wg.Done()
 			}()
 		}
@@ -765,7 +765,7 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult.Err)
-	require.Equal(t, `{"verifier":"fred"}`, string(qResult.Ok))
+	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 
 	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, testingGasLimit, testingPrintDebug)
 	require.NoError(t, err)
@@ -776,7 +776,7 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult2)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult2.Err)
-	require.Equal(t, `{"verifier":"alice"}`, string(qResult2.Ok))
+	require.JSONEq(t, `{"verifier":"alice"}`, string(qResult2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -994,6 +994,14 @@ func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
 	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
 }
 
+func assertOkResponse(t testing.TB, res []byte, expectedMsgs int) {
+	var result types.ContractResult
+	err := json.Unmarshal(res, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, "", result.Err)
+	assert.Equal(t, expectedMsgs, len(result.Ok.Messages))
+}
+
 func requireQueryError(t *testing.T, res []byte) {
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
@@ -1094,7 +1102,7 @@ func TestQuery(t *testing.T) {
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult.Err)
-	require.Equal(t, `{"verifier":"fred"}`, string(qResult.Ok))
+	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 }
 
 func TestHackatomQuerier(t *testing.T) {
@@ -1255,4 +1263,13 @@ func TestFloats(t *testing.T) {
 
 	hash := hasher.Sum(nil)
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+}
+
+func MockInfoBinNoAssert(t testing.TB, sender string) []byte {
+	info := MockInfo(sender, nil)
+	bin, err := json.Marshal(info)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bin
 }

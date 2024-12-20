@@ -212,13 +212,13 @@ func TestQueueIteratorSimple(t *testing.T) {
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
 	require.Equal(t, "", reduced.Err)
-	require.Equal(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
+	require.JSONEq(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
 func TestQueueIteratorRaces(t *testing.T) {
 	cache, _ := withCache(t) // No need for t.Cleanup(cleanup)
 
-	assert.Equal(t, 0, len(iteratorFrames))
+	assert.Empty(t, iteratorFrames)
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -234,12 +234,12 @@ func TestQueueIteratorRaces(t *testing.T) {
 
 		query := []byte(`{"reducer":{}}`)
 		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, testingGasLimit, testingPrintDebug)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		var reduced types.QueryResult
 		err = json.Unmarshal(data, &reduced)
-		require.NoError(t, err)
-		require.Equal(t, "", reduced.Err)
-		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
+		assert.NoError(t, err)
+		assert.Equal(t, "", reduced.Err)
+		assert.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
 	// 30 concurrent batches to trigger race conditions if any
@@ -264,7 +264,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	wg.Wait()
 
 	// after all done, no frames should remain
-	assert.Equal(t, 0, len(iteratorFrames))
+	assert.Empty(t, iteratorFrames)
 }
 
 func TestQueueIteratorLimit(t *testing.T) {

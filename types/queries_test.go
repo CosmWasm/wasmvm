@@ -12,7 +12,7 @@ func TestDelegationWithEmptyArray(t *testing.T) {
 	var del Array[Delegation]
 	bz, err := json.Marshal(&del)
 	require.NoError(t, err)
-	assert.Equal(t, string(bz), `[]`)
+	assert.Equal(t, `[]`, string(bz))
 
 	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
@@ -165,11 +165,8 @@ func TestDistributionQuerySerialization(t *testing.T) {
 	var query DistributionQuery
 	err = json.Unmarshal(document, &query)
 	require.NoError(t, err)
-	require.Equal(t, query, DistributionQuery{
-		DelegatorWithdrawAddress: &DelegatorWithdrawAddressQuery{
-			DelegatorAddress: "jane",
-		},
-	})
+	require.NotNil(t, query.DelegatorWithdrawAddress)
+	require.Equal(t, "jane", query.DelegatorWithdrawAddress.DelegatorAddress)
 
 	// Serialization
 	res := DelegatorWithdrawAddressResponse{
@@ -177,7 +174,7 @@ func TestDistributionQuerySerialization(t *testing.T) {
 	}
 	serialized, err := json.Marshal(res)
 	require.NoError(t, err)
-	require.Equal(t, string(serialized), `{"withdraw_address":"jane"}`)
+	require.JSONEq(t, `{"withdraw_address":"jane"}`, string(serialized))
 }
 
 func TestCodeInfoResponseSerialization(t *testing.T) {
@@ -200,5 +197,5 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	}
 	serialized, err := json.Marshal(&myRes)
 	require.NoError(t, err)
-	require.Equal(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
+	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }

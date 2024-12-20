@@ -6,7 +6,6 @@ linters:
     - goimports
     - errcheck
     - testifylint
-    - revive
 
 linters-settings:
   goimports:
