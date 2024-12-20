@@ -5,11 +5,17 @@ package api
 import "C"
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
-	"github.com/CosmWasm/wasmvm/types"
+	"golang.org/x/sys/unix"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 // Value types
@@ -29,38 +35,71 @@ type (
 type cu8_ptr = *C.uint8_t //nolint:revive
 
 type Cache struct {
-	ptr *C.cache_t
+	ptr      *C.cache_t
+	lockfile os.File
 }
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedFeatures string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
-	dataDirBytes := []byte(dataDir)
-	supportedFeaturesBytes := []byte(supportedFeatures)
+func InitCache(config types.VMConfig) (Cache, error) {
+	// libwasmvm would create this directory too but we need it earlier for the lockfile
+	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not create base directory")
+	}
 
-	d := makeView(dataDirBytes)
-	defer runtime.KeepAlive(dataDirBytes)
-	f := makeView(supportedFeaturesBytes)
-	defer runtime.KeepAlive(supportedFeaturesBytes)
+	lockfile, err := os.OpenFile(filepath.Join(config.Cache.BaseDir, "exclusive.lock"), os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
+	}
+	_, err = lockfile.WriteString("This is a lockfile that prevent two VM instances to operate on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
+	if err != nil {
+		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
+	}
+
+	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
+	}
+
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		return Cache{}, fmt.Errorf("Could not serialize config")
+	}
+	configView := makeView(configBytes)
+	defer runtime.KeepAlive(configBytes)
 
 	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, f, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg) //nolint:gocritic
+	ptr, err := C.init_cache(configView, &errmsg)
 	if err != nil {
 		return Cache{}, errorWithMessage(err, errmsg)
 	}
-	return Cache{ptr: ptr}, nil
+	return Cache{ptr: ptr, lockfile: *lockfile}, nil
 }
 
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
+
+	cache.lockfile.Close() // Also releases the file lock
 }
 
-func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
+func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
+	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(persist), &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(checksum), nil
+}
+
+func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
+	w := makeView(wasm)
+	defer runtime.KeepAlive(wasm)
+	errmsg := uninitializedUnmanagedVector()
+	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(true), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
@@ -120,10 +159,13 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 		return nil, errorWithMessage(err, errmsg)
 	}
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
+	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+
 	res := types.AnalysisReport{
-		HasIBCEntryPoints:    bool(report.has_ibc_entry_points),
-		RequiredFeatures:     requiredCapabilities,
-		RequiredCapabilities: requiredCapabilities,
+		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		RequiredCapabilities:   requiredCapabilities,
+		Entrypoints:            strings.Split(entrypoints, ","),
+		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
 	}
 	return &res, nil
 }
@@ -147,6 +189,21 @@ func GetMetrics(cache Cache) (*types.Metrics, error) {
 	}, nil
 }
 
+func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
+	errmsg := uninitializedUnmanagedVector()
+	metrics, err := C.get_pinned_metrics(cache.ptr, &errmsg)
+	if err != nil {
+		return nil, errorWithMessage(err, errmsg)
+	}
+
+	var pinnedMetrics types.PinnedMetrics
+	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
+		return nil, err
+	}
+
+	return &pinnedMetrics, nil
+}
+
 func Instantiate(
 	cache Cache,
 	checksum []byte,
@@ -159,7 +216,7 @@ func Instantiate(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
@@ -168,6 +225,11 @@ func Instantiate(
 	defer runtime.KeepAlive(info)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -176,15 +238,15 @@ func Instantiate(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func Execute(
@@ -199,7 +261,7 @@ func Execute(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
@@ -208,6 +270,11 @@ func Execute(
 	defer runtime.KeepAlive(info)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -216,15 +283,15 @@ func Execute(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func Migrate(
@@ -238,13 +305,18 @@ func Migrate(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -253,15 +325,60 @@ func Migrate(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
+func MigrateWithInfo(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	msg []byte,
+	migrateInfo []byte,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, types.GasReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	m := makeView(msg)
+	defer runtime.KeepAlive(msg)
+	i := makeView(migrateInfo)
+	defer runtime.KeepAlive(i)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasReport C.GasReport
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.migrate_with_info(cache.ptr, cs, e, m, i, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func Sudo(
@@ -275,13 +392,18 @@ func Sudo(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -290,15 +412,15 @@ func Sudo(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func Reply(
@@ -312,13 +434,18 @@ func Reply(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	r := makeView(reply)
 	defer runtime.KeepAlive(reply)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -327,15 +454,15 @@ func Reply(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func Query(
@@ -349,13 +476,18 @@ func Query(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -364,15 +496,15 @@ func Query(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCChannelOpen(
@@ -386,13 +518,18 @@ func IBCChannelOpen(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -401,15 +538,15 @@ func IBCChannelOpen(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCChannelConnect(
@@ -423,13 +560,18 @@ func IBCChannelConnect(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -438,15 +580,15 @@ func IBCChannelConnect(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCChannelClose(
@@ -460,13 +602,18 @@ func IBCChannelClose(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -475,15 +622,15 @@ func IBCChannelClose(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCPacketReceive(
@@ -497,13 +644,18 @@ func IBCPacketReceive(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -512,15 +664,15 @@ func IBCPacketReceive(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCPacketAck(
@@ -534,13 +686,18 @@ func IBCPacketAck(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	ac := makeView(ack)
 	defer runtime.KeepAlive(ack)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -549,15 +706,15 @@ func IBCPacketAck(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
 func IBCPacketTimeout(
@@ -571,13 +728,18 @@ func IBCPacketTimeout(
 	querier *Querier,
 	gasLimit uint64,
 	printDebug bool,
-) ([]byte, uint64, error) {
+) ([]byte, types.GasReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
 	pa := makeView(packet)
 	defer runtime.KeepAlive(packet)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
@@ -586,27 +748,159 @@ func IBCPacketTimeout(
 	db := buildDB(&dbState, gasMeter)
 	a := buildAPI(api)
 	q := buildQuerier(querier)
-	var gasUsed cu64
+	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasUsed, &errmsg) //nolint:gocritic
+	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, uint64(gasUsed), errorWithMessage(err, errmsg)
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), uint64(gasUsed), nil
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
+func IBCSourceCallback(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	msg []byte,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, types.GasReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	msgBytes := makeView(msg)
+	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasReport C.GasReport
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.ibc_source_callback(cache.ptr, cs, e, msgBytes, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
+func IBCDestinationCallback(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	msg []byte,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, types.GasReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	msgBytes := makeView(msg)
+	defer runtime.KeepAlive(msg)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasReport C.GasReport
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.ibc_destination_callback(cache.ptr, cs, e, msgBytes, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
+func convertGasReport(report C.GasReport) types.GasReport {
+	return types.GasReport{
+		Limit:          uint64(report.limit),
+		Remaining:      uint64(report.remaining),
+		UsedExternally: uint64(report.used_externally),
+		UsedInternally: uint64(report.used_internally),
+	}
 }
 
 /**** To error module ***/
 
 func errorWithMessage(err error, b C.UnmanagedVector) error {
+	// we always destroy the unmanaged vector to avoid a memory leak
+	msg := copyAndDestroyUnmanagedVector(b)
+
 	// this checks for out of gas as a special case
 	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
 		return types.OutOfGasError{}
 	}
-	msg := copyAndDestroyUnmanagedVector(b)
 	if msg == nil {
 		return err
 	}
 	return fmt.Errorf("%s", string(msg))
+}
+
+// checkAndPinAPI checks and pins the API and relevant pointers inside of it.
+// All errors will result in panics as they indicate misuse of the wasmvm API and are not expected
+// to be caused by user data.
+func checkAndPinAPI(api *types.GoAPI, pinner runtime.Pinner) {
+	if api == nil {
+		panic("API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
+	}
+
+	// func cHumanizeAddress assumes this is set
+	if api.HumanizeAddress == nil {
+		panic("HumanizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
+	}
+
+	// func cCanonicalizeAddress assumes this is set
+	if api.CanonicalizeAddress == nil {
+		panic("CanonicalizeAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
+	}
+
+	// func cValidateAddress assumes this is set
+	if api.ValidateAddress == nil {
+		panic("ValidateAddress in API must not be nil. If you don't want to provide API functionality, please create an instance that returns an error on every call to HumanizeAddress(), CanonicalizeAddress() and ValidateAddress().")
+	}
+
+	pinner.Pin(api) // this pointer is used in Rust (`state` in `C.GoApi`) and must not change
+}
+
+// checkAndPinQuerier checks and pins the querier.
+// All errors will result in panics as they indicate misuse of the wasmvm API and are not expected
+// to be caused by user data.
+func checkAndPinQuerier(querier *Querier, pinner runtime.Pinner) {
+	if querier == nil {
+		panic("Querier must not be nil. If you don't want to provide querier functionality, please create an instance that returns an error on every call to Query().")
+	}
+
+	pinner.Pin(querier) // this pointer is used in Rust (`state` in `C.GoQuerier`) and must not change
 }

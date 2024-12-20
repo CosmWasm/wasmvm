@@ -148,6 +148,47 @@ type IBCPacketTimeoutMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
+// The type of IBC source callback that is being called.
+//
+// IBC source callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
+//
+// Note that there are some prerequisites that need to be fulfilled to receive source callbacks: - The contract must implement the `ibc_source_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
+type IBCSourceCallbackMsg struct {
+	Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
+	Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
+}
+
+type IBCAckCallbackMsg struct {
+	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
+	OriginalPacket  IBCPacket          `json:"original_packet"`
+	Relayer         string             `json:"relayer"`
+}
+
+type IBCTimeoutCallbackMsg struct {
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer"`
+}
+
+// The message type of the IBC destination callback.
+//
+// The IBC destination callback is needed for cases where someone triggers the sending of an
+// IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and
+// your contract needs to know that it received this.
+// The callback is called after the packet was successfully acknowledged on the destination chain.
+// A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know
+// that someone sent you IBC coins.
+//
+// Note that there are some prerequisites that need to be fulfilled to receive source callbacks:
+//   - The contract must implement the `ibc_destination_callback` entrypoint.
+//   - The module that receives the packet must be wrapped by an `IBCMiddleware`
+//     (i.e. the destination chain needs to support callbacks for the message you are being sent).
+//   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
+//     For `IbcMsg::Transfer`, this is the `memo` field.
+type IBCDestinationCallbackMsg struct {
+	Ack    IBCAcknowledgement `json:"ack"`
+	Packet IBCPacket          `json:"packet"`
+}
+
 // TODO: test what the sdk Order.String() represents and how to parse back
 // Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
 // Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
@@ -165,7 +206,7 @@ const (
 // Ordering is (revision_number, timeout_height)
 type IBCTimeoutBlock struct {
 	// the version that the client is currently on
-	// (eg. after reseting the chain this could increment 1 as height drops to 0)
+	// (eg. after resetting the chain this could increment 1 as height drops to 0)
 	Revision uint64 `json:"revision"`
 	// block height after which the packet times out.
 	// the height within the given revision
@@ -222,6 +263,13 @@ type IBCBasicResult struct {
 	Err string            `json:"error,omitempty"`
 }
 
+func (r *IBCBasicResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
+}
+
 // IBCBasicResponse defines the return value on a successful processing.
 // This is the counterpart of [IbcBasicResponse](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L194-L216).
 type IBCBasicResponse struct {
@@ -249,6 +297,13 @@ type IBCReceiveResult struct {
 	Err string              `json:"error,omitempty"`
 }
 
+func (r *IBCReceiveResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
+}
+
 // IBCReceiveResponse defines the return value on packet response processing.
 // This "success" case should be returned even in application-level errors,
 // Where the Acknowledgement bytes contain an encoded error message to be returned to
@@ -256,7 +311,9 @@ type IBCReceiveResult struct {
 // and not inform the calling chain).
 // This is the counterpart of (IbcReceiveResponse)(https://github.com/CosmWasm/cosmwasm/blob/v0.15.0/packages/std/src/ibc.rs#L247-L267).
 type IBCReceiveResponse struct {
-	// binary encoded data to be returned to calling chain as the acknowledgement
+	// Acknowledgement is binary encoded data to be returned to calling chain as the acknowledgement.
+	// If this field is nil, no acknowledgement must be written. For contracts before CosmWasm 2.0, this
+	// was always a non-nil value. See also https://github.com/CosmWasm/cosmwasm/pull/1892.
 	Acknowledgement []byte `json:"acknowledgement"`
 	// Messages comes directly from the contract and is it's request for action.
 	// If the ReplyOn value matches the result, the runtime will invoke this

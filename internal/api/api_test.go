@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/types"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 func TestValidateAddressFailure(t *testing.T) {
@@ -17,14 +17,14 @@ func TestValidateAddressFailure(t *testing.T) {
 	// create contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
-	gasMeter := NewMockGasMeter(TestingGasLimit)
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MockContractAddr, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MockContractAddr, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -34,7 +34,7 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
 	igasMeter := types.GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TestingGasLimit, TestingPrintDebug)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)

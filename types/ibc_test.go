@@ -80,4 +80,40 @@ func TestIbcTimeoutDeserialization(t *testing.T) {
 		},
 		Timestamp: 0,
 	}, timeout3)
+
+	// Zero timestamp
+	// This is not very useful but something a contract developer can do in the current type
+	// system by setting timestamp to IbcTimeout::with_timestamp(Timestamp::from_nanos(0))
+	var timeout4 IBCTimeout
+	err = json.Unmarshal([]byte(`{"block":null,"timestamp":"0"}`), &timeout4)
+	require.NoError(t, err)
+	assert.Equal(t, IBCTimeout{
+		Block:     nil,
+		Timestamp: 0,
+	}, timeout4)
+}
+
+func TestIbcReceiveResponseDeserialization(t *testing.T) {
+	var err error
+
+	// without acknowledgement
+	var resp IBCReceiveResponse
+	err = json.Unmarshal([]byte(`{"acknowledgement":null,"messages":[],"attributes":[],"events":[]}`), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, IBCReceiveResponse{
+		Acknowledgement: nil,
+		Messages:        []SubMsg{},
+		Attributes:      []EventAttribute{},
+		Events:          []Event{},
+	}, resp)
+
+	// with acknowledgement
+	err = json.Unmarshal([]byte(`{"acknowledgement":"YWNr","messages":[],"attributes":[],"events":[]}`), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, IBCReceiveResponse{
+		Acknowledgement: []byte("ack"),
+		Messages:        []SubMsg{},
+		Attributes:      []EventAttribute{},
+		Events:          []Event{},
+	}, resp)
 }

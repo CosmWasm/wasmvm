@@ -9,7 +9,6 @@ use cosmwasm_vm::{
 };
 
 static CYBERPUNK: &[u8] = include_bytes!("../../testdata/cyberpunk.wasm");
-const PRINT_DEBUG: bool = false;
 const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 const MEMORY_LIMIT: Size = Size::mebi(32);
 const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
@@ -17,21 +16,20 @@ const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
 #[test]
 fn handle_cpu_loop_with_cache() {
     let backend = mock_backend(&[]);
-    let options = CacheOptions {
-        base_dir: TempDir::new().unwrap().path().to_path_buf(),
-        available_capabilities: capabilities_from_csv("staking"),
-        memory_cache_size: MEMORY_CACHE_SIZE,
-        instance_memory_limit: MEMORY_LIMIT,
-    };
+    let options = CacheOptions::new(
+        TempDir::new().unwrap().path().to_path_buf(),
+        capabilities_from_csv("staking"),
+        MEMORY_CACHE_SIZE,
+        MEMORY_LIMIT,
+    );
     let cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
-        print_debug: PRINT_DEBUG,
     };
 
     // store code
-    let checksum = cache.save_wasm(CYBERPUNK).unwrap();
+    let checksum = cache.store_code(CYBERPUNK, true, true).unwrap();
 
     // instantiate
     let env = mock_env();
@@ -42,7 +40,7 @@ fn handle_cpu_loop_with_cache() {
     let res = call_instantiate_raw(&mut instance, &raw_env, &raw_info, b"{}");
     let gas_left = instance.get_gas_left();
     let gas_used = options.gas_limit - gas_left;
-    println!("Init gas left: {}, used: {}", gas_left, gas_used);
+    println!("Init gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_ok());
     let backend = instance.recycle().unwrap();
 
@@ -52,7 +50,7 @@ fn handle_cpu_loop_with_cache() {
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg);
     let gas_left = instance.get_gas_left();
     let gas_used = options.gas_limit - gas_left;
-    println!("Handle gas left: {}, used: {}", gas_left, gas_used);
+    println!("Handle gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_err());
     assert_eq!(gas_left, 0);
     let _ = instance.recycle();
@@ -71,7 +69,7 @@ fn handle_cpu_loop_no_cache() {
     let res = call_instantiate_raw(&mut instance, &raw_env, &raw_info, b"{}");
     let gas_left = instance.get_gas_left();
     let gas_used = gas_limit - gas_left;
-    println!("Init gas left: {}, used: {}", gas_left, gas_used);
+    println!("Init gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_ok());
 
     // execute
@@ -79,7 +77,7 @@ fn handle_cpu_loop_no_cache() {
     let res = call_execute_raw(&mut instance, &raw_env, &raw_info, raw_msg);
     let gas_left = instance.get_gas_left();
     let gas_used = gas_limit - gas_left;
-    println!("Handle gas left: {}, used: {}", gas_left, gas_used);
+    println!("Handle gas left: {gas_left}, used: {gas_used}");
     assert!(res.is_err());
     assert_eq!(gas_left, 0);
 }

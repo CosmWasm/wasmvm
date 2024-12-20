@@ -45,7 +45,7 @@ ensure we can switch between compiler versions in some range.
 ## Production Rust compiler
 
 This is the version set in the builders: `builders/Dockerfile.alpine`,
-`builders/Dockerfile.centos7` and `Dockerfile.cross`.
+`builders/Dockerfile.debian` and `Dockerfile.cross`.
 
 ## Min Rust compiler
 
@@ -54,7 +54,7 @@ supported by cosmwasm-std/cosmwasm-vm.
 
 ## Tooling Rust compiler
 
-This Rust version is not related to our codebase directy. It's sufficiently
+This Rust version is not related to our codebase directly. It's sufficiently
 modern to install and execute tools like `cargo-audit`.
 
 ## Versions in use
@@ -63,6 +63,6 @@ We currently use the following version:
 
 | Type                     | Rust version | Note                              |
 | ------------------------ | ------------ | --------------------------------- |
-| Production Rust compiler | 1.65.0       | Builders version 0014             |
-| Min Rust compiler        | 1.60.0       | Supports builder versions >= 0012 |
-| Tooling Rust compiler    | 1.65.0       |                                   |
+| Production Rust compiler | 1.82.0       | Builders version 0102             |
+| Min Rust compiler        | 1.74.0       | Supports builder versions >= 0019 |
+| Tooling Rust compiler    | 1.75.0       |                                   |

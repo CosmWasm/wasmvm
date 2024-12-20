@@ -9,19 +9,19 @@ import (
 )
 
 func TestDelegationWithEmptyArray(t *testing.T) {
-	var del Delegations
+	var del Array[Delegation]
 	bz, err := json.Marshal(&del)
 	require.NoError(t, err)
 	assert.Equal(t, string(bz), `[]`)
 
-	var redel Delegations
+	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
 	require.NoError(t, err)
-	assert.Nil(t, redel)
+	assert.Equal(t, Array[Delegation]{}, redel)
 }
 
 func TestDelegationWithData(t *testing.T) {
-	del := Delegations{{
+	del := Array[Delegation]{{
 		Validator: "foo",
 		Delegator: "bar",
 		Amount:    NewCoin(123, "stake"),
@@ -29,26 +29,26 @@ func TestDelegationWithData(t *testing.T) {
 	bz, err := json.Marshal(&del)
 	require.NoError(t, err)
 
-	var redel Delegations
+	var redel Array[Delegation]
 	err = json.Unmarshal(bz, &redel)
 	require.NoError(t, err)
 	assert.Equal(t, redel, del)
 }
 
 func TestValidatorWithEmptyArray(t *testing.T) {
-	var val Validators
+	var val Array[Validator]
 	bz, err := json.Marshal(&val)
 	require.NoError(t, err)
 	assert.Equal(t, string(bz), `[]`)
 
-	var reval Validators
+	var reval Array[Validator]
 	err = json.Unmarshal(bz, &reval)
 	require.NoError(t, err)
-	assert.Nil(t, reval)
+	assert.Equal(t, Array[Validator]{}, reval)
 }
 
 func TestValidatorWithData(t *testing.T) {
-	val := Validators{{
+	val := Array[Validator]{{
 		Address:       "1234567890",
 		Commission:    "0.05",
 		MaxCommission: "0.1",
@@ -57,36 +57,36 @@ func TestValidatorWithData(t *testing.T) {
 	bz, err := json.Marshal(&val)
 	require.NoError(t, err)
 
-	var reval Validators
+	var reval Array[Validator]
 	err = json.Unmarshal(bz, &reval)
 	require.NoError(t, err)
 	assert.Equal(t, reval, val)
 }
 
-func TestQueryResponseWithEmptyData(t *testing.T) {
+func TestQueryResultWithEmptyData(t *testing.T) {
 	cases := map[string]struct {
-		req       QueryResponse
+		req       QueryResult
 		resp      string
 		unmarshal bool
 	}{
 		"ok with data": {
-			req: QueryResponse{Ok: []byte("foo")},
+			req: QueryResult{Ok: []byte("foo")},
 			// base64-encoded "foo"
 			resp:      `{"ok":"Zm9v"}`,
 			unmarshal: true,
 		},
 		"error": {
-			req:       QueryResponse{Err: "try again later"},
+			req:       QueryResult{Err: "try again later"},
 			resp:      `{"error":"try again later"}`,
 			unmarshal: true,
 		},
 		"ok with empty slice": {
-			req:       QueryResponse{Ok: []byte{}},
+			req:       QueryResult{Ok: []byte{}},
 			resp:      `{"ok":""}`,
 			unmarshal: true,
 		},
 		"nil data": {
-			req:  QueryResponse{},
+			req:  QueryResult{},
 			resp: `{"ok":""}`,
 			// Once converted to the Rust enum `ContractResult<Binary>` or
 			// its JSON serialization, we cannot differentiate between
@@ -105,7 +105,7 @@ func TestQueryResponseWithEmptyData(t *testing.T) {
 
 			// if unmarshall, make sure this comes back to the proper state
 			if tc.unmarshal {
-				var parsed QueryResponse
+				var parsed QueryResult
 				err = json.Unmarshal(data, &parsed)
 				require.NoError(t, err)
 				require.Equal(t, tc.req, parsed)
@@ -155,6 +155,29 @@ func TestContractInfoResponseSerialization(t *testing.T) {
 		Pinned:  true,
 		IBCPort: "wasm.123",
 	}, res)
+}
+
+func TestDistributionQuerySerialization(t *testing.T) {
+	var err error
+
+	// Deserialization
+	document := []byte(`{"delegator_withdraw_address":{"delegator_address":"jane"}}`)
+	var query DistributionQuery
+	err = json.Unmarshal(document, &query)
+	require.NoError(t, err)
+	require.Equal(t, query, DistributionQuery{
+		DelegatorWithdrawAddress: &DelegatorWithdrawAddressQuery{
+			DelegatorAddress: "jane",
+		},
+	})
+
+	// Serialization
+	res := DelegatorWithdrawAddressResponse{
+		WithdrawAddress: "jane",
+	}
+	serialized, err := json.Marshal(res)
+	require.NoError(t, err)
+	require.Equal(t, string(serialized), `{"withdraw_address":"jane"}`)
 }
 
 func TestCodeInfoResponseSerialization(t *testing.T) {

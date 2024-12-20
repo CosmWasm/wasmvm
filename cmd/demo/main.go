@@ -2,21 +2,33 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 
-	wasmvm "github.com/CosmWasm/wasmvm"
+	wasmvm "github.com/CosmWasm/wasmvm/v2"
 )
 
 const (
-	SupportedFeatures = "staking"
-	PrintDebug        = true
-	MemoryLimit       = 32  // MiB
-	CacheSize         = 100 // MiB
+	PRINT_DEBUG  = true
+	MEMORY_LIMIT = 32  // MiB
+	CACHE_SIZE   = 100 // MiB
 )
+
+var SUPPORTED_CAPABILITIES = []string{"staking"}
 
 // This is just a demo to ensure we can compile a static go binary
 func main() {
 	file := os.Args[1]
+
+	if file == "version" {
+		libwasmvmVersion, err := wasmvm.LibwasmvmVersion()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("libwasmvm: %s\n", libwasmvmVersion)
+		return
+	}
+
 	fmt.Printf("Running %s...\n", file)
 	bz, err := os.ReadFile(file)
 	if err != nil {
@@ -28,12 +40,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	vm, err := wasmvm.NewVM("tmp", SupportedFeatures, MemoryLimit, PrintDebug, CacheSize)
+	vm, err := wasmvm.NewVM("tmp", SUPPORTED_CAPABILITIES, MEMORY_LIMIT, PRINT_DEBUG, CACHE_SIZE)
 	if err != nil {
 		panic(err)
 	}
 
-	checksum, err := vm.StoreCode(bz)
+	checksum, _, err := vm.StoreCode(bz, math.MaxUint64)
 	if err != nil {
 		panic(err)
 	}

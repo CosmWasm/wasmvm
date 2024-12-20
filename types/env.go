@@ -4,7 +4,7 @@ package types
 
 // Env defines the state of the blockchain environment this contract is
 // running in. This must contain only trusted data - nothing from the Tx itself
-// that has not been verfied (like Signer).
+// that has not been verified (like Signer).
 //
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {
@@ -16,8 +16,8 @@ type Env struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
-	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
-	Time    uint64 `json:"time,string"`
+	// time in nanoseconds since unix epoch. Uses Uint64 to ensure JavaScript compatibility.
+	Time    Uint64 `json:"time"`
 	ChainID string `json:"chain_id"`
 }
 
@@ -39,5 +39,5 @@ type MessageInfo struct {
 	// Bech32 encoded sdk.AccAddress executing the contract
 	Sender HumanAddress `json:"sender"`
 	// Amount of funds send to the contract along with this message
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 }

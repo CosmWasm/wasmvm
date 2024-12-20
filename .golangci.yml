@@ -6,7 +6,7 @@ run:
 linters:
   disable-all: true
   enable:
-    - depguard
+    - copyloopvar
     - dogsled
     - errcheck
     - exportloopref
