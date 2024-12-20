@@ -28,6 +28,7 @@ const (
 )
 
 func withVM(t *testing.T) *VM {
+	t.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
@@ -41,6 +42,7 @@ func withVM(t *testing.T) *VM {
 }
 
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
+	t.Helper()
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
 	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
@@ -125,7 +127,7 @@ func TestSimulateStoreCode(t *testing.T) {
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				_, err = vm.GetCode(checksum)
 				assert.ErrorContains(t, err, "Error opening Wasm file for reading")

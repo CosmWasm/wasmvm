@@ -24,6 +24,8 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 }
 
 func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
+	t.Helper()
+
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -58,7 +60,8 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 }
 
 func setupQueueContract(t *testing.T, cache Cache) queueData {
-	return setupQueueContractWithData(t, cache, 17, 22)
+	t.Helper()
+	return setupQueueContractWithData(t, cache)
 }
 
 func TestStoreIterator(t *testing.T) {
@@ -216,6 +219,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	env := MockEnvBin(t)
 
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
+		t.Helper()
 		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter := types.GasMeter(gasMeter)

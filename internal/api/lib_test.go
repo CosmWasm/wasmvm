@@ -27,6 +27,10 @@ const (
 
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
+type CapitalizedResponse struct {
+	Text string `json:"text"`
+}
+
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
@@ -190,9 +194,10 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (Cache, func()) {
+	tb.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -202,7 +207,7 @@ func withCache(t testing.TB) (Cache, func()) {
 		},
 	}
 	cache, err := InitCache(config)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	cleanup := func() {
 		os.RemoveAll(tmpdir)
@@ -1155,15 +1160,17 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
+func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
+	tb.Helper()
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
-	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
-	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
+	require.NoError(tb, err)
+	require.Equal(tb, "", result.Err)
+	require.Equal(tb, expectedMsgs, len(result.Ok.Messages))
 }
 
 func requireQueryError(t *testing.T, res []byte) {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1172,6 +1179,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1180,36 +1188,43 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+func createHackatomContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+func createQueueContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+func createReflectContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+func createFloaty2(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
-	wasm, err := os.ReadFile(wasmFile)
-	require.NoError(t, err)
+func createContract(tb testing.TB, cache Cache, path string) []byte {
+	tb.Helper()
+	wasm, err := os.ReadFile(path)
+	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return checksum
 }
 
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier types.Querier, gasExpected uint64) types.ContractResult {
+	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -1305,10 +1320,6 @@ func TestCustomReflectQuerier(t *testing.T) {
 		Capitalized *CapitalizedQuery `json:"capitalized,omitempty"`
 		// There are more queries but we don't use them yet
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
-	}
-
-	type CapitalizedResponse struct {
-		Text string `json:"text"`
 	}
 
 	cache, cleanup := withCache(t)

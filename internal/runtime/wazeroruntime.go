@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -373,7 +374,101 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	return w.callContractFn("query", checksum, env, nil, query)
+	if checksum == nil {
+		return nil, types.GasReport{}, errors.New("Null/Nil argument: checksum")
+	} else if len(checksum) != 32 {
+		return nil, types.GasReport{}, errors.New("Checksum not of length 32")
+	}
+
+	w.mu.Lock()
+	csHex := hex.EncodeToString(checksum)
+	compiled, ok := w.compiledModules[csHex]
+	// Track module hits
+	w.moduleHits[csHex]++
+	w.mu.Unlock()
+
+	if !ok {
+		return nil, types.GasReport{}, errors.New("Error opening Wasm file for reading")
+	}
+
+	ctx := context.Background()
+
+	// Create runtime environment with the current state
+	runtimeEnv := &RuntimeEnvironment{
+		DB:        w.kvStore,
+		API:       *w.api,
+		Querier:   w.querier,
+		Memory:    NewMemoryAllocator(65536), // Start at 64KB offset
+		Gas:       w.querier,                 // Use querier as gas meter since it implements GasConsumed()
+		iterators: make(map[uint64]map[uint64]types.Iterator),
+	}
+
+	// Register host functions first
+	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
+	}
+	defer hostModule.Close(ctx)
+
+	// Instantiate the host module with the name "env"
+	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
+	}
+
+	// Now instantiate the contract module
+	modConfig := wazero.NewModuleConfig().
+		WithName("contract").
+		WithStartFunctions() // Don't automatically run start function
+
+	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
+	}
+	defer module.Close(ctx)
+
+	envPtr, _, err := writeToWasmMemory(module, env)
+	if err != nil {
+		return nil, types.GasReport{}, err
+	}
+	queryPtr, _, err := writeToWasmMemory(module, query)
+	if err != nil {
+		return nil, types.GasReport{}, err
+	}
+
+	fn := module.ExportedFunction("query")
+	if fn == nil {
+		return nil, types.GasReport{}, fmt.Errorf("function query not found")
+	}
+
+	results, err := fn.Call(ctx,
+		uint64(envPtr),
+		uint64(queryPtr),
+	)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("call failed: %w", err)
+	}
+
+	if len(results) < 2 {
+		return nil, types.GasReport{}, fmt.Errorf("function query returned too few results")
+	}
+
+	dataPtr := uint32(results[0])
+	dataLen := uint32(results[1])
+
+	data, ok2 := module.Memory().Read(dataPtr, dataLen)
+	if !ok2 {
+		return nil, types.GasReport{}, fmt.Errorf("failed to read return data")
+	}
+
+	gr := types.GasReport{
+		Limit:          1_000_000_000,
+		Remaining:      500_000_000,
+		UsedExternally: 0,
+		UsedInternally: 500_000_000,
+	}
+
+	return data, gr, nil
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -494,15 +589,15 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 	}
 	defer module.Close(ctx)
 
-	envPtr, envLen, err := writeToWasmMemory(module, env)
+	envPtr, _, err := writeToWasmMemory(module, env)
 	if err != nil {
 		return nil, types.GasReport{}, err
 	}
-	infoPtr, infoLen, err := writeToWasmMemory(module, info)
+	infoPtr, _, err := writeToWasmMemory(module, info)
 	if err != nil {
 		return nil, types.GasReport{}, err
 	}
-	msgPtr, msgLen, err := writeToWasmMemory(module, msg)
+	msgPtr, _, err := writeToWasmMemory(module, msg)
 	if err != nil {
 		return nil, types.GasReport{}, err
 	}
@@ -513,9 +608,9 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 	}
 
 	results, err := fn.Call(ctx,
-		uint64(envPtr), uint64(envLen),
-		uint64(infoPtr), uint64(infoLen),
-		uint64(msgPtr), uint64(msgLen),
+		uint64(envPtr),
+		uint64(infoPtr),
+		uint64(msgPtr),
 	)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("call failed: %w", err)
@@ -545,14 +640,50 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 
 func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 	if len(data) == 0 {
-		return 0, 0, nil
+		// Return a ByteSliceView with is_nil=false, ptr=0, len=0
+		offset := uint32(1024)
+		mem := module.Memory()
+		// Write is_nil (bool)
+		if !mem.Write(offset, []byte{0}) {
+			return 0, 0, fmt.Errorf("failed to write is_nil to memory")
+		}
+		// Write ptr (usize)
+		if !mem.Write(offset+1, make([]byte, 8)) {
+			return 0, 0, fmt.Errorf("failed to write ptr to memory")
+		}
+		// Write len (usize)
+		if !mem.Write(offset+9, make([]byte, 8)) {
+			return 0, 0, fmt.Errorf("failed to write len to memory")
+		}
+		return offset, 17, nil // Size of ByteSliceView struct
 	}
-	offset := uint32(1024)
+
+	// Allocate memory for the data
+	dataOffset := uint32(2048)
 	mem := module.Memory()
-	if !mem.Write(offset, data) {
+	if !mem.Write(dataOffset, data) {
 		return 0, 0, fmt.Errorf("failed to write data to memory")
 	}
-	return offset, uint32(len(data)), nil
+
+	// Write ByteSliceView struct
+	structOffset := uint32(1024)
+	// Write is_nil (bool)
+	if !mem.Write(structOffset, []byte{0}) {
+		return 0, 0, fmt.Errorf("failed to write is_nil to memory")
+	}
+	// Write ptr (usize)
+	ptrBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(ptrBytes, uint64(dataOffset))
+	if !mem.Write(structOffset+1, ptrBytes) {
+		return 0, 0, fmt.Errorf("failed to write ptr to memory")
+	}
+	// Write len (usize)
+	lenBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(lenBytes, uint64(len(data)))
+	if !mem.Write(structOffset+9, lenBytes) {
+		return 0, 0, fmt.Errorf("failed to write len to memory")
+	}
+	return structOffset, 17, nil // Size of ByteSliceView struct
 }
 
 // SimulateStoreCode validates the code but does not store it
