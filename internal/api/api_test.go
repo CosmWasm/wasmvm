@@ -2,12 +2,12 @@ package api
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/types"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 func TestValidateAddressFailure(t *testing.T) {
@@ -15,16 +15,16 @@ func TestValidateAddressFailure(t *testing.T) {
 	defer cleanup()
 
 	// create contract
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := Create(cache, wasm)
+	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
@@ -33,7 +33,7 @@ func TestValidateAddressFailure(t *testing.T) {
 	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "bob"}`)
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var result types.ContractResult

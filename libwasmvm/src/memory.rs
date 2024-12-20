@@ -7,6 +7,7 @@ use std::slice;
 ///
 /// Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
 #[repr(C)]
+#[derive(Debug)]
 pub struct ByteSliceView {
     /// True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
     is_nil: bool,
@@ -43,7 +44,15 @@ impl ByteSliceView {
         if self.is_nil {
             None
         } else {
-            Some(unsafe { slice::from_raw_parts(self.ptr, self.len) })
+            Some(
+                // "`data` must be non-null and aligned even for zero-length slices"
+                if self.len == 0 {
+                    let dangling = std::ptr::NonNull::<u8>::dangling();
+                    unsafe { slice::from_raw_parts(dangling.as_ptr(), 0) }
+                } else {
+                    unsafe { slice::from_raw_parts(self.ptr, self.len) }
+                },
+            )
         }
     }
 
@@ -103,7 +112,7 @@ impl U8SliceView {
 /// ### Transfer ownership from Rust to Go
 ///
 /// When an `UnmanagedVector` was created in Rust using [`UnmanagedVector::new`], [`UnmanagedVector::default`]
-/// or [`new_unmanaged_vector`], it can be passted to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
+/// or [`new_unmanaged_vector`], it can be passed to Go as a return value (see e.g. [load_wasm][crate::load_wasm]).
 /// Rust then has no chance to destroy the vector anymore, so ownership is transferred to Go.
 /// In Go, the data has to be copied to a garbage collected `[]byte`. Then the vector must be destroyed
 /// using [`destroy_unmanaged_vector`].
@@ -147,8 +156,9 @@ impl U8SliceView {
 ///     // …
 ///     # let mut error_msg = UnmanagedVector::default();
 ///     # let mut used_gas = 0_u64;
+///     # let read_db = db.vtable.read_db.unwrap();
 ///
-///     let go_error: GoError = (db.vtable.read_db)(
+///     let go_error: GoError = read_db(
 ///         db.state,
 ///         db.gas_meter,
 ///         &mut used_gas as *mut u64,
@@ -170,7 +180,7 @@ impl U8SliceView {
 /// ```
 ///
 ///
-/// If you want to mutate data, you need to comsume the vector and create a new one:
+/// If you want to mutate data, you need to consume the vector and create a new one:
 ///
 /// ```rust
 /// # use wasmvm::{UnmanagedVector};
@@ -179,7 +189,7 @@ impl U8SliceView {
 /// assert_eq!(mutable, vec![0xAA]);
 ///
 /// // `input` is now gone and we cam do everything we want to `mutable`,
-/// // including operations that reallocate the underylying data.
+/// // including operations that reallocate the underlying data.
 ///
 /// mutable.push(0xBB);
 /// mutable.push(0xCC);
@@ -191,7 +201,7 @@ impl U8SliceView {
 /// // `output` is ready to be passed around
 /// ```
 #[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct UnmanagedVector {
     /// True if and only if this is None. If this is true, the other fields must be ignored.
     is_none: bool,
@@ -207,10 +217,18 @@ impl UnmanagedVector {
         match source {
             Some(data) => {
                 let (ptr, len, cap) = {
-                    // Can be replaced with Vec::into_raw_parts when stable
-                    // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.into_raw_parts
-                    let mut data = mem::ManuallyDrop::new(data);
-                    (data.as_mut_ptr(), data.len(), data.capacity())
+                    if data.capacity() == 0 {
+                        // we need to explicitly use a null pointer here, since `as_mut_ptr`
+                        // always returns a dangling pointer (e.g. 0x01) on an empty Vec,
+                        // which trips up Go's pointer checks.
+                        // This is safe because the Vec has not allocated, so no memory is leaked.
+                        (std::ptr::null_mut::<u8>(), 0, 0)
+                    } else {
+                        // Can be replaced with Vec::into_raw_parts when stable
+                        // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.into_raw_parts
+                        let mut data = mem::ManuallyDrop::new(data);
+                        (data.as_mut_ptr(), data.len(), data.capacity())
+                    }
                 };
                 Self {
                     is_none: false,
@@ -228,6 +246,16 @@ impl UnmanagedVector {
         }
     }
 
+    /// Creates a non-none UnmanagedVector with the given data.
+    pub fn some(data: impl Into<Vec<u8>>) -> Self {
+        Self::new(Some(data.into()))
+    }
+
+    /// Creates a none UnmanagedVector.
+    pub fn none() -> Self {
+        Self::new(None)
+    }
+
     pub fn is_none(&self) -> bool {
         self.is_none
     }
@@ -241,6 +269,12 @@ impl UnmanagedVector {
     pub fn consume(self) -> Option<Vec<u8>> {
         if self.is_none {
             None
+        } else if self.cap == 0 {
+            // capacity 0 means the vector was never allocated and
+            // the ptr field does not point to an actual byte buffer
+            // (we normalize to `null` in `UnmanagedVector::new`),
+            // so no memory is leaked by ignoring the ptr field here.
+            Some(Vec::new())
         } else {
             Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
         }
@@ -249,7 +283,7 @@ impl UnmanagedVector {
 
 impl Default for UnmanagedVector {
     fn default() -> Self {
-        Self::new(None)
+        Self::none()
     }
 }
 
@@ -264,6 +298,8 @@ pub extern "C" fn new_unmanaged_vector(
     } else if length == 0 {
         UnmanagedVector::new(Some(Vec::new()))
     } else {
+        // In slice::from_raw_parts, `data` must be non-null and aligned even for zero-length slices.
+        // For this reason we cover the length == 0 case separately above.
         let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
         let copy = Vec::from(external_memory);
         UnmanagedVector::new(Some(copy))
@@ -291,6 +327,14 @@ mod test {
 
         let view = ByteSliceView::nil();
         assert!(view.read().is_none());
+
+        // This is what we get when creating a ByteSliceView for an empty []byte in Go
+        let view = ByteSliceView {
+            is_nil: false,
+            ptr: std::ptr::null::<u8>(),
+            len: 0,
+        };
+        assert!(view.read().is_some());
     }
 
     #[test]
@@ -319,16 +363,43 @@ mod test {
         // Empty data
         let x = UnmanagedVector::new(Some(vec![]));
         assert!(!x.is_none);
-        assert_eq!(x.ptr as usize, 0x01); // We probably don't get any guarantee for this, but good to know where the 0x01 marker pointer can come from
+        assert_eq!(x.ptr as usize, 0);
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
 
         // None
         let x = UnmanagedVector::new(None);
         assert!(x.is_none);
+        assert_eq!(x.ptr as usize, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.len, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.cap, 0); // this is not guaranteed, could be anything
+    }
+
+    #[test]
+    fn unmanaged_vector_some_works() {
+        // With data
+        let x = UnmanagedVector::some(vec![0x11, 0x22]);
+        assert!(!x.is_none);
+        assert_ne!(x.ptr as usize, 0);
+        assert_eq!(x.len, 2);
+        assert_eq!(x.cap, 2);
+
+        // Empty data
+        let x = UnmanagedVector::some(vec![]);
+        assert!(!x.is_none);
         assert_eq!(x.ptr as usize, 0);
         assert_eq!(x.len, 0);
         assert_eq!(x.cap, 0);
+    }
+
+    #[test]
+    fn unmanaged_vector_none_works() {
+        let x = UnmanagedVector::new(None);
+        assert!(x.is_none);
+
+        assert_eq!(x.ptr as usize, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.len, 0); // this is not guaranteed, could be anything
+        assert_eq!(x.cap, 0); // this is not guaranteed, could be anything
     }
 
     #[test]
@@ -364,6 +435,36 @@ mod test {
     #[test]
     fn unmanaged_vector_defaults_to_none() {
         let x = UnmanagedVector::default();
+        assert_eq!(x.consume(), None);
+    }
+
+    #[test]
+    fn new_unmanaged_vector_works() {
+        // Some simple data
+        let data = b"some stuff";
+        let x = new_unmanaged_vector(false, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), Some(Vec::<u8>::from(b"some stuff" as &[u8])));
+
+        // empty created in Rust
+        let data = b"";
+        let x = new_unmanaged_vector(false, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+
+        // empty created in Go
+        let x = new_unmanaged_vector(false, std::ptr::null::<u8>(), 0);
+        assert_eq!(x.consume(), Some(Vec::<u8>::new()));
+
+        // nil with garbage pointer
+        let x = new_unmanaged_vector(true, 345 as *const u8, 46);
+        assert_eq!(x.consume(), None);
+
+        // nil with empty slice
+        let data = b"";
+        let x = new_unmanaged_vector(true, data.as_ptr(), data.len());
+        assert_eq!(x.consume(), None);
+
+        // nil with null pointer
+        let x = new_unmanaged_vector(true, std::ptr::null::<u8>(), 0);
         assert_eq!(x.consume(), None);
     }
 }

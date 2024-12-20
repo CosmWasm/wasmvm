@@ -1,10 +1,10 @@
-FROM rust:1.63.0-bullseye
+FROM --platform=linux/amd64 rust:1.82.0-bookworm
 
 # Install build dependencies
 RUN apt-get update \
   && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake \
-    # Support for Windows cross-compile
-    mingw-w64
+  # Support for Windows cross-compile
+  mingw-w64
 
 ## ADD MACOS SUPPORT
 
@@ -26,7 +26,7 @@ RUN git clone https://github.com/tpoechtrager/osxcross \
   # Don't change file name when downloading because osxcross auto-detects the version from the name
   && wget -nc https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz \
   && mv MacOSX11.3.sdk.tar.xz tarballs/ \
-  && UNATTENDED=yes OSX_VERSION_MIN=10.10 ./build.sh \
+  && UNATTENDED=yes OSX_VERSION_MIN=10.15 ./build.sh \
   # Cleanups before Docker layer is finalized
   && rm -r tarballs/
 RUN chmod +rx /opt/osxcross
@@ -49,6 +49,6 @@ RUN chmod +x /usr/local/bin/*.sh
 
 RUN mkdir /.cargo
 RUN chmod +rx /.cargo
-COPY guest/cargo-config /.cargo/config
+COPY guest/cargo-config.toml /.cargo/config.toml
 
 CMD ["bash", "-c", "echo 'Argument missing. Pass one build script (e.g. build_macos.sh) to docker run' && exit 1"]

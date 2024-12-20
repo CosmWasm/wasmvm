@@ -28,7 +28,12 @@ impl Storage for GoStorage {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.db.vtable.read_db)(
+        let read_db = self
+            .db
+            .vtable
+            .read_db
+            .expect("vtable function 'read_db' not set");
+        let go_error: GoError = read_db(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -65,9 +70,14 @@ impl Storage for GoStorage {
         order: Order,
     ) -> BackendResult<u32> {
         let mut error_msg = UnmanagedVector::default();
-        let mut iter = GoIter::new(self.db.gas_meter);
+        let mut iter = GoIter::stub();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.db.vtable.scan_db)(
+        let scan_db = self
+            .db
+            .vtable
+            .scan_db
+            .expect("vtable function 'scan_db' not set");
+        let go_error: GoError = scan_db(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -104,22 +114,46 @@ impl Storage for GoStorage {
     }
 
     fn next(&mut self, iterator_id: u32) -> BackendResult<Option<Record>> {
-        let iterator = match self.iterators.get_mut(&iterator_id) {
-            Some(i) => i,
-            None => {
-                return (
-                    Err(BackendError::iterator_does_not_exist(iterator_id)),
-                    GasInfo::free(),
-                )
-            }
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
+            return (
+                Err(BackendError::iterator_does_not_exist(iterator_id)),
+                GasInfo::free(),
+            );
         };
         iterator.next()
+    }
+
+    fn next_key(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
+            return (
+                Err(BackendError::iterator_does_not_exist(iterator_id)),
+                GasInfo::free(),
+            );
+        };
+
+        iterator.next_key()
+    }
+
+    fn next_value(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
+        let Some(iterator) = self.iterators.get_mut(&iterator_id) else {
+            return (
+                Err(BackendError::iterator_does_not_exist(iterator_id)),
+                GasInfo::free(),
+            );
+        };
+
+        iterator.next_value()
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.db.vtable.write_db)(
+        let write_db = self
+            .db
+            .vtable
+            .write_db
+            .expect("vtable function 'write_db' not set");
+        let go_error: GoError = write_db(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,
@@ -147,7 +181,12 @@ impl Storage for GoStorage {
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_error: GoError = (self.db.vtable.remove_db)(
+        let remove_db = self
+            .db
+            .vtable
+            .remove_db
+            .expect("vtable function 'remove_db' not set");
+        let go_error: GoError = remove_db(
             self.db.state,
             self.db.gas_meter,
             &mut used_gas as *mut u64,

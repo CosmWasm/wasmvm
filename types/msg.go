@@ -14,6 +14,13 @@ type ContractResult struct {
 	Err string    `json:"error,omitempty"`
 }
 
+func (r *ContractResult) SubMessages() []SubMsg {
+	if r.Ok != nil {
+		return r.Ok.Messages
+	}
+	return nil
+}
+
 // Response defines the return value on a successful instantiate/execute/migrate.
 // This is the counterpart of [Response](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/results/response.rs#L73-L88)
 type Response struct {
@@ -31,61 +38,9 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
-// Events must encode empty array as []
-type Events []Event
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (e Events) MarshalJSON() ([]byte, error) {
-	if len(e) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []Event = e
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (e *Events) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []Event
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*e = raw
-	return nil
-}
-
 type Event struct {
-	Type       string          `json:"type"`
-	Attributes EventAttributes `json:"attributes"`
-}
-
-// EventAttributes must encode empty array as []
-type EventAttributes []EventAttribute
-
-// MarshalJSON ensures that we get [] for empty arrays
-func (a EventAttributes) MarshalJSON() ([]byte, error) {
-	if len(a) == 0 {
-		return []byte("[]"), nil
-	}
-	var raw []EventAttribute = a
-	return json.Marshal(raw)
-}
-
-// UnmarshalJSON ensures that we get [] for empty arrays
-func (a *EventAttributes) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var raw []EventAttribute
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	*a = raw
-	return nil
+	Type       string                `json:"type"`
+	Attributes Array[EventAttribute] `json:"attributes"`
 }
 
 // EventAttribute
@@ -103,8 +58,47 @@ type CosmosMsg struct {
 	Gov          *GovMsg          `json:"gov,omitempty"`
 	IBC          *IBCMsg          `json:"ibc,omitempty"`
 	Staking      *StakingMsg      `json:"staking,omitempty"`
-	Stargate     *StargateMsg     `json:"stargate,omitempty"`
+	Any          *AnyMsg          `json:"any,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
+}
+
+func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
+	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
+	type InternalCosmosMsg struct {
+		Bank         *BankMsg         `json:"bank,omitempty"`
+		Custom       json.RawMessage  `json:"custom,omitempty"`
+		Distribution *DistributionMsg `json:"distribution,omitempty"`
+		Gov          *GovMsg          `json:"gov,omitempty"`
+		IBC          *IBCMsg          `json:"ibc,omitempty"`
+		Staking      *StakingMsg      `json:"staking,omitempty"`
+		Any          *AnyMsg          `json:"any,omitempty"`
+		Wasm         *WasmMsg         `json:"wasm,omitempty"`
+		Stargate     *AnyMsg          `json:"stargate,omitempty"`
+	}
+	var tmp InternalCosmosMsg
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	if tmp.Any != nil && tmp.Stargate != nil {
+		return fmt.Errorf("invalid CosmosMsg: both 'any' and 'stargate' fields are set")
+	} else if tmp.Any == nil && tmp.Stargate != nil {
+		// Use "Any" for both variants
+		tmp.Any = tmp.Stargate
+	}
+
+	*m = CosmosMsg{
+		Bank:         tmp.Bank,
+		Custom:       tmp.Custom,
+		Distribution: tmp.Distribution,
+		Gov:          tmp.Gov,
+		IBC:          tmp.IBC,
+		Staking:      tmp.Staking,
+		Any:          tmp.Any,
+		Wasm:         tmp.Wasm,
+	}
+	return nil
 }
 
 type BankMsg struct {
@@ -115,37 +109,85 @@ type BankMsg struct {
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
 // It has a fixed interface here and should be converted into the proper SDK format before dispatching
 type SendMsg struct {
-	ToAddress string `json:"to_address"`
-	Amount    Coins  `json:"amount"`
+	ToAddress string      `json:"to_address"`
+	Amount    Array[Coin] `json:"amount"`
 }
 
 // BurnMsg will burn the given coins from the contract's account.
 // There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper.
 // Important if a contract controls significant token supply that must be retired.
 type BurnMsg struct {
-	Amount Coins `json:"amount"`
+	Amount Array[Coin] `json:"amount"`
 }
 
 type IBCMsg struct {
-	Transfer     *TransferMsg     `json:"transfer,omitempty"`
-	SendPacket   *SendPacketMsg   `json:"send_packet,omitempty"`
-	CloseChannel *CloseChannelMsg `json:"close_channel,omitempty"`
+	Transfer             *TransferMsg             `json:"transfer,omitempty"`
+	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
+	WriteAcknowledgement *WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
+	CloseChannel         *CloseChannelMsg         `json:"close_channel,omitempty"`
+	PayPacketFee         *PayPacketFeeMsg         `json:"pay_packet_fee,omitempty"`
+	PayPacketFeeAsync    *PayPacketFeeAsyncMsg    `json:"pay_packet_fee_async,omitempty"`
 }
 
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
 	Vote *VoteMsg `json:"vote,omitempty"`
+	/// This maps directly to [MsgVoteWeighted](https://github.com/cosmos/cosmos-sdk/blob/v0.45.8/proto/cosmos/gov/v1beta1/tx.proto#L66-L78) in the Cosmos SDK with voter set to the contract address.
+	VoteWeighted *VoteWeightedMsg `json:"vote_weighted,omitempty"`
 }
 
 type voteOption int
 
 type VoteMsg struct {
-	ProposalId uint64     `json:"proposal_id"`
-	Vote       voteOption `json:"vote"`
+	ProposalId uint64 `json:"proposal_id"`
+	// Option is the vote option.
+	//
+	// This used to be called "vote", but was changed for consistency with Cosmos SDK.
+	// The old name is still supported for backwards compatibility.
+	Option voteOption `json:"option"`
+}
+
+func (m *VoteMsg) UnmarshalJSON(data []byte) error {
+	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
+	type InternalVoteMsg struct {
+		ProposalId uint64      `json:"proposal_id"`
+		Option     *voteOption `json:"option"`
+		Vote       *voteOption `json:"vote"` // old version
+	}
+	var tmp InternalVoteMsg
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	if tmp.Option != nil && tmp.Vote != nil {
+		return fmt.Errorf("invalid VoteMsg: both 'option' and 'vote' fields are set")
+	} else if tmp.Option == nil && tmp.Vote != nil {
+		// Use "Option" for both variants
+		tmp.Option = tmp.Vote
+	}
+
+	*m = VoteMsg{
+		ProposalId: tmp.ProposalId,
+		Option:     *tmp.Option,
+	}
+	return nil
+}
+
+type VoteWeightedMsg struct {
+	ProposalId uint64               `json:"proposal_id"`
+	Options    []WeightedVoteOption `json:"options"`
+}
+
+type WeightedVoteOption struct {
+	Option voteOption `json:"option"`
+	// Weight is a Decimal string, e.g. "0.25" for 25%
+	Weight string `json:"weight"`
 }
 
 const (
-	Yes voteOption = iota
+	UnsetVoteOption voteOption = iota // The default value. We never return this in any valid instance (see toVoteOption).
+	Yes
 	No
 	Abstain
 	NoWithVeto
@@ -193,6 +235,7 @@ type TransferMsg struct {
 	ToAddress string     `json:"to_address"`
 	Amount    Coin       `json:"amount"`
 	Timeout   IBCTimeout `json:"timeout"`
+	Memo      string     `json:"memo,omitempty"`
 }
 
 type SendPacketMsg struct {
@@ -201,8 +244,45 @@ type SendPacketMsg struct {
 	Timeout   IBCTimeout `json:"timeout"`
 }
 
+type WriteAcknowledgementMsg struct {
+	// The acknowledgement to send back
+	Ack IBCAcknowledgement `json:"ack"`
+	// Existing channel where the packet was received
+	ChannelID string `json:"channel_id"`
+	// Sequence number of the packet that was received
+	PacketSequence uint64 `json:"packet_sequence"`
+}
+
 type CloseChannelMsg struct {
 	ChannelID string `json:"channel_id"`
+}
+
+type PayPacketFeeMsg struct {
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+}
+
+type PayPacketFeeAsyncMsg struct {
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+	// The sequence number of the packet that should be incentivized.
+	Sequence uint64 `json:"sequence"`
+}
+
+type IBCFee struct {
+	AckFee     Array[Coin] `json:"ack_fee"`
+	ReceiveFee Array[Coin] `json:"receive_fee"`
+	TimeoutFee Array[Coin] `json:"timeout_fee"`
 }
 
 type StakingMsg struct {
@@ -230,6 +310,7 @@ type RedelegateMsg struct {
 type DistributionMsg struct {
 	SetWithdrawAddress      *SetWithdrawAddressMsg      `json:"set_withdraw_address,omitempty"`
 	WithdrawDelegatorReward *WithdrawDelegatorRewardMsg `json:"withdraw_delegator_reward,omitempty"`
+	FundCommunityPool       *FundCommunityPoolMsg       `json:"fund_community_pool,omitempty"`
 }
 
 // SetWithdrawAddressMsg is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
@@ -246,19 +327,27 @@ type WithdrawDelegatorRewardMsg struct {
 	Validator string `json:"validator"`
 }
 
-// StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
+// FundCommunityPoolMsg is translated to a [MsgFundCommunityPool](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#LL69C1-L76C2).
+// `depositor` is automatically filled with the current contract's address
+type FundCommunityPoolMsg struct {
+	// Amount is the list of coins to be send to the community pool
+	Amount Array[Coin] `json:"amount"`
+}
+
+// AnyMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
 // This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
-type StargateMsg struct {
+type AnyMsg struct {
 	TypeURL string `json:"type_url"`
 	Value   []byte `json:"value"`
 }
 
 type WasmMsg struct {
-	Execute     *ExecuteMsg     `json:"execute,omitempty"`
-	Instantiate *InstantiateMsg `json:"instantiate,omitempty"`
-	Migrate     *MigrateMsg     `json:"migrate,omitempty"`
-	UpdateAdmin *UpdateAdminMsg `json:"update_admin,omitempty"`
-	ClearAdmin  *ClearAdminMsg  `json:"clear_admin,omitempty"`
+	Execute      *ExecuteMsg      `json:"execute,omitempty"`
+	Instantiate  *InstantiateMsg  `json:"instantiate,omitempty"`
+	Instantiate2 *Instantiate2Msg `json:"instantiate2,omitempty"`
+	Migrate      *MigrateMsg      `json:"migrate,omitempty"`
+	UpdateAdmin  *UpdateAdminMsg  `json:"update_admin,omitempty"`
+	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -276,7 +365,7 @@ type ExecuteMsg struct {
 	// as `userMsg` when calling `Handle` on the above-defined contract
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 }
 
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
@@ -285,14 +374,31 @@ type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
 	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Init` on a new contract with the above-defined CodeID
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
 	Msg []byte `json:"msg"`
 	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+	Funds Array[Coin] `json:"funds"`
 	// Label is optional metadata to be stored with a contract instance.
 	Label string `json:"label"`
 	// Admin (optional) may be set here to allow future migrations from this address
 	Admin string `json:"admin,omitempty"`
+}
+
+// Instantiate2Msg will create a new contract instance from a previously uploaded CodeID
+// using the predictable address derivation.
+type Instantiate2Msg struct {
+	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
+	CodeID uint64 `json:"code_id"`
+	// Msg is assumed to be a json-encoded message, which will be passed directly
+	// as `userMsg` when calling `Instantiate` on a new contract with the above-defined CodeID
+	Msg []byte `json:"msg"`
+	// Send is an optional amount of coins this contract sends to the called contract
+	Funds Array[Coin] `json:"funds"`
+	// Label is optional metadata to be stored with a contract instance.
+	Label string `json:"label"`
+	// Admin (optional) may be set here to allow future migrations from this address
+	Admin string `json:"admin,omitempty"`
+	Salt  []byte `json:"salt"`
 }
 
 // MigrateMsg will migrate an existing contract from it's current wasm code (logic)

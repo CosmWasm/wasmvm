@@ -3,6 +3,7 @@ use cosmwasm_vm::{BackendResult, GasInfo, Querier};
 
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
+use crate::Vtable;
 
 // this represents something passed in from the caller side of FFI
 #[repr(C)]
@@ -12,24 +13,28 @@ pub struct querier_t {
 }
 
 #[repr(C)]
-#[derive(Clone)]
-pub struct Querier_vtable {
+#[derive(Clone, Default)]
+pub struct QuerierVtable {
     // We return errors through the return buffer, but may return non-zero error codes on panic
-    pub query_external: extern "C" fn(
-        *const querier_t,
-        u64,
-        *mut u64,
-        U8SliceView,
-        *mut UnmanagedVector, // result output
-        *mut UnmanagedVector, // error message output
-    ) -> i32,
+    pub query_external: Option<
+        extern "C" fn(
+            querier: *const querier_t,
+            gas_limit: u64,
+            gas_used: *mut u64,
+            request: U8SliceView,
+            result_out: *mut UnmanagedVector, // A JSON encoded SystemResult<ContractResult<Binary>>
+            err_msg_out: *mut UnmanagedVector,
+        ) -> i32,
+    >,
 }
+
+impl Vtable for QuerierVtable {}
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct GoQuerier {
     pub state: *const querier_t,
-    pub vtable: Querier_vtable,
+    pub vtable: QuerierVtable,
 }
 
 // TODO: check if we can do this safer...
@@ -44,7 +49,11 @@ impl Querier for GoQuerier {
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
-        let go_result: GoError = (self.vtable.query_external)(
+        let query_external = self
+            .vtable
+            .query_external
+            .expect("vtable function 'query_external' not set");
+        let go_result: GoError = query_external(
             self.state,
             gas_limit,
             &mut used_gas as *mut u64,
@@ -72,12 +81,12 @@ impl Querier for GoQuerier {
         }
 
         let bin_result: Vec<u8> = output.unwrap_or_default();
-        let result = serde_json::from_slice(&bin_result).or_else(|e| {
-            Ok(SystemResult::Err(SystemError::InvalidResponse {
-                error: format!("Parsing Go response: {}", e),
+        let sys_result: SystemResult<_> = serde_json::from_slice(&bin_result).unwrap_or_else(|e| {
+            SystemResult::Err(SystemError::InvalidResponse {
+                error: format!("Parsing Go response: {e}"),
                 response: bin_result.into(),
-            }))
+            })
         });
-        (result, gas_info)
+        (Ok(sys_result), gas_info)
     }
 }

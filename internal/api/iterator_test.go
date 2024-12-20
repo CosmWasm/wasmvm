@@ -9,18 +9,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/types"
-	dbm "github.com/tendermint/tm-db"
+	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 type queueData struct {
 	checksum []byte
 	store    *Lookup
-	api      *GoAPI
+	api      *types.GoAPI
 	querier  types.Querier
 }
 
-func (q queueData) Store(meter MockGasMeter) KVStore {
+func (q queueData) Store(meter MockGasMeter) types.KVStore {
 	return q.store.WithGasMeter(meter)
 }
 
@@ -31,19 +31,19 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Coins{types.NewCoin(100, "ATOM")})
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 	msg := []byte(`{}`)
 
-	igasMeter1 := GasMeter(gasMeter1)
+	igasMeter1 := types.GasMeter(gasMeter1)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
 	for _, value := range values {
 		// push 17
-		var gasMeter2 GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
+		var gasMeter2 types.GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
 		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
 		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
@@ -67,8 +67,8 @@ func TestStoreIterator(t *testing.T) {
 	callID1 := startCall()
 	callID2 := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var index uint64
 	var err error
 
@@ -101,8 +101,8 @@ func TestStoreIterator(t *testing.T) {
 func TestStoreIteratorHitsLimit(t *testing.T) {
 	callID := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var err error
 	const limit = 2
 
@@ -126,12 +126,12 @@ func TestRetrieveIterator(t *testing.T) {
 	callID1 := startCall()
 	callID2 := startCall()
 
-	store := dbm.NewMemDB()
-	var iter dbm.Iterator
+	store := testdb.NewMemDB()
+	var iter types.Iterator
 	var err error
 
 	iter, _ = store.Iterator(nil, nil)
-	index11, err := storeIterator(callID1, iter, limit)
+	iteratorID11, err := storeIterator(callID1, iter, limit)
 	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID1, iter, limit)
@@ -140,27 +140,33 @@ func TestRetrieveIterator(t *testing.T) {
 	_, err = storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 	iter, _ = store.Iterator(nil, nil)
-	index22, err := storeIterator(callID2, iter, limit)
+	iteratorID22, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 	iter, err = store.Iterator(nil, nil)
 	require.NoError(t, err)
-	index23, err := storeIterator(callID2, iter, limit)
+	iteratorID23, err := storeIterator(callID2, iter, limit)
 	require.NoError(t, err)
 
 	// Retrieve existing
-	iter = retrieveIterator(callID1, index11)
+	iter = retrieveIterator(callID1, iteratorID11)
 	require.NotNil(t, iter)
-	iter = retrieveIterator(callID2, index22)
+	iter = retrieveIterator(callID2, iteratorID22)
 	require.NotNil(t, iter)
 
-	// Retrieve non-existent index
-	iter = retrieveIterator(callID1, index23)
+	// Retrieve with non-existent iterator ID
+	iter = retrieveIterator(callID1, iteratorID23)
 	require.Nil(t, iter)
 	iter = retrieveIterator(callID1, uint64(0))
 	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483647))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(2147483648))
+	require.Nil(t, iter)
+	iter = retrieveIterator(callID1, uint64(18446744073709551615))
+	require.Nil(t, iter)
 
-	// Retrieve non-existent call ID
-	iter = retrieveIterator(callID1+1_234_567, index23)
+	// Retrieve with non-existent call ID
+	iter = retrieveIterator(callID1+1_234_567, iteratorID23)
 	require.Nil(t, iter)
 
 	endCall(callID1)
@@ -176,23 +182,23 @@ func TestQueueIteratorSimple(t *testing.T) {
 
 	// query the sum
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"sum":{}}`)
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var qres types.QueryResponse
-	err = json.Unmarshal(data, &qres)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
-	require.Equal(t, `{"sum":39}`, string(qres.Ok))
+	require.Equal(t, "", qResult.Err)
+	require.Equal(t, `{"sum":39}`, string(qResult.Ok))
 
 	// query reduce (multiple iterators at once)
 	query = []byte(`{"reducer":{}}`)
 	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	var reduced types.QueryResponse
+	var reduced types.QueryResult
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
 	require.Equal(t, "", reduced.Err)
@@ -213,14 +219,14 @@ func TestQueueIteratorRaces(t *testing.T) {
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
 		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-		igasMeter := GasMeter(gasMeter)
+		igasMeter := types.GasMeter(gasMeter)
 		store := setup.Store(gasMeter)
 
 		// query reduce (multiple iterators at once)
 		query := []byte(`{"reducer":{}}`)
 		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
-		var reduced types.QueryResponse
+		var reduced types.QueryResult
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
 		require.Equal(t, "", reduced.Err)
@@ -261,27 +267,27 @@ func TestQueueIteratorLimit(t *testing.T) {
 	checksum, querier, api := setup.checksum, setup.querier, setup.api
 
 	var err error
-	var qres types.QueryResponse
+	var qResult types.QueryResult
 	var gasLimit uint64
 
 	// Open 5000 iterators
 	gasLimit = TESTING_GAS_LIMIT
 	gasMeter := NewMockGasMeter(gasLimit)
-	igasMeter := GasMeter(gasMeter)
+	igasMeter := types.GasMeter(gasMeter)
 	store := setup.Store(gasMeter)
 	query := []byte(`{"open_iterators":{"count":5000}}`)
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
-	err = json.Unmarshal(data, &qres)
+	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qres.Err)
-	require.Equal(t, `{}`, string(qres.Ok))
+	require.Equal(t, "", qResult.Err)
+	require.Equal(t, `{}`, string(qResult.Ok))
 
 	// Open 35000 iterators
 	gasLimit = TESTING_GAS_LIMIT * 4
 	gasMeter = NewMockGasMeter(gasLimit)
-	igasMeter = GasMeter(gasMeter)
+	igasMeter = types.GasMeter(gasMeter)
 	store = setup.Store(gasMeter)
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)

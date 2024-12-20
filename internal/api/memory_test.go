@@ -50,7 +50,7 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		var original []byte
 		unmanaged := newUnmanagedVector(original)
 		require.Equal(t, cbool(true), unmanaged.is_none)
-		// We must not make assumtions on the other fields in this case
+		// We must not make assumptions on the other fields in this case
 		copy := copyAndDestroyUnmanagedVector(unmanaged)
 		require.Nil(t, copy)
 	}
@@ -58,6 +58,7 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 
 // Like the test above but without `newUnmanagedVector` calls.
 // Since only Rust can actually create them, we only test edge cases here.
+//
 //go:nocheckptr
 func TestCopyDestroyUnmanagedVector(t *testing.T) {
 	{

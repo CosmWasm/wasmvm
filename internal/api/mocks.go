@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tm-db"
 
-	"github.com/CosmWasm/wasmvm/types"
+	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 /** helper constructors **/
@@ -35,7 +35,7 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(t *testing.T) []byte {
+func MockEnvBin(t testing.TB) []byte {
 	bin, err := json.Marshal(MockEnv())
 	require.NoError(t, err)
 	return bin
@@ -55,7 +55,7 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(t *testing.T, sender types.HumanAddress) []byte {
+func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
 	require.NoError(t, err)
 	return bin
@@ -192,28 +192,28 @@ type ErrorGasOverflow struct {
 }
 
 type MockGasMeter interface {
-	GasMeter
-	ConsumeGas(amount Gas, descriptor string)
+	types.GasMeter
+	ConsumeGas(amount types.Gas, descriptor string)
 }
 
 type mockGasMeter struct {
-	limit    Gas
-	consumed Gas
+	limit    types.Gas
+	consumed types.Gas
 }
 
 // NewMockGasMeter returns a reference to a new mockGasMeter.
-func NewMockGasMeter(limit Gas) MockGasMeter {
+func NewMockGasMeter(limit types.Gas) MockGasMeter {
 	return &mockGasMeter{
 		limit:    limit,
 		consumed: 0,
 	}
 }
 
-func (g *mockGasMeter) GasConsumed() Gas {
+func (g *mockGasMeter) GasConsumed() types.Gas {
 	return g.consumed
 }
 
-func (g *mockGasMeter) Limit() Gas {
+func (g *mockGasMeter) Limit() types.Gas {
 	return g.limit
 }
 
@@ -227,7 +227,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 	return a + b, false
 }
 
-func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
+func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
@@ -240,7 +240,7 @@ func (g *mockGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	}
 }
 
-/*** Mock KVStore ****/
+/*** Mock types.KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
 // Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
@@ -255,13 +255,13 @@ const (
 )
 
 type Lookup struct {
-	db    *dbm.MemDB
+	db    *testdb.MemDB
 	meter MockGasMeter
 }
 
 func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
-		db:    dbm.NewMemDB(),
+		db:    testdb.NewMemDB(),
 		meter: meter,
 	}
 }
@@ -277,7 +277,7 @@ func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 	}
 }
 
-// Get wraps the underlying DB's Get method panicing on error.
+// Get wraps the underlying DB's Get method panicking on error.
 func (l Lookup) Get(key []byte) []byte {
 	l.meter.ConsumeGas(GetPrice, "get")
 	v, err := l.db.Get(key)
@@ -288,7 +288,7 @@ func (l Lookup) Get(key []byte) []byte {
 	return v
 }
 
-// Set wraps the underlying DB's Set method panicing on error.
+// Set wraps the underlying DB's Set method panicking on error.
 func (l Lookup) Set(key, value []byte) {
 	l.meter.ConsumeGas(SetPrice, "set")
 	if err := l.db.Set(key, value); err != nil {
@@ -296,7 +296,7 @@ func (l Lookup) Set(key, value []byte) {
 	}
 }
 
-// Delete wraps the underlying DB's Delete method panicing on error.
+// Delete wraps the underlying DB's Delete method panicking on error.
 func (l Lookup) Delete(key []byte) {
 	l.meter.ConsumeGas(RemovePrice, "remove")
 	if err := l.db.Delete(key); err != nil {
@@ -304,8 +304,8 @@ func (l Lookup) Delete(key []byte) {
 	}
 }
 
-// Iterator wraps the underlying DB's Iterator method panicing on error.
-func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
+// Iterator wraps the underlying DB's Iterator method panicking on error.
+func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.Iterator(start, end)
 	if err != nil {
@@ -315,8 +315,8 @@ func (l Lookup) Iterator(start, end []byte) dbm.Iterator {
 	return iter
 }
 
-// ReverseIterator wraps the underlying DB's ReverseIterator method panicing on error.
-func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
+// ReverseIterator wraps the underlying DB's ReverseIterator method panicking on error.
+func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.ReverseIterator(start, end)
 	if err != nil {
@@ -326,9 +326,9 @@ func (l Lookup) ReverseIterator(start, end []byte) dbm.Iterator {
 	return iter
 }
 
-var _ KVStore = (*Lookup)(nil)
+var _ types.KVStore = (*Lookup)(nil)
 
-/***** Mock GoAPI ****/
+/***** Mock types.GoAPI ****/
 
 const CanonicalLength = 32
 
@@ -337,7 +337,7 @@ const (
 	CostHuman     uint64 = 550
 )
 
-func MockCanonicalAddress(human string) ([]byte, uint64, error) {
+func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 	if len(human) > CanonicalLength {
 		return nil, 0, fmt.Errorf("human encoding too long")
 	}
@@ -346,7 +346,7 @@ func MockCanonicalAddress(human string) ([]byte, uint64, error) {
 	return res, CostCanonical, nil
 }
 
-func MockHumanAddress(canon []byte) (string, uint64, error) {
+func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 	if len(canon) != CanonicalLength {
 		return "", 0, fmt.Errorf("wrong canonical length")
 	}
@@ -361,21 +361,40 @@ func MockHumanAddress(canon []byte) (string, uint64, error) {
 	return human, CostHuman, nil
 }
 
-func NewMockAPI() *GoAPI {
-	return &GoAPI{
-		HumanAddress:     MockHumanAddress,
-		CanonicalAddress: MockCanonicalAddress,
+func MockValidateAddress(input string) (gasCost uint64, _ error) {
+	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(input)
+	gasCost += gasCostCanonicalize
+	if err != nil {
+		return gasCost, err
+	}
+	humanized, gasCostHumanize, err := MockHumanizeAddress(canonicalized)
+	gasCost += gasCostHumanize
+	if err != nil {
+		return gasCost, err
+	}
+	if humanized != strings.ToLower(input) {
+		return gasCost, fmt.Errorf("address validation failed")
+	}
+
+	return gasCost, nil
+}
+
+func NewMockAPI() *types.GoAPI {
+	return &types.GoAPI{
+		HumanizeAddress:     MockHumanizeAddress,
+		CanonicalizeAddress: MockCanonicalizeAddress,
+		ValidateAddress:     MockValidateAddress,
 	}
 }
 
 func TestMockApi(t *testing.T) {
 	human := "foobar"
-	canon, cost, err := MockCanonicalAddress(human)
+	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
 	assert.Equal(t, CostCanonical, cost)
 
-	recover, cost, err := MockHumanAddress(canon)
+	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
 	assert.Equal(t, recover, human)
 	assert.Equal(t, CostHuman, cost)
@@ -391,20 +410,20 @@ type MockQuerier struct {
 	usedGas uint64
 }
 
-var _ types.Querier = MockQuerier{}
+var _ types.Querier = &MockQuerier{}
 
-func DefaultQuerier(contractAddr string, coins types.Coins) Querier {
-	balances := map[string]types.Coins{
+func DefaultQuerier(contractAddr string, coins types.Array[types.Coin]) types.Querier {
+	balances := map[string]types.Array[types.Coin]{
 		contractAddr: coins,
 	}
-	return MockQuerier{
+	return &MockQuerier{
 		Bank:    NewBankQuerier(balances),
 		Custom:  NoCustom{},
 		usedGas: 0,
 	}
 }
 
-func (q MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
+func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
 	marshaled, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -431,11 +450,11 @@ func (q MockQuerier) GasConsumed() uint64 {
 }
 
 type BankQuerier struct {
-	Balances map[string]types.Coins
+	Balances map[string]types.Array[types.Coin]
 }
 
-func NewBankQuerier(balances map[string]types.Coins) BankQuerier {
-	bal := make(map[string]types.Coins, len(balances))
+func NewBankQuerier(balances map[string]types.Array[types.Coin]) BankQuerier {
+	bal := make(map[string]types.Array[types.Coin], len(balances))
 	for k, v := range balances {
 		dst := make([]types.Coin, len(v))
 		copy(dst, v)
@@ -522,7 +541,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"
-	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
+	balance := types.Array[types.Coin]{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 
 	// query existing account
@@ -558,7 +577,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 
 func TestBankQuerierBalance(t *testing.T) {
 	addr := "foobar"
-	balance := types.Coins{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
+	balance := types.Array[types.Coin]{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
 	q := DefaultQuerier(addr, balance)
 
 	// query existing account with matching denom
@@ -623,7 +642,7 @@ func TestReflectCustomQuerier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, resp.Msg, "PONG")
 
-	// try captial
+	// try capital
 	msg2, err := json.Marshal(CustomQuery{Capitalized: &CapitalizedQuery{Text: "small."}})
 	require.NoError(t, err)
 	bz, err = q.Query(msg2)

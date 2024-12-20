@@ -1,3 +1,4 @@
+use cosmwasm_std::ChecksumError;
 use cosmwasm_vm::VmError;
 use errno::{set_errno, Errno};
 #[cfg(feature = "backtraces")]
@@ -21,6 +22,18 @@ pub enum RustError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
+    #[error("Cannot deserialize from MessagePack: {msg}")]
+    MessagePack {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
+    #[error("Cannot serialize to / deserialize from JSON: {msg}")]
+    Json {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
     #[error("Ran out of gas")]
     OutOfGas {
         #[cfg(feature = "backtraces")]
@@ -34,6 +47,11 @@ pub enum RustError {
     #[error("Null/Nil argument: {}", name)]
     UnsetArg {
         name: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
+    #[error("Checksum not of length 32")]
+    ChecksumError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
@@ -56,6 +74,14 @@ impl RustError {
 
     pub fn invalid_utf8<S: ToString>(msg: S) -> Self {
         RustError::InvalidUtf8 {
+            msg: msg.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn message_pack<S: ToString>(msg: S) -> Self {
+        RustError::MessagePack {
             msg: msg.to_string(),
             #[cfg(feature = "backtraces")]
             backtrace: Backtrace::capture(),
@@ -91,6 +117,13 @@ impl RustError {
             backtrace: Backtrace::capture(),
         }
     }
+
+    pub fn checksum_err() -> Self {
+        RustError::ChecksumError {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
 }
 
 impl From<VmError> for RustError {
@@ -99,6 +132,34 @@ impl From<VmError> for RustError {
             VmError::GasDepletion { .. } => RustError::out_of_gas(),
             _ => RustError::vm_err(source),
         }
+    }
+}
+
+impl From<ChecksumError> for RustError {
+    fn from(_: ChecksumError) -> Self {
+        RustError::checksum_err()
+    }
+}
+
+impl From<serde_json::Error> for RustError {
+    fn from(source: serde_json::Error) -> Self {
+        RustError::Json {
+            msg: source.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+}
+
+impl From<rmp_serde::encode::Error> for RustError {
+    fn from(source: rmp_serde::encode::Error) -> Self {
+        RustError::message_pack(source)
+    }
+}
+
+impl From<rmp_serde::decode::Error> for RustError {
+    fn from(source: rmp_serde::decode::Error) -> Self {
+        RustError::message_pack(source)
     }
 }
 
@@ -128,13 +189,6 @@ pub fn clear_error() {
 
 pub fn set_error(err: RustError, error_msg: Option<&mut UnmanagedVector>) {
     if let Some(error_msg) = error_msg {
-        if error_msg.is_some() {
-            panic!(
-                "There is an old error message in the given pointer that has not been \
-                cleaned up. Error message pointers should not be reused for multiple calls."
-            )
-        }
-
         let msg: Vec<u8> = err.to_string().into();
         *error_msg = UnmanagedVector::new(Some(msg));
     } else {
@@ -218,7 +272,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_vm::{BackendError, Checksum};
+    use cosmwasm_std::Checksum;
+    use cosmwasm_vm::BackendError;
     use errno::errno;
     use std::str;
 
@@ -304,9 +359,8 @@ mod tests {
 
     #[test]
     fn from_std_str_utf8error_works() {
-        let error: RustError = str::from_utf8(b"Hello \xF0\x90\x80World")
-            .unwrap_err()
-            .into();
+        let broken = Vec::from(b"Hello \xF0\x90\x80World" as &[u8]);
+        let error: RustError = str::from_utf8(&broken).unwrap_err().into();
         match error {
             RustError::InvalidUtf8 { msg, .. } => {
                 assert_eq!(msg, "invalid utf-8 sequence of 3 bytes from index 6")
@@ -476,7 +530,7 @@ mod tests {
         // Ok (unit)
         let mut error_msg = UnmanagedVector::default();
         let res: Result<(), RustError> = Ok(());
-        let _data = handle_c_error_default(res, Some(&mut error_msg));
+        handle_c_error_default(res, Some(&mut error_msg));
         assert_eq!(errno().0, ErrnoValue::Success as i32);
         assert!(error_msg.is_none());
         let _ = error_msg.consume();
@@ -502,7 +556,7 @@ mod tests {
         // Err (unit)
         let mut error_msg = UnmanagedVector::default();
         let res: Result<(), RustError> = Err(RustError::panic());
-        let _data = handle_c_error_default(res, Some(&mut error_msg));
+        handle_c_error_default(res, Some(&mut error_msg));
         assert_eq!(errno().0, ErrnoValue::Other as i32);
         assert!(error_msg.is_some());
         let _ = error_msg.consume();
