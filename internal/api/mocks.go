@@ -391,7 +391,7 @@ func TestMockApi(t *testing.T) {
 	human := "foobar"
 	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
-	assert.Equal(t, CanonicalLength, len(canon))
+	assert.Len(t, canon, CanonicalLength)
 	assert.Equal(t, CostCanonical, cost)
 
 	recover, cost, err := MockHumanizeAddress(canon)
@@ -639,7 +639,7 @@ func TestReflectCustomQuerier(t *testing.T) {
 	var resp CustomResponse
 	err = json.Unmarshal(bz, &resp)
 	require.NoError(t, err)
-	assert.Equal(t, resp.Msg, "PONG")
+	assert.Equal(t, "PONG", resp.Msg)
 
 	// try capital
 	msg2, err := json.Marshal(CustomQuery{Capitalized: &CapitalizedQuery{Text: "small."}})
@@ -649,5 +649,5 @@ func TestReflectCustomQuerier(t *testing.T) {
 	var resp2 CustomResponse
 	err = json.Unmarshal(bz, &resp2)
 	require.NoError(t, err)
-	assert.Equal(t, resp2.Msg, "SMALL.")
+	assert.Equal(t, "SMALL.", resp2.Msg)
 }

@@ -60,16 +60,16 @@ func TestBlockInfoSerialization(t *testing.T) {
 	}
 	bz, err := json.Marshal(block)
 	require.NoError(t, err)
-	assert.Equal(t, `{"height":123,"time":"1578939743987654321","chain_id":"foobar"}`, string(bz))
+	assert.JSONEq(t, `{"height":123,"time":"1578939743987654321","chain_id":"foobar"}`, string(bz))
 
 	block = BlockInfo{
-		Height:  0,
-		Time:    0,
-		ChainID: "",
+		0,
+		0,
+		"",
 	}
 	bz, err = json.Marshal(block)
 	require.NoError(t, err)
-	assert.Equal(t, `{"height":0,"time":"0","chain_id":""}`, string(bz))
+	assert.JSONEq(t, `{"height":0,"time":"0","chain_id":""}`, string(bz))
 }
 
 func TestBlockInfoDeserialization(t *testing.T) {
