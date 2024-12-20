@@ -139,8 +139,29 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 		return nil, errors.New("runtime is closed")
 	}
 
-	if code == nil || len(code) == 0 {
+	if code == nil {
+		return nil, errors.New("Null/Nil argument: wasm")
+	}
+
+	if len(code) == 0 {
 		return nil, errors.New("Wasm bytecode could not be deserialized")
+	}
+
+	// First try to decode the module to validate it
+	compiled, err := w.runtime.CompileModule(context.Background(), code)
+	if err != nil {
+		return nil, errors.New("Wasm bytecode could not be deserialized")
+	}
+
+	// Validate memory sections
+	memoryCount := 0
+	for _, exp := range compiled.ExportedMemories() {
+		if exp != nil {
+			memoryCount++
+		}
+	}
+	if memoryCount != 1 {
+		return nil, fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
 
 	checksum := sha256.Sum256(code)
@@ -151,12 +172,7 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 		return checksum[:], nil
 	}
 
-	compiled, err := w.runtime.CompileModule(context.Background(), code)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile module: %w", err)
-	}
-
-	// Persist code on success
+	// Store the validated module
 	w.codeCache[csHex] = code
 	w.compiledModules[csHex] = compiled
 
@@ -410,22 +426,23 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 
 	// Create runtime environment with the current state
 	runtimeEnv := &RuntimeEnvironment{
-		DB:      w.kvStore,
-		API:     *w.api,
-		Querier: w.querier,
-		Memory:  NewMemoryAllocator(65536), // Start at 64KB offset
-		Gas:     w.querier,                 // Use querier as gas meter since it implements GasConsumed()
+		DB:        w.kvStore,
+		API:       *w.api,
+		Querier:   w.querier,
+		Memory:    NewMemoryAllocator(65536), // Start at 64KB offset
+		Gas:       w.querier,                 // Use querier as gas meter since it implements GasConsumed()
+		iterators: make(map[uint64]map[uint64]types.Iterator),
 	}
 
-	// Register host functions
+	// Register host functions first
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hostModule.Close(ctx)
 
-	// Instantiate the host module first
-	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig())
+	// Instantiate the host module with the name "env"
+	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
 	}
@@ -500,4 +517,44 @@ func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 		return 0, 0, fmt.Errorf("failed to write data to memory")
 	}
 	return offset, uint32(len(data)), nil
+}
+
+// SimulateStoreCode validates the code but does not store it
+func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.closed {
+		return nil, errors.New("runtime is closed"), false
+	}
+
+	if code == nil {
+		return nil, errors.New("Null/Nil argument: wasm"), false
+	}
+
+	if len(code) == 0 {
+		return nil, errors.New("Wasm bytecode could not be deserialized"), false
+	}
+
+	// First try to decode the module to validate it
+	compiled, err := w.runtime.CompileModule(context.Background(), code)
+	if err != nil {
+		return nil, errors.New("Wasm bytecode could not be deserialized"), false
+	}
+	defer compiled.Close(context.Background())
+
+	// Validate memory sections
+	memoryCount := 0
+	for _, exp := range compiled.ExportedMemories() {
+		if exp != nil {
+			memoryCount++
+		}
+	}
+	if memoryCount != 1 {
+		return nil, fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory"), false
+	}
+
+	// Calculate checksum but don't store anything
+	checksum := sha256.Sum256(code)
+	return checksum[:], nil, true
 }
