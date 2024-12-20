@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /** helper constructors **/
@@ -392,8 +391,8 @@ func NewMockAPI() *types.GoAPI {
 	}
 }
 
-func TestMockApi(t *testing.T) {
-	human := Foobar
+func TestMockAPI(t *testing.T) {
+	human := "Foobar"
 	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
 	assert.Equal(t, CanonicalLength, len(canon))
@@ -428,7 +427,9 @@ func DefaultQuerier(contractAddr string, coins types.Array[types.Coin]) types.Qu
 	}
 }
 
-func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
+// Query is a mock implementation of the Querier interface.  It takes a request and a gas limit.
+// It returns the marshaled request and an error if the request is not supported.
+func (q *MockQuerier) Query(request types.QueryRequest, _ uint64) ([]byte, error) {
 	marshaled, err := json.Marshal(request)
 	if err != nil {
 		return nil, err

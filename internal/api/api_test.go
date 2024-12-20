@@ -5,9 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateAddressFailure(t *testing.T) {

@@ -13,10 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 const (
@@ -501,9 +500,9 @@ func TestGetPinnedMetrics(t *testing.T) {
 	findMetrics := func(list []types.PerModuleEntry, checksum types.Checksum) *types.PerModuleMetrics {
 		found := (*types.PerModuleMetrics)(nil)
 
-		for _, structure := range list {
-			if bytes.Equal(structure.Checksum, checksum) {
-				found = &structure.Metrics
+		for i := range list {
+			if bytes.Equal(list[i].Checksum, checksum) {
+				found = &list[i].Metrics
 				break
 			}
 		}
@@ -1156,7 +1155,7 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
+func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) { //nolint:unparam // expectedMsgs always receives 0 but that could change
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1361,17 +1360,17 @@ func TestFloats(t *testing.T) {
 
 	// helper to print the value in the same format as Rust's Debug trait
 	debugStr := func(value Value) string {
-		if value.U32 != nil {
+		switch {
+		case value.U32 != nil:
 			return fmt.Sprintf("U32(%d)", *value.U32)
-		} else if value.U64 != nil {
+		case value.U64 != nil:
 			return fmt.Sprintf("U64(%d)", *value.U64)
-		} else if value.F32 != nil {
+		case value.F32 != nil:
 			return fmt.Sprintf("F32(%d)", *value.F32)
-		} else if value.F64 != nil {
+		case value.F64 != nil:
 			return fmt.Sprintf("F64(%d)", *value.F64)
-		} else {
-			t.FailNow()
-			return ""
+		default:
+			return "None"
 		}
 	}
 

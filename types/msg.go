@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-var null = "null"
-
 //------- Results / Msgs -------------
 
 // ContractResult is the raw response from the instantiate/execute/migrate calls.

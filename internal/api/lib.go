@@ -13,9 +13,8 @@ import (
 	"strings"
 	"syscall"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"golang.org/x/sys/unix"
 )
 
 // Value types
@@ -45,26 +44,26 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not create base directory")
+		return Cache{}, fmt.Errorf("could not create base directory")
 	}
 
 	lockfile, err := os.OpenFile(filepath.Join(config.Cache.BaseDir, "exclusive.lock"), os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
+		return Cache{}, fmt.Errorf("could not open exclusive.lock")
 	}
 	_, err = lockfile.WriteString("This is a lockfile that prevent two VM instances to operate on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
 	if err != nil {
-		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
+		return Cache{}, fmt.Errorf("error writing to exclusive.lock")
 	}
 
 	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
+		return Cache{}, fmt.Errorf("could not lock exclusive.lock. is a different VM running in the same directory already?")
 	}
 
 	configBytes, err := json.Marshal(config)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not serialize config")
+		return Cache{}, fmt.Errorf("could not serialize config")
 	}
 	configView := makeView(configBytes)
 	defer runtime.KeepAlive(configBytes)

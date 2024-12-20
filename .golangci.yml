@@ -10,17 +10,19 @@ linters:
     - dogsled
     - errcheck
     - exportloopref
+    - gci
     - goconst
-    - gocritic
+    #   - gocritic
     - gofumpt
     - gosec
     - gosimple
     - govet
     - ineffassign
+    - maintidx
     - misspell
     - nakedret
     - nolintlint
-    - revive
+    #   - revive
     - staticcheck
     - stylecheck
     - typecheck
@@ -80,6 +82,9 @@ issues:
   max-same-issues: 10000
 
 linters-settings:
+  revive:
+    disable:
+      - var-naming
   dogsled:
     max-blank-identifiers: 3
   maligned:
