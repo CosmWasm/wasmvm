@@ -212,15 +212,17 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 }
 
 // hostValidateAddress implements addr_validate
-func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
+func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	addr, err := ReadMemory(mem, addrPtr, addrLen)
+	// Read the address bytes directly (no length prefix in Rust)
+	addr, err := ReadMemory(mem, addrPtr, 32) // Fixed size for addresses
 	if err != nil {
 		panic(fmt.Sprintf("failed to read address from memory: %v", err))
 	}
 
+	// Convert to string and validate
 	_, err = env.API.ValidateAddress(string(addr))
 	if err != nil {
 		return 0 // Return 0 for invalid address
@@ -593,6 +595,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("api_humanize_address")
 
 	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, addrPtr uint32) uint32 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostValidateAddress(ctx, m, addrPtr)
+		}).
+		WithParameterNames("addr_ptr").
+		WithResultNames("result").
+		Export("addr_validate")
+
+	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
 			ctx = context.WithValue(ctx, "env", env)
 			return hostCanonicalizeAddress(ctx, m, addrPtr, addrLen)
@@ -600,15 +611,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("addr_ptr", "addr_len").
 		WithResultNames("ptr", "len").
 		Export("addr_canonicalize")
-
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
-			return hostValidateAddress(ctx, m, addrPtr, addrLen)
-		}).
-		WithParameterNames("addr_ptr", "addr_len").
-		WithResultNames("result").
-		Export("addr_validate")
 
 	// Register Query functions
 	builder.NewFunctionBuilder().
