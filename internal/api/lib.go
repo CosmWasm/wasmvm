@@ -5,10 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"golang.org/x/sys/unix"
 )
 
 func init() {

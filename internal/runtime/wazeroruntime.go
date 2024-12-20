@@ -9,10 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-
-	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 type WazeroRuntime struct {
