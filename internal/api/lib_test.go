@@ -41,6 +41,7 @@ func TestInitCacheEmptyFeatures(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	cache, err := InitCache(tmpdir, "", TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
+	require.NoError(t, err)
 	ReleaseCache(cache)
 }
 
@@ -878,6 +879,7 @@ func TestHackatomQuerier(t *testing.T) {
 	require.Equal(t, "", qres.Err)
 	var balances types.AllBalancesResponse
 	err = json.Unmarshal(qres.Ok, &balances)
+	require.NoError(t, err)
 	require.Equal(t, balances.Amount, initBalance)
 }
 
