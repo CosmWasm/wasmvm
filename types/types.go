@@ -255,13 +255,3 @@ func (a *Array[C]) UnmarshalJSON(data []byte) error {
 	*a = raw
 	return nil
 }
-
-// Cache stores a reference to the runtime-specific cache handle and the lockfile.
-
-type WasmRuntime interface {
-	// StoreCode stores WASM code in the runtime cache
-	// checked: if true, run static analysis checks on the code
-	// persist: if true, store the raw bytecode in the cache
-	StoreCode(code []byte, checked bool, persist bool) ([]byte, error)
-	// ... other methods
-}
