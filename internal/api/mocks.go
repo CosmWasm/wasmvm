@@ -536,7 +536,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"

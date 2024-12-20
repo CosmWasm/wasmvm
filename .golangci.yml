@@ -7,6 +7,7 @@ linters:
     - errcheck
     - revive
     - gocritic
+    - testifylint
 
 linters-settings:
   goimports:

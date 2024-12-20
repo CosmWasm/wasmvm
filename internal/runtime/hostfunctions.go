@@ -127,31 +127,38 @@ func hostSet(ctx context.Context, mod api.Module, keyPtr, keyLen, valPtr, valLen
 }
 
 // hostHumanizeAddress implements api_humanize_address
-func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
+func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
+	// Read the input address from guest memory.
 	addr, err := ReadMemory(mem, addrPtr, addrLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read address from memory: %v", err))
+		// If we fail to read memory, return a non-zero error code.
+		return 1
 	}
 
+	// Call the API to humanize the address.
 	human, _, err := env.API.HumanizeAddress(addr)
 	if err != nil {
-		return 0, 0 // Return 0, 0 for invalid address
+		// On failure, return a non-zero error code.
+		return 1
 	}
 
-	// Allocate memory for the result
-	offset, err := env.Memory.Allocate(mem, uint32(len(human)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory: %v", err))
+	// We must write the result back into the same memory location, if it fits.
+	if uint32(len(human)) > addrLen {
+		// If the humanized address is larger than the provided buffer,
+		// return an error code.
+		return 1
 	}
 
-	if err := WriteMemory(mem, offset, []byte(human)); err != nil {
-		panic(fmt.Sprintf("failed to write humanized address: %v", err))
+	// Write the humanized address back to memory
+	if err := WriteMemory(mem, addrPtr, []byte(human)); err != nil {
+		return 1
 	}
 
-	return offset, uint32(len(human))
+	// Return 0 on success
+	return 0
 }
 
 // hostQueryExternal implements querier_query
@@ -184,31 +191,40 @@ func hostQueryExternal(ctx context.Context, mod api.Module, reqPtr, reqLen, gasL
 }
 
 // hostCanonicalizeAddress implements addr_canonicalize
-func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
+func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
+	// Retrieve your runtime environment.
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
+	// Read the input address from guest memory.
 	addr, err := ReadMemory(mem, addrPtr, addrLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read address from memory: %v", err))
+		// If we fail to read memory, return a non-zero error code.
+		return 1
 	}
 
+	// Call the API to canonicalize the address.
 	canonical, _, err := env.API.CanonicalizeAddress(string(addr))
 	if err != nil {
-		return 0, 0 // Return 0, 0 for invalid address
+		// On failure, just return a non-zero error code.
+		return 1
 	}
 
-	// Allocate memory for the result
-	offset, err := env.Memory.Allocate(mem, uint32(len(canonical)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory: %v", err))
+	// Here we must decide where to write the canonical address.
+	// Without details, let's assume we write it back to the same location.
+	if uint32(len(canonical)) > addrLen {
+		// If the canonical address is larger than the provided buffer,
+		// we have no way to signal that other than returning an error.
+		return 1
 	}
 
-	if err := WriteMemory(mem, offset, canonical); err != nil {
-		panic(fmt.Sprintf("failed to write canonical address: %v", err))
+	// Write the canonical address back to the memory at addrPtr.
+	if err := WriteMemory(mem, addrPtr, canonical); err != nil {
+		return 1
 	}
 
-	return offset, uint32(len(canonical))
+	// Return 0 on success.
+	return 0
 }
 
 // hostValidateAddress implements addr_validate
@@ -507,6 +523,41 @@ func hostDbWrite(ctx context.Context, mod api.Module, keyPtr, valuePtr uint32) {
 	env.DB.Set(key, value)
 }
 
+// hostSecp256k1Verify implements secp256k1_verify
+func hostSecp256k1Verify(ctx context.Context, mod api.Module, hash_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read message from memory (32 bytes for hash)
+	message, err := ReadMemory(mem, hash_ptr, 32)
+	if err != nil {
+		return 0
+	}
+
+	// Read signature from memory (64 bytes for signature)
+	signature, err := ReadMemory(mem, sig_ptr, 64)
+	if err != nil {
+		return 0
+	}
+
+	// Read public key from memory (33 bytes for compressed pubkey)
+	pubKey, err := ReadMemory(mem, pubkey_ptr, 33)
+	if err != nil {
+		return 0
+	}
+
+	// Call the API to verify the signature
+	verified, _, err := env.API.Secp256k1Verify(message, signature, pubKey)
+	if err != nil {
+		return 0
+	}
+
+	if verified {
+		return 1
+	}
+	return 0
+}
+
 // hostDbRemove implements db_remove
 func hostDbRemove(ctx context.Context, mod api.Module, keyPtr uint32) {
 	env := ctx.Value("env").(*RuntimeEnvironment)
@@ -528,6 +579,171 @@ func hostDbRemove(ctx context.Context, mod api.Module, keyPtr uint32) {
 	env.DB.Delete(key)
 }
 
+// hostSecp256k1RecoverPubkey implements secp256k1_recover_pubkey
+func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hash_ptr, sig_ptr, rec_id uint32) uint64 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read message hash from memory (32 bytes)
+	hash, err := ReadMemory(mem, hash_ptr, 32)
+	if err != nil {
+		return 0
+	}
+
+	// Read signature from memory (64 bytes)
+	sig, err := ReadMemory(mem, sig_ptr, 64)
+	if err != nil {
+		return 0
+	}
+
+	// Call the API to recover the public key
+	pubkey, _, err := env.API.Secp256k1RecoverPubkey(hash, sig, uint8(rec_id))
+	if err != nil {
+		return 0
+	}
+
+	// Allocate memory for the result
+	offset, err := env.Memory.Allocate(mem, uint32(len(pubkey)))
+	if err != nil {
+		return 0
+	}
+
+	// Write the recovered public key to memory
+	if err := WriteMemory(mem, offset, pubkey); err != nil {
+		return 0
+	}
+
+	return uint64(offset)
+}
+
+// hostEd25519Verify implements ed25519_verify
+func hostEd25519Verify(ctx context.Context, mod api.Module, msg_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read message from memory (32 bytes for message hash)
+	message, err := ReadMemory(mem, msg_ptr, 32)
+	if err != nil {
+		return 0
+	}
+
+	// Read signature from memory (64 bytes for ed25519 signature)
+	signature, err := ReadMemory(mem, sig_ptr, 64)
+	if err != nil {
+		return 0
+	}
+
+	// Read public key from memory (32 bytes for ed25519 pubkey)
+	pubKey, err := ReadMemory(mem, pubkey_ptr, 32)
+	if err != nil {
+		return 0
+	}
+
+	// Call the API to verify the signature
+	verified, _, err := env.API.Ed25519Verify(message, signature, pubKey)
+	if err != nil {
+		return 0
+	}
+
+	if verified {
+		return 1
+	}
+	return 0
+}
+
+// hostEd25519BatchVerify implements ed25519_batch_verify
+func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_ptr, pubkeys_ptr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read the number of messages (first 4 bytes)
+	countBytes, err := ReadMemory(mem, msgs_ptr, 4)
+	if err != nil {
+		return 0
+	}
+	count := binary.LittleEndian.Uint32(countBytes)
+
+	// Read messages
+	messages := make([][]byte, count)
+	msgPtr := msgs_ptr + 4
+	for i := uint32(0); i < count; i++ {
+		// Read message length
+		lenBytes, err := ReadMemory(mem, msgPtr, 4)
+		if err != nil {
+			return 0
+		}
+		msgLen := binary.LittleEndian.Uint32(lenBytes)
+		msgPtr += 4
+
+		// Read message
+		msg, err := ReadMemory(mem, msgPtr, msgLen)
+		if err != nil {
+			return 0
+		}
+		messages[i] = msg
+		msgPtr += msgLen
+	}
+
+	// Read signatures
+	signatures := make([][]byte, count)
+	sigPtr := sigs_ptr
+	for i := uint32(0); i < count; i++ {
+		// Each signature is 64 bytes
+		sig, err := ReadMemory(mem, sigPtr, 64)
+		if err != nil {
+			return 0
+		}
+		signatures[i] = sig
+		sigPtr += 64
+	}
+
+	// Read public keys
+	pubkeys := make([][]byte, count)
+	pubkeyPtr := pubkeys_ptr
+	for i := uint32(0); i < count; i++ {
+		// Each public key is 32 bytes
+		pubkey, err := ReadMemory(mem, pubkeyPtr, 32)
+		if err != nil {
+			return 0
+		}
+		pubkeys[i] = pubkey
+		pubkeyPtr += 32
+	}
+
+	// Call the API to verify the signatures
+	verified, _, err := env.API.Ed25519BatchVerify(messages, signatures, pubkeys)
+	if err != nil {
+		return 0
+	}
+
+	if verified {
+		return 1
+	}
+	return 0
+}
+
+// hostDebug implements debug
+func hostDebug(ctx context.Context, mod api.Module, msgPtr uint32) {
+	mem := mod.Memory()
+
+	// Read message from memory (null-terminated string)
+	var msg []byte
+	offset := msgPtr
+	for {
+		// Read one byte at a time
+		b, err := ReadMemory(mem, offset, 1)
+		if err != nil || len(b) == 0 || b[0] == 0 {
+			break
+		}
+		msg = append(msg, b[0])
+		offset++
+	}
+
+	// Print debug message
+	fmt.Printf("Debug: %s\n", string(msg))
+}
+
+// RegisterHostFunctions registers all host functions with the wazero runtime
 // RegisterHostFunctions registers all host functions with the wazero runtime
 func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (wazero.CompiledModule, error) {
 	builder := runtime.NewHostModuleBuilder("env")
@@ -541,7 +757,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("code").
 		Export("abort")
 
-	// Register DB functions
+	// Register DB functions (unchanged)
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen uint32) (uint32, uint32) {
 			ctx = context.WithValue(ctx, "env", env)
@@ -584,15 +800,14 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("call_id", "iter_id").
 		Export("db_next_key")
 
-	// Register API functions
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
+		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
 			ctx = context.WithValue(ctx, "env", env)
 			return hostHumanizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
-		WithResultNames("ptr", "len").
-		Export("api_humanize_address")
+		WithResultNames("result").
+		Export("addr_humanize")
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr uint32) uint32 {
@@ -604,12 +819,12 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("addr_validate")
 
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) (uint32, uint32) {
+		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
 			ctx = context.WithValue(ctx, "env", env)
 			return hostCanonicalizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
-		WithResultNames("ptr", "len").
+		WithResultNames("result").
 		Export("addr_canonicalize")
 
 	// Register Query functions
@@ -621,7 +836,17 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("req_ptr", "req_len", "gas_limit").
 		Export("querier_query")
 
-	// Register DB read function
+	// Register secp256k1_verify function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hash_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostSecp256k1Verify(ctx, m, hash_ptr, sig_ptr, pubkey_ptr)
+		}).
+		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
+		WithResultNames("result").
+		Export("secp256k1_verify")
+
+	// Register DB read/write/remove functions
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) uint32 {
 			ctx = context.WithValue(ctx, "env", env)
@@ -630,7 +855,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("key_ptr").
 		Export("db_read")
 
-	// Register DB write function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, valuePtr uint32) {
 			ctx = context.WithValue(ctx, "env", env)
@@ -639,7 +863,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("key_ptr", "value_ptr").
 		Export("db_write")
 
-	// Register DB remove function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) {
 			ctx = context.WithValue(ctx, "env", env)
@@ -647,6 +870,45 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		}).
 		WithParameterNames("key_ptr").
 		Export("db_remove")
+
+	// Register secp256k1_recover_pubkey function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hash_ptr, sig_ptr, rec_id uint32) uint64 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostSecp256k1RecoverPubkey(ctx, m, hash_ptr, sig_ptr, rec_id)
+		}).
+		WithParameterNames("hash_ptr", "sig_ptr", "rec_id").
+		WithResultNames("result").
+		Export("secp256k1_recover_pubkey")
+
+	// Register ed25519_verify function with i32i32i32_i32 signature
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, msg_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostEd25519Verify(ctx, m, msg_ptr, sig_ptr, pubkey_ptr)
+		}).
+		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
+		WithResultNames("result").
+		Export("ed25519_verify")
+
+	// Register ed25519_batch_verify function with i32i32i32_i32 signature
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, msgs_ptr, sigs_ptr, pubkeys_ptr uint32) uint32 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostEd25519BatchVerify(ctx, m, msgs_ptr, sigs_ptr, pubkeys_ptr)
+		}).
+		WithParameterNames("msgs_ptr", "sigs_ptr", "pubkeys_ptr").
+		WithResultNames("result").
+		Export("ed25519_batch_verify")
+
+	// Register debug function with i32_v signature
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
+			ctx = context.WithValue(ctx, "env", env)
+			hostDebug(ctx, m, msgPtr)
+		}).
+		WithParameterNames("msg_ptr").
+		Export("debug")
 
 	return builder.Compile(context.Background())
 }
