@@ -743,6 +743,67 @@ func hostDebug(ctx context.Context, mod api.Module, msgPtr uint32) {
 	fmt.Printf("Debug: %s\n", string(msg))
 }
 
+// hostQueryChain implements query_chain with signature (req_ptr i32) -> i32
+// Memory layout for input:
+//
+//	at req_ptr: 4 bytes little-endian length, followed by that many bytes of request
+//
+// Memory layout for output:
+//
+//	at returned offset: 4 bytes length prefix, followed by the JSON of ChainResponse
+func hostQueryChain(ctx context.Context, mod api.Module, reqPtr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read the request length
+	lenBytes, err := ReadMemory(mem, reqPtr, 4)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read query request length: %v", err))
+	}
+	reqLen := binary.LittleEndian.Uint32(lenBytes)
+
+	// Read the actual request
+	req, err := ReadMemory(mem, reqPtr+4, reqLen)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read query request: %v", err))
+	}
+
+	// Perform the query
+	// No explicit gas limit here, but if needed, we can pass env.Gas.GasConsumed() or something similar.
+	// We'll just pass 0 or env.Gas.GasConsumed() depending on what your environment expects.
+	// For now, let's pass env.Gas.GasConsumed() as a placeholder.
+	res := types.RustQuery(env.Querier, req, env.Gas.GasConsumed())
+
+	// Wrap in ChainResponse and serialize
+	serialized, err := json.Marshal(res)
+	if err != nil {
+		// On failure, return 0
+		return 0
+	}
+
+	// Allocate memory for (4 bytes length + serialized)
+	totalLen := 4 + len(serialized)
+	offset, err := env.Memory.Allocate(mem, uint32(totalLen))
+	if err != nil {
+		panic(fmt.Sprintf("failed to allocate memory for chain response: %v", err))
+	}
+
+	// Write length prefix
+	lenData := make([]byte, 4)
+	binary.LittleEndian.PutUint32(lenData, uint32(len(serialized)))
+	if err := WriteMemory(mem, offset, lenData); err != nil {
+		panic(fmt.Sprintf("failed to write response length: %v", err))
+	}
+
+	// Write serialized response
+	if err := WriteMemory(mem, offset+4, serialized); err != nil {
+		panic(fmt.Sprintf("failed to write response data: %v", err))
+	}
+
+	// Return the offset as i32
+	return offset
+}
+
 // RegisterHostFunctions registers all host functions with the wazero runtime
 // RegisterHostFunctions registers all host functions with the wazero runtime
 func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (wazero.CompiledModule, error) {
@@ -765,6 +826,16 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		}).
 		WithParameterNames("key_ptr", "key_len").
 		Export("db_get")
+
+	// Register query_chain with i32_i32 signature
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, reqPtr uint32) uint32 {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostQueryChain(ctx, m, reqPtr)
+		}).
+		WithParameterNames("req_ptr").
+		WithResultNames("res_ptr").
+		Export("query_chain")
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
