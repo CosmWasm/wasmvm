@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -7,11 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
@@ -76,6 +73,7 @@ type AcknowledgeDispatch struct {
 }
 
 func toBytes(t *testing.T, v interface{}) []byte {
+	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	return bz
@@ -109,7 +107,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
-	require.Equal(t, 0, len(iResponse.Messages))
+	require.Empty(t, iResponse.Messages)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -200,7 +198,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 	id := connResponse.Messages[0].ID
 
 	// mock reflect init callback (to store address)

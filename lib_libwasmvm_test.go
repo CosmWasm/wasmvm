@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -9,11 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -31,6 +28,7 @@ const (
 )
 
 func withVM(t *testing.T) *VM {
+	t.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
@@ -44,6 +42,7 @@ func withVM(t *testing.T) *VM {
 }
 
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
+	t.Helper()
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
 	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
@@ -96,7 +95,7 @@ func TestStoreCode(t *testing.T) {
 
 	// Nil
 	{
-		var wasm []byte = nil
+		var wasm []byte
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
 		require.ErrorContains(t, err, "Null/Nil argument: wasm")
 	}
@@ -128,7 +127,7 @@ func TestSimulateStoreCode(t *testing.T) {
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				_, err = vm.GetCode(checksum)
 				assert.ErrorContains(t, err, "Error opening Wasm file for reading")

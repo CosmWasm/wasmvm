@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /** helper constructors **/
@@ -35,9 +34,10 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(t testing.TB) []byte {
+func MockEnvBin(tb testing.TB) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockEnv())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -55,9 +55,10 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
+func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -536,7 +537,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"
