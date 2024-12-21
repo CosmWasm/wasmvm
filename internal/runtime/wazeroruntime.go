@@ -374,101 +374,7 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	if checksum == nil {
-		return nil, types.GasReport{}, errors.New("Null/Nil argument: checksum")
-	} else if len(checksum) != 32 {
-		return nil, types.GasReport{}, errors.New("Checksum not of length 32")
-	}
-
-	w.mu.Lock()
-	csHex := hex.EncodeToString(checksum)
-	compiled, ok := w.compiledModules[csHex]
-	// Track module hits
-	w.moduleHits[csHex]++
-	w.mu.Unlock()
-
-	if !ok {
-		return nil, types.GasReport{}, errors.New("Error opening Wasm file for reading")
-	}
-
-	ctx := context.Background()
-
-	// Create runtime environment with the current state
-	runtimeEnv := &RuntimeEnvironment{
-		DB:        w.kvStore,
-		API:       *w.api,
-		Querier:   w.querier,
-		Memory:    NewMemoryAllocator(65536), // Start at 64KB offset
-		Gas:       w.querier,                 // Use querier as gas meter since it implements GasConsumed()
-		iterators: make(map[uint64]map[uint64]types.Iterator),
-	}
-
-	// Register host functions first
-	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
-	}
-	defer hostModule.Close(ctx)
-
-	// Instantiate the host module with the name "env"
-	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
-	}
-
-	// Now instantiate the contract module
-	modConfig := wazero.NewModuleConfig().
-		WithName("contract").
-		WithStartFunctions() // Don't automatically run start function
-
-	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
-	}
-	defer module.Close(ctx)
-
-	envPtr, _, err := writeToWasmMemory(module, env)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-	queryPtr, _, err := writeToWasmMemory(module, query)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	fn := module.ExportedFunction("query")
-	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("function query not found")
-	}
-
-	results, err := fn.Call(ctx,
-		uint64(envPtr),
-		uint64(queryPtr),
-	)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("call failed: %w", err)
-	}
-
-	if len(results) < 2 {
-		return nil, types.GasReport{}, fmt.Errorf("function query returned too few results")
-	}
-
-	dataPtr := uint32(results[0])
-	dataLen := uint32(results[1])
-
-	data, ok2 := module.Memory().Read(dataPtr, dataLen)
-	if !ok2 {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read return data")
-	}
-
-	gr := types.GasReport{
-		Limit:          1_000_000_000,
-		Remaining:      500_000_000,
-		UsedExternally: 0,
-		UsedInternally: 500_000_000,
-	}
-
-	return data, gr, nil
+	return w.callContractFn("query", checksum, env, nil, query)
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -535,7 +441,7 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return metrics, nil
 }
 
-func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
+func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
 	if checksum == nil {
 		return nil, types.GasReport{}, errors.New("Null/Nil argument: checksum")
 	} else if len(checksum) != 32 {
@@ -593,51 +499,92 @@ func (w *WazeroRuntime) callContractFn(fnName string, checksum, env, info, msg [
 	if err != nil {
 		return nil, types.GasReport{}, err
 	}
-	infoPtr, _, err := writeToWasmMemory(module, info)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-	msgPtr, _, err := writeToWasmMemory(module, msg)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
 
-	fn := module.ExportedFunction(fnName)
+	fn := module.ExportedFunction(name)
 	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("function %s not found", fnName)
+		return nil, types.GasReport{}, fmt.Errorf("function %s not found", name)
 	}
 
-	results, err := fn.Call(ctx,
-		uint64(envPtr),
-		uint64(infoPtr),
-		uint64(msgPtr),
-	)
+	var results []uint64
+	if name == "query" {
+		msgPtr, _, err := writeToWasmMemory(module, msg)
+		if err != nil {
+			return nil, types.GasReport{}, err
+		}
+		results, err = fn.Call(ctx,
+			uint64(envPtr),
+			uint64(msgPtr),
+		)
+	} else if name == "instantiate" || name == "execute" {
+		infoPtr, _, err := writeToWasmMemory(module, info)
+		if err != nil {
+			return nil, types.GasReport{}, err
+		}
+		msgPtr, _, err := writeToWasmMemory(module, msg)
+		if err != nil {
+			return nil, types.GasReport{}, err
+		}
+		results, err = fn.Call(ctx,
+			uint64(envPtr),
+			uint64(infoPtr),
+			uint64(msgPtr),
+		)
+	} else {
+		// For other functions like migrate, sudo, reply, etc.
+		msgPtr, _, err := writeToWasmMemory(module, msg)
+		if err != nil {
+			return nil, types.GasReport{}, err
+		}
+		results, err = fn.Call(ctx,
+			uint64(envPtr),
+			uint64(msgPtr),
+		)
+	}
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("call failed: %w", err)
 	}
 
-	if len(results) < 2 {
-		return nil, types.GasReport{}, fmt.Errorf("function %s returned too few results", fnName)
+	if len(results) != 1 {
+		return nil, types.GasReport{}, fmt.Errorf("function %s returned wrong number of results: expected 1, got %d", name, len(results))
 	}
 
-	dataPtr := uint32(results[0])
-	dataLen := uint32(results[1])
+	// The contract function returns a pointer to an UnmanagedVector
+	resultPtr := uint32(results[0])
 
-	data, ok2 := module.Memory().Read(dataPtr, dataLen)
-	if !ok2 {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read return data")
+	// Read the UnmanagedVector
+	data, err := readUnmanagedVector(module, resultPtr)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result: %w", err)
 	}
 
+	// Copy the data since it will be invalidated when the module is closed
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	// Get gas usage from the querier
+	gasUsed := w.querier.GasConsumed()
+
+	// Create gas report
 	gr := types.GasReport{
 		Limit:          1_000_000_000,
-		Remaining:      500_000_000,
+		Remaining:      1_000_000_000 - gasUsed,
 		UsedExternally: 0,
-		UsedInternally: 500_000_000,
+		UsedInternally: gasUsed,
 	}
 
-	return data, gr, nil
+	// Deallocate the UnmanagedVector
+	deallocFn := module.ExportedFunction("deallocate")
+	if deallocFn != nil {
+		_, err = deallocFn.Call(ctx, uint64(resultPtr))
+		if err != nil {
+			return nil, types.GasReport{}, fmt.Errorf("failed to deallocate result: %w", err)
+		}
+	}
+
+	return dataCopy, gr, nil
 }
 
+// writeToWasmMemory writes data to the module's memory and returns a pointer to a ByteSliceView struct
 func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 	if len(data) == 0 {
 		// Return a ByteSliceView with is_nil=false, ptr=0, len=0
@@ -659,31 +606,91 @@ func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 	}
 
 	// Allocate memory for the data
-	dataOffset := uint32(2048)
+	allocFn := module.ExportedFunction("allocate")
+	if allocFn == nil {
+		return 0, 0, fmt.Errorf("allocate function not found")
+	}
+
+	// Call allocate with the size we need
+	results, err := allocFn.Call(context.Background(), uint64(len(data)))
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to allocate memory: %w", err)
+	}
+	if len(results) != 1 {
+		return 0, 0, fmt.Errorf("allocate function returned wrong number of results")
+	}
+
+	// Get the pointer to the allocated memory
+	dataPtr := uint32(results[0])
+
+	// Write the data to memory
 	mem := module.Memory()
-	if !mem.Write(dataOffset, data) {
+	if !mem.Write(dataPtr, data) {
 		return 0, 0, fmt.Errorf("failed to write data to memory")
 	}
 
-	// Write ByteSliceView struct
-	structOffset := uint32(1024)
+	// Create a ByteSliceView struct
+	viewOffset := uint32(1024)
 	// Write is_nil (bool)
-	if !mem.Write(structOffset, []byte{0}) {
+	if !mem.Write(viewOffset, []byte{0}) {
 		return 0, 0, fmt.Errorf("failed to write is_nil to memory")
 	}
 	// Write ptr (usize)
 	ptrBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(ptrBytes, uint64(dataOffset))
-	if !mem.Write(structOffset+1, ptrBytes) {
+	binary.LittleEndian.PutUint64(ptrBytes, uint64(dataPtr))
+	if !mem.Write(viewOffset+1, ptrBytes) {
 		return 0, 0, fmt.Errorf("failed to write ptr to memory")
 	}
 	// Write len (usize)
 	lenBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(lenBytes, uint64(len(data)))
-	if !mem.Write(structOffset+9, lenBytes) {
+	if !mem.Write(viewOffset+9, lenBytes) {
 		return 0, 0, fmt.Errorf("failed to write len to memory")
 	}
-	return structOffset, 17, nil // Size of ByteSliceView struct
+
+	return viewOffset, 17, nil // Size of ByteSliceView struct
+}
+
+// readUnmanagedVector reads an UnmanagedVector from memory and returns its data
+func readUnmanagedVector(module api.Module, ptr uint32) ([]byte, error) {
+	// UnmanagedVector struct layout:
+	// is_none: bool (1 byte)
+	// ptr: *mut u8 (8 bytes)
+	// len: usize (8 bytes)
+	// cap: usize (8 bytes)
+
+	mem := module.Memory()
+
+	// Read is_none
+	isNone, ok := mem.ReadByte(ptr)
+	if !ok {
+		return nil, fmt.Errorf("failed to read is_none")
+	}
+	if isNone != 0 {
+		return nil, nil
+	}
+
+	// Read ptr
+	ptrBytes, ok := mem.Read(ptr+1, 8)
+	if !ok {
+		return nil, fmt.Errorf("failed to read ptr")
+	}
+	dataPtr := binary.LittleEndian.Uint64(ptrBytes)
+
+	// Read len
+	lenBytes, ok := mem.Read(ptr+9, 8)
+	if !ok {
+		return nil, fmt.Errorf("failed to read len")
+	}
+	dataLen := binary.LittleEndian.Uint64(lenBytes)
+
+	// Read the actual data
+	data, ok := mem.Read(uint32(dataPtr), uint32(dataLen))
+	if !ok {
+		return nil, fmt.Errorf("failed to read data")
+	}
+
+	return data, nil
 }
 
 // SimulateStoreCode validates the code but does not store it
