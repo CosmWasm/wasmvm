@@ -1,14 +1,10 @@
-run:
-  tests: true
-
 linters:
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
     - gofumpt
-    - gci
-    - errcheck
-    #   - revive
-    - gocritic
-    - testifylint
-    - thelper
+    - goimports
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/CosmWasm/wasmvm
