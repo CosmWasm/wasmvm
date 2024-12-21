@@ -804,7 +804,6 @@ func hostQueryChain(ctx context.Context, mod api.Module, reqPtr uint32) uint32 {
 }
 
 // RegisterHostFunctions registers all host functions with the wazero runtime
-// RegisterHostFunctions registers all host functions with the wazero runtime
 func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (wazero.CompiledModule, error) {
 	builder := runtime.NewHostModuleBuilder("env")
 
@@ -940,6 +939,24 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		}).
 		WithParameterNames("key_ptr").
 		Export("db_remove")
+
+		// db_next_value
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, callID, iterID uint64) (uint32, uint32, uint32) {
+			ctx = context.WithValue(ctx, "env", env)
+			return hostNextValue(ctx, m, callID, iterID)
+		}).
+		WithParameterNames("call_id", "iter_id").
+		Export("db_next_value")
+
+	// db_close_iterator
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, callID, iterID uint64) {
+			ctx = context.WithValue(ctx, "env", env)
+			hostCloseIterator(ctx, m, callID, iterID)
+		}).
+		WithParameterNames("call_id", "iter_id").
+		Export("db_close_iterator")
 
 	// Register secp256k1_recover_pubkey function
 	builder.NewFunctionBuilder().

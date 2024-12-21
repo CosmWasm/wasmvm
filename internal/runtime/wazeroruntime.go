@@ -188,12 +188,38 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 }
 
 // StoreCode compiles and persists the code
-func (w *WazeroRuntime) StoreCode(code []byte) (checksum []byte, err error, persisted bool) {
-	c, e := w.storeCodeImpl(code)
-	if e != nil {
-		return nil, e, false
+func (w *WazeroRuntime) StoreCode(wasm []byte, persist bool) (checksum []byte, err error) {
+	// Compile the module (always do this to validate, regardless of persist)
+	compiled, err := w.runtime.CompileModule(context.Background(), wasm)
+	if err != nil {
+		return nil, errors.New("Wasm bytecode could not be deserialized")
 	}
-	return c, nil, true
+
+	// Compute the code’s checksum
+	sum := sha256.Sum256(wasm)
+	csHex := hex.EncodeToString(sum[:])
+
+	// If we're not persisting, just close the compiled module and return
+	if !persist {
+		compiled.Close(context.Background())
+		return sum[:], nil
+	}
+
+	// Otherwise, store it in the internal caches
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Check for duplicates
+	if _, exists := w.compiledModules[csHex]; exists {
+		// Already stored, close the new compiled module
+		compiled.Close(context.Background())
+		return sum[:], nil
+	}
+
+	// Otherwise, store for future usage
+	w.compiledModules[csHex] = compiled
+	w.codeCache[csHex] = wasm
+	return sum[:], nil
 }
 
 // StoreCodeUnchecked is similar but does not differ in logic here
@@ -201,25 +227,27 @@ func (w *WazeroRuntime) StoreCodeUnchecked(code []byte) ([]byte, error) {
 	return w.storeCodeImpl(code)
 }
 
+// GetCode returns the stored code for the given checksum
 func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {
 	if checksum == nil {
 		return nil, errors.New("Null/Nil argument: checksum")
-	}
-	if len(checksum) != 32 {
+	} else if len(checksum) != 32 {
 		return nil, errors.New("Checksum not of length 32")
 	}
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.closed {
-		return nil, errors.New("runtime is closed")
+	csHex := hex.EncodeToString(checksum)
+	code, ok := w.codeCache[csHex]
+	if !ok {
+		return nil, errors.New("Error opening Wasm file for reading")
 	}
 
-	csHex := hex.EncodeToString(checksum)
-	if code, ok := w.codeCache[csHex]; ok {
-		return code, nil
-	}
-	return nil, errors.New("Error opening Wasm file for reading")
+	// Return a copy of the code to prevent external modifications
+	codeCopy := make([]byte, len(code))
+	copy(codeCopy, code)
+	return codeCopy, nil
 }
 
 func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
@@ -255,14 +283,22 @@ func (w *WazeroRuntime) Pin(checksum []byte) error {
 	defer w.mu.Unlock()
 
 	csHex := hex.EncodeToString(checksum)
-	if _, ok := w.codeCache[csHex]; !ok {
+	code, ok := w.codeCache[csHex]
+	if !ok {
 		return errors.New("Error opening Wasm file for reading")
 	}
 
+	// Store the module in the pinned cache
 	w.pinnedModules[csHex] = struct{}{}
-	if _, exists := w.moduleSizes[csHex]; !exists {
-		w.moduleSizes[csHex] = uint64(len(w.codeCache[csHex]))
+
+	// Initialize hits to 0 if not already set
+	if _, exists := w.moduleHits[csHex]; !exists {
+		w.moduleHits[csHex] = 0
 	}
+
+	// Store the size of the module (size of checksum + size of code)
+	w.moduleSizes[csHex] = uint64(len(checksum) + len(code))
+
 	return nil
 }
 
@@ -278,6 +314,8 @@ func (w *WazeroRuntime) Unpin(checksum []byte) error {
 
 	csHex := hex.EncodeToString(checksum)
 	delete(w.pinnedModules, csHex)
+	delete(w.moduleHits, csHex)
+	delete(w.moduleSizes, csHex)
 	return nil
 }
 
@@ -349,63 +387,588 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 }
 
 func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
+	// Call the instantiate function
 	return w.callContractFn("instantiate", checksum, env, info, msg)
 }
 
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("execute", checksum, env, info, msg)
 }
 
 func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("migrate", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Just call migrate for now
-	return w.Migrate(checksum, env, msg, otherParams...)
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
+	return w.callContractFn("migrate", checksum, env, migrateInfo, msg)
 }
 
 func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("sudo", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("reply", checksum, env, nil, reply)
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("query", checksum, env, nil, query)
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg)
 }
 
 func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	// Extract additional parameters
+	if len(otherParams) < 5 {
+		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+	}
+
+	_, ok := otherParams[0].(*types.GasMeter)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+	}
+
+	store, ok := otherParams[1].(types.KVStore)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+	}
+
+	api, ok := otherParams[2].(*types.GoAPI)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+	}
+
+	querier, ok := otherParams[3].(*types.Querier)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+	}
+
+	_, ok = otherParams[4].(uint64)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	// Set the contract execution environment
+	w.kvStore = store
+	w.api = api
+	w.querier = *querier
+
 	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg)
 }
 
@@ -418,21 +981,29 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// Create a new PinnedMetrics with empty PerModule slice
 	metrics := &types.PinnedMetrics{
-		PerModule: make([]types.PerModuleEntry, 0, len(w.pinnedModules)),
+		PerModule: make([]types.PerModuleEntry, 0),
 	}
 
+	// Only include modules that are actually pinned
 	for csHex := range w.pinnedModules {
 		checksum, err := hex.DecodeString(csHex)
 		if err != nil {
 			continue
 		}
 
+		// Get the size from moduleSizes map, defaulting to 0 if not found
+		size := w.moduleSizes[csHex]
+
+		// Get the hits from moduleHits map, defaulting to 0 if not found
+		hits := w.moduleHits[csHex]
+
 		entry := types.PerModuleEntry{
 			Checksum: checksum,
 			Metrics: types.PerModuleMetrics{
-				Hits: w.moduleHits[csHex],
-				Size: w.moduleSizes[csHex],
+				Hits: hits,
+				Size: size,
 			},
 		}
 		metrics.PerModule = append(metrics.PerModule, entry)
@@ -441,7 +1012,13 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return metrics, nil
 }
 
-func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
+func (w *WazeroRuntime) callContractFn(
+	name string,
+	checksum,
+	env,
+	info,
+	msg []byte,
+) ([]byte, types.GasReport, error) {
 	if checksum == nil {
 		return nil, types.GasReport{}, errors.New("Null/Nil argument: checksum")
 	} else if len(checksum) != 32 {
@@ -451,8 +1028,10 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	w.mu.Lock()
 	csHex := hex.EncodeToString(checksum)
 	compiled, ok := w.compiledModules[csHex]
-	// Track module hits
-	w.moduleHits[csHex]++
+	// If pinned, track hits
+	if _, isPinned := w.pinnedModules[csHex]; isPinned {
+		w.moduleHits[csHex]++
+	}
 	w.mu.Unlock()
 
 	if !ok {
@@ -461,61 +1040,58 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 
 	ctx := context.Background()
 
-	// Create runtime environment with the current state
+	// Create a new runtime environment
 	runtimeEnv := &RuntimeEnvironment{
 		DB:        w.kvStore,
 		API:       *w.api,
 		Querier:   w.querier,
 		Memory:    NewMemoryAllocator(65536), // Start at 64KB offset
-		Gas:       w.querier,                 // Use querier as gas meter since it implements GasConsumed()
+		Gas:       w.querier,                 // Use querier as gas meter if you want
 		iterators: make(map[uint64]map[uint64]types.Iterator),
 	}
 
-	// Register host functions first
+	// Register the host module
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hostModule.Close(ctx)
 
-	// Instantiate the host module with the name "env"
-	_, err = w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
+	_, err = w.runtime.InstantiateModule(
+		ctx,
+		hostModule,
+		wazero.NewModuleConfig().WithName("env"),
+	)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
 	}
 
-	// Now instantiate the contract module
+	// Instantiate the contract module
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
-		WithStartFunctions() // Don't automatically run start function
-
+		WithStartFunctions() // don't auto-run any _start
 	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
 	defer module.Close(ctx)
 
+	// Prepare arguments in Wasm memory
 	envPtr, _, err := writeToWasmMemory(module, env)
 	if err != nil {
 		return nil, types.GasReport{}, err
 	}
 
+	// pick the exported function
 	fn := module.ExportedFunction(name)
 	if fn == nil {
 		return nil, types.GasReport{}, fmt.Errorf("function %s not found", name)
 	}
 
+	// We'll call with 2 or 3 arguments, depending on the entrypoint
 	var results []uint64
-	if name == "query" {
-		msgPtr, _, err := writeToWasmMemory(module, msg)
-		if err != nil {
-			return nil, types.GasReport{}, err
-		}
-		results, err = fn.Call(ctx,
-			uint64(envPtr),
-			uint64(msgPtr),
-		)
-	} else if name == "instantiate" || name == "execute" {
+	switch name {
+	case "instantiate", "execute":
 		infoPtr, _, err := writeToWasmMemory(module, info)
 		if err != nil {
 			return nil, types.GasReport{}, err
@@ -524,47 +1100,54 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		if err != nil {
 			return nil, types.GasReport{}, err
 		}
-		results, err = fn.Call(ctx,
-			uint64(envPtr),
-			uint64(infoPtr),
-			uint64(msgPtr),
-		)
-	} else {
-		// For other functions like migrate, sudo, reply, etc.
+		results, err = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+
+	case "migrate", "sudo", "reply", "query",
+		"ibc_channel_open", "ibc_channel_connect", "ibc_channel_close",
+		"ibc_packet_receive", "ibc_packet_ack", "ibc_packet_timeout",
+		"ibc_source_callback", "ibc_destination_callback":
 		msgPtr, _, err := writeToWasmMemory(module, msg)
 		if err != nil {
 			return nil, types.GasReport{}, err
 		}
-		results, err = fn.Call(ctx,
-			uint64(envPtr),
-			uint64(msgPtr),
-		)
+		results, err = fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
+
+	default:
+		return nil, types.GasReport{}, fmt.Errorf("unsupported entrypoint %s", name)
 	}
+
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("call failed: %w", err)
 	}
 
-	if len(results) != 1 {
+	// The contract function must return exactly one result (the pointer)
+	if len(results) == 0 {
+		return nil, types.GasReport{}, fmt.Errorf("function %s returned no results: expected 1", name)
+	} else if len(results) > 1 {
 		return nil, types.GasReport{}, fmt.Errorf("function %s returned wrong number of results: expected 1, got %d", name, len(results))
 	}
 
-	// The contract function returns a pointer to an UnmanagedVector
+	// We have exactly 1 result
 	resultPtr := uint32(results[0])
 
-	// Read the UnmanagedVector
-	data, err := readUnmanagedVector(module, resultPtr)
+	// read the raw bytes from the UnmanagedVector
+	rawData, err := readUnmanagedVector(module, resultPtr)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to read result: %w", err)
 	}
+	// copy them so we can close the module
+	dataCopy := make([]byte, len(rawData))
+	copy(dataCopy, rawData)
 
-	// Copy the data since it will be invalidated when the module is closed
-	dataCopy := make([]byte, len(data))
-	copy(dataCopy, data)
+	// free that memory if there's a "deallocate" export
+	if deallocFn := module.ExportedFunction("deallocate"); deallocFn != nil {
+		if _, err = deallocFn.Call(ctx, uint64(resultPtr)); err != nil {
+			return nil, types.GasReport{}, fmt.Errorf("failed to deallocate result: %w", err)
+		}
+	}
 
-	// Get gas usage from the querier
+	// Prepare gas report
 	gasUsed := w.querier.GasConsumed()
-
-	// Create gas report
 	gr := types.GasReport{
 		Limit:          1_000_000_000,
 		Remaining:      1_000_000_000 - gasUsed,
@@ -572,15 +1155,7 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		UsedInternally: gasUsed,
 	}
 
-	// Deallocate the UnmanagedVector
-	deallocFn := module.ExportedFunction("deallocate")
-	if deallocFn != nil {
-		_, err = deallocFn.Call(ctx, uint64(resultPtr))
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to deallocate result: %w", err)
-		}
-	}
-
+	// **Return the contract’s raw bytes** directly!
 	return dataCopy, gr, nil
 }
 
@@ -602,7 +1177,11 @@ func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 		if !mem.Write(offset+9, make([]byte, 8)) {
 			return 0, 0, fmt.Errorf("failed to write len to memory")
 		}
-		return offset, 17, nil // Size of ByteSliceView struct
+		// Write cap (usize)
+		if !mem.Write(offset+17, make([]byte, 8)) {
+			return 0, 0, fmt.Errorf("failed to write cap to memory")
+		}
+		return offset, 25, nil // Size of ByteSliceView struct
 	}
 
 	// Allocate memory for the data
@@ -647,8 +1226,14 @@ func writeToWasmMemory(module api.Module, data []byte) (uint32, uint32, error) {
 	if !mem.Write(viewOffset+9, lenBytes) {
 		return 0, 0, fmt.Errorf("failed to write len to memory")
 	}
+	// Write cap (usize)
+	capBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(capBytes, uint64(len(data)))
+	if !mem.Write(viewOffset+17, capBytes) {
+		return 0, 0, fmt.Errorf("failed to write cap to memory")
+	}
 
-	return viewOffset, 17, nil // Size of ByteSliceView struct
+	return viewOffset, 25, nil // Size of ByteSliceView struct
 }
 
 // readUnmanagedVector reads an UnmanagedVector from memory and returns its data
@@ -684,6 +1269,12 @@ func readUnmanagedVector(module api.Module, ptr uint32) ([]byte, error) {
 	}
 	dataLen := binary.LittleEndian.Uint64(lenBytes)
 
+	// Read cap (we don't use it but need to read it to match the layout)
+	_, ok = mem.Read(ptr+17, 8)
+	if !ok {
+		return nil, fmt.Errorf("failed to read cap")
+	}
+
 	// Read the actual data
 	data, ok := mem.Read(uint32(dataPtr), uint32(dataLen))
 	if !ok {
@@ -695,13 +1286,6 @@ func readUnmanagedVector(module api.Module, ptr uint32) ([]byte, error) {
 
 // SimulateStoreCode validates the code but does not store it
 func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if w.closed {
-		return nil, errors.New("runtime is closed"), false
-	}
-
 	if code == nil {
 		return nil, errors.New("Null/Nil argument: wasm"), false
 	}
@@ -710,14 +1294,14 @@ func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
 		return nil, errors.New("Wasm bytecode could not be deserialized"), false
 	}
 
-	// First try to decode the module to validate it
+	// Attempt to compile the module just to validate.
 	compiled, err := w.runtime.CompileModule(context.Background(), code)
 	if err != nil {
 		return nil, errors.New("Wasm bytecode could not be deserialized"), false
 	}
 	defer compiled.Close(context.Background())
 
-	// Validate memory sections
+	// Check memory requirements
 	memoryCount := 0
 	for _, exp := range compiled.ExportedMemories() {
 		if exp != nil {
@@ -728,7 +1312,9 @@ func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
 		return nil, fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory"), false
 	}
 
-	// Calculate checksum but don't store anything
+	// Compute checksum but do not store in any cache
 	checksum := sha256.Sum256(code)
-	return checksum[:], nil, true
+
+	// Return checksum, no error, and persisted=false
+	return checksum[:], nil, false
 }

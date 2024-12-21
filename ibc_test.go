@@ -107,7 +107,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
-	require.Equal(t, 0, len(iResponse.Messages))
+	require.Empty(t, iResponse.Messages)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -198,7 +198,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 	id := connResponse.Messages[0].ID
 
 	// mock reflect init callback (to store address)

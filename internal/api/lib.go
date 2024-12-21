@@ -83,7 +83,7 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	if cache.handle == nil {
 		return nil, fmt.Errorf("cache handle is nil")
 	}
-	checksum, err, _ := currentRuntime.StoreCode(wasm)
+	checksum, err := currentRuntime.StoreCode(wasm, persist)
 	return checksum, err
 }
 
