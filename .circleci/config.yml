@@ -186,7 +186,7 @@ jobs:
   # Build types and cosmwam package without cgo
   wasmvm_no_cgo:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:1.23.4
     steps:
       - checkout
       - run:
