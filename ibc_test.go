@@ -105,6 +105,7 @@ func TestIBCHandshake(t *testing.T) {
 	}
 	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
+	t.Logf("Instantiation response: %+v", i)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
 	require.Empty(t, iResponse.Messages)

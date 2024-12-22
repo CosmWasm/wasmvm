@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
@@ -184,21 +186,6 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 	}
 
 	return nil
-}
-
-// deallocate frees memory in the WASM module
-func (m *memoryManager) deallocate(ptr, size uint32) error {
-	if ptr == 0 || size == 0 {
-		return nil
-	}
-
-	deallocate := m.module.ExportedFunction("deallocate")
-	if deallocate == nil {
-		return fmt.Errorf("deallocate function not found in WASM module")
-	}
-
-	_, err := deallocate.Call(context.Background(), uint64(ptr))
-	return err
 }
 
 func NewWazeroRuntime() (*WazeroRuntime, error) {
@@ -1179,43 +1166,190 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return metrics, nil
 }
 
-// validateEnv validates that the environment data is properly formatted JSON
-func validateEnv(env []byte) error {
-	// Environment data must be valid JSON
-	var envData struct {
-		Block struct {
-			Height  uint64       `json:"height"`
-			Time    types.Uint64 `json:"time"` // Nanoseconds since Unix epoch
-			ChainID string       `json:"chain_id"`
-		} `json:"block"`
-		Transaction *struct {
-			Index uint32 `json:"index"`
-		} `json:"transaction"`
-		Contract struct {
-			Address string `json:"address"`
-		} `json:"contract"`
+// serializeEnvForContract serializes the environment based on the contract version
+func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]byte, error) {
+	// First try to unmarshal into a strongly typed Env
+	var typedEnv types.Env
+	if err := json.Unmarshal(env, &typedEnv); err == nil {
+		// Convert to a map for easier manipulation
+		var rawEnv map[string]interface{}
+		if err := json.Unmarshal(env, &rawEnv); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal env: %w", err)
+		}
+
+		// Handle block info time conversion
+		if block, ok := rawEnv["block"].(map[string]interface{}); ok {
+			// For strongly typed Env, we know this is a Uint64
+			block["time"] = strconv.FormatUint(uint64(typedEnv.Block.Time), 10)
+			block["height"] = strconv.FormatUint(typedEnv.Block.Height, 10)
+		}
+
+		// Get contract version info for version-specific adaptations
+		report, err := w.AnalyzeCode(checksum)
+		if err != nil {
+			return nil, fmt.Errorf("failed to analyze code: %w", err)
+		}
+
+		// Apply version-specific adaptations
+		if report.ContractMigrateVersion != nil && *report.ContractMigrateVersion < 1 {
+			delete(rawEnv, "transaction")
+		} else if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
+			// Ensure transaction index is a string
+			if idx, ok := txn["index"]; ok {
+				txn["index"] = strconv.FormatUint(uint64(idx.(float64)), 10)
+			}
+		}
+
+		// Re-serialize with appropriate version adaptations
+		adaptedEnv, err := json.Marshal(rawEnv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
+		}
+
+		return adaptedEnv, nil
 	}
 
-	if err := json.Unmarshal(env, &envData); err != nil {
-		return fmt.Errorf("invalid environment data: %w", err)
+	// If we couldn't unmarshal into a strongly typed Env, try as a raw map
+	var rawEnv map[string]interface{}
+	d := json.NewDecoder(strings.NewReader(string(env)))
+	d.UseNumber() // Use json.Number to preserve numeric precision
+	if err := d.Decode(&rawEnv); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
 	}
 
-	// Validate block height
-	if envData.Block.Height == 0 {
-		return fmt.Errorf("invalid environment data: block height must be greater than 0")
+	// Handle block info time conversion
+	if block, ok := rawEnv["block"].(map[string]interface{}); ok {
+		if timeVal, ok := block["time"]; ok {
+			var timeUint uint64
+			switch v := timeVal.(type) {
+			case json.Number:
+				if i, err := v.Int64(); err == nil {
+					timeUint = uint64(i)
+				} else {
+					return nil, fmt.Errorf("failed to parse time as int64: %w", err)
+				}
+			case string:
+				// Try parsing as nanosecond timestamp first
+				if i, err := strconv.ParseUint(v, 10, 64); err == nil {
+					timeUint = i
+				} else {
+					// Try parsing as RFC3339
+					t, err := time.Parse(time.RFC3339, v)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse time: %w", err)
+					}
+					timeUint = uint64(t.UnixNano())
+				}
+			case float64:
+				timeUint = uint64(v)
+			case uint64:
+				timeUint = v
+			case types.Uint64:
+				timeUint = uint64(v)
+			case map[string]interface{}:
+				// Handle the case where time is serialized as a JSON object with a uint64 field
+				if u, ok := v["uint64"].(float64); ok {
+					timeUint = uint64(u)
+				} else {
+					return nil, fmt.Errorf("invalid uint64 object format: %v", v)
+				}
+			default:
+				return nil, fmt.Errorf("unexpected time format: %T", v)
+			}
+			block["time"] = strconv.FormatUint(timeUint, 10)
+		}
+
+		// Ensure height is a string
+		if heightVal, ok := block["height"]; ok {
+			var height uint64
+			switch v := heightVal.(type) {
+			case json.Number:
+				if i, err := v.Int64(); err == nil {
+					height = uint64(i)
+				} else {
+					return nil, fmt.Errorf("failed to parse height as int64: %w", err)
+				}
+			case float64:
+				height = uint64(v)
+			case uint64:
+				height = v
+			case string:
+				if i, err := strconv.ParseUint(v, 10, 64); err == nil {
+					height = i
+				} else {
+					return nil, fmt.Errorf("failed to parse height: %w", err)
+				}
+			default:
+				return nil, fmt.Errorf("unexpected height format: %T", v)
+			}
+			block["height"] = strconv.FormatUint(height, 10)
+		}
+
+		// Ensure chain_id is a string
+		if chainID, ok := block["chain_id"]; ok {
+			if str, ok := chainID.(string); ok {
+				block["chain_id"] = str
+			} else {
+				return nil, fmt.Errorf("chain_id must be a string, got %T", chainID)
+			}
+		}
 	}
 
-	// Validate chain ID
-	if envData.Block.ChainID == "" {
-		return fmt.Errorf("invalid environment data: chain ID must not be empty")
+	// Ensure contract address is a string
+	if contract, ok := rawEnv["contract"].(map[string]interface{}); ok {
+		if addr, ok := contract["address"]; ok {
+			if str, ok := addr.(string); ok {
+				contract["address"] = str
+			} else {
+				return nil, fmt.Errorf("contract address must be a string, got %T", addr)
+			}
+		}
 	}
 
-	// Validate contract address
-	if envData.Contract.Address == "" {
-		return fmt.Errorf("invalid environment data: contract address must not be empty")
+	// Get contract version info for version-specific adaptations
+	report, err := w.AnalyzeCode(checksum)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze code: %w", err)
 	}
 
-	return nil
+	// Apply version-specific adaptations
+	if report.ContractMigrateVersion != nil && *report.ContractMigrateVersion < 1 {
+		delete(rawEnv, "transaction")
+	} else if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
+		// Ensure transaction index is a string
+		if idx, ok := txn["index"]; ok {
+			var index uint32
+			switch v := idx.(type) {
+			case json.Number:
+				if i, err := v.Int64(); err == nil {
+					index = uint32(i)
+				} else {
+					return nil, fmt.Errorf("failed to parse transaction index as int64: %w", err)
+				}
+			case float64:
+				index = uint32(v)
+			case uint32:
+				index = v
+			case string:
+				if i, err := strconv.ParseUint(v, 10, 32); err == nil {
+					index = uint32(i)
+				} else {
+					return nil, fmt.Errorf("failed to parse transaction index: %w", err)
+				}
+			default:
+				return nil, fmt.Errorf("unexpected transaction index format: %T", v)
+			}
+			txn["index"] = strconv.FormatUint(uint64(index), 10)
+		}
+	}
+
+	// Re-serialize with appropriate version adaptations
+	adaptedEnv, err := json.Marshal(rawEnv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
+	}
+
+	return adaptedEnv, nil
 }
 
 // callContractFn is the high-level dispatcher for all CosmWasm entry points.
@@ -1241,9 +1375,6 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{},
 			fmt.Errorf("invalid argument: checksum must be 32 bytes, got %d", len(checksum))
 	}
-	if err := validateEnv(env); err != nil {
-		return nil, types.GasReport{}, err
-	}
 
 	// 2) Lookup compiled code
 	w.mu.Lock()
@@ -1258,9 +1389,15 @@ func (w *WazeroRuntime) callContractFn(
 			fmt.Errorf("code for %s not found in compiled modules", csHex)
 	}
 
+	// 3) Adapt environment for contract version
+	adaptedEnv, err := serializeEnvForContract(env, checksum, w)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to adapt environment: %w", err)
+	}
+
 	ctx := context.Background()
 
-	// 3) Register and instantiate the host module "env"
+	// 4) Register and instantiate the host module "env"
 	hm, err := RegisterHostFunctions(w.runtime, &RuntimeEnvironment{
 		DB:        w.kvStore,
 		API:       *w.api,
@@ -1280,7 +1417,7 @@ func (w *WazeroRuntime) callContractFn(
 			fmt.Errorf("failed to instantiate host module: %w", err)
 	}
 
-	// 4) Instantiate the contract module
+	// 5) Instantiate the contract module
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
 		WithStartFunctions() // optional
@@ -1291,7 +1428,7 @@ func (w *WazeroRuntime) callContractFn(
 	}
 	defer module.Close(ctx)
 
-	// 5) Create memory manager
+	// 6) Create memory manager
 	memory := module.Memory()
 	if memory == nil {
 		return nil, types.GasReport{}, fmt.Errorf("no memory section in module")
@@ -1301,12 +1438,11 @@ func (w *WazeroRuntime) callContractFn(
 	//------------------------------------------------
 	// a) Write env → Region pointer (envRegionPtr)
 	//------------------------------------------------
-	envPtr, envSize, err := mm.writeToMemory(env)
+	envPtr, envSize, err := mm.writeToMemory(adaptedEnv)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write env: %w", err)
 	}
-	// Omit any manual mm.deallocate(envPtr, envSize)!
 
 	envRegion := &Region{
 		Offset:   envPtr,
@@ -1318,7 +1454,6 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to allocate env region: %w", err)
 	}
-	// Omit mm.deallocate(envRegionPtr, regionSize)!
 	if err := mm.writeRegion(envRegionPtr, envRegion); err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write env region: %w", err)
@@ -1332,7 +1467,6 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write msg: %w", err)
 	}
-	// Omit mm.deallocate(msgPtr, msgSize)!
 
 	msgRegion := &Region{
 		Offset:   msgPtr,
@@ -1344,7 +1478,6 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to allocate msg region: %w", err)
 	}
-	// Omit mm.deallocate(msgRegionPtr, regionSize)!
 	if err := mm.writeRegion(msgRegionPtr, msgRegion); err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write msg region: %w", err)
@@ -1365,7 +1498,6 @@ func (w *WazeroRuntime) callContractFn(
 			return nil, types.GasReport{},
 				fmt.Errorf("failed to write info: %w", err2)
 		}
-		// Omit mm.deallocate(infoPtr, infoSize)!
 
 		infoRegion := &Region{
 			Offset:   infoPtr,
@@ -1377,7 +1509,6 @@ func (w *WazeroRuntime) callContractFn(
 			return nil, types.GasReport{},
 				fmt.Errorf("failed to allocate info region: %w", err2)
 		}
-		// Omit mm.deallocate(infoRegionPtr, regionSize)!
 		if err2 = mm.writeRegion(infoRegionPtr, infoRegion); err2 != nil {
 			return nil, types.GasReport{},
 				fmt.Errorf("failed to write info region: %w", err2)

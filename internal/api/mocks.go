@@ -22,7 +22,7 @@ func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
-			Time:    types.Uint64(1578939743_987654321),
+			Time:    types.Uint64(1578939743987654321),
 			ChainID: "foobar",
 		},
 		Transaction: &types.TransactionInfo{
@@ -34,9 +34,10 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(tb testing.TB) []byte {
-	bin, err := json.Marshal(MockEnv())
-	require.NoError(tb, err)
+func MockEnvBin(t testing.TB) []byte {
+	env := MockEnv()
+	bin, err := json.Marshal(env)
+	require.NoError(t, err)
 	return bin
 }
 
@@ -54,10 +55,9 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
-	tb.Helper()
+func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(tb, err)
+	require.NoError(t, err)
 	return bin
 }
 
