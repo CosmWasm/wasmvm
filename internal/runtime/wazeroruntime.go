@@ -1218,19 +1218,34 @@ func validateEnv(env []byte) error {
 	return nil
 }
 
-func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte) ([]byte, types.GasReport, error) {
+// callContractFn is the high-level dispatcher for all CosmWasm entry points.
+//   - "query", "sudo", "reply" each expect 2 parameters: env + msg
+//   - "instantiate", "execute", "migrate" each expect 3 parameters: env + info + msg
+//
+// Any mismatch leads to memory corruption in the Wasm, causing invalid JSON parse errors.
+//
+// Here, `info` must be non-nil if the contract function is one of the 3-argument entry points.
+// For "migrate" you might also handle fallback for 2-argument signatures, depending on your contract.
+// callContractFn is revised to not double-free env/info/msg pointers.
+func (w *WazeroRuntime) callContractFn(
+	name string,
+	checksum []byte,
+	env []byte,
+	info []byte, // nil except for instantiate/execute/migrate
+	msg []byte,
+) ([]byte, types.GasReport, error) {
+	// 1) Basic validations
 	if checksum == nil {
 		return nil, types.GasReport{}, errors.New("Null/Nil argument: checksum")
 	} else if len(checksum) != 32 {
-		return nil, types.GasReport{}, fmt.Errorf("invalid argument: checksum must be 32 bytes, got %d", len(checksum))
+		return nil, types.GasReport{},
+			fmt.Errorf("invalid argument: checksum must be 32 bytes, got %d", len(checksum))
 	}
-
-	// Validate environment data
 	if err := validateEnv(env); err != nil {
 		return nil, types.GasReport{}, err
 	}
 
-	// Get the compiled module
+	// 2) Lookup compiled code
 	w.mu.Lock()
 	csHex := hex.EncodeToString(checksum)
 	compiled, ok := w.compiledModules[csHex]
@@ -1238,14 +1253,14 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		w.moduleHits[csHex]++
 	}
 	w.mu.Unlock()
-
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("code for %s not found in compiled modules", csHex)
+		return nil, types.GasReport{},
+			fmt.Errorf("code for %s not found in compiled modules", csHex)
 	}
 
 	ctx := context.Background()
 
-	// Register host environment
+	// 3) Register and instantiate the host module "env"
 	hm, err := RegisterHostFunctions(w.runtime, &RuntimeEnvironment{
 		DB:        w.kvStore,
 		API:       *w.api,
@@ -1254,188 +1269,171 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		iterators: make(map[uint64]map[uint64]types.Iterator),
 	})
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hm.Close(ctx)
 
-	// Instantiate host module as "env"
 	_, err = w.runtime.InstantiateModule(ctx, hm, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate host module: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to instantiate host module: %w", err)
 	}
 
-	// Instantiate the contract with memory configuration
+	// 4) Instantiate the contract module
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
-		WithStartFunctions() // Allow start functions for initialization
-
+		WithStartFunctions() // optional
 	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to instantiate contract: %w", err)
 	}
 	defer module.Close(ctx)
 
-	// Get the memory section
+	// 5) Create memory manager
 	memory := module.Memory()
 	if memory == nil {
-		return nil, types.GasReport{}, fmt.Errorf("no memory section found in module")
+		return nil, types.GasReport{}, fmt.Errorf("no memory section in module")
 	}
-
-	// Create memory manager with bounds checking
 	mm := newMemoryManager(memory, module)
 
-	// Write environment to memory
+	//------------------------------------------------
+	// a) Write env → Region pointer (envRegionPtr)
+	//------------------------------------------------
 	envPtr, envSize, err := mm.writeToMemory(env)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to write env: %w", err)
 	}
-	defer func() {
-		if err := mm.deallocate(envPtr, envSize); err != nil {
-			fmt.Printf("Error deallocating env: %v\n", err)
-		}
-	}()
+	// Omit any manual mm.deallocate(envPtr, envSize)!
 
-	// Create a Region for the environment
 	envRegion := &Region{
 		Offset:   envPtr,
 		Capacity: envSize,
 		Length:   envSize,
 	}
-
-	// Write environment Region to memory
 	envRegionPtr, err := allocateInContract(ctx, module, regionSize)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for env region: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to allocate env region: %w", err)
 	}
-	defer func() {
-		if err := mm.deallocate(envRegionPtr, regionSize); err != nil {
-			fmt.Printf("Error deallocating env region: %v\n", err)
-		}
-	}()
-
+	// Omit mm.deallocate(envRegionPtr, regionSize)!
 	if err := mm.writeRegion(envRegionPtr, envRegion); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env region: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to write env region: %w", err)
 	}
 
-	// Write message to memory
+	//------------------------------------------------
+	// b) Write msg → Region pointer (msgRegionPtr)
+	//------------------------------------------------
 	msgPtr, msgSize, err := mm.writeToMemory(msg)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to write msg: %w", err)
 	}
-	defer func() {
-		if err := mm.deallocate(msgPtr, msgSize); err != nil {
-			fmt.Printf("Error deallocating msg: %v\n", err)
-		}
-	}()
+	// Omit mm.deallocate(msgPtr, msgSize)!
 
-	// Create a Region for the message
 	msgRegion := &Region{
 		Offset:   msgPtr,
 		Capacity: msgSize,
 		Length:   msgSize,
 	}
-
-	// Write message Region to memory
 	msgRegionPtr, err := allocateInContract(ctx, module, regionSize)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for msg region: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to allocate msg region: %w", err)
 	}
-	defer func() {
-		if err := mm.deallocate(msgRegionPtr, regionSize); err != nil {
-			fmt.Printf("Error deallocating msg region: %v\n", err)
-		}
-	}()
-
+	// Omit mm.deallocate(msgRegionPtr, regionSize)!
 	if err := mm.writeRegion(msgRegionPtr, msgRegion); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write msg region: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to write msg region: %w", err)
 	}
 
-	// Prepare function parameters based on the function name
-	var params []uint64
+	//------------------------------------------------
+	// c) Possibly write info → Region pointer
+	//------------------------------------------------
+	var callParams []uint64
 	switch name {
-	case "query":
-		// For query, we pass the environment and message as Region pointers
-		params = []uint64{uint64(envRegionPtr), uint64(msgRegionPtr)}
 	case "instantiate", "execute", "migrate":
 		if info == nil {
-			return nil, types.GasReport{}, fmt.Errorf("info parameter is required for %s", name)
+			return nil, types.GasReport{},
+				fmt.Errorf("%s requires a non-nil info parameter", name)
 		}
-
-		// Write info to memory
-		infoPtr, infoSize, err := mm.writeToMemory(info)
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
+		infoPtr, infoSize, err2 := mm.writeToMemory(info)
+		if err2 != nil {
+			return nil, types.GasReport{},
+				fmt.Errorf("failed to write info: %w", err2)
 		}
-		defer func() {
-			if err := mm.deallocate(infoPtr, infoSize); err != nil {
-				fmt.Printf("Error deallocating info: %v\n", err)
-			}
-		}()
+		// Omit mm.deallocate(infoPtr, infoSize)!
 
-		// Create a Region for the info
 		infoRegion := &Region{
 			Offset:   infoPtr,
 			Capacity: infoSize,
 			Length:   infoSize,
 		}
-
-		// Write info Region to memory
-		infoRegionPtr, err := allocateInContract(ctx, module, regionSize)
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for info region: %w", err)
+		infoRegionPtr, err2 := allocateInContract(ctx, module, regionSize)
+		if err2 != nil {
+			return nil, types.GasReport{},
+				fmt.Errorf("failed to allocate info region: %w", err2)
 		}
-		defer func() {
-			if err := mm.deallocate(infoRegionPtr, regionSize); err != nil {
-				fmt.Printf("Error deallocating info region: %v\n", err)
-			}
-		}()
-
-		if err := mm.writeRegion(infoRegionPtr, infoRegion); err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write info region: %w", err)
+		// Omit mm.deallocate(infoRegionPtr, regionSize)!
+		if err2 = mm.writeRegion(infoRegionPtr, infoRegion); err2 != nil {
+			return nil, types.GasReport{},
+				fmt.Errorf("failed to write info region: %w", err2)
 		}
 
-		params = []uint64{uint64(envRegionPtr), uint64(infoRegionPtr), uint64(msgRegionPtr)}
+		callParams = []uint64{
+			uint64(envRegionPtr),
+			uint64(infoRegionPtr),
+			uint64(msgRegionPtr),
+		}
+	case "query", "sudo", "reply":
+		callParams = []uint64{
+			uint64(envRegionPtr),
+			uint64(msgRegionPtr),
+		}
 	default:
-		return nil, types.GasReport{}, fmt.Errorf("unknown function: %s", name)
+		return nil, types.GasReport{},
+			fmt.Errorf("unknown function name: %s", name)
 	}
 
-	// Call the contract function
+	//------------------------------------------------
+	// d) Invoke the wasm function
+	//------------------------------------------------
 	fn := module.ExportedFunction(name)
 	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("function %q not found in module", name)
+		return nil, types.GasReport{},
+			fmt.Errorf("function %q not found in contract", name)
 	}
-
-	results, err := fn.Call(ctx, params...)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("call to %s failed: %w", name, err)
+	results, callErr := fn.Call(ctx, callParams...)
+	if callErr != nil {
+		return nil, types.GasReport{},
+			fmt.Errorf("call to %s failed: %w", name, callErr)
 	}
-
-	// Handle the result
 	if len(results) != 1 {
-		return nil, types.GasReport{}, fmt.Errorf("function %s returned unexpected number of results: %d", name, len(results))
+		return nil, types.GasReport{},
+			fmt.Errorf("function %s returned %d results (wanted 1)", name, len(results))
 	}
 
-	// The result is a pointer to a Region struct
+	//------------------------------------------------
+	// e) The single result is the "result region"
+	//------------------------------------------------
 	resultRegionPtr := uint32(results[0])
 	resultRegion, err := mm.readRegion(resultRegionPtr)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result region: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to read result region: %w", err)
 	}
-
-	// Read the actual result data
-	resultData, err := mm.readFromMemory(resultRegion.Offset, resultRegion.Length)
+	resultBytes, err := mm.readFromMemory(resultRegion.Offset, resultRegion.Length)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result data: %w", err)
+		return nil, types.GasReport{},
+			fmt.Errorf("failed to read result data: %w", err)
 	}
 
-	// Deallocate the result
-	defer func() {
-		if err := mm.deallocate(resultRegion.Offset, resultRegion.Length); err != nil {
-			fmt.Printf("Error deallocating result region: %v\n", err)
-		}
-	}()
-
-	// Create gas report
+	//------------------------------------------------
+	// f) Construct GasReport
+	//------------------------------------------------
 	gasUsed := w.querier.GasConsumed()
 	gr := types.GasReport{
 		Limit:          1_000_000_000,
@@ -1444,7 +1442,7 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		UsedInternally: gasUsed,
 	}
 
-	return resultData, gr, nil
+	return resultBytes, gr, nil
 }
 
 // SimulateStoreCode validates the code but does not store it
