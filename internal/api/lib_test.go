@@ -845,22 +845,33 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		var wg sync.WaitGroup
+		errChan := make(chan error, callCount)
+		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
+		testMutex.Lock()
+		info = MockInfoBin(b, "fred")
+		testMutex.Unlock()
 		for i := 0; i < callCount; i++ {
 			go func() {
+				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 				igasMeter2 := types.GasMeter(gasMeter2)
 				store.SetGasMeter(gasMeter2)
-				info = MockInfoBin(b, "fred")
 				msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
 				res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-				require.NoError(b, err)
-				requireOkResponse(b, res, 0)
-
-				wg.Done()
+				errChan <- err
+				resChan <- res
 			}()
 		}
 		wg.Wait()
+		close(errChan)
+		close(resChan)
+
+		// Now check results in the main test goroutine
+		for i := 0; i < callCount; i++ {
+			require.NoError(b, <-errChan)
+			requireOkResponse(b, <-resChan, 0)
+		}
 	}
 }
 
@@ -1312,10 +1323,6 @@ func TestCustomReflectQuerier(t *testing.T) {
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
 	}
 
-	type CapitalizedResponse struct {
-		Text string `json:"text"`
-	}
-
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createReflectContract(t, cache)
@@ -1352,6 +1359,10 @@ func TestCustomReflectQuerier(t *testing.T) {
 	err = json.Unmarshal(qResult.Ok, &response)
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
+}
+
+type CapitalizedResponse struct {
+	Text string `json:"text"`
 }
 
 // TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
