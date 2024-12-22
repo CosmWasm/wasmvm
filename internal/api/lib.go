@@ -13,8 +13,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"golang.org/x/sys/unix"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 // Value types
