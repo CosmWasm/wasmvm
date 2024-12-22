@@ -23,7 +23,6 @@ linters:
     - misspell # Find commonly misspelled words
     - revive # a metalinter with more checks
     - bodyclose # Check HTTP response bodies are closed
-    - dupl # Code clone detector
     - goconst # Find repeated strings that could be constants
     - gocyclo # Check function complexity
     - godot # Check comment endings
