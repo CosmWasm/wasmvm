@@ -25,7 +25,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "cosmwasm_2_1", "cosmwasm_2_2"}
 
 type CapitalizedResponse struct {
 	Text string `json:"text"`
