@@ -8,7 +8,6 @@ import (
 
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -204,14 +203,14 @@ func TestQueueIteratorSimple(t *testing.T) {
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
 	require.Equal(t, "", reduced.Err)
-	require.Equal(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
+	require.JSONEq(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
 func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, 0, len(iteratorFrames))
+	require.Empty(t, iteratorFrames)
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -233,7 +232,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
 		require.Equal(t, "", reduced.Err)
-		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
+		require.JSONEq(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
 	// 30 concurrent batches (in go routines) to trigger any race condition
@@ -259,7 +258,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	wg.Wait()
 
 	// when they finish, we should have removed all frames
-	assert.Equal(t, 0, len(iteratorFrames))
+	require.Empty(t, iteratorFrames)
 }
 
 func TestQueueIteratorLimit(t *testing.T) {

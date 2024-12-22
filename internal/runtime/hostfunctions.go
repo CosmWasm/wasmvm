@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	// Maximum number of iterators per contract call
-	maxIteratorsPerCall = 100
 	// Gas costs for iterator operations
 	gasCostIteratorCreate = 2000
 	gasCostIteratorNext   = 100
@@ -363,38 +361,6 @@ func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	iter.Next()
 
 	return offset
-}
-
-// hostNextKey implements db_next_key
-func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (uint32, uint32, uint32) {
-	env := ctx.Value("env").(*RuntimeEnvironment)
-	mem := mod.Memory()
-
-	// Check or track gas, etc.
-
-	iter := env.GetIterator(callID, iterID)
-	if iter == nil {
-		return 0, 0, 2 // invalid iterator
-	}
-	if !iter.Valid() {
-		return 0, 0, 0 // end of iteration
-	}
-
-	key := iter.Key()
-
-	// OLD: keyOffset, err := env.Memory.Allocate(mem, uint32(len(key)))
-	keyOffset, err := allocateInContract(ctx, mod, uint32(len(key)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for key: %v", err))
-	}
-	if err := writeMemory(mem, keyOffset, key); err != nil {
-		panic(fmt.Sprintf("failed to write key to memory: %v", err))
-	}
-
-	iter.Next()
-
-	// Return key pointer, key length, and 0 for success
-	return keyOffset, uint32(len(key)), 0
 }
 
 // hostNextValue implements db_next_value
@@ -830,7 +796,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register abort function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, code uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostAbort(ctx, m, code)
 		}).
 		WithParameterNames("code").
@@ -839,7 +805,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register DB functions (unchanged)
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen uint32) (uint32, uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostGet(ctx, m, keyPtr, keyLen)
 		}).
 		WithParameterNames("key_ptr", "key_len").
@@ -848,7 +814,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register query_chain with i32_i32 signature
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, reqPtr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostQueryChain(ctx, m, reqPtr)
 		}).
 		WithParameterNames("req_ptr").
@@ -857,7 +823,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostSet(ctx, m, keyPtr, keyLen, valPtr, valLen)
 		}).
 		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
@@ -865,7 +831,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostScan(ctx, m, startPtr, startLen, order)
 		}).
 		WithParameterNames("start_ptr", "start_len", "order").
@@ -874,7 +840,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostNext(ctx, m, iterID)
 		}).
 		WithParameterNames("iter_id").
@@ -883,7 +849,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostHumanizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
@@ -892,7 +858,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostValidateAddress(ctx, m, addrPtr)
 		}).
 		WithParameterNames("addr_ptr").
@@ -901,7 +867,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostCanonicalizeAddress(ctx, m, addrPtr, addrLen)
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
@@ -911,7 +877,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register Query functions
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, reqPtr, reqLen, gasLimit uint32) (uint32, uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostQueryExternal(ctx, m, reqPtr, reqLen, gasLimit)
 		}).
 		WithParameterNames("req_ptr", "req_len", "gas_limit").
@@ -920,7 +886,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register secp256k1_verify function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, hash_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostSecp256k1Verify(ctx, m, hash_ptr, sig_ptr, pubkey_ptr)
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
@@ -930,7 +896,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register DB read/write/remove functions
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostDbRead(ctx, m, keyPtr)
 		}).
 		WithParameterNames("key_ptr").
@@ -938,7 +904,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, valuePtr uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostDbWrite(ctx, m, keyPtr, valuePtr)
 		}).
 		WithParameterNames("key_ptr", "value_ptr").
@@ -946,7 +912,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostDbRemove(ctx, m, keyPtr)
 		}).
 		WithParameterNames("key_ptr").
@@ -955,7 +921,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// db_next_value
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, callID, iterID uint64) (uint32, uint32, uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostNextValue(ctx, m, callID, iterID)
 		}).
 		WithParameterNames("call_id", "iter_id").
@@ -964,7 +930,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// db_close_iterator
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, callID, iterID uint64) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostCloseIterator(ctx, m, callID, iterID)
 		}).
 		WithParameterNames("call_id", "iter_id").
@@ -973,7 +939,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register secp256k1_recover_pubkey function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, hash_ptr, sig_ptr, rec_id uint32) uint64 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostSecp256k1RecoverPubkey(ctx, m, hash_ptr, sig_ptr, rec_id)
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "rec_id").
@@ -983,7 +949,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register ed25519_verify function with i32i32i32_i32 signature
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, msg_ptr, sig_ptr, pubkey_ptr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostEd25519Verify(ctx, m, msg_ptr, sig_ptr, pubkey_ptr)
 		}).
 		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
@@ -993,7 +959,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register ed25519_batch_verify function with i32i32i32_i32 signature
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, msgs_ptr, sigs_ptr, pubkeys_ptr uint32) uint32 {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			return hostEd25519BatchVerify(ctx, m, msgs_ptr, sigs_ptr, pubkeys_ptr)
 		}).
 		WithParameterNames("msgs_ptr", "sigs_ptr", "pubkeys_ptr").
@@ -1003,7 +969,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register debug function with i32_v signature
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
-			ctx = context.WithValue(ctx, "env", env)
+			ctx = context.WithValue(ctx, envKey, env)
 			hostDebug(ctx, m, msgPtr)
 		}).
 		WithParameterNames("msg_ptr").
@@ -1024,3 +990,10 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 // }
 //
 // Then, instantiate your contract module which imports "env" module's functions.
+
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const (
+	envKey contextKey = "env"
+)

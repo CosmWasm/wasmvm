@@ -186,7 +186,7 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// execute
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -197,7 +197,7 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, h.Ok)
 	hres := h.Ok
-	require.Equal(t, 1, len(hres.Messages))
+	require.Len(t, hres.Messages, 1)
 
 	// make sure it read the balance properly and we got 250 atoms
 	dispatch := hres.Messages[0].Msg
@@ -230,7 +230,7 @@ func TestEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// Execute mirror env without Transaction
 	env = types.Env{
@@ -310,11 +310,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 3
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -327,11 +327,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 4
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -343,7 +343,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 5
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
@@ -357,11 +357,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 6
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -376,7 +376,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 7
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -391,11 +391,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 8
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)

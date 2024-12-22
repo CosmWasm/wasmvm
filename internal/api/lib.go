@@ -56,7 +56,9 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	// Initialize the runtime with the config
 	handle, err := currentRuntime.InitCache(config)
 	if err != nil {
-		unix.Flock(int(lockfile.Fd()), unix.LOCK_UN)
+		if err := unix.Flock(int(lockfile.Fd()), unix.LOCK_UN); err != nil {
+			fmt.Printf("Error unlocking file: %v\n", err)
+		}
 		lockfile.Close()
 		return Cache{}, err
 	}
@@ -74,7 +76,9 @@ func ReleaseCache(cache Cache) {
 
 	// Release the file lock and close the lockfile
 	if cache.lockfile != (os.File{}) {
-		unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN)
+		if err := unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN); err != nil {
+			fmt.Printf("Error unlocking cache file: %v\n", err)
+		}
 		cache.lockfile.Close()
 	}
 }

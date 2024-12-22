@@ -48,14 +48,6 @@ type RuntimeEnvironment struct {
 	nextCallID     uint64
 }
 
-// Constants for memory addresses and sizes
-const (
-	storageAddr = uint64(0x100000)
-	apiAddr     = uint64(0x200000)
-	querierAddr = uint64(0x300000)
-	depsSize    = uint64(24) // 3 x 8-byte pointers: storage, api, querier
-)
-
 // Constants for memory management
 const (
 	// Memory page size in WebAssembly (64KB)
@@ -1297,7 +1289,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
-	defer mm.deallocate(envPtr, envSize)
+	defer func() {
+		if err := mm.deallocate(envPtr, envSize); err != nil {
+			fmt.Printf("Error deallocating env: %v\n", err)
+		}
+	}()
 
 	// Create a Region for the environment
 	envRegion := &Region{
@@ -1311,7 +1307,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for env region: %w", err)
 	}
-	defer mm.deallocate(envRegionPtr, regionSize)
+	defer func() {
+		if err := mm.deallocate(envRegionPtr, regionSize); err != nil {
+			fmt.Printf("Error deallocating env region: %v\n", err)
+		}
+	}()
 
 	if err := mm.writeRegion(envRegionPtr, envRegion); err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env region: %w", err)
@@ -1322,7 +1322,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
-	defer mm.deallocate(msgPtr, msgSize)
+	defer func() {
+		if err := mm.deallocate(msgPtr, msgSize); err != nil {
+			fmt.Printf("Error deallocating msg: %v\n", err)
+		}
+	}()
 
 	// Create a Region for the message
 	msgRegion := &Region{
@@ -1336,7 +1340,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for msg region: %w", err)
 	}
-	defer mm.deallocate(msgRegionPtr, regionSize)
+	defer func() {
+		if err := mm.deallocate(msgRegionPtr, regionSize); err != nil {
+			fmt.Printf("Error deallocating msg region: %v\n", err)
+		}
+	}()
 
 	if err := mm.writeRegion(msgRegionPtr, msgRegion); err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg region: %w", err)
@@ -1358,7 +1366,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		if err != nil {
 			return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
 		}
-		defer mm.deallocate(infoPtr, infoSize)
+		defer func() {
+			if err := mm.deallocate(infoPtr, infoSize); err != nil {
+				fmt.Printf("Error deallocating info: %v\n", err)
+			}
+		}()
 
 		// Create a Region for the info
 		infoRegion := &Region{
@@ -1372,7 +1384,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 		if err != nil {
 			return nil, types.GasReport{}, fmt.Errorf("failed to allocate memory for info region: %w", err)
 		}
-		defer mm.deallocate(infoRegionPtr, regionSize)
+		defer func() {
+			if err := mm.deallocate(infoRegionPtr, regionSize); err != nil {
+				fmt.Printf("Error deallocating info region: %v\n", err)
+			}
+		}()
 
 		if err := mm.writeRegion(infoRegionPtr, infoRegion); err != nil {
 			return nil, types.GasReport{}, fmt.Errorf("failed to write info region: %w", err)
@@ -1413,7 +1429,11 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	}
 
 	// Deallocate the result
-	defer mm.deallocate(resultRegion.Offset, resultRegion.Length)
+	defer func() {
+		if err := mm.deallocate(resultRegion.Offset, resultRegion.Length); err != nil {
+			fmt.Printf("Error deallocating result region: %v\n", err)
+		}
+	}()
 
 	// Create gas report
 	gasUsed := w.querier.GasConsumed()
