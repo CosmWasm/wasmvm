@@ -438,7 +438,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
+	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizePinnedMemoryCache, 0.25)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
