@@ -22,7 +22,7 @@ func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
-			Time:    1578939743_987654321,
+			Time:    types.Uint64(1578939743_987654321),
 			ChainID: "foobar",
 		},
 		Transaction: &types.TransactionInfo{
@@ -35,7 +35,6 @@ func MockEnv() types.Env {
 }
 
 func MockEnvBin(tb testing.TB) []byte {
-	tb.Helper()
 	bin, err := json.Marshal(MockEnv())
 	require.NoError(tb, err)
 	return bin
