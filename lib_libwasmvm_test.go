@@ -23,7 +23,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator"}
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "cosmwasm_2_1", "cosmwasm_2_2"}
 
 const (
 	CYBERPUNK_TEST_CONTRACT = "./testdata/cyberpunk.wasm"
