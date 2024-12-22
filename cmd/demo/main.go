@@ -16,7 +16,7 @@ const (
 
 var SUPPORTED_CAPABILITIES = []string{"staking"}
 
-// This is just a demo to ensure we can compile a static go binary
+// This is just a demo to ensure we can compile a static go binary.
 func main() {
 	file := os.Args[1]
 

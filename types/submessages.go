@@ -53,7 +53,7 @@ func (s *replyOn) UnmarshalJSON(b []byte) error {
 }
 
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
-// limiting the gas usage (GasLimit)
+// limiting the gas usage (GasLimit).
 type SubMsg struct {
 	// An arbitrary ID chosen by the contract.
 	// This is typically used to match `Reply`s in the `reply` entry point to the submessage.

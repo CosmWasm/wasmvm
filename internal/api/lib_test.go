@@ -26,7 +26,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-// Add mutex for thread safety
+// Add mutex for thread safety.
 var testMutex sync.Mutex
 
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
@@ -1232,7 +1232,7 @@ func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
 	return checksum
 }
 
-// exec runs the handle tx with the given signer
+// exec runs the handle tx with the given signer.
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
 	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -1374,7 +1374,7 @@ type CapitalizedResponse struct {
 	Text string `json:"text"`
 }
 
-// TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
+// TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm.
 func TestFloats(t *testing.T) {
 	type Value struct {
 		U32 *uint32 `json:"u32,omitempty"`
@@ -1471,7 +1471,7 @@ func TestFloats(t *testing.T) {
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
 }
 
-// mockInfoBinNoAssert creates the message binary without using testify assertions
+// mockInfoBinNoAssert creates the message binary without using testify assertions.
 func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
 	info := types.MessageInfo{
 		Sender: sender,

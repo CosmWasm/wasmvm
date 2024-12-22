@@ -248,7 +248,7 @@ func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 // Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
-// Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
+// Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests).
 const (
 	GetPrice    uint64 = 99000
 	SetPrice    uint64 = 187000
@@ -502,7 +502,7 @@ func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
-// ReflectCustom fulfills the requirements for testing `reflect` contract
+// ReflectCustom fulfills the requirements for testing `reflect` contract.
 type ReflectCustom struct{}
 
 var _ CustomQuerier = ReflectCustom{}
@@ -516,7 +516,7 @@ type CapitalizedQuery struct {
 	Text string `json:"text"`
 }
 
-// CustomResponse is the response for all `CustomQuery`s
+// CustomResponse is the response for all `CustomQuery`s.
 type CustomResponse struct {
 	Msg string `json:"msg"`
 }
@@ -538,7 +538,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"

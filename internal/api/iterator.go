@@ -8,7 +8,7 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-// frame stores all Iterators for one contract call
+// frame stores all Iterators for one contract call.
 type frame []types.Iterator
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
@@ -17,7 +17,7 @@ var (
 	iteratorFramesMutex sync.Mutex
 )
 
-// this is a global counter for creating call IDs
+// this is a global counter for creating call IDs.
 var (
 	latestCallID      uint64
 	latestCallIDMutex sync.Mutex
@@ -44,7 +44,7 @@ func removeFrame(callID uint64) frame {
 	return remove
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item the iteratorFrames.
 func endCall(callID uint64) {
 	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
 	remove := removeFrame(callID)
