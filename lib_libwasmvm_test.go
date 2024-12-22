@@ -127,10 +127,9 @@ func TestSimulateStoreCode(t *testing.T) {
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)
 			} else {
-				assert.NoError(t, err)
-
+				require.NoError(t, err)
 				_, err = vm.GetCode(checksum)
-				assert.ErrorContains(t, err, "Error opening Wasm file for reading")
+				require.ErrorContains(t, err, "Error opening Wasm file for reading")
 			}
 		})
 	}
