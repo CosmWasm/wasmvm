@@ -132,7 +132,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -237,7 +237,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var accounts ListAccountsResponse
 	err = json.Unmarshal(qResponse, &accounts)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(accounts.Accounts))
+	require.Len(t, accounts.Accounts, 1)
 	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
 	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
 
@@ -332,7 +332,7 @@ func TestIBCMsgGetChannel(t *testing.T) {
 	require.Equal(t, msg1.GetChannel(), msg4.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg5.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg6.GetChannel())
-	require.Equal(t, msg1.GetChannel().Endpoint.ChannelID, CHANNEL_ID)
+	require.Equal(t, CHANNEL_ID, msg1.GetChannel().Endpoint.ChannelID)
 }
 
 func TestIBCMsgGetCounterVersion(t *testing.T) {
