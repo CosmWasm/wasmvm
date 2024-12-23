@@ -817,8 +817,8 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			ctx = context.WithValue(ctx, envKey, env)
 			return hostQueryChain(ctx, m, reqPtr)
 		}).
-		WithParameterNames("req_ptr").
-		WithResultNames("res_ptr").
+		WithParameterNames("request").
+		WithResultNames("result").
 		Export("query_chain")
 
 	builder.NewFunctionBuilder().

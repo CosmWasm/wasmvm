@@ -299,7 +299,7 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 	// First try to decode the module to validate it
 	compiled, err := w.runtime.CompileModule(context.Background(), code)
 	if err != nil {
-		return nil, errors.New("Wasm bytecode could not be deserialized")
+		return nil, errors.New("Null/Nil argument: wasm")
 	}
 
 	// Validate memory sections
@@ -328,36 +328,43 @@ func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
 	return checksum[:], nil
 }
 
-// StoreCode compiles and persists the code
-func (w *WazeroRuntime) StoreCode(wasm []byte, persist bool) (checksum []byte, err error) {
-	// Compile the module (always do this to validate, regardless of persist)
+func (w *WazeroRuntime) StoreCode(wasm []byte, persist bool) ([]byte, error) {
+	if wasm == nil {
+		return nil, errors.New("Null/Nil argument: wasm")
+	}
+
+	if len(wasm) == 0 {
+		return nil, errors.New("Wasm bytecode could not be deserialized")
+	}
+
 	compiled, err := w.runtime.CompileModule(context.Background(), wasm)
 	if err != nil {
 		return nil, errors.New("Wasm bytecode could not be deserialized")
 	}
 
-	// Compute the code’s checksum
+	// Here is where we do the static checks
+	if err := w.analyzeForValidation(compiled); err != nil {
+		compiled.Close(context.Background())
+		return nil, fmt.Errorf("static validation failed: %w", err)
+	}
+
 	sum := sha256.Sum256(wasm)
 	csHex := hex.EncodeToString(sum[:])
 
-	// If we're not persisting, just close the compiled module and return
 	if !persist {
+		// just close the compiled module
 		compiled.Close(context.Background())
 		return sum[:], nil
 	}
 
-	// Otherwise, store it in the internal caches
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Check for duplicates
 	if _, exists := w.compiledModules[csHex]; exists {
-		// Already stored, close the new compiled module
 		compiled.Close(context.Background())
 		return sum[:], nil
 	}
 
-	// Otherwise, store for future usage
 	w.compiledModules[csHex] = compiled
 	w.codeCache[csHex] = wasm
 	return sum[:], nil
