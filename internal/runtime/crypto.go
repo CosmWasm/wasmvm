@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"crypto/ecdh"
+
 	bls12381 "github.com/kilic/bls12-381"
 )
 
@@ -110,12 +112,18 @@ func BLS12381PairingEquality(a1Compressed, a2Compressed, b1Compressed, b2Compres
 // signature should be 64 bytes (r and s concatenated),
 // pubkey should be an uncompressed or compressed public key in standard format.
 func Secp256r1Verify(hash, signature, pubkey []byte) (bool, error) {
-	// Parse public key. We will assume uncompressed (65 bytes) or compressed (33 bytes).
-	// Standard library only supports uncompressed format via elliptic.Unmarshal.
-	// If compressed, a custom decompression is needed. For simplicity, we assume uncompressed.
-	x, y := elliptic.Unmarshal(elliptic.P256(), pubkey)
-	if x == nil || y == nil {
-		return false, errors.New("invalid public key format (expected uncompressed)")
+	// Parse public key using crypto/ecdh
+	curve := ecdh.P256()
+	key, err := curve.NewPublicKey(pubkey)
+	if err != nil {
+		return false, fmt.Errorf("invalid public key: %w", err)
+	}
+
+	// Get the raw coordinates for ECDSA verification
+	rawKey := key.Bytes()
+	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), rawKey)
+	if x == nil {
+		return false, errors.New("failed to parse public key coordinates")
 	}
 
 	// Parse signature: must be exactly 64 bytes => r (first 32 bytes), s (second 32 bytes).
