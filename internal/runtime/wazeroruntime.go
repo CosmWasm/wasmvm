@@ -30,9 +30,6 @@ type WazeroRuntime struct {
 	moduleHits    map[string]uint32
 	moduleSizes   map[string]uint64
 
-	// Track instantiated modules
-	instantiatedModules map[string]struct{}
-
 	// Contract execution environment
 	kvStore types.KVStore
 	api     *types.GoAPI
@@ -204,46 +201,51 @@ func NewWazeroRuntime() (*WazeroRuntime, error) {
 	api := NewMockGoAPI()
 	querier := &MockQuerier{}
 
-	return NewWazeroRuntimeWithConfig(r, kvStore, api, querier)
-}
-
-func NewWazeroRuntimeWithConfig(r wazero.Runtime, kvStore types.KVStore, api *types.GoAPI, querier types.Querier) (*WazeroRuntime, error) {
-	if r == nil {
-		r = wazero.NewRuntime(context.Background())
-	}
-
 	return &WazeroRuntime{
-		runtime:             r,
-		codeCache:           make(map[string][]byte),
-		compiledModules:     make(map[string]wazero.CompiledModule),
-		closed:              false,
-		pinnedModules:       make(map[string]struct{}),
-		moduleHits:          make(map[string]uint32),
-		moduleSizes:         make(map[string]uint64),
-		instantiatedModules: make(map[string]struct{}),
-		kvStore:             kvStore,
-		api:                 api,
-		querier:             querier,
+		runtime:         r,
+		codeCache:       make(map[string][]byte),
+		compiledModules: make(map[string]wazero.CompiledModule),
+		closed:          false,
+		pinnedModules:   make(map[string]struct{}),
+		moduleHits:      make(map[string]uint32),
+		moduleSizes:     make(map[string]uint64),
+		kvStore:         kvStore,
+		api:             api,
+		querier:         querier,
 	}, nil
 }
 
 // Mock implementations for testing
 type MockKVStore struct{}
 
-func (m *MockKVStore) Get(key []byte) []byte {
-	return nil
-}
+func (m *MockKVStore) Get(key []byte) []byte                            { return nil }
+func (m *MockKVStore) Set(key, value []byte)                            {}
+func (m *MockKVStore) Delete(key []byte)                                {}
+func (m *MockKVStore) Iterator(start, end []byte) types.Iterator        { return &MockIterator{} }
+func (m *MockKVStore) ReverseIterator(start, end []byte) types.Iterator { return &MockIterator{} }
 
-func (m *MockKVStore) Set(key, value []byte) {}
+type MockIterator struct{}
 
-func (m *MockKVStore) Delete(key []byte) {}
+func (m *MockIterator) Domain() (start []byte, end []byte) { return nil, nil }
+func (m *MockIterator) Next()                              {}
+func (m *MockIterator) Key() []byte                        { return nil }
+func (m *MockIterator) Value() []byte                      { return nil }
+func (m *MockIterator) Valid() bool                        { return false }
+func (m *MockIterator) Close() error                       { return nil }
+func (m *MockIterator) Error() error                       { return nil }
 
-func (m *MockKVStore) Iterator(start, end []byte) types.Iterator {
-	return nil
-}
-
-func (m *MockKVStore) ReverseIterator(start, end []byte) types.Iterator {
-	return nil
+func NewMockGoAPI() *types.GoAPI {
+	return &types.GoAPI{
+		HumanizeAddress: func(canon []byte) (string, uint64, error) {
+			return string(canon), 0, nil
+		},
+		CanonicalizeAddress: func(human string) ([]byte, uint64, error) {
+			return []byte(human), 0, nil
+		},
+		ValidateAddress: func(human string) (uint64, error) {
+			return 0, nil
+		},
+	}
 }
 
 type MockQuerier struct{}
@@ -251,18 +253,7 @@ type MockQuerier struct{}
 func (m *MockQuerier) Query(request types.QueryRequest, gasLimit uint64) ([]byte, error) {
 	return nil, nil
 }
-
-func (m *MockQuerier) GasConsumed() uint64 {
-	return 0
-}
-
-func NewMockGoAPI() *types.GoAPI {
-	return &types.GoAPI{
-		HumanizeAddress:     func([]byte) (string, uint64, error) { return "", 0, nil },
-		CanonicalizeAddress: func(string) ([]byte, uint64, error) { return nil, 0, nil },
-		ValidateAddress:     func(string) (uint64, error) { return 0, nil },
-	}
-}
+func (m *MockQuerier) GasConsumed() uint64 { return 0 }
 
 func (w *WazeroRuntime) InitCache(config types.VMConfig) (any, error) {
 	w.mu.Lock()
@@ -573,12 +564,6 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 	w.kvStore = store
 	w.api = api
 	w.querier = *querier
-
-	// Mark module as instantiated
-	csHex := hex.EncodeToString(checksum)
-	w.mu.Lock()
-	w.instantiatedModules[csHex] = struct{}{}
-	w.mu.Unlock()
 
 	// Call the instantiate function
 	return w.callContractFn("instantiate", checksum, env, info, msg)
@@ -1142,39 +1127,8 @@ func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherP
 }
 
 func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	metrics := &types.Metrics{
-		HitsMemoryCache:           0,
-		HitsFsCache:               0,
-		ElementsMemoryCache:       uint64(len(w.instantiatedModules) - len(w.pinnedModules)),
-		ElementsPinnedMemoryCache: uint64(len(w.pinnedModules)),
-	}
-
-	// Calculate total size of memory cache and count elements
-	var totalSize uint64
-	var pinnedSize uint64
-	for csHex, size := range w.moduleSizes {
-		if _, isPinned := w.pinnedModules[csHex]; isPinned {
-			pinnedSize += size
-		} else if _, isInstantiated := w.instantiatedModules[csHex]; isInstantiated {
-			totalSize += size
-		}
-	}
-	metrics.SizeMemoryCache = totalSize
-	metrics.SizePinnedMemoryCache = pinnedSize
-
-	// Calculate hits
-	for csHex, hits := range w.moduleHits {
-		if _, isPinned := w.pinnedModules[csHex]; isPinned {
-			metrics.HitsMemoryCache += hits
-		} else {
-			metrics.HitsFsCache += hits
-		}
-	}
-
-	return metrics, nil
+	// Return empty metrics
+	return &types.Metrics{}, nil
 }
 
 func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
