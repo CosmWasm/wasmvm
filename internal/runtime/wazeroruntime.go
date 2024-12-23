@@ -8,10 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
@@ -1168,187 +1166,90 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 
 // serializeEnvForContract serializes the environment based on the contract version
 func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]byte, error) {
-	// First try to unmarshal into a strongly typed Env
+	// We'll try to parse it as a strongly typed Env first.
+	// If that works, we adapt to a 1.0+ shape (numeric block height/time).
 	var typedEnv types.Env
 	if err := json.Unmarshal(env, &typedEnv); err == nil {
-		// Convert to a map for easier manipulation
+		// Convert to raw map so we can adjust fields.
 		var rawEnv map[string]interface{}
 		if err := json.Unmarshal(env, &rawEnv); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal env: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal env into raw map: %w", err)
 		}
 
-		// Handle block info time conversion
+		// If there's a "block" section, set `height` and `time` as numeric
 		if block, ok := rawEnv["block"].(map[string]interface{}); ok {
-			// For strongly typed Env, we know this is a Uint64
-			block["time"] = strconv.FormatUint(uint64(typedEnv.Block.Time), 10)
-			block["height"] = strconv.FormatUint(typedEnv.Block.Height, 10)
+			block["height"] = typedEnv.Block.Height // store as integer
+			block["time"] = typedEnv.Block.Time     // store as integer
+			// chain_id presumably remains a string
 		}
 
-		// Get contract version info for version-specific adaptations
-		report, err := w.AnalyzeCode(checksum)
-		if err != nil {
-			return nil, fmt.Errorf("failed to analyze code: %w", err)
-		}
-
-		// Apply version-specific adaptations
-		if report.ContractMigrateVersion != nil && *report.ContractMigrateVersion < 1 {
-			delete(rawEnv, "transaction")
-		} else if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
-			// Ensure transaction index is a string
-			if idx, ok := txn["index"]; ok {
-				txn["index"] = strconv.FormatUint(uint64(idx.(float64)), 10)
+		// If there's a "transaction" section, set the transaction index as numeric (if present)
+		if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
+			if typedEnv.Transaction != nil {
+				txn["index"] = typedEnv.Transaction.Index
 			}
 		}
 
-		// Re-serialize with appropriate version adaptations
+		// Re-serialize with the numeric fields
 		adaptedEnv, err := json.Marshal(rawEnv)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
 		}
-
 		return adaptedEnv, nil
 	}
 
-	// If we couldn't unmarshal into a strongly typed Env, try as a raw map
+	// If we *couldn’t* parse typedEnv, then we just handle it as raw JSON
+	// but still enforce numeric shape for block.height/time and transaction.index
+	// by heuristics. Example below:
 	var rawEnv map[string]interface{}
 	d := json.NewDecoder(strings.NewReader(string(env)))
-	d.UseNumber() // Use json.Number to preserve numeric precision
+	d.UseNumber() // preserve numeric precision
 	if err := d.Decode(&rawEnv); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
 	}
 
-	// Handle block info time conversion
+	// Try to enforce numeric `height` and `time` in "block"
 	if block, ok := rawEnv["block"].(map[string]interface{}); ok {
-		if timeVal, ok := block["time"]; ok {
-			var timeUint uint64
-			switch v := timeVal.(type) {
-			case json.Number:
-				if i, err := v.Int64(); err == nil {
-					timeUint = uint64(i)
+		// parse block.height
+		if hval, ok := block["height"]; ok {
+			if num, ok := hval.(json.Number); ok {
+				if i64, err := num.Int64(); err == nil {
+					block["height"] = i64 // store as integer
 				} else {
-					return nil, fmt.Errorf("failed to parse time as int64: %w", err)
+					return nil, fmt.Errorf("unable to parse block.height as integer: %w", err)
 				}
-			case string:
-				// Try parsing as nanosecond timestamp first
-				if i, err := strconv.ParseUint(v, 10, 64); err == nil {
-					timeUint = i
-				} else {
-					// Try parsing as RFC3339
-					t, err := time.Parse(time.RFC3339, v)
-					if err != nil {
-						return nil, fmt.Errorf("failed to parse time: %w", err)
-					}
-					timeUint = uint64(t.UnixNano())
-				}
-			case float64:
-				timeUint = uint64(v)
-			case uint64:
-				timeUint = v
-			case types.Uint64:
-				timeUint = uint64(v)
-			case map[string]interface{}:
-				// Handle the case where time is serialized as a JSON object with a uint64 field
-				if u, ok := v["uint64"].(float64); ok {
-					timeUint = uint64(u)
-				} else {
-					return nil, fmt.Errorf("invalid uint64 object format: %v", v)
-				}
-			default:
-				return nil, fmt.Errorf("unexpected time format: %T", v)
 			}
-			block["time"] = strconv.FormatUint(timeUint, 10)
 		}
-
-		// Ensure height is a string
-		if heightVal, ok := block["height"]; ok {
-			var height uint64
-			switch v := heightVal.(type) {
-			case json.Number:
-				if i, err := v.Int64(); err == nil {
-					height = uint64(i)
+		// parse block.time
+		if tval, ok := block["time"]; ok {
+			if num, ok := tval.(json.Number); ok {
+				if i64, err := num.Int64(); err == nil {
+					block["time"] = i64 // store as integer
 				} else {
-					return nil, fmt.Errorf("failed to parse height as int64: %w", err)
+					return nil, fmt.Errorf("unable to parse block.time as integer: %w", err)
 				}
-			case float64:
-				height = uint64(v)
-			case uint64:
-				height = v
-			case string:
-				if i, err := strconv.ParseUint(v, 10, 64); err == nil {
-					height = i
-				} else {
-					return nil, fmt.Errorf("failed to parse height: %w", err)
-				}
-			default:
-				return nil, fmt.Errorf("unexpected height format: %T", v)
-			}
-			block["height"] = strconv.FormatUint(height, 10)
-		}
-
-		// Ensure chain_id is a string
-		if chainID, ok := block["chain_id"]; ok {
-			if str, ok := chainID.(string); ok {
-				block["chain_id"] = str
-			} else {
-				return nil, fmt.Errorf("chain_id must be a string, got %T", chainID)
 			}
 		}
 	}
 
-	// Ensure contract address is a string
-	if contract, ok := rawEnv["contract"].(map[string]interface{}); ok {
-		if addr, ok := contract["address"]; ok {
-			if str, ok := addr.(string); ok {
-				contract["address"] = str
-			} else {
-				return nil, fmt.Errorf("contract address must be a string, got %T", addr)
+	// parse transaction.index as numeric if present
+	if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
+		if idxVal, ok := txn["index"]; ok {
+			if num, ok := idxVal.(json.Number); ok {
+				if i64, err := num.Int64(); err == nil {
+					txn["index"] = i64 // store as integer
+				} else {
+					return nil, fmt.Errorf("unable to parse transaction.index: %w", err)
+				}
 			}
 		}
 	}
 
-	// Get contract version info for version-specific adaptations
-	report, err := w.AnalyzeCode(checksum)
-	if err != nil {
-		return nil, fmt.Errorf("failed to analyze code: %w", err)
-	}
-
-	// Apply version-specific adaptations
-	if report.ContractMigrateVersion != nil && *report.ContractMigrateVersion < 1 {
-		delete(rawEnv, "transaction")
-	} else if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
-		// Ensure transaction index is a string
-		if idx, ok := txn["index"]; ok {
-			var index uint32
-			switch v := idx.(type) {
-			case json.Number:
-				if i, err := v.Int64(); err == nil {
-					index = uint32(i)
-				} else {
-					return nil, fmt.Errorf("failed to parse transaction index as int64: %w", err)
-				}
-			case float64:
-				index = uint32(v)
-			case uint32:
-				index = v
-			case string:
-				if i, err := strconv.ParseUint(v, 10, 32); err == nil {
-					index = uint32(i)
-				} else {
-					return nil, fmt.Errorf("failed to parse transaction index: %w", err)
-				}
-			default:
-				return nil, fmt.Errorf("unexpected transaction index format: %T", v)
-			}
-			txn["index"] = strconv.FormatUint(uint64(index), 10)
-		}
-	}
-
-	// Re-serialize with appropriate version adaptations
+	// Now re-serialize
 	adaptedEnv, err := json.Marshal(rawEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
 	}
-
 	return adaptedEnv, nil
 }
 
