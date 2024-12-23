@@ -390,7 +390,7 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 
 	// Instead of env.Memory.Allocate(...):
 	//     valOffset, err := env.Memory.Allocate(mem, uint32(len(value)))
-	// Use the contract’s allocateInContract:
+	// Use the contract's allocateInContract:
 	valOffset, err := allocateInContract(ctx, mod, uint32(len(value)))
 	if err != nil {
 		panic(fmt.Sprintf("failed to allocate memory for value (via contract's allocate): %v", err))
@@ -829,6 +829,118 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
 		Export("db_set")
 
+	// Register interface_version_8 function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module) {
+			// This is just a marker function that doesn't need to do anything
+		}).
+		Export("interface_version_8")
+
+	// Register allocate function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
+			// Allocate memory in the Wasm module
+			memory := m.Memory()
+			if memory == nil {
+				panic("no memory exported")
+			}
+
+			// Get current memory size in pages (64KB per page)
+			currentPages := memory.Size()
+
+			// Calculate required pages for the allocation
+			requiredBytes := size
+			pageSize := uint32(65536) // 64KB
+			requiredPages := (requiredBytes + pageSize - 1) / pageSize
+
+			// Grow memory if needed
+			if requiredPages > 0 {
+				if _, ok := memory.Grow(uint32(requiredPages)); !ok {
+					panic("failed to grow memory")
+				}
+			}
+
+			// Return the pointer to the allocated memory
+			return currentPages * pageSize
+		}).
+		WithParameterNames("size").
+		WithResultNames("ptr").
+		Export("allocate")
+
+	// Register deallocate function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
+			// In our implementation, we don't need to explicitly deallocate
+			// as we rely on the Wasm runtime's memory management
+		}).
+		WithParameterNames("ptr").
+		Export("deallocate")
+
+	// Register BLS12-381 functions
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, elementsPtr uint32) (uint32, uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostBls12381AggregateG1(ctx, m, elementsPtr)
+		}).
+		WithParameterNames("elements_ptr").
+		WithResultNames("result_ptr", "result_len").
+		Export("bls12_381_aggregate_g1")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, elementsPtr uint32) (uint32, uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostBls12381AggregateG2(ctx, m, elementsPtr)
+		}).
+		WithParameterNames("elements_ptr").
+		WithResultNames("result_ptr", "result_len").
+		Export("bls12_381_aggregate_g2")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, hashLen uint32) (uint32, uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostBls12381HashToG1(ctx, m, hashPtr, hashLen)
+		}).
+		WithParameterNames("hash_ptr", "hash_len").
+		WithResultNames("result_ptr", "result_len").
+		Export("bls12_381_hash_to_g1")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, hashLen uint32) (uint32, uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostBls12381HashToG2(ctx, m, hashPtr, hashLen)
+		}).
+		WithParameterNames("hash_ptr", "hash_len").
+		WithResultNames("result_ptr", "result_len").
+		Export("bls12_381_hash_to_g2")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostBls12381PairingEquality(ctx, m, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len)
+		}).
+		WithParameterNames("a1_ptr", "a1_len", "a2_ptr", "a2_len", "b1_ptr", "b1_len", "b2_ptr", "b2_len").
+		WithResultNames("result").
+		Export("bls12_381_pairing_equality")
+
+	// Register SECP256r1 functions
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostSecp256r1Verify(ctx, m, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen)
+		}).
+		WithParameterNames("hash_ptr", "hash_len", "sig_ptr", "sig_len", "pubkey_ptr", "pubkey_len").
+		WithResultNames("result").
+		Export("secp256r1_verify")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostSecp256r1RecoverPubkey(ctx, m, hashPtr, hashLen, sigPtr, sigLen, recovery)
+		}).
+		WithParameterNames("hash_ptr", "hash_len", "sig_ptr", "sig_len", "recovery").
+		WithResultNames("pubkey_ptr", "pubkey_len").
+		Export("secp256r1_recover_pubkey")
+
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
@@ -925,6 +1037,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostNextValue(ctx, m, callID, iterID)
 		}).
 		WithParameterNames("call_id", "iter_id").
+		WithResultNames("val_ptr", "val_len", "err_code").
 		Export("db_next_value")
 
 	// db_close_iterator
