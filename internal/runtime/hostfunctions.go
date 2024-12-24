@@ -713,22 +713,16 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 // hostDebug implements debug
 func hostDebug(ctx context.Context, mod api.Module, msgPtr uint32) {
 	mem := mod.Memory()
-
-	// Read message from memory (null-terminated string)
-	var msg []byte
-	offset := msgPtr
-	for {
-		// Read one byte at a time
-		b, err := readMemory(mem, offset, 1)
-		if err != nil || len(b) == 0 || b[0] == 0 {
-			break
-		}
-		msg = append(msg, b[0])
-		offset++
+	msg, err := readMemory(mem, msgPtr, 1024) // Read up to 1024 bytes
+	if err != nil {
+		return
 	}
-
-	// Print debug message
-	fmt.Printf("Debug: %s\n", string(msg))
+	// Find null terminator
+	length := 0
+	for length < len(msg) && msg[length] != 0 {
+		length++
+	}
+	fmt.Printf("Debug: %s\n", string(msg[:length]))
 }
 
 // hostQueryChain implements query_chain with signature (req_ptr i32) -> i32
@@ -828,6 +822,14 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		}).
 		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
 		Export("db_set")
+
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
+			ctx = context.WithValue(ctx, envKey, env)
+			hostSet(ctx, m, keyPtr, keyLen, valPtr, valLen)
+		}).
+		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
+		Export("db_write")
 
 	// Register interface_version_8 function
 	builder.NewFunctionBuilder().

@@ -16,7 +16,7 @@ import (
 const (
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
-	TESTING_MEMORY_LIMIT = 32                      // MiB
+	TESTING_MEMORY_LIMIT = 64                      // MiB
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
