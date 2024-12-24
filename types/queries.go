@@ -18,7 +18,7 @@ type queryResultImpl struct {
 // A custom serializer that allows us to map QueryResult instances to the Rust
 // enum `ContractResult<Binary>`
 func (q QueryResult) MarshalJSON() ([]byte, error) {
-	// In case both Ok and Err are empty, this is interpreted and seralized
+	// In case both Ok and Err are empty, this is interpreted and serialized
 	// as an Ok case with no data because errors must not be empty.
 	if len(q.Ok) == 0 && len(q.Err) == 0 {
 		return []byte(`{"ok":""}`), nil

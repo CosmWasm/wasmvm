@@ -163,7 +163,7 @@ typedef struct ByteSliceView {
  * ```
  *
  *
- * If you want to mutate data, you need to comsume the vector and create a new one:
+ * If you want to mutate data, you need to consume the vector and create a new one:
  *
  * ```rust
  * # use wasmvm::{UnmanagedVector};
@@ -308,7 +308,7 @@ typedef struct GoIter {
   struct gas_meter_t *gas_meter;
   /**
    * A reference which identifies the iterator and allows finding and accessing the
-   * actual iterator instance in Go. Once fully initalized, this is immutable.
+   * actual iterator instance in Go. Once fully initialized, this is immutable.
    */
   struct IteratorReference reference;
   struct IteratorVtable vtable;
@@ -414,10 +414,11 @@ typedef struct GasReport {
 
 struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector save_wasm(struct cache_t *cache,
-                                 struct ByteSliceView wasm,
-                                 bool unchecked,
-                                 struct UnmanagedVector *error_msg);
+struct UnmanagedVector store_code(struct cache_t *cache,
+                                  struct ByteSliceView wasm,
+                                  bool checked,
+                                  bool persist,
+                                  struct UnmanagedVector *error_msg);
 
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,

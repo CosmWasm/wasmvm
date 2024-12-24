@@ -206,7 +206,7 @@ const (
 // Ordering is (revision_number, timeout_height)
 type IBCTimeoutBlock struct {
 	// the version that the client is currently on
-	// (eg. after reseting the chain this could increment 1 as height drops to 0)
+	// (eg. after resetting the chain this could increment 1 as height drops to 0)
 	Revision uint64 `json:"revision"`
 	// block height after which the packet times out.
 	// the height within the given revision

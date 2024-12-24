@@ -277,7 +277,7 @@ func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 	}
 }
 
-// Get wraps the underlying DB's Get method panicing on error.
+// Get wraps the underlying DB's Get method panicking on error.
 func (l Lookup) Get(key []byte) []byte {
 	l.meter.ConsumeGas(GetPrice, "get")
 	v, err := l.db.Get(key)
@@ -288,7 +288,7 @@ func (l Lookup) Get(key []byte) []byte {
 	return v
 }
 
-// Set wraps the underlying DB's Set method panicing on error.
+// Set wraps the underlying DB's Set method panicking on error.
 func (l Lookup) Set(key, value []byte) {
 	l.meter.ConsumeGas(SetPrice, "set")
 	if err := l.db.Set(key, value); err != nil {
@@ -296,7 +296,7 @@ func (l Lookup) Set(key, value []byte) {
 	}
 }
 
-// Delete wraps the underlying DB's Delete method panicing on error.
+// Delete wraps the underlying DB's Delete method panicking on error.
 func (l Lookup) Delete(key []byte) {
 	l.meter.ConsumeGas(RemovePrice, "remove")
 	if err := l.db.Delete(key); err != nil {
@@ -304,7 +304,7 @@ func (l Lookup) Delete(key []byte) {
 	}
 }
 
-// Iterator wraps the underlying DB's Iterator method panicing on error.
+// Iterator wraps the underlying DB's Iterator method panicking on error.
 func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.Iterator(start, end)
@@ -315,7 +315,7 @@ func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	return iter
 }
 
-// ReverseIterator wraps the underlying DB's ReverseIterator method panicing on error.
+// ReverseIterator wraps the underlying DB's ReverseIterator method panicking on error.
 func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
 	iter, err := l.db.ReverseIterator(start, end)
