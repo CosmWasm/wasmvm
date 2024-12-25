@@ -8,6 +8,8 @@ linters:
     - gofumpt
     - gci
     - testifylint
+    - errcheck
+    - thelper
 
 <<<<<<< HEAD
 =======

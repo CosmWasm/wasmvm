@@ -852,9 +852,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
-		testMutex.Lock()
-		info = MockInfoBin(b, "fred")
-		testMutex.Unlock()
+		info = mockInfoBinNoAssert("fred")
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -1228,9 +1226,9 @@ func createFloaty2(tb testing.TB, cache Cache) []byte {
 	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(tb testing.TB, cache Cache, path string) []byte {
+func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
 	tb.Helper()
-	wasm, err := os.ReadFile(path)
+	wasm, err := os.ReadFile(wasmFile)
 	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
 	require.NoError(tb, err)
@@ -1470,4 +1468,17 @@ func TestFloats(t *testing.T) {
 
 	hash := hasher.Sum(nil)
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+}
+
+// mockInfoBinNoAssert creates the message binary without using testify assertions
+func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
+	info := types.MessageInfo{
+		Sender: sender,
+		Funds:  types.Array[types.Coin]{},
+	}
+	res, err := json.Marshal(info)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }

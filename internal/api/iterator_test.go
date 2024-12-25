@@ -6,14 +6,10 @@ import (
 	"sync"
 	"testing"
 
-<<<<<<< HEAD
-=======
 	"github.com/stretchr/testify/require"
 
->>>>>>> bd565b4
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
-	"github.com/stretchr/testify/require"
 )
 
 type queueData struct {
@@ -29,7 +25,6 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 
 func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
 	t.Helper()
-
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -65,7 +60,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 
 func setupQueueContract(t *testing.T, cache Cache) queueData {
 	t.Helper()
-	return setupQueueContractWithData(t, cache)
+	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
 func TestStoreIterator(t *testing.T) {

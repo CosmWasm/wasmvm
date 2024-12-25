@@ -34,10 +34,10 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(t testing.TB) []byte {
-	env := MockEnv()
-	bin, err := json.Marshal(env)
-	require.NoError(t, err)
+func MockEnvBin(tb testing.TB) []byte {
+	tb.Helper()
+	bin, err := json.Marshal(MockEnv())
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -55,9 +55,10 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
+func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
