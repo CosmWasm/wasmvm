@@ -280,9 +280,9 @@ func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 // Get wraps the underlying DB's Get method panicking on error.
 func (l Lookup) Get(key []byte) []byte {
 	l.meter.ConsumeGas(GetPrice, "get")
-	v, err := l.db.Get(key)
-	if err != nil {
-		panic(err)
+	v := l.db.Get(key)
+	if v == nil {
+		panic(testdb.ErrKeyEmpty)
 	}
 
 	return v
@@ -291,37 +291,32 @@ func (l Lookup) Get(key []byte) []byte {
 // Set wraps the underlying DB's Set method panicking on error.
 func (l Lookup) Set(key, value []byte) {
 	l.meter.ConsumeGas(SetPrice, "set")
-	if err := l.db.Set(key, value); err != nil {
-		panic(err)
-	}
+	l.db.Set(key, value) // No `if err := ...` capture, because Set doesn't return an error
 }
 
 // Delete wraps the underlying DB's Delete method panicking on error.
+// note: Delete doesn't return an error, according to the kvstore implementation in types/store.go
 func (l Lookup) Delete(key []byte) {
 	l.meter.ConsumeGas(RemovePrice, "remove")
-	if err := l.db.Delete(key); err != nil {
-		panic(err)
-	}
+	l.db.Delete(key)
 }
 
 // Iterator wraps the underlying DB's Iterator method panicking on error.
 func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
-	iter, err := l.db.Iterator(start, end)
-	if err != nil {
-		panic(err)
-	}
-
+	iter := l.db.Iterator(start, end) // returns only one value
+	// no err to handle
+	// no need to close
 	return iter
 }
 
 // ReverseIterator wraps the underlying DB's ReverseIterator method panicking on error.
 func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
-	iter, err := l.db.ReverseIterator(start, end)
-	if err != nil {
-		panic(err)
-	}
+	iter := l.db.ReverseIterator(start, end) // returns only one value
+	// no err to handle
+	// no need to close
+	return iter
 
 	return iter
 }
