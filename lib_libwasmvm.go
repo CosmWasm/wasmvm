@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 // This file contains the part of the API that is exposed when libwasmvm
 // is available (i.e. cgo is enabled and nolink_libwasmvm is not set).
 
@@ -93,7 +91,8 @@ func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint6
 // StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
 // Use this for adding code that was checked before, particularly in the case of state sync.
 func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
-	return api.StoreCodeUnchecked(vm.cache, code)
+	checksum, err := api.StoreCodeUnchecked(vm.cache, code)
+	return checksum, err
 }
 
 func (vm *VM) RemoveCode(checksum Checksum) error {

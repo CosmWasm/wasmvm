@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -7,11 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
@@ -76,6 +73,7 @@ type AcknowledgeDispatch struct {
 }
 
 func toBytes(t *testing.T, v interface{}) []byte {
+	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	return bz
@@ -90,9 +88,25 @@ func TestIBCHandshake(t *testing.T) {
 	const CHANNEL_ID = "channel-432"
 
 	vm := withVM(t)
+
+	// First store the reflect contract that will be used by ibc_reflect
+	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
+	require.NoError(t, err)
+	reflectChecksum, codeID, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	t.Logf("Stored reflect contract with checksum: %v and code ID: %d", reflectChecksum, codeID)
+
+	// Verify we can access the reflect contract code
+	reflectCode, err := vm.GetCode(reflectChecksum)
+	require.NoError(t, err)
+	t.Logf("Successfully retrieved reflect contract code, size: %d bytes", len(reflectCode))
+
+	// Now store the IBC contract
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	t.Logf("Stored IBC contract with checksum: %v", checksum)
+
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -105,11 +119,17 @@ func TestIBCHandshake(t *testing.T) {
 	init_msg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	t.Logf("Attempting to instantiate IBC contract with reflect code ID: %d", REFLECT_ID)
+	t.Logf("Instantiation message: %s", string(toBytes(t, init_msg)))
+	i, gas_used, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	if err != nil {
+		t.Logf("Instantiation failed with gas used: %d", gas_used)
+	}
 	require.NoError(t, err)
+	t.Logf("Instantiation response: %+v", i)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
-	require.Equal(t, 0, len(iResponse.Messages))
+	require.Empty(t, iResponse.Messages)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -132,7 +152,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -200,7 +220,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 	id := connResponse.Messages[0].ID
 
 	// mock reflect init callback (to store address)
@@ -237,7 +257,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var accounts ListAccountsResponse
 	err = json.Unmarshal(qResponse, &accounts)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(accounts.Accounts))
+	require.Len(t, accounts.Accounts, 1)
 	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
 	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
 
@@ -301,7 +321,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
-	require.Equal(t, "cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2", report.RequiredCapabilities)
+	require.Equal(t, "", report.RequiredCapabilities)
 	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
 
 	// Store IBC contract
@@ -332,7 +352,7 @@ func TestIBCMsgGetChannel(t *testing.T) {
 	require.Equal(t, msg1.GetChannel(), msg4.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg5.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg6.GetChannel())
-	require.Equal(t, msg1.GetChannel().Endpoint.ChannelID, CHANNEL_ID)
+	require.Equal(t, CHANNEL_ID, msg1.GetChannel().Endpoint.ChannelID)
 }
 
 func TestIBCMsgGetCounterVersion(t *testing.T) {

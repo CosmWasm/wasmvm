@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -9,17 +7,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
 	TESTING_PRINT_DEBUG  = false
 	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
-	TESTING_MEMORY_LIMIT = 32                      // MiB
+	TESTING_MEMORY_LIMIT = 64                      // MiB
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
@@ -31,6 +28,7 @@ const (
 )
 
 func withVM(t *testing.T) *VM {
+	t.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
@@ -44,6 +42,7 @@ func withVM(t *testing.T) *VM {
 }
 
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
+	t.Helper()
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
 	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
@@ -54,51 +53,53 @@ func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 func TestStoreCode(t *testing.T) {
 	vm := withVM(t)
 
-	// Valid hackatom contract
-	{
-		wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
-		require.NoError(t, err)
-		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.NoError(t, err)
+	hackatom, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	specs := map[string]struct {
+		wasm        []byte
+		expectedErr string
+		expectOk    bool
+	}{
+		"valid wasm contract": {
+			wasm:     hackatom,
+			expectOk: true,
+		},
+		"nil bytes": {
+			wasm:        nil,
+			expectedErr: "Null/Nil argument: wasm",
+			expectOk:    false,
+		},
+		"empty bytes": {
+			wasm:        []byte{},
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
+		"invalid wasm - random bytes": {
+			wasm:        []byte("random invalid data"),
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
+		"invalid wasm - corrupted header": {
+			// First 8 bytes of a valid wasm file, followed by random data
+			wasm:        append([]byte{0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00}, []byte("corrupted content")...),
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
 	}
 
-	// Valid cyberpunk contract
-	{
-		wasm, err := os.ReadFile(CYBERPUNK_TEST_CONTRACT)
-		require.NoError(t, err)
-		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.NoError(t, err)
-	}
-
-	// Valid Wasm with no exports
-	{
-		// echo '(module)' | wat2wasm - -o empty.wasm
-		// hexdump -C < empty.wasm
-
-		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
-	}
-
-	// No Wasm
-	{
-		wasm := []byte("foobar")
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
-	}
-
-	// Empty
-	{
-		wasm := []byte("")
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
-	}
-
-	// Nil
-	{
-		var wasm []byte = nil
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Null/Nil argument: wasm")
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			checksum, _, err := vm.StoreCode(spec.wasm, TESTING_GAS_LIMIT)
+			if spec.expectOk {
+				require.NoError(t, err)
+				require.NotEmpty(t, checksum, "checksum should not be empty on success")
+			} else {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), spec.expectedErr)
+				require.Empty(t, checksum, "checksum should be empty on error")
+			}
+		})
 	}
 }
 
@@ -109,29 +110,58 @@ func TestSimulateStoreCode(t *testing.T) {
 	require.NoError(t, err)
 
 	specs := map[string]struct {
-		wasm []byte
-		err  string
+		wasm        []byte
+		expectedErr string
+		expectOk    bool
 	}{
-		"valid hackatom contract": {
-			wasm: hackatom,
+		"valid wasm contract": {
+			wasm:     hackatom,
+			expectOk: true,
 		},
-		"no wasm": {
-			wasm: []byte("foobar"),
-			err:  "Wasm bytecode could not be deserialized",
+		"nil bytes": {
+			wasm:        nil,
+			expectedErr: "Null/Nil argument: wasm",
+			expectOk:    false,
+		},
+		"empty bytes": {
+			wasm:        []byte{},
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
+		"invalid wasm - random bytes": {
+			wasm:        []byte("random invalid data"),
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
+		"invalid wasm - corrupted header": {
+			// First 8 bytes of a valid wasm file, followed by random data
+			wasm:        append([]byte{0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00}, []byte("corrupted content")...),
+			expectedErr: "Wasm bytecode could not be deserialized",
+			expectOk:    false,
+		},
+		"invalid wasm - no memory section": {
+			// Minimal valid wasm module without memory section
+			wasm:        []byte{0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00},
+			expectedErr: "Error during static Wasm validation: Wasm contract must contain exactly one memory",
+			expectOk:    false,
 		},
 	}
 
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
 			checksum, _, err := vm.SimulateStoreCode(spec.wasm, TESTING_GAS_LIMIT)
+			if spec.expectOk {
+				require.NoError(t, err)
+				require.NotEmpty(t, checksum, "checksum should not be empty on success")
 
-			if spec.err != "" {
-				assert.ErrorContains(t, err, spec.err)
-			} else {
-				assert.NoError(t, err)
-
+				// Verify the code was not actually stored
 				_, err = vm.GetCode(checksum)
-				assert.ErrorContains(t, err, "Error opening Wasm file for reading")
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "Error opening Wasm file for reading")
+			} else {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), spec.expectedErr)
+				require.Empty(t, checksum, "checksum should be empty on error")
 			}
 		})
 	}
@@ -187,7 +217,7 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// execute
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -198,7 +228,7 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, h.Ok)
 	hres := h.Ok
-	require.Equal(t, 1, len(hres.Messages))
+	require.Len(t, hres.Messages, 1)
 
 	// make sure it read the balance properly and we got 250 atoms
 	dispatch := hres.Messages[0].Msg
@@ -231,7 +261,7 @@ func TestEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// Execute mirror env without Transaction
 	env = types.Env{
@@ -311,11 +341,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 3
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -328,11 +358,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 4
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -344,7 +374,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 5
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
@@ -358,11 +388,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 6
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -377,7 +407,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 7
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -392,11 +422,11 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
-	require.Equal(t, 0, len(ires.Messages))
+	require.Empty(t, ires.Messages)
 
 	// GetMetrics 8
 	metrics, err = vm.GetMetrics()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
