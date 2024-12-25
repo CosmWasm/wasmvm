@@ -154,6 +154,7 @@ func TestSimulateStoreCode(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, checksum, "checksum should not be empty on success")
 
+<<<<<<< HEAD
 				// Verify the code was not actually stored
 				_, err = vm.GetCode(checksum)
 				require.Error(t, err)
@@ -162,6 +163,14 @@ func TestSimulateStoreCode(t *testing.T) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), spec.expectedErr)
 				require.Empty(t, checksum, "checksum should be empty on error")
+=======
+			if spec.err != "" {
+				assert.ErrorContains(t, err, spec.err)
+			} else {
+				require.NoError(t, err)
+				_, err = vm.GetCode(checksum)
+				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+>>>>>>> bd565b4
 			}
 		})
 	}

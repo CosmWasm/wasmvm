@@ -6,6 +6,11 @@ import (
 	"sync"
 	"testing"
 
+<<<<<<< HEAD
+=======
+	"github.com/stretchr/testify/require"
+
+>>>>>>> bd565b4
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/stretchr/testify/require"
