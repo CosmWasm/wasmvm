@@ -71,8 +71,8 @@ func (w *WazeroRuntime) analyzeForValidation(compiled wazero.CompiledModule) err
 	prefix := "requires_"
 	for _, expName := range exportNames {
 		if strings.HasPrefix(expName, prefix) && len(expName) > len(prefix) {
-			capName := expName[len(prefix):] // everything after "requires_"
-			requiredCaps = append(requiredCaps, capName)
+			capName := expName[len(prefix):]             // everything after "requires_"
+			requiredCaps = append(requiredCaps, capName) //nolint:staticcheck
 		}
 	}
 

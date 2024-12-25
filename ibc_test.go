@@ -5,10 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CosmWasm/wasmvm/v2/internal/api"
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/CosmWasm/wasmvm/v2/internal/api"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"

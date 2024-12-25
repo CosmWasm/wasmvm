@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 const (

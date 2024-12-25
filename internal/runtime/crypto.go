@@ -1,13 +1,12 @@
 package runtime
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"math/big"
-
-	"crypto/ecdh"
 
 	bls12381 "github.com/kilic/bls12-381"
 )

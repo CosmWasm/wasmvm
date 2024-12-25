@@ -11,8 +11,6 @@ linters:
     - errcheck
     - thelper
 
-<<<<<<< HEAD
-=======
 linters-settings:
   gci:
     # Section configuration to compare against.
@@ -40,7 +38,6 @@ linters-settings:
     # Default: false
     no-lex-order: true
 
->>>>>>> bd565b4
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
