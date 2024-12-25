@@ -180,6 +180,18 @@ func TestInstantiateWithVariousMsgFormats(t *testing.T) {
 			expErrMsg:     "Error parsing into type hackatom::msg::InstantiateMsg",
 		},
 		{
+			name:          "big extra field",
+			jsonMsg:       buildTestJSON(30, 5), // adjust repeats as needed
+			expectFailure: true,
+			expErrMsg:     "Error parsing into type hackatom::msg::InstantiateMsg: missing field `beneficiary`",
+		},
+		{
+			name:          "giant extra field",
+			jsonMsg:       buildTestJSON(300, 50), // even bigger
+			expectFailure: true,
+			expErrMsg:     "Error parsing into type hackatom::msg::InstantiateMsg: missing field `beneficiary`",
+		},
+		{
 			name:          "Empty JSON message",
 			jsonMsg:       `{}`,
 			expectFailure: true,
@@ -284,50 +296,108 @@ func buildTestJSON(fieldRepeat, valueRepeat int) string {
 }
 
 func TestExtraFieldParsing(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	// Load the contract
+	wasmPath := "../../testdata/hackatom.wasm"
+	wasm, err := os.ReadFile(wasmPath)
+	require.NoError(t, err, "Could not read wasm file at %s", wasmPath)
+
+	// Store the code in the cache
+	checksum, err := StoreCode(cache, wasm, true)
+	require.NoError(t, err, "Storing code failed for %s", wasmPath)
+
+	// We'll create a few test scenarios that each produce extra-large JSON messages
+	// so we're sending multiple megabytes. We'll log how many MB are being sent.
 	tests := []struct {
-		name          string
-		jsonMsg       string
-		expectFailure bool
-		expErrMsg     string
+		name        string
+		fieldRepeat int
+		valueRepeat int
+		expErrMsg   string
 	}{
 		{
-			name:          "big extra field",
-			jsonMsg:       buildTestJSON(30, 5), // adjust repeats as needed
-			expectFailure: true,
-			expErrMsg:     "Error parsing into type hackatom::msg::InstantiateMsg: missing field `beneficiary`",
+			name:        "0.01 MB of extra field data",
+			fieldRepeat: 150, // Tweak until you reach ~1MB total payload
+			valueRepeat: 25,
+			expErrMsg:   "Error parsing into type hackatom::msg::InstantiateMsg",
 		},
 		{
-			name:          "giant extra field",
-			jsonMsg:       buildTestJSON(300, 50), // even bigger
-			expectFailure: true,
-			expErrMsg:     "Error parsing into type hackatom::msg::InstantiateMsg: missing field `beneficiary`",
+			name:        "0.1 MB of extra field data",
+			fieldRepeat: 15000, // Tweak until you reach ~1MB total payload
+			valueRepeat: 7000,
+			expErrMsg:   "Error parsing into type hackatom::msg::InstantiateMsg",
+		},
+		{
+			name:        "~2MB of extra field data",
+			fieldRepeat: 1500,
+			valueRepeat: 250,
+			expErrMsg:   "Error parsing into type hackatom::msg::InstantiateMsg",
+		},
+		{
+			name:        ">10MB  of extra field data",
+			fieldRepeat: 100000,
+			valueRepeat: 100000,
+			expErrMsg:   "Error parsing into type hackatom::msg::InstantiateMsg",
 		},
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			// Instead of printing the entire JSON to the console,
-			// you would typically pass tc.jsonMsg to whatever JSON-parsing
-			// or instantiation logic you have, then check the result.
-			//
-			// Example pseudo-check:
-			err := parseJSONIntoHackatomInstantiateMsg(tc.jsonMsg)
-			if tc.expectFailure && err == nil {
-				t.Errorf("expected failure but got success")
-			} else if !tc.expectFailure && err != nil {
-				t.Errorf("did not expect an error but got one: %v", err)
-			}
-			if err != nil && !strings.Contains(err.Error(), tc.expErrMsg) {
-				t.Errorf("error message does not match. expected '%s', got '%s'",
-					tc.expErrMsg, err.Error())
-			}
+			// Build JSON with a huge extra field
+			jsonMsg := buildTestJSON(tc.fieldRepeat, tc.valueRepeat)
+
+			// Log how large the JSON message is (in MB)
+			sizeMB := float64(len(jsonMsg)) / (1024.0 * 1024.0)
+			t.Logf("[DEBUG] Using JSON of size: %.2f MB", sizeMB)
+
+			gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+			store := NewLookup(gasMeter)
+			api := NewMockAPI()
+			querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+			env := MockEnvBin(t)
+			info := MockInfoBin(t, "creator")
+
+			msg := []byte(jsonMsg)
+
+			var igasMeter types.GasMeter = gasMeter
+			res, cost, err := Instantiate(
+				cache,
+				checksum,
+				env,
+				info,
+				msg,
+				&igasMeter,
+				store,
+				api,
+				&querier,
+				TESTING_GAS_LIMIT,
+				TESTING_PRINT_DEBUG,
+			)
+
+			t.Logf("[DEBUG] Gas Used: %d, Gas Remaining: %d", cost.UsedInternally, cost.Remaining)
+
+			// Ensure there's no Go-level fatal error
+			require.NoError(t, err,
+				"[GO-level error] Instantiation must not return a fatal error for scenario: %s", tc.name)
+
+			// Decode the contract result (CosmWasm-level error will appear in contractResult.Err if any)
+			var contractResult types.ContractResult
+			err = json.Unmarshal(res, &contractResult)
+			require.NoError(t, err,
+				"JSON unmarshal of contract result must succeed (scenario: %s)\nRaw contract response: %s",
+				tc.name, string(res),
+			)
+
+			// We expect the contract to reject such large messages. Adjust if your contract differs.
+			require.Nil(t, contractResult.Ok,
+				"Expected no Ok response for scenario: %s, but got: %+v", tc.name, contractResult.Ok)
+			require.Contains(t, contractResult.Err, tc.expErrMsg,
+				"Expected error containing '%s', but got '%s' for scenario: %s",
+				tc.expErrMsg, contractResult.Err, tc.name)
+
+			t.Logf("[OK] We got the expected contract-level error. Full error: %s", contractResult.Err)
 		})
 	}
-}
-
-// parseJSONIntoHackatomInstantiateMsg is a stand-in for your actual parsing logic
-func parseJSONIntoHackatomInstantiateMsg(json string) error {
-	// Replace with your real JSON->struct parsing
-	// For demonstration, we just force an error containing the same error text.
-	return fmt.Errorf("Error parsing into type hackatom::msg::InstantiateMsg: missing field `beneficiary`")
 }

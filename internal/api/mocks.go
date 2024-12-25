@@ -318,7 +318,6 @@ func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	// no need to close
 	return iter
 
-	return iter
 }
 
 var _ types.KVStore = (*Lookup)(nil)
