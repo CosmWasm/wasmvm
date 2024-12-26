@@ -431,7 +431,40 @@ func hostCloseIterator(ctx context.Context, mod api.Module, callID, iterID uint6
 
 // hostAbort implements the abort function required by Wasm modules
 func hostAbort(ctx context.Context, mod api.Module, code uint32) {
-	panic(fmt.Sprintf("Wasm contract aborted with code: %d", code))
+	// Print debug information about the abort
+	fmt.Printf("Debug: Wasm contract abort triggered\n")
+	fmt.Printf("Debug: Abort code: %d (0x%x)\n", code, code)
+
+	// Try to get any memory exports to check for error messages
+	if mem := mod.Memory(); mem != nil {
+		// Try to read memory around the abort code location
+		// We'll read a few different ranges to try to catch any error message
+		ranges := []struct{ start, size uint32 }{
+			{code - 100, 200},    // Around the code point
+			{0, 256},             // Start of memory
+			{code & 0xFFFF, 256}, // Lower 16 bits as offset
+		}
+
+		for _, r := range ranges {
+			if data, ok := mem.Read(r.start, r.size); ok {
+				if len(data) > 0 {
+					// Try to interpret the memory as both string and raw bytes
+					fmt.Printf("Debug: Memory at offset %d:\n", r.start)
+					fmt.Printf("  As string: %s\n", string(data))
+					fmt.Printf("  As bytes: %v\n", data)
+				}
+			}
+		}
+	}
+
+	env := ctx.Value(envKey).(*RuntimeEnvironment)
+	if env != nil {
+		fmt.Printf("Debug: Runtime environment state:\n")
+		fmt.Printf("  Gas used: %d\n", env.GasUsed)
+		fmt.Printf("  Gas limit: %d\n", env.Gas.GasConsumed())
+	}
+
+	panic(fmt.Sprintf("Wasm contract aborted with code: %d (0x%x)", code, code))
 }
 
 // hostDbRead implements db_read
