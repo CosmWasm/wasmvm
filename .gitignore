@@ -13,6 +13,8 @@
 /demo
 tmp
 a.out
+assistant*
+libwasmvm/target/** 
 
 # macOS
 .DS_Store

@@ -972,7 +972,10 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
-			ptr, _, _ := hostNextValue(ctx, m, uint64(iterID), 0)
+			// Extract call_id and iter_id from the packed uint32
+			callID := uint64(iterID >> 16)
+			actualIterID := uint64(iterID & 0xFFFF)
+			ptr, _, _ := hostNextValue(ctx, m, callID, actualIterID)
 			return ptr
 		}).
 		WithParameterNames("iter_id").
