@@ -1,7 +1,9 @@
 // file: internal/runtime/wasm_runtime.go
 package runtime
 
-import "github.com/CosmWasm/wasmvm/v2/types"
+import (
+	"github.com/CosmWasm/wasmvm/v2/types"
+)
 
 type WasmRuntime interface {
 	// InitCache sets up any runtime-specific cache or resources. Returns a handle.

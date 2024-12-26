@@ -1483,3 +1483,42 @@ func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
 	}
 	return res
 }
+
+func TestHappyPath(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	checksum := createReflectContract(t, cache)
+
+	// set up contract
+	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter := types.GasMeter(gasMeter)
+	store := NewLookup(gasMeter)
+	api := NewMockAPI()
+	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM")}
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, initBalance)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+	msg := []byte(`{"text": "my initial message"}`)
+
+	// call instantiate
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// call execute
+	execMsg := []byte(`{"capitalize": {}}`)
+	res, _, err = Execute(cache, checksum, env, info, execMsg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	requireOkResponse(t, res, 0)
+
+	// call query
+	queryMsg := []byte(`{"get_text": {}}`)
+	data, _, err := Query(cache, checksum, env, queryMsg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	require.NoError(t, err)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
+	require.NoError(t, err)
+	require.Equal(t, "", qResult.Err)
+	require.Equal(t, `{"text":"MY INITIAL MESSAGE"}`, string(qResult.Ok))
+}

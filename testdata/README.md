@@ -1,12 +1,8 @@
-# Test Contracts
-
-## How to update
-
 Update contracts via e.g.
 
 ```sh
 cd testdata
-./download_releases.sh v2.2.0
+./download_releases.sh v0.14.0-beta2
 ```
 
 This will download the deployed builds [from GitHub releases](https://github.com/CosmWasm/cosmwasm/releases).
