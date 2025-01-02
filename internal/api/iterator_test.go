@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
@@ -25,6 +24,7 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 }
 
 func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
+	t.Helper()
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -59,6 +59,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 }
 
 func setupQueueContract(t *testing.T, cache Cache) queueData {
+	t.Helper()
 	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
@@ -202,14 +203,14 @@ func TestQueueIteratorSimple(t *testing.T) {
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
 	require.Equal(t, "", reduced.Err)
-	require.Equal(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
+	require.JSONEq(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
 func TestQueueIteratorRaces(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	assert.Equal(t, 0, len(iteratorFrames))
+	require.Empty(t, iteratorFrames)
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -217,6 +218,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	env := MockEnvBin(t)
 
 	reduceQuery := func(t *testing.T, setup queueData, expected string) {
+		t.Helper()
 		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter := types.GasMeter(gasMeter)
@@ -256,7 +258,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	wg.Wait()
 
 	// when they finish, we should have removed all frames
-	assert.Equal(t, 0, len(iteratorFrames))
+	require.Empty(t, iteratorFrames)
 }
 
 func TestQueueIteratorLimit(t *testing.T) {
