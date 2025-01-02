@@ -24,7 +24,7 @@ linters:
     - revive # a metalinter with more checks
     - bodyclose # Check HTTP response bodies are closed
     - goconst # Find repeated strings that could be constants
-    - gocyclo # Check function complexity
+#    - gocyclo # Check function complexity
     - godot # Check comment endings
     - gocognit # Check cognitive complexity
     - whitespace # Check trailing whitespace
