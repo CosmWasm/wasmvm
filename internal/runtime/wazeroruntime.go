@@ -1428,6 +1428,10 @@ func (w *WazeroRuntime) callContractFn(
 			uint64(infoRegionPtr),
 			uint64(msgRegionPtr),
 		}
+		fmt.Printf("Calling instantiate with:\n")
+		fmt.Printf("  envRegionPtr: %d\n", envRegionPtr)
+		fmt.Printf("  infoRegionPtr: %d\n", infoRegionPtr)
+		fmt.Printf("  msgRegionPtr: %d\n", msgRegionPtr)
 	case "query", "sudo", "reply":
 		callParams = []uint64{
 			uint64(envRegionPtr),

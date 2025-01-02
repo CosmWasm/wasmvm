@@ -745,7 +745,7 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 }
 
 // hostDebug implements debug
-func hostDebug(ctx context.Context, mod api.Module, msgPtr uint32) {
+func hostDebug(_ context.Context, mod api.Module, msgPtr uint32) {
 	mem := mod.Memory()
 	msg, err := readMemory(mem, msgPtr, 1024) // Read up to 1024 bytes
 	if err != nil {
@@ -897,7 +897,11 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			}
 
 			// Return the pointer to the allocated memory
-			return currentPages * pageSize
+			ptr := currentPages * pageSize
+			fmt.Printf("Host allocate called:\n")
+			fmt.Printf("  size: %d\n", size)
+			fmt.Printf("  returned ptr: %d\n", ptr)
+			return ptr
 		}).
 		WithParameterNames("size").
 		WithResultNames("ptr").
