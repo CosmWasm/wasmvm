@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"math"
+	"os"
 	"sync"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
@@ -50,7 +51,11 @@ func endCall(callID uint64) {
 	remove := removeFrame(callID)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
-		iter.Close()
+		if err := iter.Close(); err != nil {
+			// In this cleanup code, we can't do much with the error
+			// Log it to stderr since that's better than silently ignoring it
+			fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err)
+		}
 	}
 }
 

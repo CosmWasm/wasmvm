@@ -44,7 +44,7 @@ type Cache struct {
 type Querier = types.Querier
 
 func InitCache(config types.VMConfig) (Cache, error) {
-	// libwasmvm would create this directory too but we need it earlier for the lockfile
+	// libwasmvm would create this directory too but we need it earlier for the lockfile.
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
 		return Cache{}, fmt.Errorf("Could not create base directory")
@@ -83,7 +83,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 
-	cache.lockfile.Close() // Also releases the file lock
+	cache.lockfile.Close() // Also releases the file lock.
 }
 
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
@@ -331,7 +331,7 @@ func Migrate(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != 0 {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -376,7 +376,7 @@ func MigrateWithInfo(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate_with_info(cache.ptr, cs, e, m, i, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != 0 {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}

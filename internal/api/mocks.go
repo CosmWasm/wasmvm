@@ -15,6 +15,10 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
+const (
+	testAddress = "foobar"
+)
+
 /** helper constructors **/
 
 const MOCK_CONTRACT_ADDR = "contract"
@@ -24,7 +28,7 @@ func MockEnv() types.Env {
 		Block: types.BlockInfo{
 			Height:  123,
 			Time:    1578939743_987654321,
-			ChainID: "foobar",
+			ChainID: testAddress,
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 4,
@@ -390,15 +394,14 @@ func NewMockAPI() *types.GoAPI {
 }
 
 func TestMockApi(t *testing.T) {
-	human := "foobar"
-	canon, cost, err := MockCanonicalizeAddress(human)
+	canon, cost, err := MockCanonicalizeAddress(testAddress)
 	require.NoError(t, err)
 	require.Len(t, canon, CanonicalLength)
 	require.Equal(t, CostCanonical, cost)
 
 	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
-	require.Equal(t, recover, human)
+	require.Equal(t, recover, testAddress)
 	require.Equal(t, CostHuman, cost)
 }
 
@@ -528,11 +531,12 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	var resp CustomResponse
-	if query.Ping != nil {
+	switch {
+	case query.Ping != nil:
 		resp.Msg = "PONG"
-	} else if query.Capitalized != nil {
+	case query.Capitalized != nil:
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
-	} else {
+	default:
 		return nil, errors.New("Unsupported query")
 	}
 	return json.Marshal(resp)

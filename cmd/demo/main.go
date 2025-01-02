@@ -10,22 +10,22 @@ import (
 	wasmvm "github.com/CosmWasm/wasmvm/v2"
 )
 
-// PrintDebug enables debug printing when true
+// PrintDebug enables debug printing when true.
 const (
 	PrintDebug = true
-	// MemoryLimit defines the memory limit in MiB
+	// MemoryLimit defines the memory limit in MiB.
 	MemoryLimit = 32
-	// CacheSize defines the cache size in MiB
+	// CacheSize defines the cache size in MiB.
 	CacheSize = 100
 )
 
-// SupportedCapabilities defines the list of supported staking capabilities
+// SupportedCapabilities defines the list of supported staking capabilities.
 var SupportedCapabilities = []string{"staking"}
 
-// exitCode tracks the code that the program will exit with
+// exitCode tracks the code that the program will exit with.
 var exitCode = 0
 
-// main is the entry point for the demo application that tests wasmvm functionality
+// main is the entry point for the demo application that tests wasmvm functionality.
 func main() {
 	defer func() {
 		os.Exit(exitCode)
