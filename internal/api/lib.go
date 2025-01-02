@@ -83,7 +83,10 @@ func InitCache(config types.VMConfig) (Cache, error) {
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 
-	cache.lockfile.Close() // Also releases the file lock.
+	if err := cache.lockfile.Close(); err != nil {
+		// Just log the error since this is cleanup code
+		fmt.Printf("failed to close lockfile: %v\n", err)
+	} // Also releases the file lock.
 }
 
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
