@@ -1174,6 +1174,9 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 
 // serializeEnvForContract serializes the environment based on the contract version
 func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]byte, error) {
+	// Print the input environment for debugging
+	fmt.Printf("Input environment: %s\n", string(env))
+
 	// We'll try to parse it as a strongly typed Env first.
 	// If that works, we adapt to a 1.0+ shape (numeric block height/time).
 	var typedEnv types.Env
@@ -1186,8 +1189,8 @@ func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]b
 
 		// If there's a "block" section, set `height` and `time` as numeric
 		if block, ok := rawEnv["block"].(map[string]interface{}); ok {
-			block["height"] = typedEnv.Block.Height // store as integer
-			block["time"] = typedEnv.Block.Time     // store as integer
+			block["height"] = typedEnv.Block.Height                // store as integer
+			block["time"] = fmt.Sprintf("%d", typedEnv.Block.Time) // store time as string
 			// chain_id presumably remains a string
 		}
 
@@ -1203,12 +1206,14 @@ func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]b
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
 		}
+		// Print the adapted environment for debugging
+		fmt.Printf("Adapted environment: %s\n", string(adaptedEnv))
 		return adaptedEnv, nil
 	}
 
-	// If we *couldn’t* parse typedEnv, then we just handle it as raw JSON
+	// If we *couldn't* parse typedEnv, then we just handle it as raw JSON
 	// but still enforce numeric shape for block.height/time and transaction.index
-	// by heuristics. Example below:
+	// by heuristics.
 	var rawEnv map[string]interface{}
 	d := json.NewDecoder(strings.NewReader(string(env)))
 	d.UseNumber() // preserve numeric precision
@@ -1232,7 +1237,7 @@ func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]b
 		if tval, ok := block["time"]; ok {
 			if num, ok := tval.(json.Number); ok {
 				if i64, err := num.Int64(); err == nil {
-					block["time"] = i64 // store as integer
+					block["time"] = fmt.Sprintf("%d", i64) // store time as string
 				} else {
 					return nil, fmt.Errorf("unable to parse block.time as integer: %w", err)
 				}
@@ -1258,6 +1263,8 @@ func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
 	}
+	// Print the adapted environment for debugging
+	fmt.Printf("Adapted environment: %s\n", string(adaptedEnv))
 	return adaptedEnv, nil
 }
 
