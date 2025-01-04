@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 
@@ -40,7 +41,10 @@ type RuntimeEnvironment struct {
 	API     types.GoAPI
 	Querier types.Querier
 	Gas     types.GasMeter
-	GasUsed types.Gas
+
+	// Gas tracking
+	gasLimit uint64
+	gasUsed  uint64
 
 	// Iterator management
 	iteratorsMutex sync.RWMutex
@@ -58,12 +62,25 @@ const (
 	regionSize = 12
 )
 
-// Region describes some data allocated in Wasm's linear memory.
-// This matches cosmwasm_std::memory::Region.
+// Region describes data allocated in Wasm's linear memory
 type Region struct {
-	Offset   uint32 // Beginning of the region in linear memory
-	Capacity uint32 // Number of bytes available in this region
-	Length   uint32 // Number of bytes used in this region
+	Offset   uint32
+	Capacity uint32
+	Length   uint32
+}
+
+// validateRegion performs plausibility checks on a Region
+func validateRegion(region *Region) error {
+	if region.Offset == 0 {
+		return fmt.Errorf("region has zero offset")
+	}
+	if region.Length > region.Capacity {
+		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
+	}
+	if uint64(region.Offset)+uint64(region.Capacity) > math.MaxUint32 {
+		return fmt.Errorf("region out of range: offset %d, capacity %d", region.Offset, region.Capacity)
+	}
+	return nil
 }
 
 // memoryManager handles WASM memory allocation and deallocation
@@ -91,22 +108,46 @@ func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 		return 0, 0, fmt.Errorf("allocate function not found in WASM module")
 	}
 
-	// Allocate memory for the data
+	// Allocate memory for the Region struct (12 bytes) and the data
 	size := uint32(len(data))
-	results, err := allocate.Call(context.Background(), uint64(size))
+	results, err := allocate.Call(context.Background(), uint64(size+regionSize))
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to allocate memory: %w", err)
 	}
 	ptr := uint32(results[0])
 
-	// Ensure the allocated memory is properly aligned
-	if ptr%4 != 0 {
-		return 0, 0, fmt.Errorf("memory not properly aligned: ptr=%d", ptr)
+	// Create and write the Region struct
+	region := &Region{
+		Offset:   ptr + regionSize, // Data starts after the Region struct
+		Capacity: size,
+		Length:   size,
 	}
 
-	// Write the data to memory
-	if !m.memory.Write(ptr, data) {
-		return 0, 0, fmt.Errorf("failed to write data to memory at ptr=%d size=%d", ptr, size)
+	// Validate the region before writing
+	if err := validateRegion(region); err != nil {
+		deallocate := m.module.ExportedFunction("deallocate")
+		if deallocate != nil {
+			deallocate.Call(context.Background(), uint64(ptr))
+		}
+		return 0, 0, fmt.Errorf("invalid region: %w", err)
+	}
+
+	// Write the Region struct
+	if err := m.writeRegion(ptr, region); err != nil {
+		deallocate := m.module.ExportedFunction("deallocate")
+		if deallocate != nil {
+			deallocate.Call(context.Background(), uint64(ptr))
+		}
+		return 0, 0, fmt.Errorf("failed to write region: %w", err)
+	}
+
+	// Write the actual data
+	if !m.memory.Write(region.Offset, data) {
+		deallocate := m.module.ExportedFunction("deallocate")
+		if deallocate != nil {
+			deallocate.Call(context.Background(), uint64(ptr))
+		}
+		return 0, 0, fmt.Errorf("failed to write data to memory at ptr=%d size=%d", region.Offset, size)
 	}
 
 	return ptr, size, nil
@@ -114,25 +155,40 @@ func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 
 // readFromMemory reads data from WASM memory
 func (m *memoryManager) readFromMemory(ptr, size uint32) ([]byte, error) {
-	if ptr == 0 || size == 0 {
+	if ptr == 0 {
 		return nil, nil
 	}
 
-	// Ensure we're not reading out of bounds
-	memSize := uint64(m.memory.Size())
-	if uint64(ptr)+uint64(size) > memSize {
-		return nil, fmt.Errorf("memory access out of bounds: ptr=%d size=%d memSize=%d", ptr, size, memSize)
+	// Read the Region struct first
+	region, err := m.readRegion(ptr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read region: %w", err)
 	}
 
-	data, ok := m.memory.Read(ptr, size)
-	if !ok {
-		return nil, fmt.Errorf("failed to read memory at ptr=%d size=%d", ptr, size)
+	// Validate the region
+	if err := validateRegion(region); err != nil {
+		return nil, fmt.Errorf("invalid region: %w", err)
 	}
-	return data, nil
+
+	// Read the actual data using the region's length
+	data, ok := m.memory.Read(region.Offset, region.Length)
+	if !ok {
+		return nil, fmt.Errorf("failed to read memory at ptr=%d size=%d", region.Offset, region.Length)
+	}
+
+	// Make a copy to ensure we own the data
+	result := make([]byte, len(data))
+	copy(result, data)
+
+	return result, nil
 }
 
 // readRegion reads a Region struct from memory and validates it
 func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
+	if ptr == 0 {
+		return nil, fmt.Errorf("null region pointer")
+	}
+
 	// Read the Region struct (12 bytes total)
 	data, ok := m.memory.Read(ptr, regionSize)
 	if !ok {
@@ -147,14 +203,14 @@ func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 	}
 
 	// Validate the region
-	if region.Length > region.Capacity {
-		return nil, fmt.Errorf("invalid Region: length %d exceeds capacity %d", region.Length, region.Capacity)
+	if err := validateRegion(region); err != nil {
+		return nil, fmt.Errorf("invalid region: %w", err)
 	}
 
 	// Ensure we're not reading out of bounds
 	memSize := uint64(m.memory.Size()) * wasmPageSize
 	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
-		return nil, fmt.Errorf("invalid Region: out of memory bounds (offset=%d, capacity=%d, memSize=%d)", region.Offset, region.Capacity, memSize)
+		return nil, fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d", region.Offset, region.Capacity, memSize)
 	}
 
 	return region, nil
@@ -162,15 +218,19 @@ func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 
 // writeRegion writes a Region struct to memory
 func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
+	if ptr == 0 {
+		return fmt.Errorf("null region pointer")
+	}
+
 	// Validate the region before writing
-	if region.Length > region.Capacity {
-		return fmt.Errorf("invalid Region: length %d exceeds capacity %d", region.Length, region.Capacity)
+	if err := validateRegion(region); err != nil {
+		return fmt.Errorf("invalid region: %w", err)
 	}
 
 	// Ensure we're not writing out of bounds
 	memSize := uint64(m.memory.Size()) * wasmPageSize
 	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
-		return fmt.Errorf("invalid Region: out of memory bounds (offset=%d, capacity=%d, memSize=%d)", region.Offset, region.Capacity, memSize)
+		return fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d", region.Offset, region.Capacity, memSize)
 	}
 
 	// Create the Region struct bytes (little-endian)
@@ -1172,116 +1232,35 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return metrics, nil
 }
 
-// serializeEnvForContract serializes the environment based on the contract version
+// serializeEnvForContract serializes and validates the environment for the contract
 func serializeEnvForContract(env []byte, checksum []byte, w *WazeroRuntime) ([]byte, error) {
-	// Print the input environment for debugging
-	fmt.Printf("Input environment: %s\n", string(env))
-
-	// We'll try to parse it as a strongly typed Env first.
-	// If that works, we adapt to a 1.0+ shape (numeric block height/time).
+	// Parse and validate the environment
 	var typedEnv types.Env
-	if err := json.Unmarshal(env, &typedEnv); err == nil {
-		// Convert to raw map so we can adjust fields.
-		var rawEnv map[string]interface{}
-		if err := json.Unmarshal(env, &rawEnv); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal env into raw map: %w", err)
-		}
-
-		// If there's a "block" section, set `height` and `time` as numeric
-		if block, ok := rawEnv["block"].(map[string]interface{}); ok {
-			block["height"] = typedEnv.Block.Height                // store as integer
-			block["time"] = fmt.Sprintf("%d", typedEnv.Block.Time) // store time as string
-			// chain_id presumably remains a string
-		}
-
-		// If there's a "transaction" section, set the transaction index as numeric (if present)
-		if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
-			if typedEnv.Transaction != nil {
-				txn["index"] = typedEnv.Transaction.Index
-			}
-		}
-
-		// Re-serialize with the numeric fields
-		adaptedEnv, err := json.Marshal(rawEnv)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
-		}
-		// Print the adapted environment for debugging
-		fmt.Printf("Adapted environment: %s\n", string(adaptedEnv))
-		return adaptedEnv, nil
-	}
-
-	// If we *couldn't* parse typedEnv, then we just handle it as raw JSON
-	// but still enforce numeric shape for block.height/time and transaction.index
-	// by heuristics.
-	var rawEnv map[string]interface{}
-	d := json.NewDecoder(strings.NewReader(string(env)))
-	d.UseNumber() // preserve numeric precision
-	if err := d.Decode(&rawEnv); err != nil {
+	if err := json.Unmarshal(env, &typedEnv); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
 	}
 
-	// Try to enforce numeric `height` and `time` in "block"
-	if block, ok := rawEnv["block"].(map[string]interface{}); ok {
-		// parse block.height
-		if hval, ok := block["height"]; ok {
-			if num, ok := hval.(json.Number); ok {
-				if i64, err := num.Int64(); err == nil {
-					block["height"] = i64 // store as integer
-				} else {
-					return nil, fmt.Errorf("unable to parse block.height as integer: %w", err)
-				}
-			}
-		}
-		// parse block.time
-		if tval, ok := block["time"]; ok {
-			if num, ok := tval.(json.Number); ok {
-				if i64, err := num.Int64(); err == nil {
-					block["time"] = fmt.Sprintf("%d", i64) // store time as string
-				} else {
-					return nil, fmt.Errorf("unable to parse block.time as integer: %w", err)
-				}
-			}
-		}
+	// Validate required fields
+	if typedEnv.Block.ChainID == "" {
+		return nil, fmt.Errorf("missing required field: block.chain_id")
+	}
+	if typedEnv.Contract.Address == "" {
+		return nil, fmt.Errorf("missing required field: contract.address")
+	}
+	if typedEnv.Transaction == nil {
+		return nil, fmt.Errorf("missing required field: transaction")
 	}
 
-	// parse transaction.index as numeric if present
-	if txn, ok := rawEnv["transaction"].(map[string]interface{}); ok {
-		if idxVal, ok := txn["index"]; ok {
-			if num, ok := idxVal.(json.Number); ok {
-				if i64, err := num.Int64(); err == nil {
-					txn["index"] = i64 // store as integer
-				} else {
-					return nil, fmt.Errorf("unable to parse transaction.index: %w", err)
-				}
-			}
-		}
-	}
-
-	// Now re-serialize
-	adaptedEnv, err := json.Marshal(rawEnv)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
-	}
-	// Print the adapted environment for debugging
-	fmt.Printf("Adapted environment: %s\n", string(adaptedEnv))
-	return adaptedEnv, nil
+	// Return the validated environment bytes directly
+	return env, nil
 }
 
-// callContractFn is the high-level dispatcher for all CosmWasm entry points.
-//   - "query", "sudo", "reply" each expect 2 parameters: env + msg
-//   - "instantiate", "execute", "migrate" each expect 3 parameters: env + info + msg
-//
-// Any mismatch leads to memory corruption in the Wasm, causing invalid JSON parse errors.
-//
-// Here, `info` must be non-nil if the contract function is one of the 3-argument entry points.
-// For "migrate" you might also handle fallback for 2-argument signatures, depending on your contract.
-// callContractFn is revised to not double-free env/info/msg pointers.
+// callContractFn is the high-level dispatcher for all CosmWasm entry points
 func (w *WazeroRuntime) callContractFn(
 	name string,
 	checksum []byte,
 	env []byte,
-	info []byte, // nil except for instantiate/execute/migrate
+	info []byte,
 	msg []byte,
 ) ([]byte, types.GasReport, error) {
 	// 1) Basic validations
@@ -1314,29 +1293,38 @@ func (w *WazeroRuntime) callContractFn(
 	ctx := context.Background()
 
 	// 4) Register and instantiate the host module "env"
-	hm, err := RegisterHostFunctions(w.runtime, &RuntimeEnvironment{
+	gasLimit := uint64(1_000_000_000) // 1 billion gas units
+	runtimeEnv := &RuntimeEnvironment{
 		DB:        w.kvStore,
 		API:       *w.api,
 		Querier:   w.querier,
 		Gas:       w.querier,
+		gasLimit:  gasLimit,
+		gasUsed:   0,
 		iterators: make(map[uint64]map[uint64]types.Iterator),
-	})
+	}
+	hm, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hm.Close(ctx)
 
-	_, err = w.runtime.InstantiateModule(ctx, hm, wazero.NewModuleConfig().WithName("env"))
+	// Instantiate the env module
+	envConfig := wazero.NewModuleConfig().
+		WithName("env").
+		WithStartFunctions()
+	envModule, err := w.runtime.InstantiateModule(ctx, hm, envConfig)
 	if err != nil {
 		return nil, types.GasReport{},
-			fmt.Errorf("failed to instantiate host module: %w", err)
+			fmt.Errorf("failed to instantiate env module: %w", err)
 	}
+	defer envModule.Close(ctx)
 
 	// 5) Instantiate the contract module
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
-		WithStartFunctions() // optional
+		WithStartFunctions()
 	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
 		return nil, types.GasReport{},
@@ -1351,57 +1339,20 @@ func (w *WazeroRuntime) callContractFn(
 	}
 	mm := newMemoryManager(memory, module)
 
-	//------------------------------------------------
-	// a) Write env → Region pointer (envRegionPtr)
-	//------------------------------------------------
-	envPtr, envSize, err := mm.writeToMemory(adaptedEnv)
+	// Write environment to memory
+	envPtr, _, err := mm.writeToMemory(adaptedEnv)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write env: %w", err)
 	}
 
-	envRegion := &Region{
-		Offset:   envPtr,
-		Capacity: envSize,
-		Length:   envSize,
-	}
-	envRegionPtr, err := allocateInContract(ctx, module, regionSize)
-	if err != nil {
-		return nil, types.GasReport{},
-			fmt.Errorf("failed to allocate env region: %w", err)
-	}
-	if err := mm.writeRegion(envRegionPtr, envRegion); err != nil {
-		return nil, types.GasReport{},
-			fmt.Errorf("failed to write env region: %w", err)
-	}
-
-	//------------------------------------------------
-	// b) Write msg → Region pointer (msgRegionPtr)
-	//------------------------------------------------
-	msgPtr, msgSize, err := mm.writeToMemory(msg)
+	// Write message to memory
+	msgPtr, _, err := mm.writeToMemory(msg)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to write msg: %w", err)
 	}
 
-	msgRegion := &Region{
-		Offset:   msgPtr,
-		Capacity: msgSize,
-		Length:   msgSize,
-	}
-	msgRegionPtr, err := allocateInContract(ctx, module, regionSize)
-	if err != nil {
-		return nil, types.GasReport{},
-			fmt.Errorf("failed to allocate msg region: %w", err)
-	}
-	if err := mm.writeRegion(msgRegionPtr, msgRegion); err != nil {
-		return nil, types.GasReport{},
-			fmt.Errorf("failed to write msg region: %w", err)
-	}
-
-	//------------------------------------------------
-	// c) Possibly write info → Region pointer
-	//------------------------------------------------
 	var callParams []uint64
 	switch name {
 	case "instantiate", "execute", "migrate":
@@ -1409,91 +1360,79 @@ func (w *WazeroRuntime) callContractFn(
 			return nil, types.GasReport{},
 				fmt.Errorf("%s requires a non-nil info parameter", name)
 		}
-		infoPtr, infoSize, err2 := mm.writeToMemory(info)
-		if err2 != nil {
-			return nil, types.GasReport{},
-				fmt.Errorf("failed to write info: %w", err2)
-		}
 
-		infoRegion := &Region{
-			Offset:   infoPtr,
-			Capacity: infoSize,
-			Length:   infoSize,
-		}
-		infoRegionPtr, err2 := allocateInContract(ctx, module, regionSize)
-		if err2 != nil {
+		// Write info to memory
+		infoPtr, _, err := mm.writeToMemory(info)
+		if err != nil {
 			return nil, types.GasReport{},
-				fmt.Errorf("failed to allocate info region: %w", err2)
-		}
-		if err2 = mm.writeRegion(infoRegionPtr, infoRegion); err2 != nil {
-			return nil, types.GasReport{},
-				fmt.Errorf("failed to write info region: %w", err2)
+				fmt.Errorf("failed to write info: %w", err)
 		}
 
 		callParams = []uint64{
-			uint64(envRegionPtr),
-			uint64(infoRegionPtr),
-			uint64(msgRegionPtr),
+			uint64(envPtr),
+			uint64(infoPtr),
+			uint64(msgPtr),
 		}
-		fmt.Printf("Calling instantiate with:\n")
-		fmt.Printf("  envRegionPtr: %d\n", envRegionPtr)
-		fmt.Printf("  infoRegionPtr: %d\n", infoRegionPtr)
-		fmt.Printf("  msgRegionPtr: %d\n", msgRegionPtr)
+
 	case "query", "sudo", "reply":
 		callParams = []uint64{
-			uint64(envRegionPtr),
-			uint64(msgRegionPtr),
+			uint64(envPtr),
+			uint64(msgPtr),
 		}
+
 	default:
 		return nil, types.GasReport{},
 			fmt.Errorf("unknown function name: %s", name)
 	}
 
-	//------------------------------------------------
-	// d) Invoke the wasm function
-	//------------------------------------------------
+	// Call the contract function
 	fn := module.ExportedFunction(name)
 	if fn == nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("function %q not found in contract", name)
 	}
-	results, callErr := fn.Call(ctx, callParams...)
-	if callErr != nil {
+
+	results, err := fn.Call(ctx, callParams...)
+	if err != nil {
 		return nil, types.GasReport{},
-			fmt.Errorf("call to %s failed: %w", name, callErr)
+			fmt.Errorf("call to %s failed: %w", name, err)
 	}
+
 	if len(results) != 1 {
 		return nil, types.GasReport{},
 			fmt.Errorf("function %s returned %d results (wanted 1)", name, len(results))
 	}
 
-	//------------------------------------------------
-	// e) The single result is the "result region"
-	//------------------------------------------------
-	resultRegionPtr := uint32(results[0])
-	resultRegion, err := mm.readRegion(resultRegionPtr)
+	// Read result from memory
+	resultPtr := uint32(results[0])
+	resultRegion, err := mm.readRegion(resultPtr)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to read result region: %w", err)
 	}
-	resultBytes, err := mm.readFromMemory(resultRegion.Offset, resultRegion.Length)
+
+	// Validate the result region
+	if err := validateRegion(resultRegion); err != nil {
+		return nil, types.GasReport{},
+			fmt.Errorf("invalid result region: %w", err)
+	}
+
+	// Read the actual result data using the region's length
+	resultData, err := mm.readFromMemory(resultRegion.Offset, resultRegion.Length)
 	if err != nil {
 		return nil, types.GasReport{},
 			fmt.Errorf("failed to read result data: %w", err)
 	}
 
-	//------------------------------------------------
-	// f) Construct GasReport
-	//------------------------------------------------
-	gasUsed := w.querier.GasConsumed()
+	// Construct gas report
 	gr := types.GasReport{
-		Limit:          1_000_000_000,
-		Remaining:      1_000_000_000 - gasUsed,
+		Limit:          gasLimit,
+		Remaining:      gasLimit - runtimeEnv.gasUsed,
 		UsedExternally: 0,
-		UsedInternally: gasUsed,
+		UsedInternally: runtimeEnv.gasUsed,
 	}
 
-	return resultBytes, gr, nil
+	return resultData, gr, nil
 }
 
 // SimulateStoreCode validates the code but does not store it

@@ -370,10 +370,10 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 	mem := mod.Memory()
 
 	// Check gas for iterator next operation
-	if env.GasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
+	if env.gasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
 		return 0, 0, 1 // Return error code 1 for out of gas
 	}
-	env.GasUsed += gasCostIteratorNext
+	env.gasUsed += gasCostIteratorNext
 
 	// Get iterator from environment
 	iter := env.GetIterator(callID, iterID)
@@ -460,7 +460,7 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 	env := ctx.Value(envKey).(*RuntimeEnvironment)
 	if env != nil {
 		fmt.Printf("Debug: Runtime environment state:\n")
-		fmt.Printf("  Gas used: %d\n", env.GasUsed)
+		fmt.Printf("  Gas used: %d\n", env.gasUsed)
 		fmt.Printf("  Gas limit: %d\n", env.Gas.GasConsumed())
 	}
 
@@ -830,10 +830,18 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("code").
 		Export("abort")
 
-	// Register DB functions (unchanged)
+	// Register DB functions
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen uint32) (uint32, uint32) {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for read operation (1 gas per byte read)
+			env.gasUsed += uint64(keyLen)
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			return hostGet(ctx, m, keyPtr, keyLen)
 		}).
 		WithParameterNames("key_ptr", "key_len").
@@ -842,7 +850,23 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register query_chain with i32_i32 signature
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, reqPtr uint32) uint32 {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Read request from memory to calculate gas
+			mem := m.Memory()
+			req, err := readMemory(mem, reqPtr, 4) // Read length prefix first
+			if err != nil {
+				panic(fmt.Sprintf("failed to read request length: %v", err))
+			}
+			reqLen := binary.LittleEndian.Uint32(req)
+
+			// Charge gas for query operation (10 gas per byte queried)
+			env.gasUsed += uint64(reqLen) * 10
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			return hostQueryChain(ctx, m, reqPtr)
 		}).
 		WithParameterNames("request").
@@ -851,7 +875,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for write operation (2 gas per byte written)
+			env.gasUsed += uint64(keyLen+valLen) * 2
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			hostSet(ctx, m, keyPtr, keyLen, valPtr, valLen)
 		}).
 		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
@@ -859,7 +891,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for write operation (2 gas per byte written)
+			env.gasUsed += uint64(keyLen+valLen) * 2
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			hostSet(ctx, m, keyPtr, keyLen, valPtr, valLen)
 		}).
 		WithParameterNames("key_ptr", "key_len", "val_ptr", "val_len").
@@ -875,16 +915,27 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register allocate function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for allocation (1 gas per 1KB, minimum 1 gas)
+			gasCharge := (size + 1023) / 1024 // Round up to nearest KB
+			if gasCharge == 0 {
+				gasCharge = 1
+			}
+			env.gasUsed += uint64(gasCharge)
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			// Allocate memory in the Wasm module
 			memory := m.Memory()
 			if memory == nil {
 				panic("no memory exported")
 			}
 
-			// Get current memory size in pages (64KB per page)
-			currentPages := memory.Size()
-
 			// Calculate required pages for the allocation
+			currentPages := memory.Size()
 			requiredBytes := size
 			pageSize := uint32(65536) // 64KB
 			requiredPages := (requiredBytes + pageSize - 1) / pageSize
@@ -898,9 +949,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 			// Return the pointer to the allocated memory
 			ptr := currentPages * pageSize
-			fmt.Printf("Host allocate called:\n")
-			fmt.Printf("  size: %d\n", size)
-			fmt.Printf("  returned ptr: %d\n", ptr)
 			return ptr
 		}).
 		WithParameterNames("size").
@@ -910,6 +958,14 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register deallocate function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge minimal gas for deallocation
+			env.gasUsed += 1
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
 			// In our implementation, we don't need to explicitly deallocate
 			// as we rely on the Wasm runtime's memory management
 		}).
@@ -988,7 +1044,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for scan operation (gasCostIteratorCreate + 1 gas per byte scanned)
+			env.gasUsed += gasCostIteratorCreate + uint64(startLen)
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			return hostScan(ctx, m, startPtr, startLen, order)
 		}).
 		WithParameterNames("start_ptr", "start_len", "order").
@@ -998,7 +1062,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// db_next
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for next operation
+			env.gasUsed += gasCostIteratorNext
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			return hostNext(ctx, m, iterID)
 		}).
 		WithParameterNames("iter_id").
@@ -1008,7 +1080,15 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// db_next_value
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
-			ctx = context.WithValue(ctx, envKey, env)
+			// Get environment from context
+			env := ctx.Value(envKey).(*RuntimeEnvironment)
+
+			// Charge gas for next value operation
+			env.gasUsed += gasCostIteratorNext
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
 			// Extract call_id and iter_id from the packed uint32
 			callID := uint64(iterID >> 16)
 			actualIterID := uint64(iterID & 0xFFFF)
@@ -1178,10 +1258,10 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 	mem := mod.Memory()
 
 	// Check gas for iterator next operation
-	if env.GasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
+	if env.gasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
 		return 0, 0, 1 // Return error code 1 for out of gas
 	}
-	env.GasUsed += gasCostIteratorNext
+	env.gasUsed += gasCostIteratorNext
 
 	// Get iterator from environment
 	iter := env.GetIterator(callID, iterID)
