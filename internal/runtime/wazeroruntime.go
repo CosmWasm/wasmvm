@@ -15,6 +15,8 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/crypto"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
@@ -34,6 +36,7 @@ type WazeroRuntime struct {
 	kvStore types.KVStore
 	api     *types.GoAPI
 	querier types.Querier
+	module  api.Module
 }
 
 type RuntimeEnvironment struct {
@@ -51,6 +54,10 @@ type RuntimeEnvironment struct {
 	iterators      map[uint64]map[uint64]types.Iterator
 	nextIterID     uint64
 	nextCallID     uint64
+
+	// Host functions
+	Crypto *crypto.HostFunctions
+	Memory *memory.HostFunctions
 }
 
 // Constants for memory management
@@ -1468,4 +1475,11 @@ func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
 
 	// Return checksum, no error, and persisted=false
 	return checksum[:], nil, false
+}
+
+// StartContract starts a new contract execution
+func (r *WazeroRuntime) StartContract(db types.KVStore, api *types.GoAPI, querier types.Querier, gasLimit uint64) (*RuntimeEnvironment, error) {
+	env := NewRuntimeEnvironment(db, api, querier)
+	env.gasLimit = gasLimit
+	return env, nil
 }

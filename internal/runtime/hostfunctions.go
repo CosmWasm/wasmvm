@@ -996,7 +996,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, psPtr, qsPtr, rPtr, sPtr uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
-			return hostBls12381PairingEquality(ctx, m, psPtr, 0, qsPtr, 0, rPtr, 0, sPtr, 0)
+			return crypto.hostBls12381PairingEquality(ctx, m, psPtr, 0, qsPtr, 0, rPtr, 0, sPtr, 0)
 		}).
 		WithParameterNames("ps_ptr", "qs_ptr", "r_ptr", "s_ptr").
 		WithResultNames("result").
@@ -1005,7 +1005,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, hashFunction, msgPtr, dstPtr, outPtr uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
-			ptr, _ := hostBls12381HashToG1(ctx, m, msgPtr, hashFunction)
+			ptr, _ := crypto.hostBls12381HashToG1(ctx, m, msgPtr, hashFunction)
 			return ptr
 		}).
 		WithParameterNames("hash_function", "msg_ptr", "dst_ptr", "out_ptr").
@@ -1015,7 +1015,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, hashFunction, msgPtr, dstPtr, outPtr uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
-			ptr, _ := hostBls12381HashToG2(ctx, m, msgPtr, hashFunction)
+			ptr, _ := crypto.hostBls12381HashToG2(ctx, m, msgPtr, hashFunction)
 			return ptr
 		}).
 		WithParameterNames("hash_function", "msg_ptr", "dst_ptr", "out_ptr").
@@ -1026,7 +1026,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, messageHashPtr, signaturePtr, publicKeyPtr uint32) uint32 {
 			ctx = context.WithValue(ctx, envKey, env)
-			return hostSecp256r1Verify(ctx, m, messageHashPtr, 0, signaturePtr, 0, publicKeyPtr, 0)
+			return crypto.hostSecp256r1Verify(ctx, m, messageHashPtr, 0, signaturePtr, 0, publicKeyPtr, 0)
 		}).
 		WithParameterNames("message_hash_ptr", "signature_ptr", "public_key_ptr").
 		WithResultNames("result").
@@ -1035,7 +1035,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, messageHashPtr, signaturePtr, recoveryParam uint32) uint64 {
 			ctx = context.WithValue(ctx, envKey, env)
-			ptr, len := hostSecp256r1RecoverPubkey(ctx, m, messageHashPtr, 0, signaturePtr, 0, recoveryParam)
+			ptr, len := crypto.hostSecp256r1RecoverPubkey(ctx, m, messageHashPtr, 0, signaturePtr, 0, recoveryParam)
 			return (uint64(len) << 32) | uint64(ptr)
 		}).
 		WithParameterNames("message_hash_ptr", "signature_ptr", "recovery_param").
@@ -1231,26 +1231,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	return builder.Compile(context.Background())
 }
-
-// When you instantiate a contract, you can do something like:
-//
-// compiledHost, err := RegisterHostFunctions(runtime, env)
-// if err != nil {
-//   ...
-// }
-// _, err = runtime.InstantiateModule(ctx, compiledHost, wazero.NewModuleConfig())
-// if err != nil {
-//   ...
-// }
-//
-// Then, instantiate your contract module which imports "env" module's functions.
-
-// contextKey is a custom type for context keys to avoid collisions
-type contextKey string
-
-const (
-	envKey contextKey = "env"
-)
 
 // hostNextKey implements db_next_key
 func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (keyPtr, keyLen, errCode uint32) {
