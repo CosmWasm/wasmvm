@@ -4,6 +4,7 @@
 *.iml
 .idea
 .vscode
+**combined_code.txt
 
 # no static libraries (35MB+)
 /internal/api/lib*.a
