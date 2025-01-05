@@ -195,6 +195,7 @@ func (m *memoryManager) readFromMemory(ptr, size uint32) ([]byte, error) {
 }
 
 // readRegion reads a Region struct from memory and validates it
+// readRegion reads a Region struct from memory and validates it
 func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 	if ptr == 0 {
 		return nil, fmt.Errorf("null region pointer")
@@ -216,12 +217,6 @@ func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 	// Validate the region
 	if err := validateRegion(region); err != nil {
 		return nil, fmt.Errorf("invalid region: %w", err)
-	}
-
-	// Ensure we're not reading out of bounds
-	memSize := uint64(m.memory.Size()) * wasmPageSize
-	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
-		return nil, fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d", region.Offset, region.Capacity, memSize)
 	}
 
 	return region, nil
@@ -261,8 +256,8 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(512).      // Set max memory to 32 MiB (512 * 64KB)
-		WithMemoryCapacityFromMax(true) // Eagerly allocate memory
+		WithMemoryLimitPages(4096).      // Set max memory to 256 MiB (4096 * 64KB)
+		WithMemoryCapacityFromMax(false) // Eagerly allocate memory
 
 	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
 
@@ -608,11 +603,11 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 
 func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -632,9 +627,14 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -643,16 +643,16 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 	w.querier = *querier
 
 	// Call the instantiate function
-	return w.callContractFn("instantiate", checksum, env, info, msg, otherParams...)
+	return w.callContractFn("instantiate", checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -672,9 +672,14 @@ func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -682,16 +687,16 @@ func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("execute", checksum, env, info, msg, otherParams...)
+	return w.callContractFn("execute", checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -711,9 +716,14 @@ func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -721,16 +731,16 @@ func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("migrate", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("migrate", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -750,9 +760,14 @@ func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, 
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -760,16 +775,16 @@ func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("migrate", checksum, env, migrateInfo, msg, otherParams...)
+	return w.callContractFn("migrate", checksum, env, migrateInfo, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -789,9 +804,14 @@ func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -799,16 +819,16 @@ func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("sudo", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("sudo", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -828,9 +848,14 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -838,16 +863,16 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("reply", checksum, env, nil, reply, otherParams...)
+	return w.callContractFn("reply", checksum, env, nil, reply, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -867,9 +892,14 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -888,16 +918,16 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("query message must have exactly one field")
 	}
 
-	return w.callContractFn("query", checksum, env, nil, query, otherParams...)
+	return w.callContractFn("query", checksum, env, nil, query, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -917,9 +947,14 @@ func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ..
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -927,16 +962,16 @@ func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ..
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -956,9 +991,14 @@ func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -966,16 +1006,16 @@ func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -995,9 +1035,14 @@ func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams .
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1005,16 +1050,16 @@ func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams .
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -1034,9 +1079,14 @@ func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams 
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1044,16 +1094,16 @@ func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -1073,9 +1123,14 @@ func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...i
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1083,16 +1138,16 @@ func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...i
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -1112,9 +1167,14 @@ func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams 
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1122,16 +1182,16 @@ func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -1151,9 +1211,14 @@ func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1161,16 +1226,16 @@ func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	// Extract additional parameters
-	if len(otherParams) < 5 {
+	if len(otherParams) < 6 {
 		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
 	}
 
-	_, ok := otherParams[0].(*types.GasMeter)
+	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
 	}
@@ -1190,9 +1255,14 @@ func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherP
 		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
 	}
 
-	_, ok = otherParams[4].(uint64)
+	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
 		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+	}
+
+	printDebug, ok := otherParams[5].(bool)
+	if !ok {
+		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
 	}
 
 	// Set the contract execution environment
@@ -1200,7 +1270,7 @@ func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherP
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg, otherParams...)
+	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
 func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
@@ -1273,11 +1343,18 @@ func (w *WazeroRuntime) callContractFn(
 	env []byte,
 	info []byte,
 	msg []byte,
-	otherParams ...interface{},
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *types.Querier,
+	gasLimit uint64,
+	printDebug bool,
 ) ([]byte, types.GasReport, error) {
-	fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
-	fmt.Printf("[DEBUG] callContractFn: name=%s checksum=%x\n", name, checksum)
-	fmt.Printf("[DEBUG] len(env)=%d, len(info)=%d, len(msg)=%d\n", len(env), len(info), len(msg))
+	if printDebug {
+		fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
+		fmt.Printf("[DEBUG] callContractFn: name=%s checksum=%x\n", name, checksum)
+		fmt.Printf("[DEBUG] len(env)=%d, len(info)=%d, len(msg)=%d\n", len(env), len(info), len(msg))
+	}
 
 	// 1) Basic validations
 	if checksum == nil {
@@ -1296,7 +1373,9 @@ func (w *WazeroRuntime) callContractFn(
 	compiled, ok := w.compiledModules[csHex]
 	if _, pinned := w.pinnedModules[csHex]; pinned {
 		w.moduleHits[csHex]++
-		fmt.Printf("[DEBUG] pinned module hits incremented for %s -> total hits = %d\n", csHex, w.moduleHits[csHex])
+		if printDebug {
+			fmt.Printf("[DEBUG] pinned module hits incremented for %s -> total hits = %d\n", csHex, w.moduleHits[csHex])
+		}
 	}
 	w.mu.Unlock()
 	if !ok {
@@ -1316,13 +1395,13 @@ func (w *WazeroRuntime) callContractFn(
 	ctx := context.Background()
 
 	// 4) Register and instantiate the host module "env"
-	fmt.Println("[DEBUG] Registering host functions ...")
-	gasMeter := otherParams[0].(*types.GasMeter)
-	gasLimit := otherParams[4].(uint64)
+	if printDebug {
+		fmt.Println("[DEBUG] Registering host functions ...")
+	}
 	runtimeEnv := &RuntimeEnvironment{
-		DB:        w.kvStore,
-		API:       *w.api,
-		Querier:   w.querier,
+		DB:        store,
+		API:       *api,
+		Querier:   *querier,
 		Gas:       *gasMeter,
 		gasLimit:  gasLimit,
 		gasUsed:   0,
@@ -1335,12 +1414,16 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 	defer func() {
-		fmt.Println("[DEBUG] Closing host module ...")
+		if printDebug {
+			fmt.Println("[DEBUG] Closing host module ...")
+		}
 		hm.Close(ctx)
 	}()
 
 	// Instantiate the env module
-	fmt.Println("[DEBUG] Instantiating 'env' module ...")
+	if printDebug {
+		fmt.Println("[DEBUG] Instantiating 'env' module ...")
+	}
 	envConfig := wazero.NewModuleConfig().
 		WithName("env").
 		WithStartFunctions()
@@ -1351,12 +1434,16 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 	defer func() {
-		fmt.Println("[DEBUG] Closing 'env' module ...")
+		if printDebug {
+			fmt.Println("[DEBUG] Closing 'env' module ...")
+		}
 		envModule.Close(ctx)
 	}()
 
 	// 5) Instantiate the contract module
-	fmt.Println("[DEBUG] Instantiating contract module ...")
+	if printDebug {
+		fmt.Println("[DEBUG] Instantiating contract module ...")
+	}
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
 		WithStartFunctions()
@@ -1367,7 +1454,9 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 	defer func() {
-		fmt.Println("[DEBUG] Closing contract module ...")
+		if printDebug {
+			fmt.Println("[DEBUG] Closing contract module ...")
+		}
 		module.Close(ctx)
 	}()
 
@@ -1380,7 +1469,9 @@ func (w *WazeroRuntime) callContractFn(
 	}
 	mm := newMemoryManager(memory, module)
 
-	fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
+	if printDebug {
+		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
+	}
 	envPtr, _, err := mm.writeToMemory(adaptedEnv)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: failed to write env: %v", err)
@@ -1388,7 +1479,9 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 
-	fmt.Printf("[DEBUG] Writing msg to memory (size=%d) ...\n", len(msg))
+	if printDebug {
+		fmt.Printf("[DEBUG] Writing msg to memory (size=%d) ...\n", len(msg))
+	}
 	msgPtr, _, err := mm.writeToMemory(msg)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: failed to write msg: %v", err)
@@ -1404,7 +1497,9 @@ func (w *WazeroRuntime) callContractFn(
 			fmt.Println(errStr)
 			return nil, types.GasReport{}, fmt.Errorf(errStr)
 		}
-		fmt.Printf("[DEBUG] Writing info to memory (size=%d) ...\n", len(info))
+		if printDebug {
+			fmt.Printf("[DEBUG] Writing info to memory (size=%d) ...\n", len(info))
+		}
 		infoPtr, _, err := mm.writeToMemory(info)
 		if err != nil {
 			errStr := fmt.Sprintf("[callContractFn] Error: failed to write info: %v", err)
@@ -1430,7 +1525,9 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 
-	fmt.Printf("[DEBUG] about to call function '%s' with callParams=%v\n", name, callParams)
+	if printDebug {
+		fmt.Printf("[DEBUG] about to call function '%s' with callParams=%v\n", name, callParams)
+	}
 	results, err := fn.Call(ctx, callParams...)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: call to %s failed: %v", name, err)
@@ -1444,7 +1541,9 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 
-	fmt.Printf("[DEBUG] results from contract call: %#v\n", results)
+	if printDebug {
+		fmt.Printf("[DEBUG] results from contract call: %#v\n", results)
+	}
 
 	// Read result from memory
 	resultPtr := uint32(results[0])
@@ -1455,8 +1554,10 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 
-	fmt.Printf("[DEBUG] result region: Offset=%d, Capacity=%d, Length=%d\n",
-		resultRegion.Offset, resultRegion.Capacity, resultRegion.Length)
+	if printDebug {
+		fmt.Printf("[DEBUG] result region: Offset=%d, Capacity=%d, Length=%d\n",
+			resultRegion.Offset, resultRegion.Capacity, resultRegion.Length)
+	}
 
 	// Validate the result region
 	if err := validateRegion(resultRegion); err != nil {
@@ -1473,13 +1574,15 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf(errStr)
 	}
 
-	fmt.Printf("[DEBUG] resultData length=%d\n", len(resultData))
-	if len(resultData) < 256 {
-		// If it's reasonably small, dump it as hex/string
-		fmt.Printf("[DEBUG] resultData (string) = %q\n", string(resultData))
-		fmt.Printf("[DEBUG] resultData (hex)    = % x\n", resultData)
-	} else {
-		fmt.Println("[DEBUG] resultData is larger than 256 bytes, skipping direct print.")
+	if printDebug {
+		fmt.Printf("[DEBUG] resultData length=%d\n", len(resultData))
+		if len(resultData) < 256 {
+			// If it's reasonably small, dump it as hex/string
+			fmt.Printf("[DEBUG] resultData (string) = %q\n", string(resultData))
+			fmt.Printf("[DEBUG] resultData (hex)    = % x\n", resultData)
+		} else {
+			fmt.Println("[DEBUG] resultData is larger than 256 bytes, skipping direct print.")
+		}
 	}
 
 	// Construct gas report
@@ -1490,9 +1593,11 @@ func (w *WazeroRuntime) callContractFn(
 		UsedInternally: runtimeEnv.gasUsed,
 	}
 
-	fmt.Printf("[DEBUG] GasReport: Used=%d (internally), Remaining=%d, Limit=%d\n",
-		gr.UsedInternally, gr.Remaining, gr.Limit)
-	fmt.Println("==============================================================\n")
+	if printDebug {
+		fmt.Printf("[DEBUG] GasReport: Used=%d (internally), Remaining=%d, Limit=%d\n",
+			gr.UsedInternally, gr.Remaining, gr.Limit)
+		fmt.Println("==============================================================\n")
+	}
 
 	return resultData, gr, nil
 }
