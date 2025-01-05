@@ -12,12 +12,6 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-const (
-	// Gas costs for iterator operations
-	gasCostIteratorCreate = 2000
-	gasCostIteratorNext   = 100
-)
-
 // RuntimeEnvironment holds the environment for contract execution
 
 // NewRuntimeEnvironment creates a new runtime environment
