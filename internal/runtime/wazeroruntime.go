@@ -632,7 +632,7 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 	w.querier = *querier
 
 	// Call the instantiate function
-	return w.callContractFn("instantiate", checksum, env, info, msg)
+	return w.callContractFn("instantiate", checksum, env, info, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -671,7 +671,7 @@ func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("execute", checksum, env, info, msg)
+	return w.callContractFn("execute", checksum, env, info, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -710,7 +710,7 @@ func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("migrate", checksum, env, nil, msg)
+	return w.callContractFn("migrate", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -749,7 +749,7 @@ func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("migrate", checksum, env, migrateInfo, msg)
+	return w.callContractFn("migrate", checksum, env, migrateInfo, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -788,7 +788,7 @@ func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("sudo", checksum, env, nil, msg)
+	return w.callContractFn("sudo", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -827,7 +827,7 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("reply", checksum, env, nil, reply)
+	return w.callContractFn("reply", checksum, env, nil, reply, otherParams...)
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -877,7 +877,7 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("query message must have exactly one field")
 	}
 
-	return w.callContractFn("query", checksum, env, nil, query)
+	return w.callContractFn("query", checksum, env, nil, query, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -916,7 +916,7 @@ func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ..
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg)
+	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -955,7 +955,7 @@ func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg)
+	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -994,7 +994,7 @@ func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams .
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg)
+	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1033,7 +1033,7 @@ func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg)
+	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1072,7 +1072,7 @@ func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...i
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg)
+	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1111,7 +1111,7 @@ func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams 
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg)
+	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1150,7 +1150,7 @@ func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg)
+	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1189,7 +1189,7 @@ func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherP
 	w.api = api
 	w.querier = *querier
 
-	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg)
+	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg, otherParams...)
 }
 
 func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
@@ -1262,6 +1262,7 @@ func (w *WazeroRuntime) callContractFn(
 	env []byte,
 	info []byte,
 	msg []byte,
+	otherParams ...interface{},
 ) ([]byte, types.GasReport, error) {
 	// 1) Basic validations
 	if checksum == nil {
@@ -1293,12 +1294,13 @@ func (w *WazeroRuntime) callContractFn(
 	ctx := context.Background()
 
 	// 4) Register and instantiate the host module "env"
-	gasLimit := uint64(1_000_000_000) // 1 billion gas units
+	gasMeter := otherParams[0].(*types.GasMeter)
+	gasLimit := otherParams[4].(uint64)
 	runtimeEnv := &RuntimeEnvironment{
 		DB:        w.kvStore,
 		API:       *w.api,
 		Querier:   w.querier,
-		Gas:       w.querier,
+		Gas:       *gasMeter,
 		gasLimit:  gasLimit,
 		gasUsed:   0,
 		iterators: make(map[uint64]map[uint64]types.Iterator),
