@@ -601,40 +601,49 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 	}, nil
 }
 
-func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
+// parseParams extracts and validates the common parameters passed to contract functions
+func (w *WazeroRuntime) parseParams(otherParams []interface{}) (*types.GasMeter, types.KVStore, *types.GoAPI, *types.Querier, uint64, bool, error) {
 	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("missing required parameters")
 	}
 
 	gasMeter, ok := otherParams[0].(*types.GasMeter)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid gas meter parameter")
 	}
 
 	store, ok := otherParams[1].(types.KVStore)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid store parameter")
 	}
 
 	api, ok := otherParams[2].(*types.GoAPI)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid api parameter")
 	}
 
 	querier, ok := otherParams[3].(*types.Querier)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid querier parameter")
 	}
 
 	gasLimit, ok := otherParams[4].(uint64)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid gas limit parameter")
 	}
 
 	printDebug, ok := otherParams[5].(bool)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid printDebug parameter")
+	}
+
+	return gasMeter, store, api, querier, gasLimit, printDebug, nil
+}
+
+func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -647,39 +656,9 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 }
 
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -691,39 +670,9 @@ func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...
 }
 
 func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -735,39 +684,9 @@ func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interf
 }
 
 func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -779,39 +698,9 @@ func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, 
 }
 
 func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -823,39 +712,9 @@ func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface
 }
 
 func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -867,39 +726,9 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 }
 
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -922,39 +751,9 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -966,39 +765,9 @@ func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ..
 }
 
 func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1010,39 +779,9 @@ func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams
 }
 
 func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1054,39 +793,9 @@ func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams .
 }
 
 func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1098,39 +807,9 @@ func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams 
 }
 
 func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1142,39 +821,9 @@ func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...i
 }
 
 func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1186,39 +835,9 @@ func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams 
 }
 
 func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
@@ -1230,39 +849,9 @@ func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams
 }
 
 func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	// Extract additional parameters
-	if len(otherParams) < 6 {
-		return nil, types.GasReport{}, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("invalid printDebug parameter")
+	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
+	if err != nil {
+		return nil, types.GasReport{}, err
 	}
 
 	// Set the contract execution environment
