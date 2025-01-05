@@ -19,7 +19,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 	}
 	bz, err := json.Marshal(timeout)
 	require.NoError(t, err)
-	assert.Equal(t, `{"block":{"revision":17,"height":42},"timestamp":"1578939743987654321"}`, string(bz))
+	assert.JSONEq(t, `{"block":{"revision":17,"height":42},"timestamp":"1578939743987654321"}`, string(bz))
 
 	// Null block
 	timeout = IBCTimeout{
@@ -28,7 +28,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 	}
 	bz, err = json.Marshal(timeout)
 	require.NoError(t, err)
-	assert.Equal(t, `{"block":null,"timestamp":"1578939743987654321"}`, string(bz))
+	assert.JSONEq(t, `{"block":null,"timestamp":"1578939743987654321"}`, string(bz))
 
 	// Null timestamp
 	// This should be `"timestamp":null`, but we are lacking this feature: https://github.com/golang/go/issues/37711
@@ -42,7 +42,7 @@ func TestIbcTimeoutSerialization(t *testing.T) {
 	}
 	bz, err = json.Marshal(timeout)
 	require.NoError(t, err)
-	assert.Equal(t, `{"block":{"revision":17,"height":42}}`, string(bz))
+	assert.JSONEq(t, `{"block":{"revision":17,"height":42}}`, string(bz))
 }
 
 func TestIbcTimeoutDeserialization(t *testing.T) {
