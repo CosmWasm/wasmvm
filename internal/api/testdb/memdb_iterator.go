@@ -141,7 +141,7 @@ func (i *memDBIterator) Error() error {
 // Key implements Iterator.
 func (i *memDBIterator) Key() []byte {
 	i.assertIsValid()
-	if i.item.key == nil || len(i.item.key) == 0 {
+	if len(i.item.key) == 0 {
 		return nil
 	}
 	return i.item.key
@@ -150,7 +150,7 @@ func (i *memDBIterator) Key() []byte {
 // Value implements Iterator.
 func (i *memDBIterator) Value() []byte {
 	i.assertIsValid()
-	if i.item.value == nil || len(i.item.value) == 0 {
+	if len(i.item.value) == 0 {
 		return nil
 	}
 	return i.item.value

@@ -402,7 +402,7 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 }
 
 // hostCloseIterator implements db_close_iterator
-func hostCloseIterator(ctx context.Context, mod api.Module, callID, iterID uint64) {
+func hostCloseIterator(ctx context.Context, _ api.Module, callID, iterID uint64) {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 
 	// Get iterator from environment

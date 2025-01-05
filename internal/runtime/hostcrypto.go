@@ -173,7 +173,7 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen 
 }
 
 // hostBls12381PairingEquality implements bls12_381_pairing_equality
-func hostBls12381PairingEquality(ctx context.Context, mod api.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
+func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
 	mem := mod.Memory()
 
 	// Read points
@@ -207,7 +207,7 @@ func hostBls12381PairingEquality(ctx context.Context, mod api.Module, a1Ptr, a1L
 }
 
 // hostSecp256r1Verify implements secp256r1_verify
-func hostSecp256r1Verify(ctx context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
 	mem := mod.Memory()
 
 	// Read inputs
