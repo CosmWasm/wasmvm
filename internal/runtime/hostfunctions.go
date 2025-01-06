@@ -1271,6 +1271,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithResultNames("key_ptr").
 		Export("db_next_key")
 
+	// Compile and return the module
 	return builder.Compile(context.Background())
 }
 
