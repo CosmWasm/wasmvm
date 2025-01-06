@@ -27,7 +27,7 @@ func TestSystemErrorNoSuchContractSerialization(t *testing.T) {
 	}
 	serialized, err := json.Marshal(&mySE)
 	require.NoError(t, err)
-	require.Equal(t, `{"no_such_contract":{"addr":"404"}}`, string(serialized))
+	require.JSONEq(t, `{"no_such_contract":{"addr":"404"}}`, string(serialized))
 }
 
 func TestSystemErrorNoSuchCodeSerialization(t *testing.T) {
@@ -50,5 +50,5 @@ func TestSystemErrorNoSuchCodeSerialization(t *testing.T) {
 	}
 	serialized, err := json.Marshal(&mySE)
 	require.NoError(t, err)
-	require.Equal(t, `{"no_such_code":{"code_id":321}}`, string(serialized))
+	require.JSONEq(t, `{"no_such_code":{"code_id":321}}`, string(serialized))
 }

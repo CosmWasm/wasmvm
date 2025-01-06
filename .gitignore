@@ -4,6 +4,7 @@
 *.iml
 .idea
 .vscode
+**combined_code.txt
 
 # no static libraries (35MB+)
 /internal/api/lib*.a
@@ -13,6 +14,8 @@
 /demo
 tmp
 a.out
+assistant*
+libwasmvm/target/** 
 
 # macOS
 .DS_Store

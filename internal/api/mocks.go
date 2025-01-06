@@ -19,6 +19,8 @@ import (
 
 const MOCK_CONTRACT_ADDR = "contract"
 
+// MockEnv returns a mock environment for testing
+// this is the original, and should not be changed.
 func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
@@ -35,9 +37,10 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(t testing.TB) []byte {
+func MockEnvBin(tb testing.TB) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockEnv())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -55,9 +58,10 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
+func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -391,13 +395,13 @@ func TestMockApi(t *testing.T) {
 	human := "foobar"
 	canon, cost, err := MockCanonicalizeAddress(human)
 	require.NoError(t, err)
-	assert.Equal(t, CanonicalLength, len(canon))
-	assert.Equal(t, CostCanonical, cost)
+	require.Len(t, canon, CanonicalLength)
+	require.Equal(t, CostCanonical, cost)
 
 	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
-	assert.Equal(t, recover, human)
-	assert.Equal(t, CostHuman, cost)
+	require.Equal(t, recover, human)
+	require.Equal(t, CostHuman, cost)
 }
 
 /**** MockQuerier ****/
@@ -536,7 +540,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"
@@ -639,7 +643,7 @@ func TestReflectCustomQuerier(t *testing.T) {
 	var resp CustomResponse
 	err = json.Unmarshal(bz, &resp)
 	require.NoError(t, err)
-	assert.Equal(t, resp.Msg, "PONG")
+	assert.Equal(t, "PONG", resp.Msg)
 
 	// try capital
 	msg2, err := json.Marshal(CustomQuery{Capitalized: &CapitalizedQuery{Text: "small."}})
@@ -649,5 +653,5 @@ func TestReflectCustomQuerier(t *testing.T) {
 	var resp2 CustomResponse
 	err = json.Unmarshal(bz, &resp2)
 	require.NoError(t, err)
-	assert.Equal(t, resp2.Msg, "SMALL.")
+	assert.Equal(t, "SMALL.", resp2.Msg)
 }
