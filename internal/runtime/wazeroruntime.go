@@ -70,16 +70,27 @@ type Region struct {
 }
 
 // validateRegion performs plausibility checks on a Region
-func validateRegion(region *Region) error {
+func validateRegion(region *Region, memory api.Memory) error {
+	// Match vm/src/memory.rs validation exactly
 	if region.Offset == 0 {
-		return fmt.Errorf("region has zero offset")
+		return fmt.Errorf("zero offset")
 	}
 	if region.Length > region.Capacity {
-		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
+		return fmt.Errorf("length %d exceeds capacity %d", region.Length, region.Capacity)
 	}
+
+	// Check for overflow like Rust impl
 	if uint64(region.Offset)+uint64(region.Capacity) > math.MaxUint32 {
 		return fmt.Errorf("region out of range: offset %d, capacity %d", region.Offset, region.Capacity)
 	}
+
+	// Add memory bounds check
+	memSize := uint64(memory.Size()) * wasmPageSize
+	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
+		return fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d",
+			region.Offset, region.Capacity, memSize)
+	}
+
 	return nil
 }
 
@@ -97,66 +108,76 @@ func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
 }
 
 // writeToMemory writes data to WASM memory and returns the pointer and size
+// writeToMemory writes data to WASM memory and returns a pointer to a Region struct + the size.
 func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 	if data == nil {
 		return 0, 0, nil
 	}
 
-	// Get the allocate function
+	// 1) Lookup "allocate"
 	allocate := m.module.ExportedFunction("allocate")
 	if allocate == nil {
 		return 0, 0, fmt.Errorf("allocate function not found in WASM module")
 	}
 
-	// Allocate memory for the Region struct (12 bytes) and the data
 	size := uint32(len(data))
-	results, err := allocate.Call(context.Background(), uint64(size+regionSize))
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to allocate memory: %w", err)
-	}
-	ptr := uint32(results[0])
 
-	// Create and write the Region struct
+	// 2) Allocate space for the data
+	dataResult, err := allocate.Call(context.Background(), uint64(size))
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to allocate memory for data: %w", err)
+	}
+	dataPtr := uint32(dataResult[0])
+
+	// 3) Write the data
+	if !m.memory.Write(dataPtr, data) {
+		// Attempt to free the partially allocated data
+		if deallocate := m.module.ExportedFunction("deallocate"); deallocate != nil {
+			_, _ = deallocate.Call(context.Background(), uint64(dataPtr))
+		}
+		return 0, 0, fmt.Errorf("failed to write data to memory at ptr=%d size=%d", dataPtr, size)
+	}
+
+	// 4) Allocate space for the Region struct
+	regionResult, err := allocate.Call(context.Background(), regionSize)
+	if err != nil {
+		// Attempt to free the data pointer
+		if deallocate := m.module.ExportedFunction("deallocate"); deallocate != nil {
+			_, _ = deallocate.Call(context.Background(), uint64(dataPtr))
+		}
+		return 0, 0, fmt.Errorf("failed to allocate memory for region struct: %w", err)
+	}
+	regionPtr := uint32(regionResult[0])
+
+	// 5) Construct the Region
 	region := &Region{
-		Offset:   ptr + regionSize, // Data starts after the Region struct
+		Offset:   dataPtr,
 		Capacity: size,
 		Length:   size,
 	}
 
-	// Validate the region before writing
-	if err := validateRegion(region); err != nil {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
+	// 6) Validate the region
+	if err := validateRegion(region, m.memory); err != nil {
+		// Attempt to free both pointers
+		if deallocate := m.module.ExportedFunction("deallocate"); deallocate != nil {
+			_, _ = deallocate.Call(context.Background(), uint64(dataPtr))
+			_, _ = deallocate.Call(context.Background(), uint64(regionPtr))
 		}
 		return 0, 0, fmt.Errorf("invalid region: %w", err)
 	}
 
-	// Write the Region struct
-	if err := m.writeRegion(ptr, region); err != nil {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
+	// 7) Write the region struct to memory
+	if err := m.writeRegion(regionPtr, region); err != nil {
+		// Attempt to free both pointers
+		if deallocate := m.module.ExportedFunction("deallocate"); deallocate != nil {
+			_, _ = deallocate.Call(context.Background(), uint64(dataPtr))
+			_, _ = deallocate.Call(context.Background(), uint64(regionPtr))
 		}
 		return 0, 0, fmt.Errorf("failed to write region: %w", err)
 	}
 
-	// Write the actual data
-	if !m.memory.Write(region.Offset, data) {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
-		}
-		return 0, 0, fmt.Errorf("failed to write data to memory at ptr=%d size=%d", region.Offset, size)
-	}
-
-	return ptr, size, nil
+	// 8) Return the pointer to the Region struct (not the data pointer)
+	return regionPtr, size, nil
 }
 
 // readFromMemory reads data from WASM memory
@@ -172,7 +193,7 @@ func (m *memoryManager) readFromMemory(ptr, size uint32) ([]byte, error) {
 	}
 
 	// Validate the region
-	if err := validateRegion(region); err != nil {
+	if err := validateRegion(region, m.memory); err != nil {
 		return nil, fmt.Errorf("invalid region: %w", err)
 	}
 
@@ -215,7 +236,7 @@ func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 	}
 
 	// Validate the region
-	if err := validateRegion(region); err != nil {
+	if err := validateRegion(region, m.memory); err != nil {
 		return nil, fmt.Errorf("invalid region: %w", err)
 	}
 
@@ -229,7 +250,7 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 	}
 
 	// Validate the region before writing
-	if err := validateRegion(region); err != nil {
+	if err := validateRegion(region, m.memory); err != nil {
 		return fmt.Errorf("invalid region: %w", err)
 	}
 
@@ -256,7 +277,7 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(4096).      // Set max memory to 256 MiB (4096 * 64KB)
+		WithMemoryLimitPages(65536).     // Set max memory to limit maximum memory usage
 		WithMemoryCapacityFromMax(false) // Eagerly allocate memory
 
 	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
@@ -1149,7 +1170,7 @@ func (w *WazeroRuntime) callContractFn(
 	}
 
 	// Validate the result region
-	if err := validateRegion(resultRegion); err != nil {
+	if err := validateRegion(resultRegion, mm.memory); err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: invalid result region: %v", err)
 		fmt.Println(errStr)
 		return nil, types.GasReport{}, errors.New(errStr)

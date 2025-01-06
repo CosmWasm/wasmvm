@@ -1,0 +1,186 @@
+name: Release CLI
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:  # ignore docs as they are built with Netlify.
+      - '**/*.md'
+      - 'site/**'
+      - 'netlify.toml'
+  push:
+    branches: [main]
+    tags: 'v[0-9]+.[0-9]+.[0-9]+**'  # Ex. v0.2.0 v0.2.1-rc2
+
+env: # Update this prior to requiring a higher minor version in go.mod
+  GO_VERSION: "1.23"
+
+defaults:
+  run:  # use bash for all operating systems unless overridden
+    shell: bash
+
+concurrency:
+  # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.actor }}
+  cancel-in-progress: true
+
+jobs:
+  pre_release:
+    name: Pre-release build
+    # This only runs on Windows so that we can simplify the installation of necessary toolchain to build artifacts.
+    runs-on: windows-2022
+    # This allows us to test in the following job regardless of the event (tag or not).
+    outputs:
+      VERSION: ${{ steps.output-version.outputs.VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          cache: false
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/go/bin
+          key: pre-release-check-${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum', 'Makefile') }}
+
+      # windows-2022 is missing osslsigncode (no issue, yet)
+      - name: "Install osslsigncode, infozip; setup wix"
+        run: |
+          # Find "C:\Program Files (x86)\WiX Toolset <version>\"
+          WIXDIR=`ls '/c/Program Files (x86)'|grep WiX`
+          WIXBIN="C:\\Program Files (x86)\\$WIXDIR\\bin"
+          echo WIXBIN=$WIXBIN
+          echo $WIXBIN >> $GITHUB_PATH
+          choco install osslsigncode -y
+          choco install zip -y
+
+      - name: Download Windows code signing certificate
+        env:
+          WINDOWS_CODESIGN_P12_BASE64: ${{ secrets.WINDOWS_CODESIGN_P12_BASE64 }}
+        run: | # On the fork PRs, our org secret is not visible.
+          if [ $WINDOWS_CODESIGN_P12_BASE64 ]; then
+            echo $WINDOWS_CODESIGN_P12_BASE64 | base64 --decode > windows-certificate.p12
+            echo "WINDOWS_CODESIGN_P12=windows-certificate.p12" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Make artifacts (test)
+        if: github.event_name != 'push' || !contains(github.ref, 'refs/tags/')
+        run: | # On the fork PRs, our org secret is not visible. We unset the required env so that `make dist` uses default self-signed cert.
+          if [ $WINDOWS_CODESIGN_P12 ]; then
+            export WINDOWS_CODESIGN_PASSWORD=${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+          fi
+          VERSION=${{ github.sha }}
+          make dist VERSION=$VERSION
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Make artifacts
+        # Triggers only on tag creation.
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        env:
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: | # Note: MSI_VERSION requires . as a separator and admits only numbers, so replace "-[a-z]*" in the tag with ".".
+          VERSION=${GITHUB_REF#refs/tags/v}
+          MSI_VERSION=${VERSION//-[a-z]*./.}
+          make dist VERSION=$VERSION MSI_VERSION=$MSI_VERSION
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        shell: bash
+
+      # This allows us to test in the following job regardless of the event (tag or not).
+      - id: output-version
+        run: echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # In order to share the built artifacts in the subsequent tests, we use cache instead of actions/upload-artifacts.
+      # The reason is that upload-artifacts are not globally consistent and sometimes pre_release_test won't be able to
+      # find the artifacts uploaded here. See https://github.com/actions/upload-artifact/issues/21 for more context.
+      # Downside of this is that, we pressure the cache capacity set per repository. We delete all caches created
+      # on PRs on close. See .github/workflows/clear_cache.yaml. On main branch, in any way this cache will be deleted
+      # in 7 days, also this at most a few MB, so this won't be an issue.
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          # Use share the cache containing archives across OSes.
+          enableCrossOsArchive: true
+          # Note: this creates a cache per run.
+          key: release-artifacts-${{ github.run_id }}
+          path:
+            dist/
+
+  # pre_release_test tests the artifacts built by pre_release in the OS dependent way.
+  pre_release_test:
+    needs: pre_release
+    name: Pre-release test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # don't fail fast as sometimes failures are arch/OS specific
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          # We need this cache to run tests.
+          fail-on-cache-miss: true
+          enableCrossOsArchive: true
+          key: release-artifacts-${{ github.run_id }}
+          path:
+            dist/
+
+      - name: Test (linux)
+         # Check if the version was correctly inserted with VERSION variable
+        if: runner.os == 'Linux'
+        run: |
+          tar xf dist/wazero_${{ needs.pre_release.outputs.VERSION }}_linux_amd64.tar.gz
+          ./wazero version | grep ${{ needs.pre_release.outputs.VERSION }}
+
+      - name: Test (darwin)
+        # Check if the version was correctly inserted with VERSION variable
+        if: runner.os == 'macOS'
+        run: |
+          tar xf dist/wazero_${{ needs.pre_release.outputs.VERSION }}_darwin_amd64.tar.gz
+          ./wazero version | grep ${{ needs.pre_release.outputs.VERSION }}
+
+      # This only checks the installer when built on Windows as it is simpler than switching OS.
+      # refreshenv is from choco, and lets you reload ENV variables (used here for PATH).
+      - name: Test Windows Installer
+        if: runner.os == 'Windows'
+        run: |
+          set MSI_FILE="dist\wazero_${{ needs.pre_release.outputs.VERSION }}_windows_amd64.msi"
+          call packaging\msi\verify_msi.cmd
+        shell: cmd
+
+  # Triggers only on the tag creation.
+  release:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    needs: pre_release_test
+    name: Release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:  # Ensure release_notes.sh can see prior commits
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          fail-on-cache-miss: true
+          enableCrossOsArchive: true
+          key: release-artifacts-${{ github.run_id }}
+          path:
+            dist/
+
+      - name: Create draft release
+        run: |
+          ls dist
+          tag="${GITHUB_REF#refs/tags/}"
+          ./.github/workflows/release_notes.sh ${tag} > release-notes.txt
+          gh release create ${tag} --draft --notes-file release-notes.txt --title ${GITHUB_REF#refs/tags/} ./dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

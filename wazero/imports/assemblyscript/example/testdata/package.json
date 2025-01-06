@@ -1,0 +1,10 @@
+{
+  "name": "hello-assemblyscript",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "asc index.ts --debug -b none -o index.wasm"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0"
+  }
+}
