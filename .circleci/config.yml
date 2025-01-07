@@ -156,7 +156,7 @@ jobs:
             - cachev4-libwasmvm_audit-rust:1.75.0-
       - run:
           name: Install cargo-audit
-          command: cargo install --debug cargo-audit --version 0.17.6
+          command: cargo install --debug cargo-audit --version 0.17.6 --locked
       - run:
           name: Run cargo-audit
           working_directory: libwasmvm
