@@ -5,9 +5,9 @@
 .idea
 .vscode
 **combined_code.txt
-/vm
-/wazero
-
+/vm/
+/wazero/
+/contracts/
 
 
 
