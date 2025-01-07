@@ -63,7 +63,7 @@ func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
 // SimulateStoreCode is the same as StoreCode but does not actually store the code.
 // This is useful for simulating all the validations happening in StoreCode without actually
 // writing anything to disk.
-func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, error) {
+func (vm *VM) SimulateStoreCode(code WasmCode) (Checksum, error) {
 	return api.StoreCode(vm.cache, code, false)
 }
 
