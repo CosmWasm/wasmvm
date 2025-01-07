@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 
@@ -71,24 +70,34 @@ type Region struct {
 
 // validateRegion performs plausibility checks on a Region
 func validateRegion(region *Region, memory api.Memory) error {
-	// Match vm/src/memory.rs validation exactly
-	if region.Offset == 0 {
-		return fmt.Errorf("zero offset")
+	if region == nil {
+		return fmt.Errorf("region pointer cannot be nil")
 	}
+
+	// memory.Size() returns size in pages
+	memSizePages := memory.Size()
+	memSizeBytes := memSizePages * wasmPageSize
+
+	// Check if offset is within bounds
+	if region.Offset >= memSizeBytes {
+		return fmt.Errorf("region offset %d out of memory bounds (size: %d bytes)", region.Offset, memSizeBytes)
+	}
+
+	// Check if length is valid
 	if region.Length > region.Capacity {
-		return fmt.Errorf("length %d exceeds capacity %d", region.Length, region.Capacity)
+		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
 	}
 
 	// Check for overflow like Rust impl
-	if uint64(region.Offset)+uint64(region.Capacity) > math.MaxUint32 {
-		return fmt.Errorf("region out of range: offset %d, capacity %d", region.Offset, region.Capacity)
+	if uint64(region.Offset)+uint64(region.Capacity) > uint64(memSizeBytes) {
+		return fmt.Errorf("region out of range: offset %d + capacity %d exceeds memory size %d",
+			region.Offset, region.Capacity, memSizeBytes)
 	}
 
-	// Add memory bounds check
-	memSize := uint64(memory.Size()) * wasmPageSize
-	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
-		return fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d",
-			region.Offset, region.Capacity, memSize)
+	// Check if the entire region fits in memory
+	endOffset := uint64(region.Offset) + uint64(region.Length)
+	if endOffset > uint64(memSizeBytes) {
+		return fmt.Errorf("region end offset %d out of memory bounds (size: %d bytes)", endOffset, memSizeBytes)
 	}
 
 	return nil
@@ -107,7 +116,6 @@ func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
 	}
 }
 
-// writeToMemory writes data to WASM memory and returns the pointer and size
 // writeToMemory writes data to WASM memory and returns a pointer to a Region struct + the size.
 func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 	if data == nil {
@@ -129,6 +137,20 @@ func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 	}
 	dataPtr := uint32(dataResult[0])
 
+	// Validate the allocated memory region before writing
+	dataRegion := &Region{
+		Offset:   dataPtr,
+		Capacity: size,
+		Length:   size,
+	}
+	if err := validateRegion(dataRegion, m.memory); err != nil {
+		// Attempt to free the allocated memory
+		if deallocate := m.module.ExportedFunction("deallocate"); deallocate != nil {
+			_, _ = deallocate.Call(context.Background(), uint64(dataPtr))
+		}
+		return 0, 0, fmt.Errorf("invalid data region: %w", err)
+	}
+
 	// 3) Write the data
 	if !m.memory.Write(dataPtr, data) {
 		// Attempt to free the partially allocated data
@@ -149,7 +171,7 @@ func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 	}
 	regionPtr := uint32(regionResult[0])
 
-	// 5) Construct the Region
+	// 5) Construct and validate the Region
 	region := &Region{
 		Offset:   dataPtr,
 		Capacity: size,
@@ -176,7 +198,6 @@ func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
 		return 0, 0, fmt.Errorf("failed to write region: %w", err)
 	}
 
-	// 8) Return the pointer to the Region struct (not the data pointer)
 	return regionPtr, size, nil
 }
 
@@ -216,10 +237,19 @@ func (m *memoryManager) readFromMemory(ptr, size uint32) ([]byte, error) {
 }
 
 // readRegion reads a Region struct from memory and validates it
-// readRegion reads a Region struct from memory and validates it
 func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
 	if ptr == 0 {
 		return nil, fmt.Errorf("null region pointer")
+	}
+
+	// Validate that we can read the Region struct itself
+	regionStruct := &Region{
+		Offset:   ptr,
+		Capacity: regionSize,
+		Length:   regionSize,
+	}
+	if err := validateRegion(regionStruct, m.memory); err != nil {
+		return nil, fmt.Errorf("cannot read region struct: %w", err)
 	}
 
 	// Read the Region struct (12 bytes total)
@@ -277,8 +307,7 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(65536).     // Set max memory to limit maximum memory usage
-		WithMemoryCapacityFromMax(false) // Eagerly allocate memory
+		WithMemoryLimitPages(65536) // Set maximum memory limit to 65536 pages (4GB)
 
 	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
 
@@ -291,7 +320,6 @@ func NewWazeroRuntime() (*WazeroRuntime, error) {
 		runtime:         r,
 		codeCache:       make(map[string][]byte),
 		compiledModules: make(map[string]wazero.CompiledModule),
-		closed:          false,
 		pinnedModules:   make(map[string]struct{}),
 		moduleHits:      make(map[string]uint32),
 		moduleSizes:     make(map[string]uint64),
