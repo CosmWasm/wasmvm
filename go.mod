@@ -16,6 +16,8 @@ require (
 )
 
 retract (
+	// see https://github.com/CosmWasm/wasmvm/issues/599; use 1.5.7 instead
+	v1.5.6
 	// see https://github.com/CosmWasm/wasmvm/issues/459
 	v1.4.0
 	// originally published without the CWA-2023-004 fix
