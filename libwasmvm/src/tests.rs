@@ -22,7 +22,7 @@ fn handle_cpu_loop_with_cache() {
         MEMORY_CACHE_SIZE,
         MEMORY_LIMIT,
     );
-    let mut cache = unsafe { Cache::new(options) }.unwrap();
+    let cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
