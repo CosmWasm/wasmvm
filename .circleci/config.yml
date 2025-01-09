@@ -7,7 +7,7 @@ jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
   libwasmvm_sanity:
     docker:
-      - image: cimg/rust:1.74.0
+      - image: cimg/rust:1.81.0
     steps:
       - checkout
       - run:
@@ -18,8 +18,8 @@ jobs:
           command: rustup component add rustfmt
       - restore_cache:
           keys:
-            - cargocache-v3-libwasmvm_sanity-rust:1.74.0-{{ checksum "libwasmvm/Cargo.lock" }}
-            - cargocache-v3-libwasmvm_sanity-rust:1.74.0-
+            - cargocache-v3-libwasmvm_sanity-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cargocache-v3-libwasmvm_sanity-rust:1.81.0-
       - run:
           name: Ensure libwasmvm/bindings.h is up-to-date
           working_directory: libwasmvm
