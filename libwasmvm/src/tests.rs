@@ -18,11 +18,11 @@ fn handle_cpu_loop_with_cache() {
     let backend = mock_backend(&[]);
     let options = CacheOptions::new(
         TempDir::new().unwrap().path().to_path_buf(),
-        capabilities_from_csv("staking"),
+        capabilities_from_csv("cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2,staking,iterator,stargate"),
         MEMORY_CACHE_SIZE,
         MEMORY_LIMIT,
     );
-    let cache = unsafe { Cache::new(options) }.unwrap();
+    let mut cache = unsafe { Cache::new(options) }.unwrap();
 
     let options = InstanceOptions {
         gas_limit: GAS_LIMIT,
