@@ -267,7 +267,7 @@ jobs:
 
   build_shared_library:
     docker:
-      - image: cimg/rust:1.74.0
+      - image: cimg/rust:1.83.0
     steps:
       - checkout
       - run:
