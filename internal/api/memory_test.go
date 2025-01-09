@@ -1,78 +1,149 @@
 package api
 
 import (
+	"sync"
 	"testing"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestMakeView(t *testing.T) {
-	data := []byte{0xaa, 0xbb, 0x64}
-	dataView := makeView(data)
-	require.Equal(t, cbool(false), dataView.is_nil)
-	require.Equal(t, cusize(3), dataView.len)
+//-------------------------------------
+// Example tests for memory bridging
+//-------------------------------------
 
-	empty := []byte{}
-	emptyView := makeView(empty)
-	require.Equal(t, cbool(false), emptyView.is_nil)
-	require.Equal(t, cusize(0), emptyView.len)
-
-	nilView := makeView(nil)
-	require.Equal(t, cbool(true), nilView.is_nil)
-}
-
-func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
-	// non-empty
-	{
-		original := []byte{0xaa, 0xbb, 0x64}
-		unmanaged := newUnmanagedVector(original)
-		require.Equal(t, cbool(false), unmanaged.is_none)
-		require.Equal(t, 3, int(unmanaged.len))
-		require.GreaterOrEqual(t, 3, int(unmanaged.cap)) // Rust implementation decides this
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Equal(t, original, copy)
+func TestMakeView_TableDriven(t *testing.T) {
+	type testCase struct {
+		name     string
+		input    []byte
+		expIsNil bool
+		expLen   cusize
 	}
 
-	// empty
-	{
-		original := []byte{}
-		unmanaged := newUnmanagedVector(original)
-		require.Equal(t, cbool(false), unmanaged.is_none)
-		require.Equal(t, 0, int(unmanaged.len))
-		require.GreaterOrEqual(t, 0, int(unmanaged.cap)) // Rust implementation decides this
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Equal(t, original, copy)
+	tests := []testCase{
+		{
+			name:     "Non-empty byte slice",
+			input:    []byte{0xaa, 0xbb, 0x64},
+			expIsNil: false,
+			expLen:   3,
+		},
+		{
+			name:     "Empty slice",
+			input:    []byte{},
+			expIsNil: false,
+			expLen:   0,
+		},
+		{
+			name:     "Nil slice",
+			input:    nil,
+			expIsNil: true,
+			expLen:   0,
+		},
 	}
 
-	// none
-	{
-		var original []byte
-		unmanaged := newUnmanagedVector(original)
-		require.Equal(t, cbool(true), unmanaged.is_none)
-		// We must not make assumptions on the other fields in this case
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Nil(t, copy)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			view := makeView(tc.input)
+			require.Equal(t, cbool(tc.expIsNil), view.is_nil,
+				"Mismatch in is_nil for test: %s", tc.name)
+			require.Equal(t, tc.expLen, view.len,
+				"Mismatch in len for test: %s", tc.name)
+		})
 	}
 }
 
-// Like the test above but without `newUnmanagedVector` calls.
-// Since only Rust can actually create them, we only test edge cases here.
-//
-//go:nocheckptr
-func TestCopyDestroyUnmanagedVector(t *testing.T) {
-	{
-		// ptr, cap and len broken. Do not access those values when is_none is true
-		invalid_ptr := unsafe.Pointer(uintptr(42))
-		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalid_ptr), cusize(0xBB), cusize(0xAA))
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Nil(t, copy)
+func TestCreateAndDestroyUnmanagedVector_TableDriven(t *testing.T) {
+	// Helper for the round-trip test
+	checkUnmanagedRoundTrip := func(t *testing.T, input []byte, expectNone bool) {
+		unmanaged := newUnmanagedVector(input)
+		require.Equal(t, cbool(expectNone), unmanaged.is_none,
+			"Mismatch on is_none with input: %v", input)
+
+		if !expectNone && len(input) > 0 {
+			require.Equal(t, len(input), int(unmanaged.len),
+				"Length mismatch for input: %v", input)
+			require.GreaterOrEqual(t, int(unmanaged.cap), int(unmanaged.len),
+				"Expected cap >= len for input: %v", input)
+		}
+
+		copyData := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Equal(t, input, copyData,
+			"Round-trip mismatch for input: %v", input)
 	}
-	{
-		// Capacity is 0, so no allocation happened. Do not access the pointer.
-		invalid_ptr := unsafe.Pointer(uintptr(42))
-		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalid_ptr), cusize(0), cusize(0))
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Equal(t, []byte{}, copy)
+
+	type testCase struct {
+		name       string
+		input      []byte
+		expectNone bool
 	}
+
+	tests := []testCase{
+		{
+			name:       "Non-empty data",
+			input:      []byte{0xaa, 0xbb, 0x64},
+			expectNone: false,
+		},
+		{
+			name:       "Empty but non-nil",
+			input:      []byte{},
+			expectNone: false,
+		},
+		{
+			name:       "Nil => none",
+			input:      nil,
+			expectNone: true,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			checkUnmanagedRoundTrip(t, tc.input, tc.expectNone)
+		})
+	}
+}
+
+func TestCopyDestroyUnmanagedVector_SpecificEdgeCases(t *testing.T) {
+	t.Run("is_none = true ignoring ptr/len/cap", func(t *testing.T) {
+		invalidPtr := unsafe.Pointer(uintptr(42))
+		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalidPtr), cusize(0xBB), cusize(0xAA))
+		copy := copyAndDestroyUnmanagedVector(uv)
+		require.Nil(t, copy, "copy should be nil if is_none=true")
+	})
+
+	t.Run("cap=0 => no allocation => empty data", func(t *testing.T) {
+		invalidPtr := unsafe.Pointer(uintptr(42))
+		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalidPtr), cusize(0), cusize(0))
+		copy := copyAndDestroyUnmanagedVector(uv)
+		require.Equal(t, []byte{}, copy,
+			"expected empty result if cap=0 and is_none=false")
+	})
+}
+
+func TestCopyDestroyUnmanagedVector_Concurrent(t *testing.T) {
+	inputs := [][]byte{
+		{1, 2, 3},
+		{},
+		nil,
+		{0xff, 0x00, 0x12, 0xab, 0xcd, 0xef},
+	}
+
+	var wg sync.WaitGroup
+	concurrency := 10
+
+	for i := 0; i < concurrency; i++ {
+		for _, data := range inputs {
+			data := data
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				uv := newUnmanagedVector(data)
+				out := copyAndDestroyUnmanagedVector(uv)
+				require.Equal(t, data, out,
+					"Mismatch in concurrency test for input=%v", data)
+			}()
+		}
+	}
+	wg.Wait()
 }
