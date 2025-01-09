@@ -455,7 +455,7 @@ workflows:
           matrix:
             parameters:
               # Run with MSRV and some modern stable Rust
-              rust-version: ["1.74.0", "1.80.0"]
+              rust-version: ["1.80.0", "1.83.0"]
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
