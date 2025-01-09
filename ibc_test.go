@@ -276,7 +276,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(prResponse2.Acknowledgement, &ack2)
 	require.NoError(t, err)
-	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
+	require.Equal(t, "invalid packet: account no-such-channel not found", ack2.Err)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
