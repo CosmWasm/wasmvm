@@ -1082,21 +1082,8 @@ func (w *WazeroRuntime) callContractFn(
 		fmt.Printf("[DEBUG] Original env: %s\n", string(env))
 	}
 
-	// Get the compiled module from cache
-	w.mu.Lock()
-	csHex := hex.EncodeToString(checksum)
-	compiled, ok := w.compiledModules[csHex]
-	if _, pinned := w.pinnedModules[csHex]; pinned {
-		w.moduleHits[csHex]++
-	}
-	w.mu.Unlock()
-
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("module not found: %s", csHex)
-	}
-
 	// Adapt environment for contract version
-	adaptedEnv, err := serializeEnvForContract(env, checksum, w)
+	adaptedEnv, err := serializeEnvForContract(env, info, w)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to serialize env: %w", err)
 	}
@@ -1110,84 +1097,95 @@ func (w *WazeroRuntime) callContractFn(
 
 	// Create runtime environment
 	runtimeEnv := &RuntimeEnvironment{
-		DB:        store,
-		API:       *api,
-		Querier:   *querier,
-		Gas:       *gasMeter,
-		gasLimit:  gasLimit,
-		gasUsed:   0,
-		iterators: make(map[uint64]map[uint64]types.Iterator),
+		DB:      store,
+		API:     *api,
+		Querier: *querier,
+		Gas:     *gasMeter,
+
+		gasLimit: gasLimit,
+		gasUsed:  0,
+
+		iterators:  make(map[uint64]map[uint64]types.Iterator),
+		nextCallID: 1,
 	}
 
-	// Register host functions
 	if printDebug {
 		fmt.Printf("[DEBUG] Registering host functions...\n")
 	}
 
-	hostMod, err := RegisterHostFunctions(w.runtime, runtimeEnv)
+	// Register host functions
+	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
-	defer hostMod.Close(context.Background())
+	defer hostModule.Close(context.Background())
 
-	// Instantiate the env module
+	// Get the module
+	w.mu.Lock()
+	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
+	if !ok {
+		w.mu.Unlock()
+		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum %x", checksum)
+	}
+	w.mu.Unlock()
+
 	if printDebug {
 		fmt.Printf("[DEBUG] Instantiating env module...\n")
 	}
 
-	envConfig := wazero.NewModuleConfig().WithName("env")
-	envModule, err := w.runtime.InstantiateModule(context.Background(), hostMod, envConfig)
+	// Create new module instance with host functions
+	ctx := context.Background()
+	moduleConfig := wazero.NewModuleConfig().
+		WithName("env").
+		WithStartFunctions()
+
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
-	defer envModule.Close(context.Background())
+	defer envModule.Close(ctx)
 
-	// Instantiate the contract module
 	if printDebug {
 		fmt.Printf("[DEBUG] Instantiating contract module...\n")
 	}
 
-	modConfig := wazero.NewModuleConfig().WithName("contract")
-	module, err := w.runtime.InstantiateModule(context.Background(), compiled, modConfig)
+	// Create contract module instance
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithStartFunctions())
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
-	defer module.Close(context.Background())
+	defer contractModule.Close(ctx)
 
-	// Get memory from instantiated module
-	memory := module.Memory()
+	// Initialize memory manager
+	memory := contractModule.Memory()
 	if memory == nil {
 		return nil, types.GasReport{}, fmt.Errorf("module has no memory")
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Initial memory size: %d bytes (%d pages)\n",
-			memory.Size(), memory.Size()/wasmPageSize)
+		fmt.Printf("[DEBUG] Initial memory size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
 	}
 
-	// Create memory manager
-	mm := newMemoryManager(memory, module)
+	mm := newMemoryManager(memory, contractModule)
 	initialBytes := memory.Size()
 	if err := mm.validateMemorySize(initialBytes); err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("memory validation failed: %w", err)
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Memory initialized with %d bytes (%d pages)\n",
-			memory.Size(), memory.Size()/wasmPageSize)
-		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
-		fmt.Printf("[DEBUG] Environment content: %s\n", string(adaptedEnv))
-		var prettyEnv interface{}
-		if err := json.Unmarshal(adaptedEnv, &prettyEnv); err == nil {
-			prettyJSON, _ := json.MarshalIndent(prettyEnv, "", "  ")
-			fmt.Printf("[DEBUG] Parsed env structure:\n%s\n", string(prettyJSON))
-		}
+		fmt.Printf("[DEBUG] Memory initialized with %d bytes (%d pages)\n", initialBytes, initialBytes/wasmPageSize)
 	}
 
 	// Write environment to memory
+	if printDebug {
+		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
+		fmt.Printf("[DEBUG] Environment content: %s\n", string(adaptedEnv))
+		fmt.Printf("[DEBUG] Parsed env structure:\n%s\n", prettyPrintJSON(adaptedEnv))
+	}
+
 	envPtr, _, err := mm.writeToMemory(adaptedEnv, printDebug)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env: %w", err)
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
 	// Write info to memory if present
@@ -1198,61 +1196,56 @@ func (w *WazeroRuntime) callContractFn(
 		}
 		infoPtr, _, err = mm.writeToMemory(info, printDebug)
 		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write info: %w", err)
+			return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
 		}
 	} else {
-		// Write empty JSON object for info when not provided
-		emptyInfo := []byte("{}")
 		if printDebug {
 			fmt.Printf("[DEBUG] Writing empty info to memory\n")
 		}
+		// Write empty JSON object for info
+		emptyInfo := []byte("{}")
 		infoPtr, _, err = mm.writeToMemory(emptyInfo, printDebug)
 		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write empty info: %w", err)
+			return nil, types.GasReport{}, fmt.Errorf("failed to write empty info to memory: %w", err)
 		}
 	}
 
-	// Write message to memory
+	// Write msg to memory
 	if printDebug {
 		fmt.Printf("[DEBUG] Writing msg to memory (size=%d) ...\n", len(msg))
 	}
-
 	msgPtr, _, err := mm.writeToMemory(msg, printDebug)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write msg: %w", err)
+		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
+	}
+
+	// Get the function
+	fn := contractModule.ExportedFunction(name)
+	if fn == nil {
+		return nil, types.GasReport{}, fmt.Errorf("function %s not found", name)
 	}
 
 	if printDebug {
 		fmt.Printf("[DEBUG] Function params: env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
-	}
-
-	// Call the contract function
-	fn := module.ExportedFunction(name)
-	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("function %q not found in contract", name)
-	}
-
-	if printDebug {
 		fmt.Printf("[DEBUG] About to call function '%s'\n", name)
 	}
 
+	// Call the function with appropriate parameters
 	var results []uint64
 	var callErr error
-
-	// Call with appropriate number of parameters based on function
 	switch name {
 	case "query":
 		// Query takes 2 params: env and msg
-		results, callErr = fn.Call(context.Background(), uint64(envPtr), uint64(msgPtr))
+		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
 	case "sudo", "reply", "migrate":
 		// These functions take 3 params but can have empty info
-		results, callErr = fn.Call(context.Background(), uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	default:
 		// All other functions take 3 params with required info
 		if len(info) == 0 {
 			return nil, types.GasReport{}, fmt.Errorf("info parameter required for %s", name)
 		}
-		results, callErr = fn.Call(context.Background(), uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	}
 
 	if callErr != nil {
@@ -1260,53 +1253,52 @@ func (w *WazeroRuntime) callContractFn(
 	}
 
 	if len(results) != 1 {
-		return nil, types.GasReport{}, fmt.Errorf("unexpected number of results: %d", len(results))
+		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(results))
 	}
 
 	// Read result from memory
 	resultPtr := uint32(results[0])
-	if printDebug {
-		fmt.Printf("[DEBUG] Contract returned pointer: 0x%x\n", resultPtr)
-		fmt.Printf("[DEBUG] Reading result from memory...\n")
-	}
-
-	// Read the Region struct
-	regionData, ok := memory.Read(resultPtr, regionSize)
+	resultData, ok := memory.Read(resultPtr, 8)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read Region struct")
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
 	}
 
-	region := &Region{
-		Offset:   binary.LittleEndian.Uint32(regionData[0:4]),
-		Capacity: binary.LittleEndian.Uint32(regionData[4:8]),
-		Length:   binary.LittleEndian.Uint32(regionData[8:12]),
-	}
+	dataPtr := binary.LittleEndian.Uint32(resultData[0:4])
+	dataLen := binary.LittleEndian.Uint32(resultData[4:8])
 
-	if printDebug {
-		fmt.Printf("[DEBUG] Result Region: offset=0x%x, capacity=%d, length=%d\n",
-			region.Offset, region.Capacity, region.Length)
-	}
-
-	// Read the actual result data
-	resultData, ok := memory.Read(region.Offset, region.Length)
+	data, ok := memory.Read(dataPtr, dataLen)
 	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result data")
+		return nil, types.GasReport{}, fmt.Errorf("failed to read data from memory")
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Read %d bytes of result data\n", len(resultData))
-		if len(resultData) < 1024 {
-			fmt.Printf("[DEBUG] Result data: %s\n", string(resultData))
+		fmt.Printf("[DEBUG] Function result: ptr=%d, len=%d\n", dataPtr, dataLen)
+		if len(data) < 1024 {
+			fmt.Printf("[DEBUG] Result data: %s\n", string(data))
 		}
-		fmt.Printf("==============================================================\n")
 	}
 
-	return resultData, types.GasReport{
+	gasReport := types.GasReport{
 		UsedInternally: runtimeEnv.gasUsed,
 		UsedExternally: 0,
 		Remaining:      gasLimit - runtimeEnv.gasUsed,
 		Limit:          gasLimit,
-	}, nil
+	}
+
+	return data, gasReport, nil
+}
+
+// prettyPrintJSON formats JSON with indentation for better readability
+func prettyPrintJSON(input []byte) string {
+	var temp interface{}
+	if err := json.Unmarshal(input, &temp); err != nil {
+		return fmt.Sprintf("Error formatting JSON: %v", err)
+	}
+	pretty, err := json.MarshalIndent(temp, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error formatting JSON: %v", err)
+	}
+	return string(pretty)
 }
 
 // SimulateStoreCode validates the code but does not store it
