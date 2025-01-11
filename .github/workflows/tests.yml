@@ -8,7 +8,7 @@ on:
 
 jobs:
   setup:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go
@@ -26,7 +26,7 @@ jobs:
   # Main package tests
   test-ibc:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -36,7 +36,7 @@ jobs:
 
   test-ibc-handshake:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -46,7 +46,7 @@ jobs:
 
   test-ibc-packet-dispatch:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -56,7 +56,7 @@ jobs:
 
   test-analyze-code:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -66,7 +66,7 @@ jobs:
 
   test-ibc-msg-get-channel:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -76,7 +76,7 @@ jobs:
 
   test-ibc-msg-get-counter-version:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -86,7 +86,7 @@ jobs:
 
   test-store-code:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -96,7 +96,7 @@ jobs:
 
   test-simulate-store-code:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -106,7 +106,7 @@ jobs:
 
   test-store-code-and-get:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -116,7 +116,7 @@ jobs:
 
   test-remove-code:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -126,7 +126,7 @@ jobs:
 
   test-happy-path:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -136,7 +136,7 @@ jobs:
 
   test-env:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -146,7 +146,7 @@ jobs:
 
   test-get-metrics:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -157,7 +157,7 @@ jobs:
   # API Tests
   test-validate-address-failure:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -167,7 +167,7 @@ jobs:
 
   test-store-iterator:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -177,7 +177,7 @@ jobs:
 
   test-store-iterator-hits-limit:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -187,7 +187,7 @@ jobs:
 
   test-queue-iterator-simple:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -197,7 +197,7 @@ jobs:
 
   test-queue-iterator-races:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -207,7 +207,7 @@ jobs:
 
   test-queue-iterator-limit:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -217,7 +217,7 @@ jobs:
 
   test-init-and-release-cache:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -227,7 +227,7 @@ jobs:
 
   test-init-cache-works-for-non-existent-dir:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -237,7 +237,7 @@ jobs:
 
   test-init-cache-errors-for-broken-dir:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -247,7 +247,7 @@ jobs:
 
   test-init-locking-prevents-concurrent-access:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -257,7 +257,7 @@ jobs:
 
   test-init-locking-allows-multiple-instances:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -267,7 +267,7 @@ jobs:
 
   test-init-cache-empty-capabilities:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -277,7 +277,7 @@ jobs:
 
   test-store-code-and-get-code:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -287,7 +287,7 @@ jobs:
 
   test-store-code-fails-with-bad-data:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -297,7 +297,7 @@ jobs:
 
   test-store-code-unchecked:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -307,7 +307,7 @@ jobs:
 
   test-pin:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -317,7 +317,7 @@ jobs:
 
   test-pin-errors:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -327,7 +327,7 @@ jobs:
 
   test-unpin:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -337,7 +337,7 @@ jobs:
 
   test-unpin-errors:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -347,7 +347,7 @@ jobs:
 
   test-get-pinned-metrics:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -357,7 +357,7 @@ jobs:
 
   test-instantiate:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -367,7 +367,7 @@ jobs:
 
   test-execute:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -377,7 +377,7 @@ jobs:
 
   test-execute-panic:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -387,7 +387,7 @@ jobs:
 
   test-execute-unreachable:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -397,7 +397,7 @@ jobs:
 
   test-execute-cpu-loop:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -407,7 +407,7 @@ jobs:
 
   test-execute-storage-loop:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -417,7 +417,7 @@ jobs:
 
   test-execute-user-errors-in-api-calls:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -427,7 +427,7 @@ jobs:
 
   test-migrate:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -437,7 +437,7 @@ jobs:
 
   test-multiple-instances:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -447,7 +447,7 @@ jobs:
 
   test-sudo:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -457,7 +457,7 @@ jobs:
 
   test-dispatch-submessage:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -467,7 +467,7 @@ jobs:
 
   test-reply-and-query:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -477,7 +477,7 @@ jobs:
 
   test-query:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -487,7 +487,7 @@ jobs:
 
   test-hackatom-querier:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -497,7 +497,7 @@ jobs:
 
   test-custom-reflect-querier:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -507,7 +507,7 @@ jobs:
 
   test-floats:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -517,7 +517,7 @@ jobs:
 
   test-libwasmvm-version:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -528,7 +528,7 @@ jobs:
   # Types package tests
   test-config-json:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -538,7 +538,7 @@ jobs:
 
   test-message-info-handles-multiple-coins:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -548,7 +548,7 @@ jobs:
 
   test-message-info-handles-missing-coins:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -558,7 +558,7 @@ jobs:
 
   test-block-info-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -568,7 +568,7 @@ jobs:
 
   test-block-info-deserialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -578,7 +578,7 @@ jobs:
 
   test-ibc-timeout-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -588,7 +588,7 @@ jobs:
 
   test-ibc-timeout-deserialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -598,7 +598,7 @@ jobs:
 
   test-ibc-receive-response-deserialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -608,7 +608,7 @@ jobs:
 
   test-wasm-msg-instantiate-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -618,7 +618,7 @@ jobs:
 
   test-wasm-msg-instantiate2-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -628,7 +628,7 @@ jobs:
 
   test-any-msg-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -638,7 +638,7 @@ jobs:
 
   test-gov-msg-vote-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -648,7 +648,7 @@ jobs:
 
   test-gov-msg-vote-weighted-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -658,7 +658,7 @@ jobs:
 
   test-msg-fund-community-pool-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -668,7 +668,7 @@ jobs:
 
   test-delegation-with-empty-array:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -678,7 +678,7 @@ jobs:
 
   test-delegation-with-data:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -688,7 +688,7 @@ jobs:
 
   test-validator-with-empty-array:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -698,7 +698,7 @@ jobs:
 
   test-validator-with-data:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -708,7 +708,7 @@ jobs:
 
   test-query-result-with-empty-data:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -718,7 +718,7 @@ jobs:
 
   test-wasm-query-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -728,7 +728,7 @@ jobs:
 
   test-contract-info-response-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -738,7 +738,7 @@ jobs:
 
   test-distribution-query-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -748,7 +748,7 @@ jobs:
 
   test-code-info-response-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -758,7 +758,7 @@ jobs:
 
   test-reply-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -768,7 +768,7 @@ jobs:
 
   test-sub-msg-response-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -778,7 +778,7 @@ jobs:
 
   test-system-error-no-such-contract-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -788,7 +788,7 @@ jobs:
 
   test-system-error-no-such-code-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -798,7 +798,7 @@ jobs:
 
   test-checksum-string:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -808,7 +808,7 @@ jobs:
 
   test-uint64-json:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -818,7 +818,7 @@ jobs:
 
   test-int64-json:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -828,7 +828,7 @@ jobs:
 
   test-array-serialization:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -838,7 +838,7 @@ jobs:
 
   benchmarks:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
