@@ -191,16 +191,11 @@ func validateRegion(region *Region) error {
 
 // writeToMemory writes data to memory and returns the offset where it was written
 func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, uint32, error) {
-	if len(data) == 0 {
-		return 0, 0, nil
-	}
-
-	// Calculate required pages and allocation size
 	dataSize := uint32(len(data))
 	pagesNeeded := (dataSize + wasmPageSize - 1) / wasmPageSize
 	allocSize := pagesNeeded * wasmPageSize
 
-	// Ensure we have enough memory
+	// Check if we need to grow memory
 	if mm.nextOffset+allocSize > mm.size {
 		pagesToGrow := (mm.nextOffset + allocSize - mm.size + wasmPageSize - 1) / wasmPageSize
 		if printDebug {
@@ -215,8 +210,7 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 	}
 
 	// Write data to memory
-	success := mm.memory.Write(mm.nextOffset, data)
-	if !success {
+	if !mm.memory.Write(mm.nextOffset, data) {
 		return 0, 0, fmt.Errorf("failed to write data to memory")
 	}
 
@@ -1144,7 +1138,7 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 
 // serializeEnvForContract serializes and validates the environment for the contract
 func serializeEnvForContract(env []byte, printDebug bool) ([]byte, error) {
-	// First unmarshal the environment data
+	// First unmarshal into a typed struct to validate the data
 	var typedEnv types.Env
 	if err := json.Unmarshal(env, &typedEnv); err != nil {
 		return nil, fmt.Errorf("failed to deserialize environment: %w", err)
@@ -1154,14 +1148,14 @@ func serializeEnvForContract(env []byte, printDebug bool) ([]byte, error) {
 	if typedEnv.Block.Height == 0 {
 		return nil, fmt.Errorf("block height is required")
 	}
-	if typedEnv.Block.Time == 0 {
-		return nil, fmt.Errorf("block time is required")
-	}
 	if typedEnv.Block.ChainID == "" {
 		return nil, fmt.Errorf("chain id is required")
 	}
+	if typedEnv.Contract.Address == "" {
+		return nil, fmt.Errorf("contract address is required")
+	}
 
-	// Create output preserving original formats and field order
+	// Create a map with the required structure
 	envMap := map[string]interface{}{
 		"block": map[string]interface{}{
 			"height":   typedEnv.Block.Height,
@@ -1173,7 +1167,7 @@ func serializeEnvForContract(env []byte, printDebug bool) ([]byte, error) {
 		},
 	}
 
-	// Add transaction if present (must come after block)
+	// Add transaction if present
 	if typedEnv.Transaction != nil {
 		txMap := map[string]interface{}{
 			"index": typedEnv.Transaction.Index,
