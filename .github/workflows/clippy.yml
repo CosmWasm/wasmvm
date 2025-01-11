@@ -1,0 +1,39 @@
+# .github/workflows/clippy.yml
+name: Clippy Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  libwasmvm_clippy_msrv:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.83.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version information
+        run: rustc --version && cargo --version
+      - name: Add clippy component
+        run: rustup component add clippy
+      - name: Run clippy
+        working-directory: libwasmvm
+        run: cargo clippy --all-targets -- -D warnings
+
+  libwasmvm_clippy_stable:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.83.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version information
+        run: rustc --version && cargo --version
+      - name: Add clippy component
+        run: rustup component add clippy
+      - name: Run clippy
+        working-directory: libwasmvm
+        run: cargo clippy --all-targets -- -D warnings

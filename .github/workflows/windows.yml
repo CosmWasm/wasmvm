@@ -1,0 +1,23 @@
+# .github/workflows/windows.yml
+name: Windows Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  libwasmvm_sanity_windows:
+    runs-on: windows-latest
+    container:
+      image: rust:1.83.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Rust version information
+        run: rustc --version && cargo --version && rustup --version
+      - name: Run unit tests
+        working-directory: libwasmvm
+        run: cargo test
