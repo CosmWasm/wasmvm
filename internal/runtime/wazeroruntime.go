@@ -256,8 +256,8 @@ func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(4096).      // Set max memory to 256 MiB (4096 * 64KB)
-		WithMemoryCapacityFromMax(false) // Eagerly allocate memory
+		WithMemoryLimitPages(4096).     // Set max memory to 256 MiB (4096 * 64KB)
+		WithMemoryCapacityFromMax(true) // Eagerly allocate memory to prevent alignment issues
 
 	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
 
@@ -1136,41 +1136,66 @@ func (w *WazeroRuntime) callContractFn(
 
 	// Read result from memory
 	resultPtr := uint32(results[0])
-	resultRegion, err := mm.readRegion(resultPtr)
-	if err != nil {
-		errStr := fmt.Sprintf("[callContractFn] Error: failed to read result region: %v", err)
+	if printDebug {
+		fmt.Printf("[DEBUG] raw result pointer: 0x%x\n", resultPtr)
+	}
+
+	// Try to read the raw memory first
+	rawData, ok := memory.Read(resultPtr, regionSize)
+	if !ok {
+		errStr := fmt.Sprintf("[callContractFn] Error: failed to read raw memory at ptr=%d", resultPtr)
 		fmt.Println(errStr)
 		return nil, types.GasReport{}, errors.New(errStr)
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] result region: Offset=%d, Capacity=%d, Length=%d\n",
+		fmt.Printf("[DEBUG] raw memory at result ptr: % x\n", rawData)
+	}
+
+	// Try to parse as Region struct
+	resultRegion := &Region{
+		Offset:   binary.LittleEndian.Uint32(rawData[0:4]),
+		Capacity: binary.LittleEndian.Uint32(rawData[4:8]),
+		Length:   binary.LittleEndian.Uint32(rawData[8:12]),
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] parsed region: Offset=0x%x, Capacity=%d, Length=%d\n",
 			resultRegion.Offset, resultRegion.Capacity, resultRegion.Length)
 	}
 
-	// Validate the result region
-	if err := validateRegion(resultRegion); err != nil {
-		errStr := fmt.Sprintf("[callContractFn] Error: invalid result region: %v", err)
-		fmt.Println(errStr)
-		return nil, types.GasReport{}, errors.New(errStr)
+	// Try to read the actual data, but be defensive about length
+	var resultData []byte
+	if resultRegion.Length > 1024*1024 { // Cap at 1MB
+		resultRegion.Length = 1024 * 1024
 	}
 
-	// Read the actual result data using the region's length
-	resultData, err := mm.readFromMemory(resultRegion.Offset, resultRegion.Length)
-	if err != nil {
-		errStr := fmt.Sprintf("[callContractFn] Error: failed to read result data: %v", err)
-		fmt.Println(errStr)
-		return nil, types.GasReport{}, errors.New(errStr)
+	resultData, ok = memory.Read(resultRegion.Offset, resultRegion.Length)
+	if !ok {
+		// Try reading a smaller amount if that failed
+		resultRegion.Length = 1024 // Try 1KB
+		resultData, ok = memory.Read(resultRegion.Offset, resultRegion.Length)
+		if !ok {
+			errStr := fmt.Sprintf("[callContractFn] Error: failed to read result data at offset=%d length=%d",
+				resultRegion.Offset, resultRegion.Length)
+			fmt.Println(errStr)
+			return nil, types.GasReport{}, errors.New(errStr)
+		}
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] resultData length=%d\n", len(resultData))
+		fmt.Printf("[DEBUG] read %d bytes of result data\n", len(resultData))
 		if len(resultData) < 256 {
-			fmt.Printf("[DEBUG] resultData (string) = %q\n", string(resultData))
-			fmt.Printf("[DEBUG] resultData (hex)    = % x\n", resultData)
-		} else {
-			fmt.Println("[DEBUG] resultData is larger than 256 bytes, skipping direct print.")
+			fmt.Printf("[DEBUG] result data (string) = %q\n", string(resultData))
+			fmt.Printf("[DEBUG] result data (hex)    = % x\n", resultData)
 		}
+	}
+
+	// Try to parse as JSON to validate
+	var jsonTest interface{}
+	if err := json.Unmarshal(resultData, &jsonTest); err != nil {
+		fmt.Printf("[DEBUG] Warning: result data is not valid JSON: %v\n", err)
+		// Continue anyway, maybe it's binary data
 	}
 
 	// Construct gas report

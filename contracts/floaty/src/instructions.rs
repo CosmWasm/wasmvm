@@ -294,7 +294,7 @@ pub fn run_instruction(instr: &str, args: &[Value]) -> Value {
     use Value::*;
 
     let arg1 = || args.get(0).unwrap();
-    let arg2 = || args.get(0).unwrap();
+    let arg2 = || args.get(1).unwrap();
 
     match instr {
         "f32.eq" => U32(run!("f32.eq", arg1().f32(), arg2().f32())),
