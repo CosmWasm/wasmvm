@@ -209,11 +209,15 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] writeToMemory: Writing %d bytes\n", len(data))
-		fmt.Printf("[DEBUG] Current memory state: size=%d bytes, nextOffset=0x%x\n", mm.size, mm.nextOffset)
+		fmt.Printf("\n=== Memory Write Operation ===\n")
+		fmt.Printf("Current memory state:\n")
+		fmt.Printf("- Total size: %d bytes (%d pages)\n", mm.size, mm.size/wasmPageSize)
+		fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
+		fmt.Printf("Writing data:\n")
+		fmt.Printf("- Size: %d bytes\n", len(data))
 		if len(data) < 1024 {
-			fmt.Printf("[DEBUG] Data to write: %s\n", string(data))
-			fmt.Printf("[DEBUG] Data hex: % x\n", data)
+			fmt.Printf("- Content: %s\n", string(data))
+			fmt.Printf("- Hex: % x\n", data)
 		}
 	}
 
@@ -227,8 +231,18 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 		Length:   uint32(len(data)),
 	}
 
+	if printDebug {
+		fmt.Printf("Region structure:\n")
+		fmt.Printf("- Offset: 0x%x\n", region.Offset)
+		fmt.Printf("- Capacity: %d\n", region.Capacity)
+		fmt.Printf("- Length: %d\n", region.Length)
+	}
+
 	// Validate the region before proceeding with memory operations
 	if err := validateRegion(region); err != nil {
+		if printDebug {
+			fmt.Printf("Region validation failed: %v\n", err)
+		}
 		return 0, 0, fmt.Errorf("invalid memory region: %w", err)
 	}
 
@@ -244,18 +258,31 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 		pagesToGrow := (neededSize - mm.size) / wasmPageSize
 
 		if printDebug {
-			fmt.Printf("[DEBUG] Growing memory: current=%d pages, growing by %d pages\n",
-				currentPages, pagesToGrow)
+			fmt.Printf("Growing memory:\n")
+			fmt.Printf("- Current pages: %d\n", currentPages)
+			fmt.Printf("- Growing by: %d pages\n", pagesToGrow)
+			fmt.Printf("- Required size: %d bytes\n", requiredSize)
 		}
 
 		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
+			if printDebug {
+				fmt.Printf("Failed to grow memory!\n")
+			}
 			return 0, 0, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
 		}
 		mm.size = mm.memory.Size()
+
+		if printDebug {
+			fmt.Printf("Memory grown successfully:\n")
+			fmt.Printf("- New size: %d bytes (%d pages)\n", mm.size, mm.size/wasmPageSize)
+		}
 	}
 
 	// Write data
 	if !mm.memory.Write(region.Offset, data) {
+		if printDebug {
+			fmt.Printf("Failed to write data to memory!\n")
+		}
 		return 0, 0, fmt.Errorf("failed to write data to memory at offset 0x%x", region.Offset)
 	}
 
@@ -267,6 +294,9 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 	binary.LittleEndian.PutUint32(regionBytes[8:12], region.Length)
 
 	if !mm.memory.Write(regionPtr, regionBytes) {
+		if printDebug {
+			fmt.Printf("Failed to write Region struct!\n")
+		}
 		return 0, 0, fmt.Errorf("failed to write Region struct at offset 0x%x", regionPtr)
 	}
 
@@ -274,8 +304,23 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 	mm.nextOffset = regionPtr + regionSize
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Memory write successful: data_offset=0x%x, region_ptr=0x%x, next_offset=0x%x\n",
-			region.Offset, regionPtr, mm.nextOffset)
+		fmt.Printf("Write operation successful:\n")
+		fmt.Printf("- Data offset: 0x%x\n", region.Offset)
+		fmt.Printf("- Region ptr: 0x%x\n", regionPtr)
+		fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
+
+		// Verify written data
+		readBack, ok := mm.memory.Read(region.Offset, region.Length)
+		if ok {
+			fmt.Printf("Data verification:\n")
+			if len(readBack) < 1024 {
+				fmt.Printf("- Read back: %s\n", string(readBack))
+				fmt.Printf("- Read hex: % x\n", readBack)
+			}
+			fmt.Printf("- Length matches: %v\n", len(readBack) == len(data))
+		} else {
+			fmt.Printf("Failed to verify written data!\n")
+		}
 	}
 
 	return regionPtr, regionSize, nil
@@ -971,35 +1016,36 @@ func serializeEnvForContract(env []byte, _ []byte, _ *WazeroRuntime) ([]byte, er
 		return nil, fmt.Errorf("contract address cannot be empty")
 	}
 
-	// Get the original block data
+	// Get the original block data and preserve exact number formats
 	rawBlock, ok := rawEnv["block"].(map[string]interface{})
 	if !ok {
-		fmt.Printf("[DEBUG] Failed to get block data from raw env\n")
 		return nil, fmt.Errorf("invalid block structure in environment")
 	}
 
-	fmt.Printf("[DEBUG] Raw block data: %+v\n", rawBlock)
+	// Use the raw values directly to preserve exact number formats
+	height := rawBlock["height"]
+	time := rawBlock["time"]
 
-	// Create output environment preserving original number formats
+	// Create output environment preserving original number formats and field order
 	envMap := map[string]interface{}{
 		"block": map[string]interface{}{
-			"height":   rawBlock["height"],
-			"time":     rawBlock["time"],
-			"chain_id": typedEnv.Block.ChainID,
+			"chain_id": typedEnv.Block.ChainID, // chain_id should be first
+			"height":   height,
+			"time":     time,
 		},
 		"contract": map[string]interface{}{
 			"address": typedEnv.Contract.Address,
 		},
 	}
 
-	// Add transaction if present
+	// Add transaction if present, preserving field order
 	if typedEnv.Transaction != nil {
-		txMap := map[string]interface{}{
-			"index": typedEnv.Transaction.Index,
-		}
+		txMap := map[string]interface{}{}
+		// Add fields in specific order
 		if typedEnv.Transaction.Hash != "" {
 			txMap["hash"] = typedEnv.Transaction.Hash
 		}
+		txMap["index"] = typedEnv.Transaction.Index
 		envMap["transaction"] = txMap
 	}
 
