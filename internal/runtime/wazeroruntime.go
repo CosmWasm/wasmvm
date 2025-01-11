@@ -70,15 +70,25 @@ type Region struct {
 	Length   uint32
 }
 
+// ToBytes serializes the Region struct to bytes for WASM memory
+func (r *Region) ToBytes() []byte {
+	buf := make([]byte, 12) // 3 uint32 fields * 4 bytes each
+	binary.LittleEndian.PutUint32(buf[0:4], r.Offset)
+	binary.LittleEndian.PutUint32(buf[4:8], r.Capacity)
+	binary.LittleEndian.PutUint32(buf[8:12], r.Length)
+	return buf
+}
+
 // memoryManager handles WASM memory allocation and deallocation
 type memoryManager struct {
 	memory     api.Memory
 	module     api.Module
 	size       uint32
 	nextOffset uint32 // Track next available offset
+	gasState   *GasState
 }
 
-func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
+func newMemoryManager(memory api.Memory, module api.Module, gasState *GasState) *memoryManager {
 	if memory == nil {
 		panic("memory cannot be nil")
 	}
@@ -86,9 +96,14 @@ func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
 	// Get initial memory size in bytes
 	memBytes := memory.Size()
 
-	// Ensure memory is initialized with at least one page
-	if memBytes == 0 {
-		if _, ok := memory.Grow(1); !ok {
+	// Ensure memory is initialized with at least two pages
+	initialPages := uint32(2)
+	if memBytes < wasmPageSize*initialPages {
+		pagesToGrow := initialPages - (memBytes / wasmPageSize)
+		if memBytes%wasmPageSize != 0 {
+			pagesToGrow++
+		}
+		if _, ok := memory.Grow(pagesToGrow); !ok {
 			panic("failed to initialize memory with minimum size")
 		}
 		memBytes = memory.Size()
@@ -101,8 +116,8 @@ func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
 	}
 
 	// Verify memory size after initialization
-	if memBytes < wasmPageSize {
-		panic("memory not properly initialized: size less than one page")
+	if memBytes < wasmPageSize*initialPages {
+		panic("memory not properly initialized: size less than minimum pages")
 	}
 
 	return &memoryManager{
@@ -110,6 +125,7 @@ func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
 		module:     module,
 		size:       memBytes,
 		nextOffset: wasmPageSize, // Start allocations after first page
+		gasState:   gasState,
 	}
 }
 
@@ -156,9 +172,13 @@ func (m *memoryManager) validateMemorySize(memSizeBytes uint32) error {
 
 // validateMemoryRegion performs validation checks on a memory region
 func validateMemoryRegion(region *Region) error {
-	// Check for zero offset (required by Rust implementation)
-	if region.Offset == 0 {
-		return fmt.Errorf("region offset cannot be zero")
+	if region == nil {
+		return fmt.Errorf("region is nil")
+	}
+
+	// Allow zero offset for first page
+	if region.Offset > 0 && region.Offset%wasmPageSize != 0 {
+		return fmt.Errorf("region offset %d is not page-aligned", region.Offset)
 	}
 
 	// Check if length exceeds capacity
@@ -169,6 +189,12 @@ func validateMemoryRegion(region *Region) error {
 	// Check for potential overflow
 	if region.Capacity > (math.MaxUint32 - region.Offset) {
 		return fmt.Errorf("region capacity (%d) would overflow when added to offset (%d)", region.Capacity, region.Offset)
+	}
+
+	// Enforce a maximum region size of 64MB to prevent excessive allocations
+	const maxRegionSize = 64 * 1024 * 1024 // 64MB
+	if region.Capacity > maxRegionSize {
+		return fmt.Errorf("region capacity %d exceeds maximum allowed size of %d", region.Capacity, maxRegionSize)
 	}
 
 	return nil
@@ -209,119 +235,65 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 		return 0, 0, fmt.Errorf("memory not initialized")
 	}
 
-	if printDebug {
-		fmt.Printf("\n=== Memory Write Operation ===\n")
-		fmt.Printf("Current memory state:\n")
-		fmt.Printf("- Total size: %d bytes (%d pages)\n", mm.size, mm.size/wasmPageSize)
-		fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
-		fmt.Printf("Writing data:\n")
-		fmt.Printf("- Size: %d bytes\n", len(data))
-		if len(data) < 1024 {
-			fmt.Printf("- Content: %s\n", string(data))
-			fmt.Printf("- Hex: % x\n", data)
-		}
+	// Consume gas for data size
+	if mm.gasState != nil {
+		mm.gasState.ConsumeGas(uint64(len(data))*DefaultGasConfig().PerByte, "memory write")
+	}
+
+	// Ensure offset is page-aligned
+	if mm.nextOffset%wasmPageSize != 0 {
+		mm.nextOffset = ((mm.nextOffset + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
 	}
 
 	// Calculate total size needed (data + Region struct)
 	totalSize := uint32(len(data)) + regionSize
 
-	// Create region before growing memory to validate size requirements
+	// Ensure we have enough memory, including padding to next page boundary
+	requiredSize := mm.nextOffset + totalSize
+	if requiredSize%wasmPageSize != 0 {
+		requiredSize = ((requiredSize + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
+	}
+
+	if requiredSize > mm.size {
+		pagesToGrow := (requiredSize - mm.size + wasmPageSize - 1) / wasmPageSize
+		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
+			return 0, 0, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
+		}
+		mm.size = mm.memory.Size()
+	}
+
+	// Create region
 	region := &Region{
 		Offset:   mm.nextOffset,
 		Capacity: uint32(len(data)),
 		Length:   uint32(len(data)),
 	}
 
-	if printDebug {
-		fmt.Printf("Region structure:\n")
-		fmt.Printf("- Offset: 0x%x\n", region.Offset)
-		fmt.Printf("- Capacity: %d\n", region.Capacity)
-		fmt.Printf("- Length: %d\n", region.Length)
-	}
-
-	// Validate the region before proceeding with memory operations
-	if err := validateRegion(region); err != nil {
-		if printDebug {
-			fmt.Printf("Region validation failed: %v\n", err)
-		}
+	// Validate the region
+	if err := validateMemoryRegion(region); err != nil {
 		return 0, 0, fmt.Errorf("invalid memory region: %w", err)
-	}
-
-	// Ensure we have enough memory
-	requiredSize := mm.nextOffset + totalSize
-	if requiredSize > mm.size {
-		// Calculate needed pages
-		currentPages := mm.size / wasmPageSize
-		neededSize := requiredSize
-		if neededSize%wasmPageSize != 0 {
-			neededSize += wasmPageSize - (neededSize % wasmPageSize)
-		}
-		pagesToGrow := (neededSize - mm.size) / wasmPageSize
-
-		if printDebug {
-			fmt.Printf("Growing memory:\n")
-			fmt.Printf("- Current pages: %d\n", currentPages)
-			fmt.Printf("- Growing by: %d pages\n", pagesToGrow)
-			fmt.Printf("- Required size: %d bytes\n", requiredSize)
-		}
-
-		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
-			if printDebug {
-				fmt.Printf("Failed to grow memory!\n")
-			}
-			return 0, 0, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
-		}
-		mm.size = mm.memory.Size()
-
-		if printDebug {
-			fmt.Printf("Memory grown successfully:\n")
-			fmt.Printf("- New size: %d bytes (%d pages)\n", mm.size, mm.size/wasmPageSize)
-		}
 	}
 
 	// Write data
 	if !mm.memory.Write(region.Offset, data) {
-		if printDebug {
-			fmt.Printf("Failed to write data to memory!\n")
-		}
 		return 0, 0, fmt.Errorf("failed to write data to memory at offset 0x%x", region.Offset)
 	}
 
 	// Write Region struct
 	regionPtr := region.Offset + uint32(len(data))
-	regionBytes := make([]byte, regionSize)
-	binary.LittleEndian.PutUint32(regionBytes[0:4], region.Offset)
-	binary.LittleEndian.PutUint32(regionBytes[4:8], region.Capacity)
-	binary.LittleEndian.PutUint32(regionBytes[8:12], region.Length)
+	if regionPtr%wasmPageSize != 0 {
+		regionPtr = ((regionPtr + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
+	}
 
+	regionBytes := region.ToBytes()
 	if !mm.memory.Write(regionPtr, regionBytes) {
-		if printDebug {
-			fmt.Printf("Failed to write Region struct!\n")
-		}
 		return 0, 0, fmt.Errorf("failed to write Region struct at offset 0x%x", regionPtr)
 	}
 
-	// Update next offset for future allocations
+	// Update next offset
 	mm.nextOffset = regionPtr + regionSize
-
-	if printDebug {
-		fmt.Printf("Write operation successful:\n")
-		fmt.Printf("- Data offset: 0x%x\n", region.Offset)
-		fmt.Printf("- Region ptr: 0x%x\n", regionPtr)
-		fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
-
-		// Verify written data
-		readBack, ok := mm.memory.Read(region.Offset, region.Length)
-		if ok {
-			fmt.Printf("Data verification:\n")
-			if len(readBack) < 1024 {
-				fmt.Printf("- Read back: %s\n", string(readBack))
-				fmt.Printf("- Read hex: % x\n", readBack)
-			}
-			fmt.Printf("- Length matches: %v\n", len(readBack) == len(data))
-		} else {
-			fmt.Printf("Failed to verify written data!\n")
-		}
+	if mm.nextOffset%wasmPageSize != 0 {
+		mm.nextOffset = ((mm.nextOffset + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
 	}
 
 	return regionPtr, regionSize, nil
@@ -879,14 +851,14 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		WithName("env").
 		WithStartFunctions()
 
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig.WithName("env"))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
 
 	// Create contract module instance
-	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithStartFunctions())
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
@@ -903,51 +875,7 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
 	}
 
-	mm := newMemoryManager(memory, contractModule)
-
-	// Combine env and query into a single request
-	request := struct {
-		Env json.RawMessage `json:"env"`
-		Msg json.RawMessage `json:"msg"`
-	}{
-		Env: env,
-		Msg: query,
-	}
-
-	requestBytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Query request: %s\n", string(requestBytes))
-	}
-
-	// Write request to memory
-	_, _, err = mm.writeToMemory(requestBytes, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write request to memory: %w", err)
-	}
-
-	// Parse the request to get env and msg
-	var parsedRequest struct {
-		Env json.RawMessage `json:"env"`
-		Msg json.RawMessage `json:"msg"`
-	}
-	if err := json.Unmarshal(requestBytes, &parsedRequest); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to parse request: %w", err)
-	}
-
-	// Write env and msg to memory separately
-	envPtr, _, err := mm.writeToMemory(parsedRequest.Env, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
-	}
-
-	msgPtr, _, err := mm.writeToMemory(parsedRequest.Msg, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
-	}
+	mm := newMemoryManager(memory, contractModule, gasState)
 
 	// Get the query function
 	fn := contractModule.ExportedFunction("query")
@@ -955,18 +883,140 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("query function not found")
 	}
 
-	if printDebug {
-		fmt.Printf("[DEBUG] Memory layout:\n")
-		fmt.Printf("- Env: ptr=0x%x\n", envPtr)
-		fmt.Printf("- Msg: ptr=0x%x\n", msgPtr)
-		fmt.Printf("[DEBUG] Calling query function...\n")
+	// Write env and msg to memory separately
+	envPtr, _, err := mm.writeToMemory(env, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
-	// Call the query function with environment and message pointers
-	results, err := fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
+	queryPtr, _, err := mm.writeToMemory(query, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write query to memory: %w", err)
+	}
+
+	// Create and validate Region structs
+	envRegion := &Region{
+		Offset:   envPtr,
+		Capacity: uint32(len(env)),
+		Length:   uint32(len(env)),
+	}
+	if err := validateRegion(envRegion); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("invalid env region: %w", err)
+	}
+
+	queryRegion := &Region{
+		Offset:   queryPtr,
+		Capacity: uint32(len(query)),
+		Length:   uint32(len(query)),
+	}
+	if err := validateRegion(queryRegion); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("invalid query region: %w", err)
+	}
+
+	// Write Region structs to memory and get their pointers
+	envRegionBytes := envRegion.ToBytes()
+	envRegionPtr, _, err := mm.writeToMemory(envRegionBytes, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env region to memory: %w", err)
+	}
+
+	queryRegionBytes := queryRegion.ToBytes()
+	queryRegionPtr, _, err := mm.writeToMemory(queryRegionBytes, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write query region to memory: %w", err)
+	}
+
+	if printDebug {
+		fmt.Printf("\n[DEBUG] ====== Pre-Function Call Memory State ======\n")
+		fmt.Printf("Environment Region:\n")
+		fmt.Printf("- Data ptr: 0x%x, size: %d bytes\n", envPtr, len(env))
+		fmt.Printf("- Region ptr: 0x%x\n", envRegionPtr)
+		fmt.Printf("- Region contents: offset=0x%x, capacity=%d, length=%d\n", envRegion.Offset, envRegion.Capacity, envRegion.Length)
+		if len(env) < 1024 {
+			fmt.Printf("- Data content: %s\n", string(env))
+		}
+
+		fmt.Printf("\nQuery Region:\n")
+		fmt.Printf("- Data ptr: 0x%x, size: %d bytes\n", queryPtr, len(query))
+		fmt.Printf("- Region ptr: 0x%x\n", queryRegionPtr)
+		fmt.Printf("- Region contents: offset=0x%x, capacity=%d, length=%d\n", queryRegion.Offset, queryRegion.Capacity, queryRegion.Length)
+		if len(query) < 1024 {
+			fmt.Printf("- Data content: %s\n", string(query))
+		}
+
+		// Verify Region structs in memory
+		envRegionData, ok := memory.Read(envRegionPtr, 12)
+		if ok {
+			fmt.Printf("\nEnvironment Region in memory:\n")
+			fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(envRegionData[0:4]))
+			fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(envRegionData[4:8]))
+			fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(envRegionData[8:12]))
+		} else {
+			fmt.Printf("\nWarning: Could not read environment Region from memory at 0x%x\n", envRegionPtr)
+		}
+
+		queryRegionData, ok := memory.Read(queryRegionPtr, 12)
+		if ok {
+			fmt.Printf("\nQuery Region in memory:\n")
+			fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(queryRegionData[0:4]))
+			fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(queryRegionData[4:8]))
+			fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(queryRegionData[8:12]))
+
+			// Try to read the actual data
+			dataOffset := binary.LittleEndian.Uint32(queryRegionData[0:4])
+			dataLength := binary.LittleEndian.Uint32(queryRegionData[8:12])
+			if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
+				fmt.Printf("- Data at offset: %s\n", string(data))
+			}
+		} else {
+			fmt.Printf("\nWarning: Could not read query Region from memory at 0x%x\n", queryRegionPtr)
+		}
+
+		fmt.Printf("\nCalling query function with parameters:\n")
+		fmt.Printf("- envRegionPtr: 0x%x\n", envRegionPtr)
+		fmt.Printf("- queryRegionPtr: 0x%x\n", queryRegionPtr)
+		fmt.Printf("==========================================\n\n")
+	}
+
+	// Call query function with Region struct pointers
+	results, err := fn.Call(ctx, uint64(envRegionPtr), uint64(queryRegionPtr))
 	if err != nil {
 		if printDebug {
-			fmt.Printf("[DEBUG] Query call failed: %v\n", err)
+			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
+			fmt.Printf("Error: %v\n", err)
+
+			// Try to read the data at the Region pointers again to see if anything changed
+			envRegionDataAtFailure, ok := memory.Read(envRegionPtr, 12)
+			if ok {
+				fmt.Printf("\nEnvironment Region at failure:\n")
+				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4]))
+				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[4:8]))
+				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12]))
+
+				// Try to read the actual data
+				dataOffset := binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4])
+				dataLength := binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12])
+				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
+					fmt.Printf("- Data at offset: %s\n", string(data))
+				}
+			}
+
+			queryRegionDataAtFailure, ok := memory.Read(queryRegionPtr, 12)
+			if ok {
+				fmt.Printf("\nQuery Region at failure:\n")
+				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[0:4]))
+				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[4:8]))
+				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[8:12]))
+
+				// Try to read the actual data
+				dataOffset := binary.LittleEndian.Uint32(queryRegionDataAtFailure[0:4])
+				dataLength := binary.LittleEndian.Uint32(queryRegionDataAtFailure[8:12])
+				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
+					fmt.Printf("- Data at offset: %s\n", string(data))
+				}
+			}
+
+			fmt.Printf("=====================================\n\n")
 		}
 		return nil, types.GasReport{}, fmt.Errorf("query call failed: %w", err)
 	}
@@ -1018,8 +1068,8 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 
 	gasReport := types.GasReport{
 		UsedInternally: runtimeEnv.gasUsed,
-		UsedExternally: 0,
-		Remaining:      gasLimit - runtimeEnv.gasUsed,
+		UsedExternally: gasState.GetGasUsed(),
+		Remaining:      gasLimit - (runtimeEnv.gasUsed + gasState.GetGasUsed()),
 		Limit:          gasLimit,
 	}
 
@@ -1189,94 +1239,18 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 
 // serializeEnvForContract serializes and validates the environment for the contract
 func serializeEnvForContract(env []byte, _ []byte, _ *WazeroRuntime) ([]byte, error) {
-	fmt.Printf("[DEBUG] serializeEnvForContract: Input env: %s\n", string(env))
-
-	// Parse the environment into a raw map to preserve number formats
-	var rawEnv map[string]interface{}
-	if err := json.Unmarshal(env, &rawEnv); err != nil {
-		fmt.Printf("[DEBUG] Failed to unmarshal env into raw map: %v\n", err)
-		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
+	if len(env) == 0 {
+		return nil, fmt.Errorf("env cannot be empty")
 	}
 
-	fmt.Printf("[DEBUG] Raw env structure: %+v\n", rawEnv)
-
-	// Also parse into typed struct for validation
-	var typedEnv types.Env
-	if err := json.Unmarshal(env, &typedEnv); err != nil {
-		fmt.Printf("[DEBUG] Failed to unmarshal env into typed struct: %v\n", err)
-		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
+	// Verify it's valid JSON but don't modify it
+	var raw json.RawMessage
+	if err := json.Unmarshal(env, &raw); err != nil {
+		return nil, fmt.Errorf("env is not valid JSON: %w", err)
 	}
 
-	fmt.Printf("[DEBUG] Typed env structure: %+v\n", typedEnv)
-
-	// Validate required fields
-	if typedEnv.Block.Height == 0 {
-		fmt.Printf("[DEBUG] Validation failed: block height is 0\n")
-		return nil, fmt.Errorf("block height cannot be 0")
-	}
-	if typedEnv.Block.Time == 0 {
-		fmt.Printf("[DEBUG] Validation failed: block time is 0\n")
-		return nil, fmt.Errorf("block time cannot be 0")
-	}
-	if typedEnv.Block.ChainID == "" {
-		fmt.Printf("[DEBUG] Validation failed: chain_id is empty\n")
-		return nil, fmt.Errorf("chain_id cannot be empty")
-	}
-	if typedEnv.Contract.Address == "" {
-		fmt.Printf("[DEBUG] Validation failed: contract address is empty\n")
-		return nil, fmt.Errorf("contract address cannot be empty")
-	}
-
-	// Get the original block data and preserve exact number formats
-	rawBlock, ok := rawEnv["block"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid block structure in environment")
-	}
-
-	// Use the raw values directly to preserve exact number formats
-	height := rawBlock["height"]
-	time := rawBlock["time"]
-
-	// Ensure time is a string
-	timeStr, ok := time.(string)
-	if !ok {
-		// Convert time to string if it's not already
-		timeStr = fmt.Sprintf("%d", typedEnv.Block.Time)
-	}
-
-	// Create output environment preserving original number formats and field order
-	// Field order must match the Rust struct exactly:
-	// 1. block: height, time, chain_id
-	// 2. transaction (optional): hash, index
-	// 3. contract: address
-	envMap := map[string]interface{}{
-		"block": map[string]interface{}{
-			"height":   height,
-			"time":     timeStr,
-			"chain_id": typedEnv.Block.ChainID,
-		},
-	}
-
-	// Add transaction if present
-	if typedEnv.Transaction != nil {
-		envMap["transaction"] = rawEnv["transaction"]
-	}
-
-	// Add contract info (must come last)
-	envMap["contract"] = map[string]interface{}{
-		"address": typedEnv.Contract.Address,
-	}
-
-	// Marshal back to JSON
-	adaptedEnv, err := json.Marshal(envMap)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize adapted environment: %w", err)
-	}
-
-	log.Printf("[DEBUG] Adapted env hex: %x", adaptedEnv)
-	log.Printf("[DEBUG] Adapted env string: %s", adaptedEnv)
-
-	return adaptedEnv, nil
+	// Return the original bytes directly
+	return env, nil
 }
 
 func (w *WazeroRuntime) callContractFn(
@@ -1330,6 +1304,9 @@ func (w *WazeroRuntime) callContractFn(
 		nextCallID: 1,
 	}
 
+	// Create gas state for memory operations
+	gasState := NewGasState(gasLimit)
+
 	if printDebug {
 		fmt.Printf("[DEBUG] Registering host functions...\n")
 	}
@@ -1360,14 +1337,14 @@ func (w *WazeroRuntime) callContractFn(
 		WithName("env").
 		WithStartFunctions()
 
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig.WithName("env"))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
 
 	// Create contract module instance
-	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithStartFunctions())
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
@@ -1384,98 +1361,104 @@ func (w *WazeroRuntime) callContractFn(
 		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
 	}
 
-	mm := newMemoryManager(memory, contractModule)
-	initialBytes := memory.Size()
-	if err := mm.validateMemorySize(initialBytes); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("memory validation failed: %w", err)
+	mm := newMemoryManager(memory, contractModule, gasState)
+
+	// Get the query function
+	fn := contractModule.ExportedFunction("query")
+	if fn == nil {
+		return nil, types.GasReport{}, fmt.Errorf("query function not found")
 	}
 
-	if printDebug {
-		fmt.Printf("- Memory initialized: %d bytes (%d pages)\n", initialBytes, initialBytes/wasmPageSize)
-		fmt.Printf("[DEBUG] Writing data to memory...\n")
-	}
-
-	// Write environment to memory
-	envPtr, envSize, err := mm.writeToMemory(adaptedEnv, printDebug)
+	// Write env and msg to memory separately
+	envPtr, _, err := mm.writeToMemory(env, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
-	// Write info to memory if present
-	var infoPtr uint32
-	var infoSize uint32
-	if len(info) > 0 {
-		if printDebug {
-			fmt.Printf("[DEBUG] Writing info to memory...\n")
-		}
-		infoPtr, infoSize, err = mm.writeToMemory(info, printDebug)
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
-		}
-	} else {
-		if printDebug {
-			fmt.Printf("[DEBUG] Writing empty info object...\n")
-		}
-		// Write empty JSON object for info
-		emptyInfo := []byte("{}")
-		infoPtr, infoSize, err = mm.writeToMemory(emptyInfo, printDebug)
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write empty info to memory: %w", err)
-		}
-	}
-
-	// Write msg to memory
-	if printDebug {
-		fmt.Printf("[DEBUG] Writing message to memory...\n")
-	}
-	msgPtr, msgSize, err := mm.writeToMemory(msg, printDebug)
+	msgPtr, _, err := mm.writeToMemory(msg, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
 
-	// Get the function
-	fn := contractModule.ExportedFunction(name)
-	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("function %s not found", name)
+	// Create and validate Region structs
+	envRegion := &Region{
+		Offset:   envPtr,
+		Capacity: uint32(len(env)),
+		Length:   uint32(len(env)),
+	}
+	if err := validateRegion(envRegion); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("invalid env region: %w", err)
+	}
+
+	msgRegion := &Region{
+		Offset:   msgPtr,
+		Capacity: uint32(len(msg)),
+		Length:   uint32(len(msg)),
+	}
+	if err := validateRegion(msgRegion); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("invalid msg region: %w", err)
+	}
+
+	// Write Region structs to memory and get their pointers
+	envRegionBytes := envRegion.ToBytes()
+	envRegionPtr, _, err := mm.writeToMemory(envRegionBytes, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env region to memory: %w", err)
+	}
+
+	msgRegionBytes := msgRegion.ToBytes()
+	msgRegionPtr, _, err := mm.writeToMemory(msgRegionBytes, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write msg region to memory: %w", err)
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Memory layout:\n")
-		fmt.Printf("- Environment: ptr=0x%x, size=%d\n", envPtr, envSize)
-		fmt.Printf("- Info: ptr=0x%x, size=%d\n", infoPtr, infoSize)
-		fmt.Printf("- Message: ptr=0x%x, size=%d\n", msgPtr, msgSize)
-		fmt.Printf("[DEBUG] Calling contract function '%s'...\n", name)
+		fmt.Printf("[DEBUG] Memory layout before function call:\n")
+		fmt.Printf("- Environment: ptr=0x%x, size=%d, region_ptr=0x%x\n", envPtr, len(env), envRegionPtr)
+		fmt.Printf("- Message: ptr=0x%x, size=%d, region_ptr=0x%x\n", msgPtr, len(msg), msgRegionPtr)
 	}
 
-	// Call the function with appropriate parameters
-	var results []uint64
-	var callErr error
-	switch name {
-	case "query":
+	// Call query function with Region struct pointers
+	results, err := fn.Call(ctx, uint64(envRegionPtr), uint64(msgRegionPtr))
+	if err != nil {
 		if printDebug {
-			fmt.Printf("[DEBUG] Query function call with 2 params: env=%d, msg=%d\n", envPtr, msgPtr)
-		}
-		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
-	case "sudo", "reply", "migrate":
-		if printDebug {
-			fmt.Printf("[DEBUG] Function call with 3 params (empty info allowed): env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
-		}
-		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
-	default:
-		if len(info) == 0 {
-			return nil, types.GasReport{}, fmt.Errorf("info parameter required for %s", name)
-		}
-		if printDebug {
-			fmt.Printf("[DEBUG] Function call with 3 params: env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
-		}
-		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
-	}
+			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
+			fmt.Printf("Error: %v\n", err)
 
-	if callErr != nil {
-		if printDebug {
-			fmt.Printf("[DEBUG] Contract call failed: %v\n", callErr)
+			// Try to read the data at the Region pointers again to see if anything changed
+			envRegionDataAtFailure, ok := memory.Read(envRegionPtr, 12)
+			if ok {
+				fmt.Printf("\nEnvironment Region at failure:\n")
+				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4]))
+				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[4:8]))
+				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12]))
+
+				// Try to read the actual data
+				dataOffset := binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4])
+				dataLength := binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12])
+				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
+					fmt.Printf("- Data at offset: %s\n", string(data))
+				}
+			}
+
+			msgRegionDataAtFailure, ok := memory.Read(msgRegionPtr, 12)
+			if ok {
+				fmt.Printf("\nMessage Region at failure:\n")
+				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[0:4]))
+				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[4:8]))
+				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[8:12]))
+
+				// Try to read the actual data
+				dataOffset := binary.LittleEndian.Uint32(msgRegionDataAtFailure[0:4])
+				dataLength := binary.LittleEndian.Uint32(msgRegionDataAtFailure[8:12])
+				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
+					fmt.Printf("- Data at offset: %s\n", string(data))
+				}
+			}
+
+			fmt.Printf("=====================================\n\n")
 		}
-		return nil, types.GasReport{}, fmt.Errorf("contract call failed: %w", callErr)
+		return nil, types.GasReport{}, fmt.Errorf("query call failed: %w", err)
 	}
 
 	if len(results) != 1 {
@@ -1525,8 +1508,8 @@ func (w *WazeroRuntime) callContractFn(
 
 	gasReport := types.GasReport{
 		UsedInternally: runtimeEnv.gasUsed,
-		UsedExternally: 0,
-		Remaining:      gasLimit - runtimeEnv.gasUsed,
+		UsedExternally: gasState.GetGasUsed(),
+		Remaining:      gasLimit - (runtimeEnv.gasUsed + gasState.GetGasUsed()),
 		Limit:          gasLimit,
 	}
 
