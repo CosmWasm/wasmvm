@@ -15,9 +15,9 @@ use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
 #[repr(C)]
-pub struct cache_t {}
+pub struct CacheT {}
 
-pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
+pub fn to_cache(ptr: *mut CacheT) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
     if ptr.is_null() {
         None
     } else {
@@ -30,12 +30,12 @@ pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage
 pub extern "C" fn init_cache(
     config: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
-) -> *mut cache_t {
+) -> *mut CacheT {
     let r = catch_unwind(|| do_init_cache(config)).unwrap_or_else(|err| {
         handle_vm_panic("do_init_cache", err);
         Err(Error::panic())
     });
-    handle_c_error_ptr(r, error_msg) as *mut cache_t
+    handle_c_error_ptr(r, error_msg) as *mut CacheT
 }
 
 fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
@@ -49,7 +49,7 @@ fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, G
 
 #[no_mangle]
 pub extern "C" fn store_code(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     wasm: ByteSliceView,
     checked: bool,
     persist: bool,
@@ -81,7 +81,7 @@ fn do_store_code(
 
 #[no_mangle]
 pub extern "C" fn remove_wasm(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) {
@@ -110,7 +110,7 @@ fn do_remove_wasm(
 
 #[no_mangle]
 pub extern "C" fn load_wasm(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
@@ -140,7 +140,7 @@ fn do_load_wasm(
 
 #[no_mangle]
 pub extern "C" fn pin(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) {
@@ -170,7 +170,7 @@ fn do_pin(
 
 #[no_mangle]
 pub extern "C" fn unpin(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) {
@@ -278,7 +278,7 @@ fn set_to_csv(set: BTreeSet<impl AsRef<str>>) -> String {
 
 #[no_mangle]
 pub extern "C" fn analyze_code(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     checksum: ByteSliceView,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> AnalysisReport {
@@ -357,7 +357,7 @@ impl From<cosmwasm_vm::Metrics> for Metrics {
 
 #[no_mangle]
 pub extern "C" fn get_metrics(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> Metrics {
     let r = match to_cache(cache) {
@@ -412,7 +412,7 @@ impl From<cosmwasm_vm::PinnedMetrics> for PinnedMetrics {
 
 #[no_mangle]
 pub extern "C" fn get_pinned_metrics(
-    cache: *mut cache_t,
+    cache: *mut CacheT,
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     let r = match to_cache(cache) {
@@ -442,7 +442,7 @@ fn do_get_pinned_metrics(
 /// This must be called exactly once for any `*cache_t` returned by `init_cache`
 /// and cannot be called on any other pointer.
 #[no_mangle]
-pub extern "C" fn release_cache(cache: *mut cache_t) {
+pub extern "C" fn release_cache(cache: *mut CacheT) {
     if !cache.is_null() {
         // this will free cache when it goes out of scope
         let _ = unsafe { Box::from_raw(cache as *mut Cache<GoApi, GoStorage, GoQuerier>) };

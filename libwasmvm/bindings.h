@@ -53,9 +53,9 @@ enum GoError {
 };
 typedef int32_t GoError;
 
-typedef struct cache_t {
+typedef struct CacheT {
 
-} cache_t;
+} CacheT;
 
 /**
  * A view into an externally owned byte slice (Go `[]byte`).
@@ -412,33 +412,33 @@ typedef struct GasReport {
   uint64_t used_internally;
 } GasReport;
 
-struct cache_t *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
+struct CacheT *init_cache(struct ByteSliceView config, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector store_code(struct cache_t *cache,
+struct UnmanagedVector store_code(struct CacheT *cache,
                                   struct ByteSliceView wasm,
                                   bool checked,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
 
-void remove_wasm(struct cache_t *cache,
+void remove_wasm(struct CacheT *cache,
                  struct ByteSliceView checksum,
                  struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector load_wasm(struct cache_t *cache,
+struct UnmanagedVector load_wasm(struct CacheT *cache,
                                  struct ByteSliceView checksum,
                                  struct UnmanagedVector *error_msg);
 
-void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+void pin(struct CacheT *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
-void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
+void unpin(struct CacheT *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
-struct AnalysisReport analyze_code(struct cache_t *cache,
+struct AnalysisReport analyze_code(struct CacheT *cache,
                                    struct ByteSliceView checksum,
                                    struct UnmanagedVector *error_msg);
 
-struct Metrics get_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
+struct Metrics get_metrics(struct CacheT *cache, struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector get_pinned_metrics(struct cache_t *cache, struct UnmanagedVector *error_msg);
+struct UnmanagedVector get_pinned_metrics(struct CacheT *cache, struct UnmanagedVector *error_msg);
 
 /**
  * frees a cache reference
@@ -448,9 +448,9 @@ struct UnmanagedVector get_pinned_metrics(struct cache_t *cache, struct Unmanage
  * This must be called exactly once for any `*cache_t` returned by `init_cache`
  * and cannot be called on any other pointer.
  */
-void release_cache(struct cache_t *cache);
+void release_cache(struct CacheT *cache);
 
-struct UnmanagedVector instantiate(struct cache_t *cache,
+struct UnmanagedVector instantiate(struct CacheT *cache,
                                    struct ByteSliceView checksum,
                                    struct ByteSliceView env,
                                    struct ByteSliceView info,
@@ -463,7 +463,7 @@ struct UnmanagedVector instantiate(struct cache_t *cache,
                                    struct GasReport *gas_report,
                                    struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector execute(struct cache_t *cache,
+struct UnmanagedVector execute(struct CacheT *cache,
                                struct ByteSliceView checksum,
                                struct ByteSliceView env,
                                struct ByteSliceView info,
@@ -476,7 +476,7 @@ struct UnmanagedVector execute(struct cache_t *cache,
                                struct GasReport *gas_report,
                                struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector migrate(struct cache_t *cache,
+struct UnmanagedVector migrate(struct CacheT *cache,
                                struct ByteSliceView checksum,
                                struct ByteSliceView env,
                                struct ByteSliceView msg,
@@ -488,7 +488,7 @@ struct UnmanagedVector migrate(struct cache_t *cache,
                                struct GasReport *gas_report,
                                struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector migrate_with_info(struct cache_t *cache,
+struct UnmanagedVector migrate_with_info(struct CacheT *cache,
                                          struct ByteSliceView checksum,
                                          struct ByteSliceView env,
                                          struct ByteSliceView msg,
@@ -501,7 +501,7 @@ struct UnmanagedVector migrate_with_info(struct cache_t *cache,
                                          struct GasReport *gas_report,
                                          struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector sudo(struct cache_t *cache,
+struct UnmanagedVector sudo(struct CacheT *cache,
                             struct ByteSliceView checksum,
                             struct ByteSliceView env,
                             struct ByteSliceView msg,
@@ -513,7 +513,7 @@ struct UnmanagedVector sudo(struct cache_t *cache,
                             struct GasReport *gas_report,
                             struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector reply(struct cache_t *cache,
+struct UnmanagedVector reply(struct CacheT *cache,
                              struct ByteSliceView checksum,
                              struct ByteSliceView env,
                              struct ByteSliceView msg,
@@ -525,7 +525,7 @@ struct UnmanagedVector reply(struct cache_t *cache,
                              struct GasReport *gas_report,
                              struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector query(struct cache_t *cache,
+struct UnmanagedVector query(struct CacheT *cache,
                              struct ByteSliceView checksum,
                              struct ByteSliceView env,
                              struct ByteSliceView msg,
@@ -537,7 +537,7 @@ struct UnmanagedVector query(struct cache_t *cache,
                              struct GasReport *gas_report,
                              struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
+struct UnmanagedVector ibc_channel_open(struct CacheT *cache,
                                         struct ByteSliceView checksum,
                                         struct ByteSliceView env,
                                         struct ByteSliceView msg,
@@ -549,7 +549,7 @@ struct UnmanagedVector ibc_channel_open(struct cache_t *cache,
                                         struct GasReport *gas_report,
                                         struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
+struct UnmanagedVector ibc_channel_connect(struct CacheT *cache,
                                            struct ByteSliceView checksum,
                                            struct ByteSliceView env,
                                            struct ByteSliceView msg,
@@ -561,7 +561,7 @@ struct UnmanagedVector ibc_channel_connect(struct cache_t *cache,
                                            struct GasReport *gas_report,
                                            struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
+struct UnmanagedVector ibc_channel_close(struct CacheT *cache,
                                          struct ByteSliceView checksum,
                                          struct ByteSliceView env,
                                          struct ByteSliceView msg,
@@ -573,7 +573,7 @@ struct UnmanagedVector ibc_channel_close(struct cache_t *cache,
                                          struct GasReport *gas_report,
                                          struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
+struct UnmanagedVector ibc_packet_receive(struct CacheT *cache,
                                           struct ByteSliceView checksum,
                                           struct ByteSliceView env,
                                           struct ByteSliceView msg,
@@ -585,7 +585,7 @@ struct UnmanagedVector ibc_packet_receive(struct cache_t *cache,
                                           struct GasReport *gas_report,
                                           struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
+struct UnmanagedVector ibc_packet_ack(struct CacheT *cache,
                                       struct ByteSliceView checksum,
                                       struct ByteSliceView env,
                                       struct ByteSliceView msg,
@@ -597,7 +597,7 @@ struct UnmanagedVector ibc_packet_ack(struct cache_t *cache,
                                       struct GasReport *gas_report,
                                       struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
+struct UnmanagedVector ibc_packet_timeout(struct CacheT *cache,
                                           struct ByteSliceView checksum,
                                           struct ByteSliceView env,
                                           struct ByteSliceView msg,
@@ -609,7 +609,7 @@ struct UnmanagedVector ibc_packet_timeout(struct cache_t *cache,
                                           struct GasReport *gas_report,
                                           struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_source_callback(struct cache_t *cache,
+struct UnmanagedVector ibc_source_callback(struct CacheT *cache,
                                            struct ByteSliceView checksum,
                                            struct ByteSliceView env,
                                            struct ByteSliceView msg,
@@ -621,7 +621,7 @@ struct UnmanagedVector ibc_source_callback(struct cache_t *cache,
                                            struct GasReport *gas_report,
                                            struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc_destination_callback(struct cache_t *cache,
+struct UnmanagedVector ibc_destination_callback(struct CacheT *cache,
                                                 struct ByteSliceView checksum,
                                                 struct ByteSliceView env,
                                                 struct ByteSliceView msg,

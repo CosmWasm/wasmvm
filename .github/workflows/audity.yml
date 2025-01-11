@@ -1,0 +1,29 @@
+# .github/workflows/libwasmvm_audit.yml
+name: libwasmvm_audit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  libwasmvm_audit:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.83.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenSSL
+        run: |
+          sudo apt update
+          sudo apt install libssl-dev
+      - name: Show Rust version information
+        run: rustc --version && cargo --version && rustup --version
+      - name: Install cargo-audit
+        run: cargo install --debug cargo-audit --version 0.21.0
+      - name: Run cargo-audit
+        working-directory: libwasmvm
+        run: cargo audit
