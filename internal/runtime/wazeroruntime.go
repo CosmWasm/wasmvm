@@ -800,10 +800,44 @@ func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interf
 	return w.callContractFn("reply", checksum, env, nil, reply, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// ByteSliceView represents a view into a Go byte slice without copying
+type ByteSliceView struct {
+	IsNil bool
+	Data  []byte
+}
+
+func NewByteSliceView(data []byte) ByteSliceView {
+	if data == nil {
+		return ByteSliceView{
+			IsNil: true,
+			Data:  nil,
+		}
+	}
+	return ByteSliceView{
+		IsNil: false,
+		Data:  data,
+	}
+}
+
 func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
 	if err != nil {
 		return nil, types.GasReport{}, err
+	}
+
+	// Create ByteSliceView for query to avoid unnecessary copying
+	queryView := NewByteSliceView(query)
+	defer func() {
+		// Clear the view when done
+		queryView.Data = nil
+	}()
+
+	// Create gas state for tracking memory operations
+	gasState := NewGasState(gasLimit)
+
+	// Account for memory view creation
+	if !queryView.IsNil {
+		gasState.ConsumeGas(uint64(len(queryView.Data))*DefaultGasConfig().PerByte, "query memory view")
 	}
 
 	// Set the contract execution environment
@@ -811,14 +845,14 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	// Create runtime environment
+	// Create runtime environment with gas tracking
 	runtimeEnv := &RuntimeEnvironment{
 		DB:         store,
 		API:        *api,
 		Querier:    *querier,
 		Gas:        *gasMeter,
-		gasLimit:   gasLimit,
-		gasUsed:    0,
+		gasLimit:   gasState.GetGasLimit() - gasState.GetGasUsed(), // Adjust gas limit for memory operations
+		gasUsed:    gasState.GetGasUsed(),
 		iterators:  make(map[uint64]map[uint64]types.Iterator),
 		nextCallID: 1,
 	}
@@ -895,6 +929,21 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		return nil, types.GasReport{}, fmt.Errorf("failed to write request to memory: %w", err)
 	}
 
+	if err := json.Unmarshal(requestBytes, &request); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to parse request: %w", err)
+	}
+
+	// Write env and msg to memory separately
+	envPtr, _, err := mm.writeToMemory(request.Env, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
+	}
+
+	msgPtr, _, err := mm.writeToMemory(request.Msg, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
+	}
+
 	// Get the query function
 	fn := contractModule.ExportedFunction("query")
 	if fn == nil {
@@ -907,8 +956,8 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		fmt.Printf("[DEBUG] Calling query function...\n")
 	}
 
-	// Call the query function with the request pointer
-	results, err := fn.Call(ctx, uint64(requestPtr))
+	// Call the query function with environment and message pointers
+	results, err := fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
 	if err != nil {
 		if printDebug {
 			fmt.Printf("[DEBUG] Query call failed: %v\n", err)
@@ -950,7 +999,7 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 		if printDebug {
 			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
 		}
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result data from memory")
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
 	}
 
 	// Create gas report

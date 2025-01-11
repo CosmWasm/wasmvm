@@ -1175,6 +1175,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostQueryExternal(ctx, m, reqPtr, reqLen, gasLimit)
 		}).
 		WithParameterNames("req_ptr", "req_len", "gas_limit").
+		WithResultNames("res_ptr", "res_len").
 		Export("querier_query")
 
 	// Register secp256k1_verify function
