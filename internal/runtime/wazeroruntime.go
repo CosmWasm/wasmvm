@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"sync"
@@ -810,18 +811,156 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 	w.api = api
 	w.querier = *querier
 
-	// Validate query message format
-	var queryMsg map[string]interface{}
-	if err := json.Unmarshal(query, &queryMsg); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("invalid query message format: %w", err)
+	// Create runtime environment
+	runtimeEnv := &RuntimeEnvironment{
+		DB:         store,
+		API:        *api,
+		Querier:    *querier,
+		Gas:        *gasMeter,
+		gasLimit:   gasLimit,
+		gasUsed:    0,
+		iterators:  make(map[uint64]map[uint64]types.Iterator),
+		nextCallID: 1,
 	}
 
-	// Ensure query message is properly formatted
-	if len(queryMsg) != 1 {
-		return nil, types.GasReport{}, fmt.Errorf("query message must have exactly one field")
+	// Register host functions
+	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
+	}
+	defer hostModule.Close(context.Background())
+
+	// Get the module
+	w.mu.Lock()
+	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
+	if !ok {
+		w.mu.Unlock()
+		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum %x", checksum)
+	}
+	w.mu.Unlock()
+
+	// Create new module instance with host functions
+	ctx := context.Background()
+	moduleConfig := wazero.NewModuleConfig().
+		WithName("env").
+		WithStartFunctions()
+
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
+	}
+	defer envModule.Close(ctx)
+
+	// Create contract module instance
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithStartFunctions())
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
+	}
+	defer contractModule.Close(ctx)
+
+	// Initialize memory manager
+	memory := contractModule.Memory()
+	if memory == nil {
+		return nil, types.GasReport{}, fmt.Errorf("module has no memory")
 	}
 
-	return w.callContractFn("query", checksum, env, nil, query, gasMeter, store, api, querier, gasLimit, printDebug)
+	if printDebug {
+		fmt.Printf("[DEBUG] Memory initialization:\n")
+		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
+	}
+
+	mm := newMemoryManager(memory, contractModule)
+
+	// Combine env and query into a single request
+	request := struct {
+		Env json.RawMessage `json:"env"`
+		Msg json.RawMessage `json:"msg"`
+	}{
+		Env: env,
+		Msg: query,
+	}
+
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Query request: %s\n", string(requestBytes))
+	}
+
+	// Write request to memory
+	requestPtr, requestSize, err := mm.writeToMemory(requestBytes, printDebug)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write request to memory: %w", err)
+	}
+
+	// Get the query function
+	fn := contractModule.ExportedFunction("query")
+	if fn == nil {
+		return nil, types.GasReport{}, fmt.Errorf("query function not found")
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Memory layout:\n")
+		fmt.Printf("- Request: ptr=0x%x, size=%d\n", requestPtr, requestSize)
+		fmt.Printf("[DEBUG] Calling query function...\n")
+	}
+
+	// Call the query function with the request pointer
+	results, err := fn.Call(ctx, uint64(requestPtr))
+	if err != nil {
+		if printDebug {
+			fmt.Printf("[DEBUG] Query call failed: %v\n", err)
+		}
+		return nil, types.GasReport{}, fmt.Errorf("query call failed: %w", err)
+	}
+
+	if len(results) != 1 {
+		if printDebug {
+			fmt.Printf("[DEBUG] Unexpected number of results: got %d, want 1\n", len(results))
+		}
+		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(results))
+	}
+
+	// Read result from memory
+	resultPtr := uint32(results[0])
+	if printDebug {
+		fmt.Printf("[DEBUG] Reading result from memory at ptr=0x%x\n", resultPtr)
+	}
+
+	resultData, ok := memory.Read(resultPtr, 8)
+	if !ok {
+		if printDebug {
+			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
+		}
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
+	}
+
+	dataPtr := binary.LittleEndian.Uint32(resultData[0:4])
+	dataLen := binary.LittleEndian.Uint32(resultData[4:8])
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Result data: ptr=0x%x, len=%d\n", dataPtr, dataLen)
+	}
+
+	// Read the actual result data
+	data, ok := memory.Read(dataPtr, dataLen)
+	if !ok {
+		if printDebug {
+			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
+		}
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result data from memory")
+	}
+
+	// Create gas report
+	gasReport := types.GasReport{
+		Limit:          gasLimit,
+		Remaining:      gasLimit - runtimeEnv.gasUsed,
+		UsedInternally: runtimeEnv.gasUsed,
+	}
+
+	return data, gasReport, nil
 }
 
 func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1026,40 +1165,46 @@ func serializeEnvForContract(env []byte, _ []byte, _ *WazeroRuntime) ([]byte, er
 	height := rawBlock["height"]
 	time := rawBlock["time"]
 
+	// Ensure time is a string
+	timeStr, ok := time.(string)
+	if !ok {
+		// Convert time to string if it's not already
+		timeStr = fmt.Sprintf("%d", typedEnv.Block.Time)
+	}
+
 	// Create output environment preserving original number formats and field order
+	// Field order must match the Rust struct exactly:
+	// 1. block: height, time, chain_id
+	// 2. transaction (optional): hash, index
+	// 3. contract: address
 	envMap := map[string]interface{}{
 		"block": map[string]interface{}{
-			"chain_id": typedEnv.Block.ChainID, // chain_id should be first
 			"height":   height,
-			"time":     time,
-		},
-		"contract": map[string]interface{}{
-			"address": typedEnv.Contract.Address,
+			"time":     timeStr,
+			"chain_id": typedEnv.Block.ChainID,
 		},
 	}
 
-	// Add transaction if present, preserving field order
+	// Add transaction if present
 	if typedEnv.Transaction != nil {
-		txMap := map[string]interface{}{}
-		// Add fields in specific order
-		if typedEnv.Transaction.Hash != "" {
-			txMap["hash"] = typedEnv.Transaction.Hash
-		}
-		txMap["index"] = typedEnv.Transaction.Index
-		envMap["transaction"] = txMap
+		envMap["transaction"] = rawEnv["transaction"]
 	}
 
-	fmt.Printf("[DEBUG] Final env map structure: %+v\n", envMap)
+	// Add contract info (must come last)
+	envMap["contract"] = map[string]interface{}{
+		"address": typedEnv.Contract.Address,
+	}
 
-	// Marshal back to JSON preserving original number formats
-	result, err := json.Marshal(envMap)
+	// Marshal back to JSON
+	adaptedEnv, err := json.Marshal(envMap)
 	if err != nil {
-		fmt.Printf("[DEBUG] Failed to marshal final env: %v\n", err)
-		return nil, fmt.Errorf("failed to marshal env: %w", err)
+		return nil, fmt.Errorf("failed to serialize adapted environment: %w", err)
 	}
 
-	fmt.Printf("[DEBUG] Final serialized env: %s\n", string(result))
-	return result, nil
+	log.Printf("[DEBUG] Adapted env hex: %x", adaptedEnv)
+	log.Printf("[DEBUG] Adapted env string: %s", adaptedEnv)
+
+	return adaptedEnv, nil
 }
 
 func (w *WazeroRuntime) callContractFn(
@@ -1077,9 +1222,15 @@ func (w *WazeroRuntime) callContractFn(
 ) ([]byte, types.GasReport, error) {
 	if printDebug {
 		fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
-		fmt.Printf("[DEBUG] callContractFn: name=%s checksum=%x\n", name, checksum)
-		fmt.Printf("[DEBUG] len(env)=%d, len(info)=%d, len(msg)=%d\n", len(env), len(info), len(msg))
+		fmt.Printf("[DEBUG] Function call: %s\n", name)
+		fmt.Printf("[DEBUG] Checksum: %x\n", checksum)
+		fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
+		fmt.Printf("[DEBUG] Input sizes: env=%d, info=%d, msg=%d\n", len(env), len(info), len(msg))
 		fmt.Printf("[DEBUG] Original env: %s\n", string(env))
+		if len(info) > 0 {
+			fmt.Printf("[DEBUG] Info: %s\n", string(info))
+		}
+		fmt.Printf("[DEBUG] Message: %s\n", string(msg))
 	}
 
 	// Adapt environment for contract version
@@ -1090,9 +1241,7 @@ func (w *WazeroRuntime) callContractFn(
 
 	if printDebug {
 		fmt.Printf("[DEBUG] Adapted env: %s\n", string(adaptedEnv))
-		fmt.Printf("[DEBUG] Message: %s\n", string(msg))
-		fmt.Printf("[DEBUG] Function name: %s\n", name)
-		fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
+		fmt.Printf("[DEBUG] Creating runtime environment with gas limit: %d\n", gasLimit)
 	}
 
 	// Create runtime environment
@@ -1130,7 +1279,7 @@ func (w *WazeroRuntime) callContractFn(
 	w.mu.Unlock()
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Instantiating env module...\n")
+		fmt.Printf("[DEBUG] Instantiating modules...\n")
 	}
 
 	// Create new module instance with host functions
@@ -1144,10 +1293,6 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Instantiating contract module...\n")
-	}
 
 	// Create contract module instance
 	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithStartFunctions())
@@ -1163,7 +1308,8 @@ func (w *WazeroRuntime) callContractFn(
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Initial memory size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
+		fmt.Printf("[DEBUG] Memory initialization:\n")
+		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
 	}
 
 	mm := newMemoryManager(memory, contractModule)
@@ -1173,38 +1319,34 @@ func (w *WazeroRuntime) callContractFn(
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Memory initialized with %d bytes (%d pages)\n", initialBytes, initialBytes/wasmPageSize)
+		fmt.Printf("- Memory initialized: %d bytes (%d pages)\n", initialBytes, initialBytes/wasmPageSize)
+		fmt.Printf("[DEBUG] Writing data to memory...\n")
 	}
 
 	// Write environment to memory
-	if printDebug {
-		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
-		fmt.Printf("[DEBUG] Environment content: %s\n", string(adaptedEnv))
-		fmt.Printf("[DEBUG] Parsed env structure:\n%s\n", prettyPrintJSON(adaptedEnv))
-	}
-
-	envPtr, _, err := mm.writeToMemory(adaptedEnv, printDebug)
+	envPtr, envSize, err := mm.writeToMemory(adaptedEnv, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
 	// Write info to memory if present
 	var infoPtr uint32
+	var infoSize uint32
 	if len(info) > 0 {
 		if printDebug {
-			fmt.Printf("[DEBUG] Writing info to memory (size=%d) ...\n", len(info))
+			fmt.Printf("[DEBUG] Writing info to memory...\n")
 		}
-		infoPtr, _, err = mm.writeToMemory(info, printDebug)
+		infoPtr, infoSize, err = mm.writeToMemory(info, printDebug)
 		if err != nil {
 			return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
 		}
 	} else {
 		if printDebug {
-			fmt.Printf("[DEBUG] Writing empty info to memory\n")
+			fmt.Printf("[DEBUG] Writing empty info object...\n")
 		}
 		// Write empty JSON object for info
 		emptyInfo := []byte("{}")
-		infoPtr, _, err = mm.writeToMemory(emptyInfo, printDebug)
+		infoPtr, infoSize, err = mm.writeToMemory(emptyInfo, printDebug)
 		if err != nil {
 			return nil, types.GasReport{}, fmt.Errorf("failed to write empty info to memory: %w", err)
 		}
@@ -1212,9 +1354,9 @@ func (w *WazeroRuntime) callContractFn(
 
 	// Write msg to memory
 	if printDebug {
-		fmt.Printf("[DEBUG] Writing msg to memory (size=%d) ...\n", len(msg))
+		fmt.Printf("[DEBUG] Writing message to memory...\n")
 	}
-	msgPtr, _, err := mm.writeToMemory(msg, printDebug)
+	msgPtr, msgSize, err := mm.writeToMemory(msg, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
@@ -1226,8 +1368,11 @@ func (w *WazeroRuntime) callContractFn(
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Function params: env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
-		fmt.Printf("[DEBUG] About to call function '%s'\n", name)
+		fmt.Printf("[DEBUG] Memory layout:\n")
+		fmt.Printf("- Environment: ptr=0x%x, size=%d\n", envPtr, envSize)
+		fmt.Printf("- Info: ptr=0x%x, size=%d\n", infoPtr, infoSize)
+		fmt.Printf("- Message: ptr=0x%x, size=%d\n", msgPtr, msgSize)
+		fmt.Printf("[DEBUG] Calling contract function '%s'...\n", name)
 	}
 
 	// Call the function with appropriate parameters
@@ -1235,46 +1380,74 @@ func (w *WazeroRuntime) callContractFn(
 	var callErr error
 	switch name {
 	case "query":
-		// Query takes 2 params: env and msg
+		if printDebug {
+			fmt.Printf("[DEBUG] Query function call with 2 params: env=%d, msg=%d\n", envPtr, msgPtr)
+		}
 		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
 	case "sudo", "reply", "migrate":
-		// These functions take 3 params but can have empty info
+		if printDebug {
+			fmt.Printf("[DEBUG] Function call with 3 params (empty info allowed): env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
+		}
 		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	default:
-		// All other functions take 3 params with required info
 		if len(info) == 0 {
 			return nil, types.GasReport{}, fmt.Errorf("info parameter required for %s", name)
+		}
+		if printDebug {
+			fmt.Printf("[DEBUG] Function call with 3 params: env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
 		}
 		results, callErr = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	}
 
 	if callErr != nil {
+		if printDebug {
+			fmt.Printf("[DEBUG] Contract call failed: %v\n", callErr)
+		}
 		return nil, types.GasReport{}, fmt.Errorf("contract call failed: %w", callErr)
 	}
 
 	if len(results) != 1 {
+		if printDebug {
+			fmt.Printf("[DEBUG] Unexpected number of results: got %d, want 1\n", len(results))
+		}
 		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(results))
 	}
 
 	// Read result from memory
 	resultPtr := uint32(results[0])
+	if printDebug {
+		fmt.Printf("[DEBUG] Reading result from memory at ptr=0x%x\n", resultPtr)
+	}
+
 	resultData, ok := memory.Read(resultPtr, 8)
 	if !ok {
+		if printDebug {
+			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
+		}
 		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
 	}
 
 	dataPtr := binary.LittleEndian.Uint32(resultData[0:4])
 	dataLen := binary.LittleEndian.Uint32(resultData[4:8])
 
+	if printDebug {
+		fmt.Printf("[DEBUG] Result points to: ptr=0x%x, len=%d\n", dataPtr, dataLen)
+	}
+
 	data, ok := memory.Read(dataPtr, dataLen)
 	if !ok {
+		if printDebug {
+			fmt.Printf("[DEBUG] Failed to read data from memory\n")
+		}
 		return nil, types.GasReport{}, fmt.Errorf("failed to read data from memory")
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Function result: ptr=%d, len=%d\n", dataPtr, dataLen)
+		fmt.Printf("[DEBUG] Function completed successfully\n")
 		if len(data) < 1024 {
 			fmt.Printf("[DEBUG] Result data: %s\n", string(data))
+		} else {
+			fmt.Printf("[DEBUG] Result data too large to display (len=%d)\n", len(data))
 		}
 	}
 
@@ -1283,6 +1456,15 @@ func (w *WazeroRuntime) callContractFn(
 		UsedExternally: 0,
 		Remaining:      gasLimit - runtimeEnv.gasUsed,
 		Limit:          gasLimit,
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Gas report:\n")
+		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
+		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
+		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
+		fmt.Printf("- Limit: %d\n", gasReport.Limit)
+		fmt.Printf("=====================[END DEBUG]=====================\n\n")
 	}
 
 	return data, gasReport, nil
@@ -1379,4 +1561,62 @@ func fixBlockTimeIfNumeric(env []byte) ([]byte, error) {
 		return env, nil
 	}
 	return patched, nil
+}
+
+func (r *WazeroRuntime) serializeEnvForContract(env []byte) ([]byte, error) {
+	log.Printf("[DEBUG] Original env hex: %x", env)
+	log.Printf("[DEBUG] Original env string: %s", env)
+
+	// Parse into raw map to preserve number formats
+	var rawEnv map[string]interface{}
+	if err := json.Unmarshal(env, &rawEnv); err != nil {
+		return nil, fmt.Errorf("failed to parse environment: %w", err)
+	}
+
+	// Parse into typed struct for validation
+	var typedEnv types.Env
+	if err := json.Unmarshal(env, &typedEnv); err != nil {
+		return nil, fmt.Errorf("failed to parse environment into typed struct: %w", err)
+	}
+
+	// Validate required fields
+	if typedEnv.Block.Height == 0 {
+		return nil, fmt.Errorf("block height is required")
+	}
+	if typedEnv.Block.Time == 0 {
+		return nil, fmt.Errorf("block time is required")
+	}
+	if typedEnv.Block.ChainID == "" {
+		return nil, fmt.Errorf("chain id is required")
+	}
+
+	// Create output preserving original formats and field order
+	envMap := map[string]interface{}{
+		"block": map[string]interface{}{
+			"height":   rawEnv["block"].(map[string]interface{})["height"],
+			"time":     rawEnv["block"].(map[string]interface{})["time"],
+			"chain_id": typedEnv.Block.ChainID,
+		},
+	}
+
+	// Add transaction if present (must come after block)
+	if typedEnv.Transaction != nil {
+		envMap["transaction"] = rawEnv["transaction"]
+	}
+
+	// Add contract info (must come last)
+	envMap["contract"] = map[string]interface{}{
+		"address": typedEnv.Contract.Address,
+	}
+
+	// Marshal back to JSON
+	adaptedEnv, err := json.Marshal(envMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize adapted environment: %w", err)
+	}
+
+	log.Printf("[DEBUG] Adapted env hex: %x", adaptedEnv)
+	log.Printf("[DEBUG] Adapted env string: %s", adaptedEnv)
+
+	return adaptedEnv, nil
 }
