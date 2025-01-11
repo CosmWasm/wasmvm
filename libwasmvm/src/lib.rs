@@ -23,7 +23,7 @@ mod vtables;
 // exports. There are no guarantees those exports are stable.
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use api::{GoApi, GoApiVtable};
-pub use cache::{cache_t, load_wasm};
+pub use cache::{load_wasm, CacheT};
 pub use db::{db_t, Db, DbVtable};
 pub use error::GoError;
 pub use gas_report::GasReport;
