@@ -221,11 +221,6 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 		return 0, 0, nil
 	}
 
-	// Ensure nextOffset is page-aligned
-	if mm.nextOffset%wasmPageSize != 0 {
-		mm.nextOffset = ((mm.nextOffset + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
-	}
-
 	// Calculate pages needed for data
 	pagesNeeded := (dataSize + wasmPageSize - 1) / wasmPageSize
 	allocSize := pagesNeeded * wasmPageSize
@@ -697,56 +692,30 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 	gasState := NewGasState(gasLimit)
 	mm := newMemoryManager(contractModule.Memory(), contractModule, gasState)
 
-	// Calculate pages needed for data
+	// Calculate total memory needed
 	envDataSize := uint32(len(env))
-	envPagesNeeded := (envDataSize + wasmPageSize - 1) / wasmPageSize
-	envAllocSize := envPagesNeeded * wasmPageSize
-
 	infoDataSize := uint32(len(info))
-	infoPagesNeeded := (infoDataSize + wasmPageSize - 1) / wasmPageSize
-	infoAllocSize := infoPagesNeeded * wasmPageSize
-
 	msgDataSize := uint32(len(msg))
-	msgPagesNeeded := (msgDataSize + wasmPageSize - 1) / wasmPageSize
-	msgAllocSize := msgPagesNeeded * wasmPageSize
 
-	// Add space for Region structs (12 bytes each, aligned to page size)
-	regionStructSize := uint32(36) // 3 Region structs * 12 bytes each
-	regionPagesNeeded := (regionStructSize + wasmPageSize - 1) / wasmPageSize
-	regionAllocSize := regionPagesNeeded * wasmPageSize
-
-	// Ensure we have enough memory for everything
-	totalSize := envAllocSize + infoAllocSize + msgAllocSize + regionAllocSize
-	if totalSize > mm.size {
-		pagesToGrow := (totalSize - mm.size + wasmPageSize - 1) / wasmPageSize
-		if printDebug {
-			fmt.Printf("[DEBUG] Growing memory by %d pages (current size: %d, needed: %d)\n",
-				pagesToGrow, mm.size/wasmPageSize, totalSize/wasmPageSize)
-		}
-		grown, ok := mm.memory.Grow(pagesToGrow)
-		if !ok || grown == 0 {
-			return nil, types.GasReport{}, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
-		}
-		mm.size = mm.memory.Size()
-	}
-
-	// Write data to memory
-	envPtr, _, err := mm.writeToMemory(env, printDebug)
+	// Write env data to memory
+	envPtr, envAllocSize, err := mm.writeToMemory(env, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
-	infoPtr, _, err := mm.writeToMemory(info, printDebug)
+	// Write info data to memory
+	infoPtr, infoAllocSize, err := mm.writeToMemory(info, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write info to memory: %w", err)
 	}
 
-	msgPtr, _, err := mm.writeToMemory(msg, printDebug)
+	// Write msg data to memory
+	msgPtr, msgAllocSize, err := mm.writeToMemory(msg, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
 
-	// Create Region structs with page-aligned capacities
+	// Create Region structs
 	envRegion := &Region{
 		Offset:   envPtr,
 		Capacity: envAllocSize,
@@ -786,9 +755,12 @@ func (w *WazeroRuntime) Instantiate(checksum, env, info, msg []byte, otherParams
 
 	if printDebug {
 		fmt.Printf("[DEBUG] Memory layout before function call:\n")
-		fmt.Printf("- Environment: ptr=0x%x, size=%d, region_ptr=0x%x\n", envPtr, len(env), envRegionPtr)
-		fmt.Printf("- Info: ptr=0x%x, size=%d, region_ptr=0x%x\n", infoPtr, len(info), infoRegionPtr)
-		fmt.Printf("- Message: ptr=0x%x, size=%d, region_ptr=0x%x\n", msgPtr, len(msg), msgRegionPtr)
+		fmt.Printf("  env region ptr: %d\n", envRegionPtr)
+		fmt.Printf("  info region ptr: %d\n", infoRegionPtr)
+		fmt.Printf("  msg region ptr: %d\n", msgRegionPtr)
+		fmt.Printf("  env data ptr: %d, size: %d\n", envPtr, envDataSize)
+		fmt.Printf("  info data ptr: %d, size: %d\n", infoPtr, infoDataSize)
+		fmt.Printf("  msg data ptr: %d, size: %d\n", msgPtr, msgDataSize)
 	}
 
 	// Call instantiate function
@@ -1475,7 +1447,7 @@ func (w *WazeroRuntime) callContractFn(
 	// Create memory manager
 	mm := newMemoryManager(memory, contractModule, gasState)
 
-	// Calculate pages needed for data
+	// Calculate total memory needed for data and Region structs
 	envDataSize := uint32(len(adaptedEnv))
 	envPagesNeeded := (envDataSize + wasmPageSize - 1) / wasmPageSize
 	envAllocSize := envPagesNeeded * wasmPageSize
@@ -1524,7 +1496,7 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
 
-	// Create Region structs with page-aligned capacities
+	// Create Region structs
 	envRegion := &Region{
 		Offset:   envPtr,
 		Capacity: envAllocSize,
