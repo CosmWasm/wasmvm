@@ -9,6 +9,7 @@ on:
 jobs:
   setup:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -26,9 +27,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-  test-all:
+  # Main package tests
+  test-ibc:
     needs: setup
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -37,12 +40,1134 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: "1.23"
-      - name: Run all tests
-        run: go test -v ./...
+      - run: go test -v ./... -run ^TestIBC$
+
+  test-ibc-handshake:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestIBCHandshake$
+
+  test-ibc-packet-dispatch:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestIBCPacketDispatch$
+
+  test-analyze-code:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestAnalyzeCode$
+
+  test-ibc-msg-get-channel:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestIBCMsgGetChannel$
+
+  test-ibc-msg-get-counter-version:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestIBCMsgGetCounterVersion$
+
+  test-store-code:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestStoreCode$
+
+  test-simulate-store-code:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestSimulateStoreCode$
+
+  test-store-code-and-get:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestStoreCodeAndGet$
+
+  test-remove-code:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestRemoveCode$
+
+  test-happy-path:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestHappyPath$
+
+  test-env:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestEnv$
+
+  test-get-metrics:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./... -run ^TestGetMetrics$
+
+  # API Tests
+  test-validate-address-failure:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestValidateAddressFailure$
+
+  test-store-iterator:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestStoreIterator$
+
+  test-store-iterator-hits-limit:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestStoreIteratorHitsLimit$
+
+  test-queue-iterator-simple:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestQueueIteratorSimple$
+
+  test-queue-iterator-races:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestQueueIteratorRaces$
+
+  test-queue-iterator-limit:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestQueueIteratorLimit$
+
+  test-init-and-release-cache:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitAndReleaseCache$
+
+  test-init-cache-works-for-non-existent-dir:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitCacheWorksForNonExistentDir$
+
+  test-init-cache-errors-for-broken-dir:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitCacheErrorsForBrokenDir$
+
+  test-init-locking-prevents-concurrent-access:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitLockingPreventsConcurrentAccess$
+
+  test-init-locking-allows-multiple-instances:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitLockingAllowsMultipleInstancesInDifferentDirs$
+
+  test-init-cache-empty-capabilities:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInitCacheEmptyCapabilities$
+
+  test-store-code-and-get-code:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestStoreCodeAndGetCode$
+
+  test-store-code-fails-with-bad-data:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestStoreCodeFailsWithBadData$
+
+  test-store-code-unchecked:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestStoreCodeUnchecked$
+
+  test-pin:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestPin$
+
+  test-pin-errors:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestPinErrors$
+
+  test-unpin:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestUnpin$
+
+  test-unpin-errors:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestUnpinErrors$
+
+  test-get-pinned-metrics:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestGetPinnedMetrics$
+
+  test-instantiate:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestInstantiate$
+
+  test-execute:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecute$
+
+  test-execute-panic:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecutePanic$
+
+  test-execute-unreachable:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecuteUnreachable$
+
+  test-execute-cpu-loop:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecuteCpuLoop$
+
+  test-execute-storage-loop:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecuteStorageLoop$
+
+  test-execute-user-errors-in-api-calls:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestExecuteUserErrorsInApiCalls$
+
+  test-migrate:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestMigrate$
+
+  test-multiple-instances:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestMultipleInstances$
+
+  test-sudo:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestSudo$
+
+  test-dispatch-submessage:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestDispatchSubmessage$
+
+  test-reply-and-query:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestReplyAndQuery$
+
+  test-query:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestQuery$
+
+  test-hackatom-querier:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestHackatomQuerier$
+
+  test-custom-reflect-querier:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestCustomReflectQuerier$
+
+  test-floats:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestFloats$
+
+  test-libwasmvm-version:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./internal/api -run ^TestLibwasmvmVersion$
+
+  # Types package tests
+  test-config-json:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestConfigJSON$
+
+  test-message-info-handles-multiple-coins:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestMessageInfoHandlesMultipleCoins$
+
+  test-message-info-handles-missing-coins:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestMessageInfoHandlesMissingCoins$
+
+  test-block-info-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestBlockInfoSerialization$
+
+  test-block-info-deserialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestBlockInfoDeserialization$
+
+  test-ibc-timeout-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestIbcTimeoutSerialization$
+
+  test-ibc-timeout-deserialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestIbcTimeoutDeserialization$
+
+  test-ibc-receive-response-deserialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestIbcReceiveResponseDeserialization$
+
+  test-wasm-msg-instantiate-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestWasmMsgInstantiateSerialization$
+
+  test-wasm-msg-instantiate2-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestWasmMsgInstantiate2Serialization$
+
+  test-any-msg-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestAnyMsgSerialization$
+
+  test-gov-msg-vote-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestGovMsgVoteSerialization$
+
+  test-gov-msg-vote-weighted-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestGovMsgVoteWeightedSerialization$
+
+  test-msg-fund-community-pool-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestMsgFundCommunityPoolSerialization$
+
+  test-delegation-with-empty-array:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestDelegationWithEmptyArray$
+
+  test-delegation-with-data:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestDelegationWithData$
+
+  test-validator-with-empty-array:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestValidatorWithEmptyArray$
+
+  test-validator-with-data:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestValidatorWithData$
+
+  test-query-result-with-empty-data:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestQueryResultWithEmptyData$
+
+  test-wasm-query-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestWasmQuerySerialization$
+
+  test-contract-info-response-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestContractInfoResponseSerialization$
+
+  test-distribution-query-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestDistributionQuerySerialization$
+
+  test-code-info-response-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestCodeInfoResponseSerialization$
+
+  test-reply-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestReplySerialization$
+
+  test-sub-msg-response-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestSubMsgResponseSerialization$
+
+  test-system-error-no-such-contract-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestSystemErrorNoSuchContractSerialization$
+
+  test-system-error-no-such-code-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestSystemErrorNoSuchCodeSerialization$
+
+  test-checksum-string:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestChecksumString$
+
+  test-uint64-json:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestUint64JSON$
+
+  test-int64-json:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestInt64JSON$
+
+  test-array-serialization:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+      - run: go test -v ./types -run ^TestArraySerialization$
 
   benchmarks:
     needs: setup
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -52,4 +1177,5 @@ jobs:
         with:
           go-version: "1.23"
       - name: Run benchmarks
-        run: go test -v ./internal/api -run=^$ -bench=.
+        run: |
+          go test -v ./internal/api -run=^$ -bench=.
