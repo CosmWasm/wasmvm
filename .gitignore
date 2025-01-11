@@ -5,6 +5,9 @@
 .idea
 .vscode
 **combined_code.txt
+/vm
+/contracts
+
 
 # no static libraries (35MB+)
 /internal/api/lib*.a

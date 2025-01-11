@@ -69,195 +69,216 @@ type Region struct {
 	Length   uint32
 }
 
-// validateRegion performs plausibility checks on a Region
-func validateRegion(region *Region) error {
-	if region.Offset == 0 {
-		return fmt.Errorf("region has zero offset")
-	}
-	if region.Length > region.Capacity {
-		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
-	}
-	if uint64(region.Offset)+uint64(region.Capacity) > math.MaxUint32 {
-		return fmt.Errorf("region out of range: offset %d, capacity %d", region.Offset, region.Capacity)
-	}
-	return nil
-}
-
 // memoryManager handles WASM memory allocation and deallocation
 type memoryManager struct {
 	memory api.Memory
 	module api.Module
+	size   uint32
 }
 
 func newMemoryManager(memory api.Memory, module api.Module) *memoryManager {
+	if memory == nil {
+		panic("memory cannot be nil")
+	}
+
+	// Get initial memory size in bytes
+	memBytes := memory.Size()
+
+	// Ensure memory is initialized with at least one page
+	if memBytes == 0 {
+		if _, ok := memory.Grow(1); !ok {
+			panic("failed to initialize memory with minimum size")
+		}
+		memBytes = memory.Size()
+	}
+
+	// Ensure we have enough memory pages (at least 1MB)
+	const minMemoryBytes = 1024 * 1024 // 1MB
+	if memBytes < minMemoryBytes {
+		pagesNeeded := (minMemoryBytes - memBytes + wasmPageSize - 1) / wasmPageSize
+		if _, ok := memory.Grow(uint32(pagesNeeded)); !ok {
+			panic(fmt.Sprintf("failed to grow memory to minimum size: needs %d more pages", pagesNeeded))
+		}
+		memBytes = memory.Size()
+	}
+
+	// Verify memory size after initialization
+	if memBytes == 0 {
+		panic("memory not properly initialized after growth")
+	}
+
+	// Initialize first page with zeros to ensure clean state
+	zeroMem := make([]byte, wasmPageSize)
+	if !memory.Write(0, zeroMem) {
+		panic("failed to initialize first memory page")
+	}
+
 	return &memoryManager{
 		memory: memory,
 		module: module,
+		size:   memBytes,
 	}
 }
 
-// writeToMemory writes data to WASM memory and returns the pointer and size
-func (m *memoryManager) writeToMemory(data []byte) (uint32, uint32, error) {
-	if data == nil {
-		return 0, 0, nil
+// validateMemorySize checks if the memory size is within acceptable limits
+func (m *memoryManager) validateMemorySize(memSizeBytes uint32) error {
+	// Get current memory size in bytes
+	currentSize := m.memory.Size()
+
+	if currentSize == 0 {
+		return fmt.Errorf("memory not properly initialized")
 	}
 
-	// Get the allocate function
-	allocate := m.module.ExportedFunction("allocate")
-	if allocate == nil {
-		return 0, 0, fmt.Errorf("allocate function not found in WASM module")
+	// Check if memory size is reasonable (max 64MB)
+	const maxMemorySize = 64 * 1024 * 1024 // 64MB
+	if memSizeBytes > maxMemorySize {
+		return fmt.Errorf("memory size %d bytes exceeds maximum allowed size of %d bytes", memSizeBytes, maxMemorySize)
 	}
 
-	// Allocate memory for the Region struct (12 bytes) and the data
-	size := uint32(len(data))
-	results, err := allocate.Call(context.Background(), uint64(size+regionSize))
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to allocate memory: %w", err)
+	// Ensure memory size is page-aligned
+	if memSizeBytes%wasmPageSize != 0 {
+		return fmt.Errorf("memory size %d bytes is not page-aligned (page size: %d bytes)", memSizeBytes, wasmPageSize)
 	}
-	ptr := uint32(results[0])
 
-	// Create and write the Region struct
+	// Verify first page is properly initialized
+	firstPage, ok := m.memory.Read(0, wasmPageSize)
+	if !ok || len(firstPage) != wasmPageSize {
+		return fmt.Errorf("failed to read first memory page")
+	}
+
+	// Create initial memory region for validation
 	region := &Region{
-		Offset:   ptr + regionSize, // Data starts after the Region struct
-		Capacity: size,
-		Length:   size,
-	}
-
-	// Validate the region before writing
-	if err := validateRegion(region); err != nil {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
-		}
-		return 0, 0, fmt.Errorf("invalid region: %w", err)
-	}
-
-	// Write the Region struct
-	if err := m.writeRegion(ptr, region); err != nil {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
-		}
-		return 0, 0, fmt.Errorf("failed to write region: %w", err)
-	}
-
-	// Write the actual data
-	if !m.memory.Write(region.Offset, data) {
-		deallocate := m.module.ExportedFunction("deallocate")
-		if deallocate != nil {
-			if _, err := deallocate.Call(context.Background(), uint64(ptr)); err != nil {
-				return 0, 0, fmt.Errorf("deallocation failed: %w", err)
-			}
-		}
-		return 0, 0, fmt.Errorf("failed to write data to memory at ptr=%d size=%d", region.Offset, size)
-	}
-
-	return ptr, size, nil
-}
-
-// readFromMemory reads data from WASM memory
-func (m *memoryManager) readFromMemory(ptr, size uint32) ([]byte, error) {
-	if ptr == 0 {
-		return nil, nil
-	}
-
-	// Read the Region struct first
-	region, err := m.readRegion(ptr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read region: %w", err)
+		Offset:   wasmPageSize, // Start after first page
+		Capacity: currentSize - wasmPageSize,
+		Length:   0,
 	}
 
 	// Validate the region
 	if err := validateRegion(region); err != nil {
-		return nil, fmt.Errorf("invalid region: %w", err)
-	}
-
-	// Verify the size matches what we expect
-	if region.Length != size {
-		return nil, fmt.Errorf("size mismatch: expected %d bytes but region specifies %d bytes", size, region.Length)
-	}
-
-	// Read the actual data using the region's length
-	data, ok := m.memory.Read(region.Offset, region.Length)
-	if !ok {
-		return nil, fmt.Errorf("failed to read memory at ptr=%d size=%d", region.Offset, region.Length)
-	}
-
-	// Make a copy to ensure we own the data
-	result := make([]byte, len(data))
-	copy(result, data)
-
-	return result, nil
-}
-
-// readRegion reads a Region struct from memory and validates it
-// readRegion reads a Region struct from memory and validates it
-func (m *memoryManager) readRegion(ptr uint32) (*Region, error) {
-	if ptr == 0 {
-		return nil, fmt.Errorf("null region pointer")
-	}
-
-	// Read the Region struct (12 bytes total)
-	data, ok := m.memory.Read(ptr, regionSize)
-	if !ok {
-		return nil, fmt.Errorf("failed to read Region struct at ptr=%d", ptr)
-	}
-
-	// Parse the Region struct (little-endian)
-	region := &Region{
-		Offset:   binary.LittleEndian.Uint32(data[0:4]),
-		Capacity: binary.LittleEndian.Uint32(data[4:8]),
-		Length:   binary.LittleEndian.Uint32(data[8:12]),
-	}
-
-	// Validate the region
-	if err := validateRegion(region); err != nil {
-		return nil, fmt.Errorf("invalid region: %w", err)
-	}
-
-	return region, nil
-}
-
-// writeRegion writes a Region struct to memory
-func (m *memoryManager) writeRegion(ptr uint32, region *Region) error {
-	if ptr == 0 {
-		return fmt.Errorf("null region pointer")
-	}
-
-	// Validate the region before writing
-	if err := validateRegion(region); err != nil {
-		return fmt.Errorf("invalid region: %w", err)
-	}
-
-	// Ensure we're not writing out of bounds
-	memSize := uint64(m.memory.Size()) * wasmPageSize
-	if uint64(region.Offset)+uint64(region.Capacity) > memSize {
-		return fmt.Errorf("region exceeds memory bounds: offset=%d, capacity=%d, memSize=%d", region.Offset, region.Capacity, memSize)
-	}
-
-	// Create the Region struct bytes (little-endian)
-	data := make([]byte, regionSize)
-	binary.LittleEndian.PutUint32(data[0:4], region.Offset)
-	binary.LittleEndian.PutUint32(data[4:8], region.Capacity)
-	binary.LittleEndian.PutUint32(data[8:12], region.Length)
-
-	// Write the Region struct
-	if !m.memory.Write(ptr, data) {
-		return fmt.Errorf("failed to write Region struct at ptr=%d", ptr)
+		return fmt.Errorf("memory region validation failed: %w", err)
 	}
 
 	return nil
+}
+
+// validateMemoryRegion performs validation checks on a memory region
+func validateMemoryRegion(region *Region) error {
+	// Check for zero offset (required by Rust implementation)
+	if region.Offset == 0 {
+		return fmt.Errorf("region offset cannot be zero")
+	}
+
+	// Check if length exceeds capacity
+	if region.Length > region.Capacity {
+		return fmt.Errorf("region length (%d) exceeds capacity (%d)", region.Length, region.Capacity)
+	}
+
+	// Check for potential overflow
+	if region.Capacity > (math.MaxUint32 - region.Offset) {
+		return fmt.Errorf("region capacity (%d) would overflow when added to offset (%d)", region.Capacity, region.Offset)
+	}
+
+	return nil
+}
+
+// validateRegion performs validation checks on a memory region
+func validateRegion(region *Region) error {
+	if region == nil {
+		return fmt.Errorf("region is nil")
+	}
+	if region.Offset == 0 {
+		return fmt.Errorf("region offset is zero")
+	}
+	if region.Capacity == 0 {
+		return fmt.Errorf("region capacity is zero")
+	}
+	if region.Length > region.Capacity {
+		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
+	}
+
+	// Check for potential overflow in offset + capacity
+	if region.Offset > math.MaxUint32-region.Capacity {
+		return fmt.Errorf("region would overflow memory bounds: offset=%d, capacity=%d", region.Offset, region.Capacity)
+	}
+
+	// Enforce a maximum region size of 64MB to prevent excessive allocations
+	const maxRegionSize = 64 * 1024 * 1024 // 64MB
+	if region.Capacity > maxRegionSize {
+		return fmt.Errorf("region capacity %d exceeds maximum allowed size of %d", region.Capacity, maxRegionSize)
+	}
+
+	return nil
+}
+
+// writeToMemory writes data to WASM memory and returns the pointer and size
+func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, uint32, error) {
+	if mm.memory == nil {
+		return 0, 0, fmt.Errorf("memory not initialized")
+	}
+
+	if mm.size == 0 {
+		return 0, 0, fmt.Errorf("memory size is 0 - memory not properly initialized")
+	}
+
+	// Calculate total size needed (data + Region struct)
+	totalSize := uint32(len(data)) + regionSize
+
+	// Check if we need to grow memory
+	currentBytes := mm.size
+	neededBytes := totalSize
+
+	if neededBytes > currentBytes {
+		pagesToGrow := (neededBytes - currentBytes + uint32(wasmPageSize) - 1) / uint32(wasmPageSize)
+		if printDebug {
+			fmt.Printf("[DEBUG] Growing memory by %d pages for allocation of %d bytes\n", pagesToGrow, totalSize)
+		}
+		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
+			return 0, 0, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
+		}
+		mm.size = mm.memory.Size()
+	}
+
+	// Allocate memory for data
+	dataPtr, err := allocateInContract(context.Background(), mm.module, uint32(len(data)))
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to allocate memory for data: %v", err)
+	}
+
+	// Write data to memory
+	if err := writeMemory(mm.memory, dataPtr, data); err != nil {
+		return 0, 0, fmt.Errorf("failed to write data to memory: %v", err)
+	}
+
+	// Create Region struct
+	regionBytes := make([]byte, regionSize)
+	binary.LittleEndian.PutUint32(regionBytes[0:4], dataPtr)
+	binary.LittleEndian.PutUint32(regionBytes[4:8], uint32(len(data)))
+	binary.LittleEndian.PutUint32(regionBytes[8:12], uint32(len(data)))
+
+	// Allocate memory for Region struct
+	regionPtr, err := allocateInContract(context.Background(), mm.module, regionSize)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to allocate memory for Region struct: %v", err)
+	}
+
+	// Write Region struct to memory
+	if err := writeMemory(mm.memory, regionPtr, regionBytes); err != nil {
+		return 0, 0, fmt.Errorf("failed to write Region struct to memory: %v", err)
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Wrote %d bytes at ptr=0x%x, Region struct at ptr=0x%x\n", len(data), dataPtr, regionPtr)
+	}
+
+	return regionPtr, uint32(len(data)), nil
 }
 
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(4096).     // Set max memory to 256 MiB (4096 * 64KB)
-		WithMemoryCapacityFromMax(true) // Eagerly allocate memory to prevent alignment issues
+		WithMemoryLimitPages(1024).      // Set max memory to 64 MiB (1024 * 64KB)
+		WithMemoryCapacityFromMax(true). // Eagerly allocate memory to ensure it's initialized
+		WithDebugInfoEnabled(true)       // Enable debug info
 
 	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
 
@@ -903,27 +924,68 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 }
 
 // serializeEnvForContract serializes and validates the environment for the contract
-// checksum is kept as a parameter for future contract version validation
 func serializeEnvForContract(env []byte, _ []byte, _ *WazeroRuntime) ([]byte, error) {
-	// Parse and validate the environment
+	// First unmarshal into a raw map to preserve the exact string format of numbers
+	var rawEnv map[string]interface{}
+	if err := json.Unmarshal(env, &rawEnv); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
+	}
+
+	// Now unmarshal into typed struct for validation
 	var typedEnv types.Env
 	if err := json.Unmarshal(env, &typedEnv); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal env: %w", err)
 	}
 
-	// Validate required fields
+	// Validate Block fields
+	if typedEnv.Block.Height == 0 {
+		return nil, fmt.Errorf("block height cannot be 0")
+	}
+	if typedEnv.Block.Time == 0 {
+		return nil, fmt.Errorf("block time cannot be 0")
+	}
 	if typedEnv.Block.ChainID == "" {
-		return nil, fmt.Errorf("missing required field: block.chain_id")
-	}
-	if typedEnv.Contract.Address == "" {
-		return nil, fmt.Errorf("missing required field: contract.address")
-	}
-	if typedEnv.Transaction == nil {
-		return nil, fmt.Errorf("missing required field: transaction")
+		return nil, fmt.Errorf("chain_id cannot be empty")
 	}
 
-	// Return the validated environment bytes directly
-	return env, nil
+	// Validate Contract fields
+	if typedEnv.Contract.Address == "" {
+		return nil, fmt.Errorf("contract address cannot be empty")
+	}
+
+	// Get the original block data to preserve number formats
+	rawBlock, _ := rawEnv["block"].(map[string]interface{})
+
+	// Create a map preserving the original time format
+	envMap := map[string]interface{}{
+		"block": map[string]interface{}{
+			"height":   rawBlock["height"],
+			"time":     rawBlock["time"], // Preserve original time format
+			"chain_id": typedEnv.Block.ChainID,
+		},
+		"contract": map[string]interface{}{
+			"address": typedEnv.Contract.Address,
+		},
+	}
+
+	// Add Transaction if present
+	if typedEnv.Transaction != nil {
+		txMap := map[string]interface{}{
+			"index": typedEnv.Transaction.Index,
+		}
+		if typedEnv.Transaction.Hash != "" {
+			txMap["hash"] = typedEnv.Transaction.Hash
+		}
+		envMap["transaction"] = txMap
+	}
+
+	// Re-serialize with proper types
+	adaptedEnv, err := json.Marshal(envMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal adapted env: %w", err)
+	}
+
+	return adaptedEnv, nil
 }
 
 func (w *WazeroRuntime) callContractFn(
@@ -981,6 +1043,14 @@ func (w *WazeroRuntime) callContractFn(
 		return nil, types.GasReport{}, fmt.Errorf("failed to adapt environment: %w", err)
 	}
 
+	if printDebug {
+		fmt.Printf("[DEBUG] Original env: %s\n", string(env))
+		fmt.Printf("[DEBUG] Adapted env: %s\n", string(adaptedEnv))
+		fmt.Printf("[DEBUG] Message: %s\n", string(msg))
+		fmt.Printf("[DEBUG] Function name: %s\n", name)
+		fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
+	}
+
 	ctx := context.Background()
 
 	// 4) Register and instantiate the host module "env"
@@ -1029,13 +1099,16 @@ func (w *WazeroRuntime) callContractFn(
 		envModule.Close(ctx)
 	}()
 
-	// 5) Instantiate the contract module
+	// 5) Instantiate the contract module with memory configuration
 	if printDebug {
 		fmt.Println("[DEBUG] Instantiating contract module ...")
 	}
+
+	// Configure module with memory
 	modConfig := wazero.NewModuleConfig().
 		WithName("contract").
 		WithStartFunctions()
+	// Initialize module with memory
 	module, err := w.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: failed to instantiate contract: %v", err)
@@ -1049,19 +1122,86 @@ func (w *WazeroRuntime) callContractFn(
 		module.Close(ctx)
 	}()
 
-	// 6) Create memory manager
+	// Get memory and verify it was initialized
 	memory := module.Memory()
 	if memory == nil {
 		const errStr = "[callContractFn] Error: no memory section in module"
 		fmt.Println(errStr)
 		return nil, types.GasReport{}, errors.New(errStr)
 	}
-	mm := newMemoryManager(memory, module)
+
+	// Get initial memory size in bytes
+	initialBytes := memory.Size()
+	if printDebug {
+		fmt.Printf("[DEBUG] Initial memory size: %d bytes (%d pages)\n", initialBytes, initialBytes/uint32(wasmPageSize))
+	}
+
+	// Ensure we have enough initial memory (at least 1MB)
+	const minBytes = 16 * wasmPageSize // 1MB = 16 * 64KB pages
+	if initialBytes < minBytes {
+		// Calculate required pages, rounding up
+		newPages := (minBytes - initialBytes + uint32(wasmPageSize) - 1) / uint32(wasmPageSize)
+		if printDebug {
+			fmt.Printf("[DEBUG] Growing memory by %d pages to reach minimum size\n", newPages)
+		}
+
+		// Try to grow memory with proper error handling
+		if grown, ok := memory.Grow(newPages); !ok {
+			if printDebug {
+				fmt.Printf("[DEBUG] Failed to grow memory. Current size: %d, Attempted growth: %d pages\n",
+					initialBytes/uint32(wasmPageSize), newPages)
+			}
+			return nil, types.GasReport{}, fmt.Errorf("failed to grow memory to minimum size: needs %d more pages", newPages)
+		} else {
+			if printDebug {
+				fmt.Printf("[DEBUG] Successfully grew memory by %d pages\n", grown)
+			}
+		}
+
+		// Verify the new size
+		newSize := memory.Size()
+		if newSize < minBytes {
+			return nil, types.GasReport{}, fmt.Errorf("memory growth failed: got %d bytes, need %d bytes", newSize, minBytes)
+		}
+		initialBytes = newSize
+	}
+
+	// Verify memory size after growth
+	if initialBytes == 0 {
+		const errStr = "[callContractFn] Error: memory not properly initialized"
+		fmt.Println(errStr)
+		return nil, types.GasReport{}, errors.New(errStr)
+	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
+		fmt.Printf("[DEBUG] Memory initialized with %d bytes (%d pages)\n", initialBytes, initialBytes/uint32(wasmPageSize))
 	}
-	envPtr, _, err := mm.writeToMemory(adaptedEnv)
+
+	// Create memory manager with verified memory and add validation
+	mm := newMemoryManager(memory, module)
+	if err := mm.validateMemorySize(initialBytes); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("memory validation failed: %w", err)
+	}
+
+	// Pre-allocate some memory for the contract
+	preAllocSize := uint32(1024) // Pre-allocate 1KB
+	if _, err := allocateInContract(context.Background(), module, preAllocSize); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to pre-allocate memory: %v", err)
+	}
+
+	// Write environment data to memory
+	if printDebug {
+		fmt.Printf("[DEBUG] Writing environment to memory (size=%d) ...\n", len(adaptedEnv))
+		fmt.Printf("[DEBUG] Environment content: %s\n", string(adaptedEnv))
+		var prettyEnv interface{}
+		if err := json.Unmarshal(adaptedEnv, &prettyEnv); err != nil {
+			fmt.Printf("[DEBUG] Failed to parse env as JSON: %v\n", err)
+		} else {
+			prettyJSON, _ := json.MarshalIndent(prettyEnv, "", "  ")
+			fmt.Printf("[DEBUG] Parsed env structure:\n%s\n", string(prettyJSON))
+		}
+	}
+	envPtr, _, err := mm.writeToMemory(adaptedEnv, printDebug)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: failed to write env: %v", err)
 		fmt.Println(errStr)
@@ -1071,7 +1211,7 @@ func (w *WazeroRuntime) callContractFn(
 	if printDebug {
 		fmt.Printf("[DEBUG] Writing msg to memory (size=%d) ...\n", len(msg))
 	}
-	msgPtr, _, err := mm.writeToMemory(msg)
+	msgPtr, _, err := mm.writeToMemory(msg, printDebug)
 	if err != nil {
 		errStr := fmt.Sprintf("[callContractFn] Error: failed to write msg: %v", err)
 		fmt.Println(errStr)
@@ -1089,16 +1229,22 @@ func (w *WazeroRuntime) callContractFn(
 		if printDebug {
 			fmt.Printf("[DEBUG] Writing info to memory (size=%d) ...\n", len(info))
 		}
-		infoPtr, _, err := mm.writeToMemory(info)
+		infoPtr, _, err := mm.writeToMemory(info, printDebug)
 		if err != nil {
 			errStr := fmt.Sprintf("[callContractFn] Error: failed to write info: %v", err)
 			fmt.Println(errStr)
 			return nil, types.GasReport{}, errors.New(errStr)
 		}
 		callParams = []uint64{uint64(envPtr), uint64(infoPtr), uint64(msgPtr)}
+		if printDebug {
+			fmt.Printf("[DEBUG] Instantiate/Execute/Migrate params: env=%d, info=%d, msg=%d\n", envPtr, infoPtr, msgPtr)
+		}
 
 	case "query", "sudo", "reply":
 		callParams = []uint64{uint64(envPtr), uint64(msgPtr)}
+		if printDebug {
+			fmt.Printf("[DEBUG] Query/Sudo/Reply params: env=%d, msg=%d\n", envPtr, msgPtr)
+		}
 
 	default:
 		errStr := fmt.Sprintf("[callContractFn] Error: unknown function name: %s", name)
@@ -1137,7 +1283,15 @@ func (w *WazeroRuntime) callContractFn(
 	// Read result from memory
 	resultPtr := uint32(results[0])
 	if printDebug {
-		fmt.Printf("[DEBUG] raw result pointer: 0x%x\n", resultPtr)
+		memPages := memory.Size() // This is in bytes, not pages
+		actualPages := memPages / uint32(wasmPageSize)
+		totalBytes := memPages // This is already in bytes
+		fmt.Printf("[DEBUG] Memory info:\n")
+		fmt.Printf("  - Raw size: %d bytes\n", memPages)
+		fmt.Printf("  - Pages: %d\n", actualPages)
+		fmt.Printf("  - Page size: %d bytes\n", wasmPageSize)
+		fmt.Printf("  - Total size: %d bytes\n", totalBytes)
+		fmt.Printf("  - Result pointer: 0x%x (%d)\n", resultPtr, resultPtr)
 	}
 
 	// Try to read the raw memory first
@@ -1150,6 +1304,16 @@ func (w *WazeroRuntime) callContractFn(
 
 	if printDebug {
 		fmt.Printf("[DEBUG] raw memory at result ptr: % x\n", rawData)
+
+		// Add more context around the result pointer
+		contextStart := uint32(0)
+		if resultPtr > 16 {
+			contextStart = resultPtr - 16
+		}
+		contextData, ok := memory.Read(contextStart, 48) // 16 bytes before, 16 after
+		if ok {
+			fmt.Printf("[DEBUG] memory context around result (from %d): % x\n", contextStart, contextData)
+		}
 	}
 
 	// Try to parse as Region struct

@@ -454,13 +454,13 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 
 		for i, r := range ranges {
 			// Skip reading if `r.start + r.size` might exceed memory bounds
-			if r.start > mem.Size()*65536 {
-				fmt.Printf("[range %d] Start offset %d is out of memory bounds (size: %d pages)\n", i, r.start, mem.Size())
+			if r.start > mem.Size() {
+				fmt.Printf("[range %d] Start offset %d is out of memory bounds (size: %d bytes)\n", i, r.start, mem.Size())
 				continue
 			}
 			end := r.start + r.size
-			if end > mem.Size()*65536 {
-				end = mem.Size() * 65536
+			if end > mem.Size() {
+				end = mem.Size()
 			}
 			lengthToRead := end - r.start
 			data, ok := mem.Read(r.start, lengthToRead)
@@ -977,20 +977,20 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			}
 
 			// Calculate required pages for the allocation
-			currentPages := memory.Size()
+			currentBytes := memory.Size()
 			requiredBytes := size
 			pageSize := uint32(65536) // 64KB
-			requiredPages := (requiredBytes + pageSize - 1) / pageSize
 
 			// Grow memory if needed
-			if requiredPages > 0 {
-				if _, ok := memory.Grow(uint32(requiredPages)); !ok {
+			if requiredBytes > currentBytes {
+				pagesToGrow := (requiredBytes - currentBytes + pageSize - 1) / pageSize
+				if _, ok := memory.Grow(uint32(pagesToGrow)); !ok {
 					panic("failed to grow memory")
 				}
 			}
 
 			// Return the pointer to the allocated memory
-			ptr := currentPages * pageSize
+			ptr := currentBytes
 			return ptr
 		}).
 		WithParameterNames("size").
