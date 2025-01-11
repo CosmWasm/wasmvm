@@ -924,22 +924,27 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 	}
 
 	// Write request to memory
-	requestPtr, requestSize, err := mm.writeToMemory(requestBytes, printDebug)
+	_, _, err = mm.writeToMemory(requestBytes, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write request to memory: %w", err)
 	}
 
-	if err := json.Unmarshal(requestBytes, &request); err != nil {
+	// Parse the request to get env and msg
+	var parsedRequest struct {
+		Env json.RawMessage `json:"env"`
+		Msg json.RawMessage `json:"msg"`
+	}
+	if err := json.Unmarshal(requestBytes, &parsedRequest); err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to parse request: %w", err)
 	}
 
 	// Write env and msg to memory separately
-	envPtr, _, err := mm.writeToMemory(request.Env, printDebug)
+	envPtr, _, err := mm.writeToMemory(parsedRequest.Env, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
 	}
 
-	msgPtr, _, err := mm.writeToMemory(request.Msg, printDebug)
+	msgPtr, _, err := mm.writeToMemory(parsedRequest.Msg, printDebug)
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to write msg to memory: %w", err)
 	}
@@ -952,7 +957,8 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 
 	if printDebug {
 		fmt.Printf("[DEBUG] Memory layout:\n")
-		fmt.Printf("- Request: ptr=0x%x, size=%d\n", requestPtr, requestSize)
+		fmt.Printf("- Env: ptr=0x%x\n", envPtr)
+		fmt.Printf("- Msg: ptr=0x%x\n", msgPtr)
 		fmt.Printf("[DEBUG] Calling query function...\n")
 	}
 
@@ -990,23 +996,40 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 	dataLen := binary.LittleEndian.Uint32(resultData[4:8])
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Result data: ptr=0x%x, len=%d\n", dataPtr, dataLen)
+		fmt.Printf("[DEBUG] Result points to: ptr=0x%x, len=%d\n", dataPtr, dataLen)
 	}
 
-	// Read the actual result data
 	data, ok := memory.Read(dataPtr, dataLen)
 	if !ok {
 		if printDebug {
-			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
+			fmt.Printf("[DEBUG] Failed to read data from memory\n")
 		}
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
+		return nil, types.GasReport{}, fmt.Errorf("failed to read data from memory")
 	}
 
-	// Create gas report
+	if printDebug {
+		fmt.Printf("[DEBUG] Function completed successfully\n")
+		if len(data) < 1024 {
+			fmt.Printf("[DEBUG] Result data: %s\n", string(data))
+		} else {
+			fmt.Printf("[DEBUG] Result data too large to display (len=%d)\n", len(data))
+		}
+	}
+
 	gasReport := types.GasReport{
-		Limit:          gasLimit,
-		Remaining:      gasLimit - runtimeEnv.gasUsed,
 		UsedInternally: runtimeEnv.gasUsed,
+		UsedExternally: 0,
+		Remaining:      gasLimit - runtimeEnv.gasUsed,
+		Limit:          gasLimit,
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Gas report:\n")
+		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
+		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
+		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
+		fmt.Printf("- Limit: %d\n", gasReport.Limit)
+		fmt.Printf("=====================[END DEBUG]=====================\n\n")
 	}
 
 	return data, gasReport, nil
