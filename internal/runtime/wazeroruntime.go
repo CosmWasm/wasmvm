@@ -120,11 +120,17 @@ func newMemoryManager(memory api.Memory, module api.Module, gasState *GasState) 
 		panic("memory not properly initialized: size less than minimum pages")
 	}
 
+	// Ensure nextOffset starts at a page boundary
+	nextOffset := uint32(wasmPageSize) // Start allocations after first page
+	if nextOffset%wasmPageSize != 0 {
+		nextOffset = ((nextOffset + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
+	}
+
 	return &memoryManager{
 		memory:     memory,
 		module:     module,
 		size:       memBytes,
-		nextOffset: wasmPageSize, // Start allocations after first page
+		nextOffset: nextOffset,
 		gasState:   gasState,
 	}
 }
@@ -176,9 +182,9 @@ func validateMemoryRegion(region *Region) error {
 		return fmt.Errorf("region is nil")
 	}
 
-	// Allow zero offset for first page
+	// Ensure offset is page-aligned (except for first page)
 	if region.Offset > 0 && region.Offset%wasmPageSize != 0 {
-		return fmt.Errorf("region offset %d is not page-aligned", region.Offset)
+		return fmt.Errorf("region offset %d is not page-aligned (page size: %d)", region.Offset, wasmPageSize)
 	}
 
 	// Check if length exceeds capacity
@@ -187,35 +193,6 @@ func validateMemoryRegion(region *Region) error {
 	}
 
 	// Check for potential overflow
-	if region.Capacity > (math.MaxUint32 - region.Offset) {
-		return fmt.Errorf("region capacity (%d) would overflow when added to offset (%d)", region.Capacity, region.Offset)
-	}
-
-	// Enforce a maximum region size of 64MB to prevent excessive allocations
-	const maxRegionSize = 64 * 1024 * 1024 // 64MB
-	if region.Capacity > maxRegionSize {
-		return fmt.Errorf("region capacity %d exceeds maximum allowed size of %d", region.Capacity, maxRegionSize)
-	}
-
-	return nil
-}
-
-// validateRegion performs validation checks on a memory region
-func validateRegion(region *Region) error {
-	if region == nil {
-		return fmt.Errorf("region is nil")
-	}
-	if region.Offset < wasmPageSize {
-		return fmt.Errorf("region offset %d is less than first page size %d", region.Offset, wasmPageSize)
-	}
-	if region.Capacity == 0 {
-		return fmt.Errorf("region capacity is zero")
-	}
-	if region.Length > region.Capacity {
-		return fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
-	}
-
-	// Check for potential overflow in offset + capacity
 	if region.Offset > math.MaxUint32-region.Capacity {
 		return fmt.Errorf("region would overflow memory bounds: offset=%d, capacity=%d", region.Offset, region.Capacity)
 	}
@@ -227,6 +204,11 @@ func validateRegion(region *Region) error {
 	}
 
 	return nil
+}
+
+// validateRegion is now an alias for validateMemoryRegion for consistency
+func validateRegion(region *Region) error {
+	return validateMemoryRegion(region)
 }
 
 // writeToMemory writes data to WASM memory and returns the pointer and size
@@ -274,29 +256,22 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 		return 0, 0, fmt.Errorf("invalid memory region: %w", err)
 	}
 
-	// Write data
+	// Write data to memory
 	if !mm.memory.Write(region.Offset, data) {
-		return 0, 0, fmt.Errorf("failed to write data to memory at offset 0x%x", region.Offset)
+		return 0, 0, fmt.Errorf("failed to write data to memory at offset %d", region.Offset)
 	}
 
-	// Write Region struct
-	regionPtr := region.Offset + uint32(len(data))
-	if regionPtr%wasmPageSize != 0 {
-		regionPtr = ((regionPtr + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
-	}
-
-	regionBytes := region.ToBytes()
-	if !mm.memory.Write(regionPtr, regionBytes) {
-		return 0, 0, fmt.Errorf("failed to write Region struct at offset 0x%x", regionPtr)
-	}
-
-	// Update next offset
-	mm.nextOffset = regionPtr + regionSize
+	// Update next offset, ensuring it stays page-aligned
+	mm.nextOffset = region.Offset + totalSize
 	if mm.nextOffset%wasmPageSize != 0 {
 		mm.nextOffset = ((mm.nextOffset + wasmPageSize - 1) / wasmPageSize) * wasmPageSize
 	}
 
-	return regionPtr, regionSize, nil
+	if printDebug {
+		fmt.Printf("[DEBUG] Wrote %d bytes to memory at offset 0x%x\n", len(data), region.Offset)
+	}
+
+	return region.Offset, uint32(len(data)), nil
 }
 
 func NewWazeroRuntime() (*WazeroRuntime, error) {
