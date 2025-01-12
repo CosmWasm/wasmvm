@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -19,15 +17,44 @@ const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
 func TestIBC(t *testing.T) {
 	vm := withVM(t)
 
-	wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
-	require.NoError(t, err)
+	t.Run("Store and retrieve IBC contract", func(t *testing.T) {
+		wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+		require.NoError(t, err)
 
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-	require.NoError(t, err)
+		checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		require.NoError(t, err)
 
-	code, err := vm.GetCode(checksum)
-	require.NoError(t, err)
-	require.Equal(t, WasmCode(wasm), code)
+		code, err := vm.GetCode(checksum)
+		require.NoError(t, err)
+		require.Equal(t, WasmCode(wasm), code)
+	})
+
+	t.Run("Analyze stored IBC contract", func(t *testing.T) {
+		// Re-read the same wasm file and store it again, or retrieve the same checksum from above
+		wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+		require.NoError(t, err)
+
+		checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		require.NoError(t, err)
+
+		// Now run the analyzer
+		report, err := vm.AnalyzeCode(checksum)
+		require.NoError(t, err)
+
+		// We expect IBC entry points to be present in this contract
+		require.True(t, report.HasIBCEntryPoints, "IBC contract should have IBC entry points")
+
+		// You can also assert/update checks regarding capabilities or migration versions:
+		require.Contains(t, report.RequiredCapabilities, "iterator", "Expected 'iterator' capability for this contract")
+		require.Contains(t, report.RequiredCapabilities, "stargate", "Expected 'stargate' capability for this contract")
+
+		// Optionally check if the contract has a migrate version or not
+		if report.ContractMigrateVersion != nil {
+			t.Logf("Contract declares a migration version: %d", *report.ContractMigrateVersion)
+		} else {
+			t.Log("Contract does not declare a migration version")
+		}
+	})
 }
 
 // IBCInstantiateMsg is the Go version of
@@ -76,6 +103,7 @@ type AcknowledgeDispatch struct {
 }
 
 func toBytes(t *testing.T, v interface{}) []byte {
+	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	return bz
@@ -109,7 +137,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
-	require.Equal(t, 0, len(iResponse.Messages))
+	require.Empty(t, iResponse.Messages)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -132,7 +160,7 @@ func TestIBCHandshake(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -200,7 +228,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, conn.Ok)
 	connResponse := conn.Ok
-	require.Equal(t, 1, len(connResponse.Messages))
+	require.Len(t, connResponse.Messages, 1)
 	id := connResponse.Messages[0].ID
 
 	// mock reflect init callback (to store address)
@@ -237,7 +265,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var accounts ListAccountsResponse
 	err = json.Unmarshal(qResponse, &accounts)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(accounts.Accounts))
+	require.Len(t, accounts.Accounts, 1)
 	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
 	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
 
@@ -276,7 +304,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(prResponse2.Acknowledgement, &ack2)
 	require.NoError(t, err)
-	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
+	require.Equal(t, "invalid packet: account no-such-channel not found", ack2.Err)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -332,7 +360,7 @@ func TestIBCMsgGetChannel(t *testing.T) {
 	require.Equal(t, msg1.GetChannel(), msg4.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg5.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg6.GetChannel())
-	require.Equal(t, msg1.GetChannel().Endpoint.ChannelID, CHANNEL_ID)
+	require.Equal(t, CHANNEL_ID, msg1.GetChannel().Endpoint.ChannelID)
 }
 
 func TestIBCMsgGetCounterVersion(t *testing.T) {

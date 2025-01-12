@@ -22,10 +22,10 @@ func main() {
 
 	if file == "version" {
 		libwasmvmVersion, err := wasmvm.LibwasmvmVersion()
+		fmt.Printf("libwasmvm: %s\n", libwasmvmVersion)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("libwasmvm: %s\n", libwasmvmVersion)
 		return
 	}
 
