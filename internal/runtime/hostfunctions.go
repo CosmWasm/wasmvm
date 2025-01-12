@@ -424,7 +424,6 @@ func hostCloseIterator(ctx context.Context, _ api.Module, callID, iterID uint64)
 }
 
 // hostAbort implements the abort function required by Wasm modules
-// hostAbort implements the abort function required by Wasm modules
 func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 	fmt.Printf("\n===================== [ WASM CONTRACT ABORT ] =====================\n")
 	fmt.Printf("Abort code: %d (0x%x)\n", code, code)
@@ -436,12 +435,12 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 
 	// Attempt to get and log memory details
 	if mem := mod.Memory(); mem != nil {
-		fmt.Printf("Memory size (pages): %d\n", mem.Size())
-		// We can guess that each "page" is 64 KiB (65536 bytes).
-		fmt.Printf("Approx. memory size (bytes): %d\n", mem.Size()*65536)
+		// mem.Size() is already in bytes (Wazero returns total bytes, not pages)
+		pages := mem.Size() / wasmPageSize
+		fmt.Printf("Memory size (pages): %d\n", pages)
+		fmt.Printf("Approx. memory size (bytes): %d\n", mem.Size())
 
 		// We'll attempt to read memory around the `code` offset
-		// in case the contract placed an error message there.
 		ranges := []struct {
 			start uint32
 			size  uint32
@@ -463,6 +462,10 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 				end = mem.Size()
 			}
 			lengthToRead := end - r.start
+			if lengthToRead == 0 {
+				fmt.Printf("[range %d] Not enough memory to read from offset=%d\n", i, r.start)
+				continue
+			}
 			data, ok := mem.Read(r.start, lengthToRead)
 			if ok && len(data) > 0 {
 				fmt.Printf("[range %d] Reading %d bytes %s at offset=%d:\n", i, lengthToRead, r.desc, r.start)
@@ -487,22 +490,14 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 		if !ok {
 			fmt.Printf("Found envKey in context but could not cast to *RuntimeEnvironment.\n")
 		} else {
-			// Now we can print out environment details
 			fmt.Printf("\n=== Runtime Environment Debug Info ===\n")
 			fmt.Printf(" - Gas used: %d\n", env.gasUsed)
-			fmt.Printf(" - Gas limit: %d\n", env.Gas.GasConsumed()) // If `env.Gas` is a pointer to a GasMeter or similar
-
-			// If you have additional fields in RuntimeEnvironment that are relevant, print them here.
-			// For instance, you may want to show how many iterators are open or if there's a contract address.
-			// Example:
+			// If env.Gas is a pointer to a GasMeter or tracks the gas limit differently, adjust as needed:
+			fmt.Printf(" - Gas limit: %d\n", env.Gas.GasConsumed())
 			fmt.Printf(" - open iterators callID->(iterID->Iterator) map size: %d\n", len(env.iterators))
 			for callID, iterMap := range env.iterators {
 				fmt.Printf("    callID=%d has %d iterators\n", callID, len(iterMap))
 			}
-
-			// If your environment has references to the current contract address, block info, etc.,
-			// log them here. For example:
-			// fmt.Printf(" - Current contract address: %s\n", env.ContractAddress)
 		}
 	}
 
