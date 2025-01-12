@@ -743,7 +743,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, false)
 	diff = time.Since(start)
 	require.Error(t, err)
 	require.Equal(t, cost.UsedInternally, maxGas)
@@ -777,7 +777,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, false)
 	diff := time.Since(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
@@ -1414,7 +1414,7 @@ func TestFloats(t *testing.T) {
 
 	// query instructions
 	query := []byte(`{"instructions":{}}`)
-	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 	require.NoError(t, err)
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
@@ -1432,7 +1432,7 @@ func TestFloats(t *testing.T) {
 		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
-			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 			require.NoError(t, err)
 			err = json.Unmarshal(data, &qResult)
 			require.NoError(t, err)
@@ -1448,7 +1448,7 @@ func TestFloats(t *testing.T) {
 
 			// run the instruction
 			// this might throw a runtime error (e.g. if the instruction traps)
-			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 			var result string
 			if err != nil {
 				require.Error(t, err)
