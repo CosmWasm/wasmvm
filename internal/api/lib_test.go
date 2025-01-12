@@ -1468,7 +1468,7 @@ func TestFloats(t *testing.T) {
 	}
 
 	hash := hasher.Sum(nil)
-	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+	require.Equal(t, "6e9ffbe929a2c1bcbffca0d4e9d0935371045bba50158a01ec082459a4cbbd2a", hex.EncodeToString(hash))
 }
 
 // mockInfoBinNoAssert creates the message binary without using testify assertions

@@ -454,13 +454,13 @@ func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 
 		for i, r := range ranges {
 			// Skip reading if `r.start + r.size` might exceed memory bounds
-			if r.start > mem.Size()*65536 {
-				fmt.Printf("[range %d] Start offset %d is out of memory bounds (size: %d pages)\n", i, r.start, mem.Size())
+			if r.start > mem.Size() {
+				fmt.Printf("[range %d] Start offset %d is out of memory bounds (size: %d bytes)\n", i, r.start, mem.Size())
 				continue
 			}
 			end := r.start + r.size
-			if end > mem.Size()*65536 {
-				end = mem.Size() * 65536
+			if end > mem.Size() {
+				end = mem.Size()
 			}
 			lengthToRead := end - r.start
 			data, ok := mem.Read(r.start, lengthToRead)
@@ -960,10 +960,38 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			// We will ignore the `size` for now and just return a fixed offset
 			// to show a minimal approach. For a real approach, see notes in the explanation.
 
-			// We can e.g. always return 16 for everything:
-			// This obviously doesn't truly separate memory for each call,
-			// so your contract code must handle it carefully (or never read from offset 16).
-			return 16
+			// Charge gas for allocation (1 gas per 1KB, minimum 1 gas)
+			gasCharge := (size + 1023) / 1024 // Round up to nearest KB
+			if gasCharge == 0 {
+				gasCharge = 1
+			}
+			env.gasUsed += uint64(gasCharge)
+			if env.gasUsed > env.Gas.GasConsumed() {
+				panic("out of gas")
+			}
+
+			// Allocate memory in the Wasm module
+			memory := m.Memory()
+			if memory == nil {
+				panic("no memory exported")
+			}
+
+			// Calculate required pages for the allocation
+			currentBytes := memory.Size()
+			requiredBytes := size
+			pageSize := uint32(65536) // 64KB
+
+			// Grow memory if needed
+			if requiredBytes > currentBytes {
+				pagesToGrow := (requiredBytes - currentBytes + pageSize - 1) / pageSize
+				if _, ok := memory.Grow(uint32(pagesToGrow)); !ok {
+					panic("failed to grow memory")
+				}
+			}
+
+			// Return the pointer to the allocated memory
+			ptr := currentBytes
+			return ptr
 		}).
 		WithParameterNames("size").
 		WithResultNames("ptr").
@@ -1147,6 +1175,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			return hostQueryExternal(ctx, m, reqPtr, reqLen, gasLimit)
 		}).
 		WithParameterNames("req_ptr", "req_len", "gas_limit").
+		WithResultNames("res_ptr", "res_len").
 		Export("querier_query")
 
 	// Register secp256k1_verify function
