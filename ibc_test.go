@@ -277,7 +277,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	var ack2 AcknowledgeDispatch
 	err = json.Unmarshal(prResponse2.Acknowledgement, &ack2)
 	require.NoError(t, err)
-	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
+	require.Equal(t, "invalid packet: account no-such-channel not found", ack2.Err)
 
 	// check for the expected custom event
 	expected_events := []types.Event{{
@@ -302,8 +302,8 @@ func TestAnalyzeCode(t *testing.T) {
 	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
-	require.Equal(t, "", report.RequiredCapabilities)
-	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
+	require.Equal(t, "cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2", report.RequiredCapabilities)
+	require.Equal(t, uint64(0x1a4), *report.ContractMigrateVersion)
 
 	// Store IBC contract
 	wasm2, err := os.ReadFile(IBC_TEST_CONTRACT)
@@ -314,7 +314,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
-	require.Equal(t, "iterator,stargate", report2.RequiredCapabilities)
+	require.Equal(t, "cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2,iterator,stargate", report2.RequiredCapabilities)
 	require.Nil(t, report2.ContractMigrateVersion)
 }
 

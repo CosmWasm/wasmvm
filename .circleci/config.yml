@@ -7,7 +7,7 @@ jobs:
   # All checks on the codebase that can run in parallel to build_shared_library
   libwasmvm_sanity:
     docker:
-      - image: cimg/rust:1.74.0
+      - image: cimg/rust:1.81.0
     steps:
       - checkout
       - run:
@@ -18,8 +18,8 @@ jobs:
           command: rustup component add rustfmt
       - restore_cache:
           keys:
-            - cargocache-v3-libwasmvm_sanity-rust:1.74.0-{{ checksum "libwasmvm/Cargo.lock" }}
-            - cargocache-v3-libwasmvm_sanity-rust:1.74.0-
+            - cargocache-v3-libwasmvm_sanity-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cargocache-v3-libwasmvm_sanity-rust:1.81.0-
       - run:
           name: Ensure libwasmvm/bindings.h is up-to-date
           working_directory: libwasmvm
@@ -139,7 +139,7 @@ jobs:
     docker:
       # The audit tool might use a more modern Rust version than the build jobs. See
       # "Tooling Rust compiler" in docs/COMPILER_VERSIONS.md
-      - image: cimg/rust:1.81.0
+      - image: cimg/rust:1.83.0
     steps:
       - checkout
       - run:
@@ -152,8 +152,8 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - v3-libwasmvm_audit-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
-            - v3-libwasmvm_audit-rust:1.81.0-
+            - v3-libwasmvm_audit-rust:1.83.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - v3-libwasmvm_audit-rust:1.83.0-
       - run:
           name: Install cargo-audit
           command: cargo install --debug cargo-audit --version 0.21.0 --locked
@@ -164,7 +164,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.cargo/registry
-          key: v3-libwasmvm_audit-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
+          key: v3-libwasmvm_audit-rust:1.83.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   format-go:
     docker:
@@ -267,7 +267,7 @@ jobs:
 
   build_shared_library:
     docker:
-      - image: cimg/rust:1.74.0
+      - image: cimg/rust:1.83.0
     steps:
       - checkout
       - run:
@@ -455,7 +455,7 @@ workflows:
           matrix:
             parameters:
               # Run with MSRV and some modern stable Rust
-              rust-version: ["1.74.0", "1.80.0"]
+              rust-version: ["1.80.0", "1.83.0"]
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
