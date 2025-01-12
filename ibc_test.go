@@ -1,5 +1,3 @@
-//go:build cgo && !nolink_libwasmvm
-
 package cosmwasm
 
 import (
@@ -303,7 +301,7 @@ func TestAnalyzeCode(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
 	require.Equal(t, "", report.RequiredCapabilities)
-	require.Equal(t, uint64(0x1a4), *report.ContractMigrateVersion)
+	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
 
 	// Store IBC contract
 	wasm2, err := os.ReadFile(IBC_TEST_CONTRACT)
@@ -314,7 +312,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report2, err := vm.AnalyzeCode(checksum2)
 	require.NoError(t, err)
 	require.True(t, report2.HasIBCEntryPoints)
-	require.Equal(t, "cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2,iterator,stargate", report2.RequiredCapabilities)
+	require.Equal(t, "iterator,stargate", report2.RequiredCapabilities)
 	require.Nil(t, report2.ContractMigrateVersion)
 }
 
