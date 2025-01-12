@@ -17,15 +17,44 @@ const IBC_TEST_CONTRACT = "./testdata/ibc_reflect.wasm"
 func TestIBC(t *testing.T) {
 	vm := withVM(t)
 
-	wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
-	require.NoError(t, err)
+	t.Run("Store and retrieve IBC contract", func(t *testing.T) {
+		wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+		require.NoError(t, err)
 
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-	require.NoError(t, err)
+		checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		require.NoError(t, err)
 
-	code, err := vm.GetCode(checksum)
-	require.NoError(t, err)
-	require.Equal(t, WasmCode(wasm), code)
+		code, err := vm.GetCode(checksum)
+		require.NoError(t, err)
+		require.Equal(t, WasmCode(wasm), code)
+	})
+
+	t.Run("Analyze stored IBC contract", func(t *testing.T) {
+		// Re-read the same wasm file and store it again, or retrieve the same checksum from above
+		wasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+		require.NoError(t, err)
+
+		checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		require.NoError(t, err)
+
+		// Now run the analyzer
+		report, err := vm.AnalyzeCode(checksum)
+		require.NoError(t, err)
+
+		// We expect IBC entry points to be present in this contract
+		require.True(t, report.HasIBCEntryPoints, "IBC contract should have IBC entry points")
+
+		// You can also assert/update checks regarding capabilities or migration versions:
+		require.Contains(t, report.RequiredCapabilities, "iterator", "Expected 'iterator' capability for this contract")
+		require.Contains(t, report.RequiredCapabilities, "stargate", "Expected 'stargate' capability for this contract")
+
+		// Optionally check if the contract has a migrate version or not
+		if report.ContractMigrateVersion != nil {
+			t.Logf("Contract declares a migration version: %d", *report.ContractMigrateVersion)
+		} else {
+			t.Log("Contract does not declare a migration version")
+		}
+	})
 }
 
 // IBCInstantiateMsg is the Go version of
