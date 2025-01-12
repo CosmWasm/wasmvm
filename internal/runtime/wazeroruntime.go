@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -957,34 +958,27 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
 			fmt.Printf("Error: %v\n", err)
 
-			// Try to read the data at the Region pointers again to see if anything changed
-			envRegionDataAtFailure, ok := memory.Read(envRegionPtr, 12)
-			if ok {
-				fmt.Printf("\nEnvironment Region at failure:\n")
-				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4]))
-				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[4:8]))
-				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12]))
-
-				// Try to read the actual data
-				dataOffset := binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4])
-				dataLength := binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12])
-				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
-					fmt.Printf("- Data at offset: %s\n", string(data))
+			// Try to read and deserialize memory at various locations
+			if memory != nil {
+				// Try the env region
+				if envRegionData, ok := memory.Read(envRegionPtr, 12); ok {
+					fmt.Printf("\nEnvironment Region:\n")
+					offset := binary.LittleEndian.Uint32(envRegionData[0:4])
+					length := binary.LittleEndian.Uint32(envRegionData[8:12])
+					if data, err := readMemoryAndDeserialize(memory, offset, length); err == nil {
+						fmt.Printf("Data: %s\n", data)
+					}
 				}
-			}
 
-			queryRegionDataAtFailure, ok := memory.Read(queryRegionPtr, 12)
-			if ok {
-				fmt.Printf("\nQuery Region at failure:\n")
-				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[0:4]))
-				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[4:8]))
-				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(queryRegionDataAtFailure[8:12]))
+				// Try reading around the error location
+				errPtr := uint32(1047844) // Common error location
+				if data, err := readMemoryAndDeserialize(memory, errPtr-100, 200); err == nil {
+					fmt.Printf("\nAround error location (offset=%d):\n%s\n", errPtr, data)
+				}
 
-				// Try to read the actual data
-				dataOffset := binary.LittleEndian.Uint32(queryRegionDataAtFailure[0:4])
-				dataLength := binary.LittleEndian.Uint32(queryRegionDataAtFailure[8:12])
-				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
-					fmt.Printf("- Data at offset: %s\n", string(data))
+				// Try reading the first page of memory
+				if data, err := readMemoryAndDeserialize(memory, 0, 256); err == nil {
+					fmt.Printf("\nFirst 256 bytes of memory:\n%s\n", data)
 				}
 			}
 
@@ -1453,49 +1447,27 @@ func (w *WazeroRuntime) callContractFn(
 			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
 			fmt.Printf("Error: %v\n", err)
 
-			// Try to read the data at the Region pointers again to see if anything changed
-			envRegionDataAtFailure, ok := memory.Read(envRegionPtr, 12)
-			if ok {
-				fmt.Printf("\nEnvironment Region at failure:\n")
-				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4]))
-				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[4:8]))
-				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12]))
-
-				// Try to read the actual data
-				dataOffset := binary.LittleEndian.Uint32(envRegionDataAtFailure[0:4])
-				dataLength := binary.LittleEndian.Uint32(envRegionDataAtFailure[8:12])
-				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
-					fmt.Printf("- Data at offset: %s\n", string(data))
+			// Try to read and deserialize memory at various locations
+			if memory != nil {
+				// Try the env region
+				if envRegionData, ok := memory.Read(envRegionPtr, 12); ok {
+					fmt.Printf("\nEnvironment Region:\n")
+					offset := binary.LittleEndian.Uint32(envRegionData[0:4])
+					length := binary.LittleEndian.Uint32(envRegionData[8:12])
+					if data, err := readMemoryAndDeserialize(memory, offset, length); err == nil {
+						fmt.Printf("Data: %s\n", data)
+					}
 				}
-			}
 
-			infoRegionDataAtFailure, ok := memory.Read(infoRegionPtr, 12)
-			if ok {
-				fmt.Printf("\nInfo Region at failure:\n")
-				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(infoRegionDataAtFailure[0:4]))
-				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(infoRegionDataAtFailure[4:8]))
-				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(infoRegionDataAtFailure[8:12]))
-
-				// Try to read the actual data
-				dataOffset := binary.LittleEndian.Uint32(infoRegionDataAtFailure[0:4])
-				dataLength := binary.LittleEndian.Uint32(infoRegionDataAtFailure[8:12])
-				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
-					fmt.Printf("- Data at offset: %s\n", string(data))
+				// Try reading around the error location
+				errPtr := uint32(1047844) // Common error location
+				if data, err := readMemoryAndDeserialize(memory, errPtr-100, 200); err == nil {
+					fmt.Printf("\nAround error location (offset=%d):\n%s\n", errPtr, data)
 				}
-			}
 
-			msgRegionDataAtFailure, ok := memory.Read(msgRegionPtr, 12)
-			if ok {
-				fmt.Printf("\nMessage Region at failure:\n")
-				fmt.Printf("- Offset: 0x%x\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[0:4]))
-				fmt.Printf("- Capacity: %d\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[4:8]))
-				fmt.Printf("- Length: %d\n", binary.LittleEndian.Uint32(msgRegionDataAtFailure[8:12]))
-
-				// Try to read the actual data
-				dataOffset := binary.LittleEndian.Uint32(msgRegionDataAtFailure[0:4])
-				dataLength := binary.LittleEndian.Uint32(msgRegionDataAtFailure[8:12])
-				if data, ok := memory.Read(dataOffset, dataLength); ok && len(data) < 1024 {
-					fmt.Printf("- Data at offset: %s\n", string(data))
+				// Try reading the first page of memory
+				if data, err := readMemoryAndDeserialize(memory, 0, 256); err == nil {
+					fmt.Printf("\nFirst 256 bytes of memory:\n%s\n", data)
 				}
 			}
 
@@ -1593,4 +1565,206 @@ func (w *WazeroRuntime) getContractModule(checksum []byte) (wazero.CompiledModul
 		return nil, fmt.Errorf("module not found for checksum %x", checksum)
 	}
 	return module, nil
+}
+
+// tryDeserializeMemory attempts to extract readable text from a memory dump
+func tryDeserializeMemory(data []byte) string {
+	var results []string
+
+	// First try to interpret as UTF-8 text
+	if str := tryUTF8(data); str != "" {
+		results = append(results, "As text: "+str)
+	}
+
+	// Try to find null-terminated C strings
+	if strs := tryCStrings(data); len(strs) > 0 {
+		results = append(results, "As C strings: "+strings.Join(strs, ", "))
+	}
+
+	// Try to find JSON fragments
+	if json := tryJSON(data); json != "" {
+		results = append(results, "As JSON: "+json)
+	}
+
+	// Always include hex representation in a readable format
+	hexStr := formatHexDump(data)
+	results = append(results, "As hex dump:\n"+hexStr)
+
+	return strings.Join(results, "\n")
+}
+
+// formatHexDump creates a formatted hex dump with both hex and ASCII representation
+func formatHexDump(data []byte) string {
+	var hexDump strings.Builder
+	var asciiDump strings.Builder
+	var result strings.Builder
+
+	for i := 0; i < len(data); i += 16 {
+		// Write offset
+		fmt.Fprintf(&result, "%04x:  ", i)
+
+		hexDump.Reset()
+		asciiDump.Reset()
+
+		// Process 16 bytes per line
+		for j := 0; j < 16; j++ {
+			if i+j < len(data) {
+				// Write hex representation
+				fmt.Fprintf(&hexDump, "%02x ", data[i+j])
+
+				// Write ASCII representation
+				if data[i+j] >= 32 && data[i+j] <= 126 {
+					asciiDump.WriteByte(data[i+j])
+				} else {
+					asciiDump.WriteByte('.')
+				}
+			} else {
+				// Pad with spaces if we're at the end
+				hexDump.WriteString("   ")
+				asciiDump.WriteByte(' ')
+			}
+
+			// Add extra space between groups of 8 bytes
+			if j == 7 {
+				hexDump.WriteByte(' ')
+			}
+		}
+
+		// Combine hex and ASCII representations
+		fmt.Fprintf(&result, "%-49s |%s|\n", hexDump.String(), asciiDump.String())
+	}
+
+	return result.String()
+}
+
+// tryUTF8 attempts to interpret the data as UTF-8 text
+func tryUTF8(data []byte) string {
+	// Remove null bytes and control characters except newline and tab
+	cleaned := make([]byte, 0, len(data))
+	hasNonControl := false
+	for _, b := range data {
+		if b == 0 {
+			continue
+		}
+		if b >= 32 || b == '\n' || b == '\t' {
+			if b >= 32 && b <= 126 { // ASCII printable characters
+				hasNonControl = true
+			}
+			cleaned = append(cleaned, b)
+		}
+	}
+
+	// Only process if we found some printable characters
+	if !hasNonControl {
+		return ""
+	}
+
+	// Try to decode as UTF-8
+	if str := string(cleaned); utf8.ValidString(str) {
+		// Only return if we have some meaningful content
+		if trimmed := strings.TrimSpace(str); len(trimmed) > 3 { // Require at least a few characters
+			return trimmed
+		}
+	}
+	return ""
+}
+
+// tryCStrings attempts to find null-terminated C strings in the data
+func tryCStrings(data []byte) []string {
+	var strings []string
+	start := 0
+	inString := false
+
+	for i := 0; i < len(data); i++ {
+		// Look for string start - first printable character
+		if !inString {
+			if data[i] >= 32 && data[i] <= 126 {
+				start = i
+				inString = true
+			}
+			continue
+		}
+
+		// Look for string end - null byte or non-printable character
+		if data[i] == 0 || (data[i] < 32 && data[i] != '\n' && data[i] != '\t') {
+			if i > start {
+				str := tryUTF8(data[start:i])
+				if str != "" && len(str) > 3 { // Require at least a few characters
+					strings = append(strings, str)
+				}
+			}
+			inString = false
+		}
+	}
+
+	// Check final segment if we're still in a string
+	if inString && start < len(data) {
+		str := tryUTF8(data[start:])
+		if str != "" && len(str) > 3 {
+			strings = append(strings, str)
+		}
+	}
+
+	return strings
+}
+
+// tryJSON attempts to find valid JSON fragments in the data
+func tryJSON(data []byte) string {
+	// Look for common JSON markers
+	start := -1
+	for i := 0; i < len(data); i++ {
+		if data[i] == '{' || data[i] == '[' {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return ""
+	}
+
+	// Try to find the end of the JSON
+	var stack []byte
+	stack = append(stack, data[start])
+	for i := start + 1; i < len(data); i++ {
+		if len(stack) == 0 {
+			// Try to parse what we found
+			if jsonStr := tryUTF8(data[start:i]); jsonStr != "" {
+				var js interface{}
+				if err := json.Unmarshal([]byte(jsonStr), &js); err == nil {
+					pretty, _ := json.MarshalIndent(js, "", "  ")
+					return string(pretty)
+				}
+			}
+			break
+		}
+
+		switch data[i] {
+		case '{', '[':
+			stack = append(stack, data[i])
+		case '}':
+			if len(stack) > 0 && stack[len(stack)-1] == '{' {
+				stack = stack[:len(stack)-1]
+			}
+		case ']':
+			if len(stack) > 0 && stack[len(stack)-1] == '[' {
+				stack = stack[:len(stack)-1]
+			}
+		}
+	}
+	return ""
+}
+
+// readMemoryAndDeserialize reads memory at the given offset and size, and attempts to deserialize it
+func readMemoryAndDeserialize(memory api.Memory, offset, size uint32) (string, error) {
+	data, ok := memory.Read(offset, size)
+	if !ok {
+		return "", fmt.Errorf("failed to read memory at offset=%d size=%d", offset, size)
+	}
+
+	if readable := tryDeserializeMemory(data); readable != "" {
+		return readable, nil
+	}
+
+	// If no readable text found, return the traditional hex dump
+	return fmt.Sprintf("As hex: %s", hex.EncodeToString(data)), nil
 }
