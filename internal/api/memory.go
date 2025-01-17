@@ -70,7 +70,7 @@ func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 		// There is no allocation we can copy
 		out = []byte{}
 	default:
-		// C.GoBytes accepts C types directly, avoiding unsafe integer conversions
+		// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 		out = C.GoBytes(unsafe.Pointer(v.ptr), C.int(v.len))
 	}
 	C.destroy_unmanaged_vector(v)
@@ -94,7 +94,7 @@ func copyU8Slice(view C.U8SliceView) []byte {
 		// In this case, we don't want to look into the ptr
 		return []byte{}
 	}
-	// C.GoBytes accepts C types directly, avoiding unsafe integer conversions
+	// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
 	res := C.GoBytes(unsafe.Pointer(view.ptr), C.int(view.len))
 	return res
 }
