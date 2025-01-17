@@ -1,14 +1,12 @@
 run:
   tests: true
   timeout: 5m
-  skip-dirs:
-    - vendor/
-    - third_party/
 
 linters:
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
+    - copyloopvar # Detect copy loops
     - errcheck # Detect unchecked errors
     - gosimple # Simplify code
     - govet # Reports suspicious constructs
@@ -81,3 +79,6 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-dirs:
+    - vendor/
+    - third_party/
