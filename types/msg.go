@@ -43,7 +43,7 @@ type Event struct {
 	Attributes Array[EventAttribute] `json:"attributes"`
 }
 
-// EventAttribute
+// EventAttribute.
 type EventAttribute struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -107,7 +107,7 @@ type BankMsg struct {
 }
 
 // SendMsg contains instructions for a Cosmos-SDK/SendMsg
-// It has a fixed interface here and should be converted into the proper SDK format before dispatching
+// It has a fixed interface here and should be converted into the proper SDK format before dispatching.
 type SendMsg struct {
 	ToAddress string      `json:"to_address"`
 	Amount    Array[Coin] `json:"amount"`
@@ -328,7 +328,7 @@ type WithdrawDelegatorRewardMsg struct {
 }
 
 // FundCommunityPoolMsg is translated to a [MsgFundCommunityPool](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#LL69C1-L76C2).
-// `depositor` is automatically filled with the current contract's address
+// `depositor` is automatically filled with the current contract's address.
 type FundCommunityPoolMsg struct {
 	// Amount is the list of coins to be send to the community pool
 	Amount Array[Coin] `json:"amount"`
