@@ -26,9 +26,6 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-// Add mutex for thread safety.
-var testMutex sync.Mutex
-
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
