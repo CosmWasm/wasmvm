@@ -1,0 +1,11 @@
+# BOILERPLATE CURSOR IGNORE FILE
+
+
+# Ignore all files in the `dist` directory
+dist/
+
+# Ignore all `.log` files
+*.log
+
+# Ignore specific file `config.json`
+config.json
