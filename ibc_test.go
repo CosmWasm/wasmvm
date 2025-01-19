@@ -111,13 +111,19 @@ func toBytes(t *testing.T, v interface{}) []byte {
 
 const IBC_VERSION = "ibc-reflect-v1"
 
-func TestIBCHandshake(t *testing.T) {
-	// code id of the reflect contract
-	const REFLECT_ID uint64 = 101
-	// channel id for handshake
-	const CHANNEL_ID = "channel-432"
+// channel id for handshake
+const CHANNEL_ID = "channel-432"
 
+func TestIBCHandshake(t *testing.T) {
 	vm := withVM(t)
+
+	// First store the reflect contract and get its code ID
+	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
+	require.NoError(t, err)
+	_, reflectID, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+
+	// Then store the IBC contract
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
@@ -131,7 +137,7 @@ func TestIBCHandshake(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	init_msg := IBCInstantiateMsg{
-		ReflectCodeID: REFLECT_ID,
+		ReflectCodeID: reflectID, // Use the actual code ID from storing reflect contract
 	}
 	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
@@ -177,13 +183,11 @@ func TestIBCHandshake(t *testing.T) {
 	require.NotNil(t, dispatch.Wasm, "%#v", dispatch)
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
 	init := dispatch.Wasm.Instantiate
-	assert.Equal(t, REFLECT_ID, init.CodeID)
+	assert.Equal(t, reflectID, init.CodeID)
 	assert.Empty(t, init.Funds)
 }
 
 func TestIBCPacketDispatch(t *testing.T) {
-	// code id of the reflect contract
-	const REFLECT_ID uint64 = 77
 	// address of first reflect contract instance that we created
 	const REFLECT_ADDR = "reflect-acct-1"
 	// channel id for handshake
@@ -191,6 +195,14 @@ func TestIBCPacketDispatch(t *testing.T) {
 
 	// setup
 	vm := withVM(t)
+
+	// First store the reflect contract and get its code ID
+	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
+	require.NoError(t, err)
+	_, reflectID, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+
+	// Then store the IBC contract
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
@@ -204,9 +216,9 @@ func TestIBCPacketDispatch(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	initMsg := IBCInstantiateMsg{
-		ReflectCodeID: REFLECT_ID,
+		ReflectCodeID: reflectID, // Use the actual code ID from storing reflect contract
 	}
-	_, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	_, _, err = vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 
 	// channel open
