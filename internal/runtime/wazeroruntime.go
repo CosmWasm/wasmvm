@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/sys"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
@@ -461,14 +463,17 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 		"ibc_packet_receive",
 		"ibc_packet_ack",
 		"ibc_packet_timeout",
-		"ibc_source_callback",
 		"ibc_destination_callback",
 	}
 
-	for _, ibcFn := range ibcFunctions {
-		if _, ok := exports[ibcFn]; ok {
-			hasIBCEntryPoints = true
-			break
+	var entrypoints []string
+	for name := range exports {
+		entrypoints = append(entrypoints, name)
+		for _, ibcFn := range ibcFunctions {
+			if name == ibcFn {
+				hasIBCEntryPoints = true
+				break
+			}
 		}
 	}
 
@@ -486,12 +491,6 @@ func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, err
 	capabilities := make([]string, 0)
 	if hasIBCEntryPoints {
 		capabilities = append(capabilities, "iterator", "stargate")
-	}
-
-	// Get all exported functions for analysis
-	var entrypoints []string
-	for name := range exports {
-		entrypoints = append(entrypoints, name)
 	}
 
 	return &types.AnalysisReport{
@@ -562,18 +561,34 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("Runtime environment initialized\n")
 
 	// Register all required host functions that the contract can call
-	fmt.Printf("Registering host functions...\n")
+	fmt.Printf("\n=== Starting Host Function Registration ===\n\n")
+	fmt.Printf("Registering Memory Management Functions...\n")
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		fmt.Printf("Host function registration failed: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hostModule.Close(ctx)
-	fmt.Printf("Host functions registered successfully\n")
+
+	// Print registered functions for debugging
+	fmt.Printf("\n=== Checking Required Host Functions ===\n")
+	start := time.Now()
+	if printDebug {
+		fmt.Printf("\n=== Registration Summary ===\n")
+		fmt.Printf("Registered host functions in %v\n", time.Since(start))
+		fmt.Printf("Memory model: wazero with 64KB pages\n")
+		fmt.Printf("Gas metering: enabled\n")
+		fmt.Printf("===================================\n\n")
+
+		fmt.Printf("Host functions registered successfully\n")
+	}
 
 	// Create module config and instantiate the environment module
 	fmt.Printf("Instantiating environment module...\n")
-	moduleConfig := wazero.NewModuleConfig().WithName("env")
+	moduleConfig := wazero.NewModuleConfig().
+		WithName("env").
+		WithStartFunctions() // Don't auto-start, we want to control this
+
 	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
 	if err != nil {
 		fmt.Printf("Environment module instantiation failed: %v\n", err)
@@ -585,7 +600,8 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Get the contract module from our cache using the checksum
 	fmt.Printf("Loading contract module from cache...\n")
 	w.mu.Lock()
-	compiledModule, ok := w.compiledModules[hex.EncodeToString(checksum)]
+	csHex := hex.EncodeToString(checksum)
+	compiledModule, ok := w.compiledModules[csHex]
 	if !ok {
 		w.mu.Unlock()
 		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum: %x", checksum)
@@ -593,10 +609,28 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	w.mu.Unlock()
 	fmt.Printf("Contract module loaded successfully\n")
 
-	// Instantiate the contract module
+	// Analyze the code to get exported functions
+	analysis, err := w.AnalyzeCode(checksum)
+	if err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to analyze code: %w", err)
+	}
+
+	fmt.Printf("\n=== Analysis Results ===\n")
+	fmt.Printf("Has IBC entry points: %v\n", analysis.HasIBCEntryPoints)
+	fmt.Printf("Required capabilities: %v\n", analysis.RequiredCapabilities)
+	if analysis.ContractMigrateVersion != nil {
+		fmt.Printf("Contract migrate version: %v\n", *analysis.ContractMigrateVersion)
+	}
+	fmt.Printf("Entrypoints: %v\n", analysis.Entrypoints)
+	fmt.Printf("===================================\n\n")
+
+	// Instantiate the contract module with detailed debugging
 	fmt.Printf("Instantiating contract module...\n")
-	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule,
-		wazero.NewModuleConfig().WithName("contract"))
+	contractConfig := wazero.NewModuleConfig().
+		WithName("contract").
+		WithStartFunctions() // Don't auto-start, we want to control this
+
+	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule, contractConfig)
 	if err != nil {
 		fmt.Printf("Contract module instantiation failed: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
@@ -711,29 +745,72 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("- Info: 0x%x\n", infoRegionPtr)
 	fmt.Printf("- Message: 0x%x\n", msgRegionPtr)
 
-	// Get the instantiate function from the contract
-	fmt.Printf("Calling contract instantiate function...\n")
+	// Add detailed debugging before calling instantiate
+	fmt.Printf("\n=== Preparing to Call instantiate ===\n")
+	fmt.Printf("Memory layout before function call:\n")
+	fmt.Printf("  env region ptr: %d\n", envRegion.Offset)
+	fmt.Printf("  info region ptr: %d\n", infoRegion.Offset)
+	fmt.Printf("  msg region ptr: %d\n", msgRegion.Offset)
+	fmt.Printf("  env data ptr: %d, size: %d\n", envPtr, len(env))
+	fmt.Printf("  info data ptr: %d, size: %d\n", infoPtr, len(info))
+	fmt.Printf("  msg data ptr: %d, size: %d\n", msgPtr, len(msg))
+
+	// Dump some memory around key regions for debugging
+	dumpMemory(memory, envRegion.Offset, 12)
+	dumpMemory(memory, infoRegion.Offset, 12)
+	dumpMemory(memory, msgRegion.Offset, 12)
+
 	instantiate := contractModule.ExportedFunction("instantiate")
 	if instantiate == nil {
-		return nil, types.GasReport{}, fmt.Errorf("instantiate function not found")
+		return nil, types.GasReport{}, fmt.Errorf("instantiate function not exported by contract")
 	}
 
-	// Call the contract's instantiate function with our Region pointers
-	results, err := instantiate.Call(ctx, uint64(envRegionPtr), uint64(infoRegionPtr),
-		uint64(msgRegionPtr))
+	fmt.Printf("\nCalling contract instantiate function...\n")
+	ret, err := instantiate.Call(ctx, uint64(envRegion.Offset), uint64(infoRegion.Offset), uint64(msgRegion.Offset))
 	if err != nil {
-		// On error, dump memory around the regions for debugging
-		if printDebug {
-			fmt.Printf("\nMemory dump around error:\n")
-			dumpMemory(memory, envRegionPtr, 64)
-			dumpMemory(memory, infoRegionPtr, 64)
-			dumpMemory(memory, msgRegionPtr, 64)
+		fmt.Printf("\n===================== [ WASM CONTRACT ABORT ] =====================\n")
+		fmt.Printf("Abort code: %d (0x%x)\n", err.Error(), err.Error())
+		fmt.Printf("Module name: %q\n", contractModule.Name())
+		fmt.Printf("Memory size (pages): %d\n", memory.Size()/65536)
+		fmt.Printf("Approx. memory size (bytes): %d\n", memory.Size())
+
+		// Dump memory around error location if possible
+		if abortErr, ok := err.(*sys.ExitError); ok {
+			code := abortErr.ExitCode()
+			fmt.Printf("\n[range 0] Reading 200 bytes around the code pointer (code - 100..code+100) at offset=%d:\n", code-100)
+			dumpMemory(memory, uint32(code-100), 200)
 		}
+
+		// Also dump first 256 bytes of memory
+		fmt.Printf("\n[range 1] Reading 256 bytes first 256 bytes of memory at offset=0:\n")
+		dumpMemory(memory, 0, 256)
+
+		// And dump around the lower 16 bits of the error code
+		if abortErr, ok := err.(*sys.ExitError); ok {
+			code := abortErr.ExitCode()
+			offset := code & 0xFFFF
+			fmt.Printf("\n[range 2] Reading 256 bytes lower 16 bits offset at offset=%d:\n", offset)
+			dumpMemory(memory, uint32(offset), 256)
+		}
+
+		fmt.Printf("\n=== Runtime Environment Debug Info ===\n")
+		fmt.Printf(" - Gas used: %d\n", runtimeEnv.gasUsed)
+		fmt.Printf(" - Gas limit: %d\n", runtimeEnv.gasLimit)
+		fmt.Printf(" - open iterators callID->(iterID->Iterator) map size: %d\n", len(runtimeEnv.iterators))
+
+		fmt.Printf("\nMemory dump around error:\n")
+		fmt.Printf("Memory at 0x%x:\n", envRegion.Offset)
+		dumpMemory(memory, envRegion.Offset, 64)
+		fmt.Printf("Memory at 0x%x:\n", infoRegion.Offset)
+		dumpMemory(memory, infoRegion.Offset, 64)
+		fmt.Printf("Memory at 0x%x:\n", msgRegion.Offset)
+		dumpMemory(memory, msgRegion.Offset, 64)
+
 		return nil, types.GasReport{}, fmt.Errorf("failed to call instantiate: %w", err)
 	}
 
 	// Get the result pointer from the contract
-	resultPtr := uint32(results[0])
+	resultPtr := uint32(ret[0])
 
 	// Read the Region struct for the result
 	resultRegionData, err := readMemory(memory, resultPtr, 12)
