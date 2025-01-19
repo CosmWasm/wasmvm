@@ -1,7 +1,6 @@
 package cosmwasm
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -109,6 +108,10 @@ func toBytes(t *testing.T, v interface{}) []byte {
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	fmt.Printf("DEBUG: JSON being sent to contract: %s\n", string(bz))
+	// Pretty print the struct for debugging
+	prettyJSON, err := json.MarshalIndent(v, "", "  ")
+	require.NoError(t, err)
+	fmt.Printf("DEBUG: Message structure:\n%s\n", string(prettyJSON))
 	return bz
 }
 
@@ -123,14 +126,25 @@ func TestIBCHandshake(t *testing.T) {
 	// First store the reflect contract and get its code ID
 	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	checksum, _, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	checksum, gas, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	// Convert first 8 bytes of checksum to uint64 for code ID
-	reflectID := binary.BigEndian.Uint64(checksum[:8])
-	fmt.Printf("DEBUG: Reflect contract stored with code ID: %d\n", reflectID)
+	// Use code ID 1 for the first contract
+	reflectID := uint64(1)
+	fmt.Printf("DEBUG: Reflect contract details:\n")
+	fmt.Printf("  Checksum (hex): %x\n", checksum)
+	fmt.Printf("  Code ID: %d\n", reflectID)
+	fmt.Printf("  Gas used: %d\n", gas)
 
 	// Then store the IBC contract
-	checksum = createTestContract(t, vm, IBC_TEST_CONTRACT)
+	ibcWasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+	require.NoError(t, err)
+	ibcChecksum, ibcGas, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	fmt.Printf("DEBUG: IBC contract details:\n")
+	fmt.Printf("  Checksum (hex): %x\n", ibcChecksum)
+	fmt.Printf("  Code ID: %d\n", uint64(2))
+	fmt.Printf("  Gas used: %d\n", ibcGas)
+	checksum = ibcChecksum
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
@@ -205,13 +219,25 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// First store the reflect contract and get its code ID
 	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	checksum, _, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	checksum, gas, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	// Convert first 8 bytes of checksum to uint64 for code ID
-	reflectID := binary.BigEndian.Uint64(checksum[:8])
+	// Use code ID 1 for the first contract
+	reflectID := uint64(1)
+	fmt.Printf("DEBUG: Reflect contract details:\n")
+	fmt.Printf("  Checksum (hex): %x\n", checksum)
+	fmt.Printf("  Code ID: %d\n", reflectID)
+	fmt.Printf("  Gas used: %d\n", gas)
 
 	// Then store the IBC contract
-	checksum = createTestContract(t, vm, IBC_TEST_CONTRACT)
+	ibcWasm, err := os.ReadFile(IBC_TEST_CONTRACT)
+	require.NoError(t, err)
+	ibcChecksum, ibcGas, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	fmt.Printf("DEBUG: IBC contract details:\n")
+	fmt.Printf("  Checksum (hex): %x\n", ibcChecksum)
+	fmt.Printf("  Code ID: %d\n", uint64(2))
+	fmt.Printf("  Gas used: %d\n", ibcGas)
+	checksum = ibcChecksum
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
