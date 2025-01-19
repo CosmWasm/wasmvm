@@ -123,28 +123,34 @@ const CHANNEL_ID = "channel-432"
 func TestIBCHandshake(t *testing.T) {
 	vm := withVM(t)
 
-	// First store the reflect contract and get its code ID
+	// First store the reflect contract
 	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	checksum, gas, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	reflectChecksum, _, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	// Use code ID 1 for the first contract
+	// Store code ID mapping
+	err = vm.Pin(reflectChecksum)
+	require.NoError(t, err)
 	reflectID := uint64(1)
+
 	fmt.Printf("DEBUG: Reflect contract details:\n")
-	fmt.Printf("  Checksum (hex): %x\n", checksum)
+	fmt.Printf("  Checksum (hex): %x\n", reflectChecksum)
 	fmt.Printf("  Code ID: %d\n", reflectID)
-	fmt.Printf("  Gas used: %d\n", gas)
 
 	// Then store the IBC contract
 	ibcWasm, err := os.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
-	ibcChecksum, ibcGas, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
+	ibcChecksum, _, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
+	// Store code ID mapping
+	err = vm.Pin(ibcChecksum)
+	require.NoError(t, err)
+	ibcID := uint64(2)
+
 	fmt.Printf("DEBUG: IBC contract details:\n")
 	fmt.Printf("  Checksum (hex): %x\n", ibcChecksum)
-	fmt.Printf("  Code ID: %d\n", uint64(2))
-	fmt.Printf("  Gas used: %d\n", ibcGas)
-	checksum = ibcChecksum
+	fmt.Printf("  Code ID: %d\n", ibcID)
+	checksum := ibcChecksum
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store
@@ -216,28 +222,34 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// setup
 	vm := withVM(t)
 
-	// First store the reflect contract and get its code ID
+	// First store the reflect contract
 	reflectWasm, err := os.ReadFile("./testdata/reflect.wasm")
 	require.NoError(t, err)
-	checksum, gas, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
+	reflectChecksum, _, err := vm.StoreCode(reflectWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
-	// Use code ID 1 for the first contract
+	// Store code ID mapping
+	err = vm.Pin(reflectChecksum)
+	require.NoError(t, err)
 	reflectID := uint64(1)
+
 	fmt.Printf("DEBUG: Reflect contract details:\n")
-	fmt.Printf("  Checksum (hex): %x\n", checksum)
+	fmt.Printf("  Checksum (hex): %x\n", reflectChecksum)
 	fmt.Printf("  Code ID: %d\n", reflectID)
-	fmt.Printf("  Gas used: %d\n", gas)
 
 	// Then store the IBC contract
 	ibcWasm, err := os.ReadFile(IBC_TEST_CONTRACT)
 	require.NoError(t, err)
-	ibcChecksum, ibcGas, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
+	ibcChecksum, _, err := vm.StoreCode(ibcWasm, TESTING_GAS_LIMIT)
 	require.NoError(t, err)
+	// Store code ID mapping
+	err = vm.Pin(ibcChecksum)
+	require.NoError(t, err)
+	ibcID := uint64(2)
+
 	fmt.Printf("DEBUG: IBC contract details:\n")
 	fmt.Printf("  Checksum (hex): %x\n", ibcChecksum)
-	fmt.Printf("  Code ID: %d\n", uint64(2))
-	fmt.Printf("  Gas used: %d\n", ibcGas)
-	checksum = ibcChecksum
+	fmt.Printf("  Code ID: %d\n", ibcID)
+	checksum := ibcChecksum
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	// instantiate it with this store

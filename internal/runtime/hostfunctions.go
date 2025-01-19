@@ -435,28 +435,6 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 	return valOffset, uint32(len(value)), 0
 }
 
-// hostCloseIterator implements db_close_iterator
-func hostCloseIterator(ctx context.Context, _ api.Module, callID, iterID uint64) {
-	env := ctx.Value("env").(*RuntimeEnvironment)
-
-	// Get iterator from environment
-	iter := env.GetIterator(callID, iterID)
-	if iter == nil {
-		return
-	}
-
-	// Close the iterator
-	iter.Close()
-
-	// Remove from environment
-	env.iteratorsMutex.Lock()
-	defer env.iteratorsMutex.Unlock()
-
-	if callMap, exists := env.iterators[callID]; exists {
-		delete(callMap, iterID)
-	}
-}
-
 // hostAbort implements the abort function required by Wasm modules
 func hostAbort(ctx context.Context, mod api.Module, code uint32) {
 	fmt.Printf("\n===================== [ WASM CONTRACT ABORT ] =====================\n")

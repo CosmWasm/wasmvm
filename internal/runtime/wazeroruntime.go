@@ -156,12 +156,12 @@ func (mm *memoryManager) writeToMemory(data []byte, printDebug bool) (uint32, ui
 
 func NewWazeroRuntime() (*WazeroRuntime, error) {
 	// Create a new wazero runtime with memory configuration
-	//	runtimeConfig := wazero.NewRuntimeConfig().
-	//		WithMemoryLimitPages(1024).      // Set max memory to 64 MiB (1024 * 64KB)
-	//		WithMemoryCapacityFromMax(true). // Eagerly allocate memory to ensure it's initialized
-	//		WithDebugInfoEnabled(true)       // Enable debug info
+	runtimeConfig := wazero.NewRuntimeConfig().
+		WithMemoryLimitPages(2048).      // Set max memory to 128 MiB (2048 * 64KB)
+		WithMemoryCapacityFromMax(true). // Eagerly allocate memory to ensure it's initialized
+		WithDebugInfoEnabled(true)       // Enable debug info
 
-	r := wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfigInterpreter())
+	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
 
 	// Create mock implementations
 	kvStore := &MockKVStore{}
