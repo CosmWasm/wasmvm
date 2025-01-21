@@ -122,6 +122,7 @@ type BurnMsg struct {
 
 type IBCMsg struct {
 	Transfer             *TransferMsg             `json:"transfer,omitempty"`
+	TransferV2           *TransferV2Msg           `json:"transfer_v2,omitempty"`
 	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
 	WriteAcknowledgement *WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 	CloseChannel         *CloseChannelMsg         `json:"close_channel,omitempty"`
@@ -236,6 +237,45 @@ type TransferMsg struct {
 	Amount    Coin       `json:"amount"`
 	Timeout   IBCTimeout `json:"timeout"`
 	Memo      string     `json:"memo,omitempty"`
+}
+
+type Token struct {
+	Amount string     `json:"amount"`
+	Base   string     `json:"base"`
+	Trace  Array[Hop] `json:"trace"`
+}
+
+type Forwarding struct {
+	Hops Array[Hop] `json:"hops"`
+	Memo string     `json:"memo"`
+}
+
+type Hop struct {
+	ChannelID string `json:"channel_id"`
+	PortID    string `json:"port_id"`
+}
+
+type TransferV2Msg struct {
+	// existing channel to send the tokens over
+	ChannelID  string     `json:"channel_id"`
+	Forwarding Forwarding `json:"forwarding"`
+	// An optional memo. See the blog post
+	// ["Moving Beyond Simple Token Transfers"](https://medium.com/the-interchain-foundation/moving-beyond-simple-token-transfers-d42b2b1dc29b)
+	// for more information.
+	//
+	// There is no difference between setting this to `None` or an empty string.
+	//
+	// This field is only supported on chains with CosmWasm >= 2.0 and silently ignored on older chains.
+	// If you need support for both 1.x and 2.x chain with the same codebase, it is recommended to use
+	// `CosmosMsg::Stargate` with a custom MsgTransfer protobuf encoder instead.
+	Memo string `json:"memo,omitempty"`
+	// when packet times out, measured on remote chain
+	Timeout IBCTimeout `json:"timeout"`
+	// address on the remote chain to receive these tokens
+	ToAddress string `json:"to_address"`
+	// packet data only supports one coin
+	// https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20
+	Tokens Array[Token] `json:"tokens"`
 }
 
 type SendPacketMsg struct {
