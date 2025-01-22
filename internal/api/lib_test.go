@@ -186,6 +186,28 @@ func TestStoreCodeUnchecked(t *testing.T) {
 	require.Equal(t, wasm, code)
 }
 
+func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	// Look for "interface_version_8" in the wasm file and replace it with "interface_version_9".
+	// This makes the wasm file invalid.
+	wasm = bytes.Replace(wasm, []byte("interface_version_8"), []byte("interface_version_9"), 1)
+
+	// StoreCode should fail
+	_, err = StoreCode(cache, wasm, true)
+	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
+
+	// StoreCodeUnchecked should not fail
+	checksum, err := StoreCodeUnchecked(cache, wasm)
+	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	assert.Equal(t, expectedChecksum[:], checksum)
+}
+
 func TestPin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
