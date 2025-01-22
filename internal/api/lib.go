@@ -101,7 +101,7 @@ func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(true), &errmsg)
+	checksum, err := C.store_code(cache.ptr, w, cbool(false), cbool(true), &errmsg)
 	if err != nil {
 		return nil, errorWithMessage(err, errmsg)
 	}
