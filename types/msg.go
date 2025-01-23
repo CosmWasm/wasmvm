@@ -361,7 +361,7 @@ type EurekaMsg struct {
 // Sends an IBC packet with given payloads over the existing channel.
 type EurekaSendPacketMsg struct {
 	ChannelID string          `json:"channel_id"`
-	Data      []EurekaPayload `json:"data"`
+	Payloads  []EurekaPayload `json:"payloads"`
 	Timeout   uint64          `json:"timeout,string,omitempty"`
 }
 
