@@ -769,7 +769,12 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	ret, err := instantiate.Call(ctx, uint64(envRegion.Offset), uint64(infoRegion.Offset), uint64(msgRegion.Offset))
 	if err != nil {
 		fmt.Printf("\n===================== [ WASM CONTRACT ABORT ] =====================\n")
-		fmt.Printf("Abort code: %d (0x%x)\n", err.Error(), err.Error())
+		if abortErr, ok := err.(*sys.ExitError); ok {
+			code := abortErr.ExitCode()
+			fmt.Printf("Abort code: %d (0x%x)\n", code, code)
+		} else {
+			fmt.Printf("Error: %v\n", err)
+		}
 		fmt.Printf("Module name: %q\n", contractModule.Name())
 		fmt.Printf("Memory size (pages): %d\n", memory.Size()/65536)
 		fmt.Printf("Approx. memory size (bytes): %d\n", memory.Size())
