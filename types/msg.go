@@ -362,7 +362,7 @@ type EurekaMsg struct {
 type EurekaSendPacketMsg struct {
 	ChannelID string          `json:"channel_id"`
 	Data      []EurekaPayload `json:"data"`
-	Timestamp uint64          `json:"timestamp,string,omitempty"`
+	Timeout   uint64          `json:"timeout,string,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
