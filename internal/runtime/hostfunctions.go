@@ -71,22 +71,6 @@ type IteratorID struct {
 	IteratorID uint64
 }
 
-// Helper functions for memory operations
-func readMemory(mem api.Memory, offset, size uint32) ([]byte, error) {
-	data, ok := mem.Read(offset, size)
-	if !ok {
-		return nil, fmt.Errorf("failed to read %d bytes at offset %d", size, offset)
-	}
-	return data, nil
-}
-
-func writeMemory(mem api.Memory, offset uint32, data []byte) error {
-	if !mem.Write(offset, data) {
-		return fmt.Errorf("failed to write %d bytes at offset %d", len(data), offset)
-	}
-	return nil
-}
-
 // allocateInContract calls the contract's allocate function
 // allocateInContract is a critical helper function that handles memory allocation
 // within the WebAssembly module's memory space. This function must be extremely
@@ -164,7 +148,7 @@ func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen u
 	}
 
 	// Write the humanized address back to memory
-	if err := writeMemory(mem, addrPtr, []byte(human)); err != nil {
+	if err := writeMemory(mem, addrPtr, []byte(human), false); err != nil {
 		return 1
 	}
 
@@ -201,7 +185,7 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 	}
 
 	// Write the canonical address back to the memory at addrPtr.
-	if err := writeMemory(mem, addrPtr, canonical); err != nil {
+	if err := writeMemory(mem, addrPtr, canonical, false); err != nil {
 		return 1
 	}
 
@@ -294,24 +278,24 @@ func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	// Write key length
 	keyLenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(keyLenData, uint32(len(key)))
-	if err := writeMemory(mem, offset, keyLenData); err != nil {
+	if err := writeMemory(mem, offset, keyLenData, false); err != nil {
 		panic(fmt.Sprintf("failed to write key length: %v", err))
 	}
 
 	// Write key
-	if err := writeMemory(mem, offset+4, key); err != nil {
+	if err := writeMemory(mem, offset+4, key, false); err != nil {
 		panic(fmt.Sprintf("failed to write key: %v", err))
 	}
 
 	// Write value length
 	valLenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(valLenData, uint32(len(value)))
-	if err := writeMemory(mem, offset+4+uint32(len(key)), valLenData); err != nil {
+	if err := writeMemory(mem, offset+4+uint32(len(key)), valLenData, false); err != nil {
 		panic(fmt.Sprintf("failed to write value length: %v", err))
 	}
 
 	// Write value
-	if err := writeMemory(mem, offset+8+uint32(len(key)), value); err != nil {
+	if err := writeMemory(mem, offset+8+uint32(len(key)), value, false); err != nil {
 		panic(fmt.Sprintf("failed to write value: %v", err))
 	}
 
@@ -349,7 +333,7 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 		panic(fmt.Sprintf("failed to allocate memory for value (via contract's allocate): %v", err))
 	}
 
-	if err := writeMemory(mem, valOffset, value); err != nil {
+	if err := writeMemory(mem, valOffset, value, false); err != nil {
 		panic(fmt.Sprintf("failed to write value to memory: %v", err))
 	}
 
@@ -499,13 +483,13 @@ func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
 	// Write length prefix
 	lenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(lenData, uint32(len(value)))
-	if err := writeMemory(memory, offset, lenData); err != nil {
+	if err := writeMemory(memory, offset, lenData, true); err != nil {
 		fmt.Printf("ERROR: Failed to write value length: %v\n", err)
 		return 0
 	}
 
 	// Write actual value
-	if err := writeMemory(memory, offset+4, value); err != nil {
+	if err := writeMemory(memory, offset+4, value, true); err != nil {
 		fmt.Printf("ERROR: Failed to write value data: %v\n", err)
 		return 0
 	}
@@ -613,24 +597,24 @@ func hostDbRemove(ctx context.Context, mod api.Module, keyPtr uint32) {
 }
 
 // hostSecp256k1RecoverPubkey implements secp256k1_recover_pubkey
-func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hash_ptr, sig_ptr, rec_id uint32) uint64 {
+func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, sigPtr, recID uint32) uint64 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
 	// Read message hash from memory (32 bytes)
-	hash, err := readMemory(mem, hash_ptr, 32)
+	hash, err := readMemory(mem, hashPtr, 32)
 	if err != nil {
 		return 0
 	}
 
 	// Read signature from memory (64 bytes)
-	sig, err := readMemory(mem, sig_ptr, 64)
+	sig, err := readMemory(mem, sigPtr, 64)
 	if err != nil {
 		return 0
 	}
 
 	// Call the API to recover the public key
-	pubkey, _, err := env.API.Secp256k1RecoverPubkey(hash, sig, uint8(rec_id))
+	pubkey, _, err := env.API.Secp256k1RecoverPubkey(hash, sig, uint8(recID))
 	if err != nil {
 		return 0
 	}
@@ -642,7 +626,7 @@ func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hash_ptr, s
 	}
 
 	// Write the recovered public key to memory
-	if err := writeMemory(mem, offset, pubkey); err != nil {
+	if err := writeMemory(mem, offset, pubkey, false); err != nil {
 		return 0
 	}
 
@@ -815,12 +799,12 @@ func hostQueryChain(ctx context.Context, mod api.Module, reqPtr uint32) uint32 {
 	// Write length prefix
 	lenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(lenData, uint32(len(serialized)))
-	if err := writeMemory(mem, offset, lenData); err != nil {
+	if err := writeMemory(mem, offset, lenData, false); err != nil {
 		panic(fmt.Sprintf("failed to write response length: %v", err))
 	}
 
 	// Write serialized response
-	if err := writeMemory(mem, offset+4, serialized); err != nil {
+	if err := writeMemory(mem, offset+4, serialized, false); err != nil {
 		panic(fmt.Sprintf("failed to write response data: %v", err))
 	}
 
@@ -876,7 +860,7 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 		panic(fmt.Sprintf("failed to allocate memory for key (via contract's allocate): %v", err))
 	}
 
-	if err := writeMemory(mem, keyOffset, key); err != nil {
+	if err := writeMemory(mem, keyOffset, key, false); err != nil {
 		panic(fmt.Sprintf("failed to write key to memory: %v", err))
 	}
 

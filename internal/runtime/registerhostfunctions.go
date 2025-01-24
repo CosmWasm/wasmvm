@@ -337,7 +337,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			}
 
 			// Write result
-			if err := writeMemory(mem, resultPtr, result); err != nil {
+			if err := writeMemory(mem, resultPtr, result, false); err != nil {
 				panic(fmt.Sprintf("failed to write result: %v", err))
 			}
 
@@ -378,7 +378,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			}
 
 			// Write result
-			if err := writeMemory(mem, resultPtr, result); err != nil {
+			if err := writeMemory(mem, resultPtr, result, false); err != nil {
 				panic(fmt.Sprintf("failed to write result: %v", err))
 			}
 
@@ -511,18 +511,4 @@ func DebugMemory(mem api.Memory, ptr uint32, size uint32) {
 	} else {
 		fmt.Printf("Failed to read memory at ptr=0x%x size=%d\n", ptr, size)
 	}
-}
-
-func mustReadMemoryString(m api.Module, ptr uint32) string {
-	mem := m.Memory()
-	data, ok := mem.Read(ptr, 1024) // Read up to 1024 bytes
-	if !ok {
-		return ""
-	}
-	// Find null terminator
-	length := 0
-	for length < len(data) && data[length] != 0 {
-		length++
-	}
-	return string(data[:length])
 }

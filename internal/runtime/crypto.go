@@ -4,7 +4,6 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -106,40 +105,35 @@ func BLS12381PairingEquality(a1Compressed, a2Compressed, b1Compressed, b2Compres
 	return ok, nil
 }
 
-// Secp256r1Verify verifies a P-256 ECDSA signature.
-// hash is the message digest (NOT the preimage),
-// signature should be 64 bytes (r and s concatenated),
-// pubkey should be an uncompressed or compressed public key in standard format.
+// Secp256r1Verify verifies a signature using NIST P-256 (secp256r1)
 func Secp256r1Verify(hash, signature, pubkey []byte) (bool, error) {
-	// Parse public key using crypto/ecdh
+	if len(hash) != 32 {
+		return false, fmt.Errorf("hash must be 32 bytes")
+	}
+	if len(signature) != 64 {
+		return false, fmt.Errorf("signature must be 64 bytes")
+	}
+
+	// Parse the public key using crypto/ecdh
 	curve := ecdh.P256()
-	key, err := curve.NewPublicKey(pubkey)
+	pk, err := curve.NewPublicKey(pubkey)
 	if err != nil {
 		return false, fmt.Errorf("invalid public key: %w", err)
 	}
 
-	// Get the raw coordinates for ECDSA verification
-	rawKey := key.Bytes()
-	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), rawKey)
-	if x == nil {
-		return false, errors.New("failed to parse public key coordinates")
-	}
-
-	// Parse signature: must be exactly 64 bytes => r (first 32 bytes), s (second 32 bytes).
-	if len(signature) != 64 {
-		return false, fmt.Errorf("signature must be 64 bytes, got %d", len(signature))
-	}
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
-
-	pub := &ecdsa.PublicKey{
+	// Convert to *ecdsa.PublicKey for verification
+	ecdsaPub := &ecdsa.PublicKey{
 		Curve: elliptic.P256(),
-		X:     x,
-		Y:     y,
+		X:     new(big.Int).SetBytes(pk.Bytes()[1:33]), // Skip the first byte (format) and take 32 bytes for X
+		Y:     new(big.Int).SetBytes(pk.Bytes()[33:]),  // Take the remaining 32 bytes for Y
 	}
 
-	verified := ecdsa.Verify(pub, hash, r, s)
-	return verified, nil
+	// Split signature into r and s
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:])
+
+	// Verify the signature
+	return ecdsa.Verify(ecdsaPub, hash, r, s), nil
 }
 
 // Secp256r1RecoverPubkey recovers a P-256 public key from a signature.

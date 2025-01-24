@@ -30,7 +30,7 @@ func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen 
 	}
 
 	// Write result
-	if err := writeMemory(mem, resultPtr, result); err != nil {
+	if err := writeMemory(mem, resultPtr, result, false); err != nil {
 		panic(fmt.Sprintf("failed to write result: %v", err))
 	}
 
@@ -60,7 +60,7 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen 
 	}
 
 	// Write result
-	if err := writeMemory(mem, resultPtr, result); err != nil {
+	if err := writeMemory(mem, resultPtr, result, false); err != nil {
 		panic(fmt.Sprintf("failed to write result: %v", err))
 	}
 
@@ -162,7 +162,7 @@ func hostSecp256r1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, ha
 	}
 
 	// Write result
-	if err := writeMemory(mem, resultPtr, pubkey); err != nil {
+	if err := writeMemory(mem, resultPtr, pubkey, false); err != nil {
 		panic(fmt.Sprintf("failed to write result: %v", err))
 	}
 
