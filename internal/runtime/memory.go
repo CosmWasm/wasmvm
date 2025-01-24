@@ -73,6 +73,11 @@ func RegionFromBytes(data []byte, ok bool) (*Region, error) {
 
 // Validate checks if a Region is valid for the given memory size
 func (r *Region) Validate(memorySize uint32) error {
+	// Check for null region
+	if r == nil {
+		return fmt.Errorf("null region")
+	}
+
 	// Check alignment
 	if r.Offset%alignmentSize != 0 {
 		return fmt.Errorf("region offset %d not aligned to %d", r.Offset, alignmentSize)
@@ -86,7 +91,7 @@ func (r *Region) Validate(memorySize uint32) error {
 		return fmt.Errorf("region length %d exceeds capacity %d", r.Length, r.Capacity)
 	}
 
-	// Check for overflow
+	// Check for overflow in offset + capacity calculation
 	if r.Offset > math.MaxUint32-r.Capacity {
 		return fmt.Errorf("region offset %d + capacity %d would overflow", r.Offset, r.Capacity)
 	}
@@ -94,6 +99,16 @@ func (r *Region) Validate(memorySize uint32) error {
 	// Check memory bounds
 	if uint64(r.Offset)+uint64(r.Capacity) > uint64(memorySize) {
 		return fmt.Errorf("region end %d exceeds memory size %d", r.Offset+r.Capacity, memorySize)
+	}
+
+	// Check minimum capacity
+	if r.Capacity == 0 {
+		return fmt.Errorf("region capacity cannot be zero")
+	}
+
+	// Check first page boundary
+	if r.Offset < firstPageOffset {
+		return fmt.Errorf("region offset %d is below first page boundary %d", r.Offset, firstPageOffset)
 	}
 
 	return nil
@@ -107,12 +122,28 @@ type memoryManager struct {
 }
 
 func newMemoryManager(memory api.Memory, gasState *GasState) *memoryManager {
-	return &memoryManager{
+	// Initialize memory with one page if empty
+	if memory.Size() == 0 {
+		if _, ok := memory.Grow(1); !ok {
+			panic("failed to initialize memory with one page")
+		}
+	}
+
+	// Ensure memory size is valid
+	size := memory.Size()
+	if size > maxMemoryPages*wasmPageSize {
+		panic(fmt.Sprintf("memory size %d exceeds maximum allowed (%d pages)", size, maxMemoryPages))
+	}
+
+	// Initialize memory manager with proper alignment
+	mm := &memoryManager{
 		memory:     memory,
 		gasState:   gasState,
-		nextOffset: firstPageOffset,
-		size:       memory.Size(),
+		nextOffset: align(firstPageOffset, alignmentSize),
+		size:       size,
 	}
+
+	return mm
 }
 
 // align ensures the offset meets CosmWasm alignment requirements
@@ -131,15 +162,23 @@ func ensureAlignment(offset uint32, printDebug bool) uint32 {
 
 // readMemory is a helper to read bytes from memory with bounds checking
 func readMemory(memory api.Memory, offset uint32, length uint32) ([]byte, error) {
+	// Check for zero length
+	if length == 0 {
+		return nil, fmt.Errorf("zero length read")
+	}
+
+	// Calculate aligned length
+	alignedLen := align(length, alignmentSize)
+
 	// Check for potential overflow in offset + length calculation
-	if offset > math.MaxUint32-length {
-		return nil, fmt.Errorf("memory access would overflow: offset=%d, length=%d", offset, length)
+	if offset > math.MaxUint32-alignedLen {
+		return nil, fmt.Errorf("memory access would overflow: offset=%d, length=%d", offset, alignedLen)
 	}
 
 	// Ensure we're not reading past memory bounds
-	if uint64(offset)+uint64(length) > uint64(memory.Size()) {
+	if uint64(offset)+uint64(alignedLen) > uint64(memory.Size()) {
 		return nil, fmt.Errorf("read would exceed memory bounds: offset=%d, length=%d, memory_size=%d",
-			offset, length, memory.Size())
+			offset, alignedLen, memory.Size())
 	}
 
 	// Ensure offset is properly aligned
@@ -147,24 +186,47 @@ func readMemory(memory api.Memory, offset uint32, length uint32) ([]byte, error)
 		return nil, fmt.Errorf("unaligned memory read: offset=%d must be aligned to %d", offset, alignmentSize)
 	}
 
-	data, ok := memory.Read(offset, length)
-	if !ok {
-		return nil, fmt.Errorf("failed to read %d bytes from memory at offset %d", length, offset)
+	// Ensure offset is after first page
+	if offset < firstPageOffset {
+		return nil, fmt.Errorf("read offset %d is below first page boundary %d", offset, firstPageOffset)
 	}
+
+	// Read aligned data
+	alignedData, ok := memory.Read(offset, alignedLen)
+	if !ok {
+		return nil, fmt.Errorf("failed to read %d bytes from memory at offset %d", alignedLen, offset)
+	}
+
+	// Validate data is not null
+	if alignedData == nil {
+		return nil, fmt.Errorf("null data read from memory")
+	}
+
+	// Return only the requested length
+	data := alignedData[:length]
+
 	return data, nil
 }
 
 // writeMemory is a helper to write bytes to memory with bounds checking
 func writeMemory(memory api.Memory, offset uint32, data []byte, printDebug bool) error {
+	// Check for null data
+	if data == nil {
+		return fmt.Errorf("null data")
+	}
+
 	// Check for potential overflow in offset + length calculation
-	if offset > math.MaxUint32-uint32(len(data)) {
-		return fmt.Errorf("memory access would overflow: offset=%d, length=%d", offset, len(data))
+	dataLen := uint32(len(data))
+	alignedLen := align(dataLen, alignmentSize)
+
+	if offset > math.MaxUint32-alignedLen {
+		return fmt.Errorf("memory access would overflow: offset=%d, length=%d", offset, alignedLen)
 	}
 
 	// Ensure we're not writing past memory bounds
-	if uint64(offset)+uint64(len(data)) > uint64(memory.Size()) {
+	if uint64(offset)+uint64(alignedLen) > uint64(memory.Size()) {
 		return fmt.Errorf("write would exceed memory bounds: offset=%d, length=%d, memory_size=%d",
-			offset, len(data), memory.Size())
+			offset, alignedLen, memory.Size())
 	}
 
 	// Ensure the write is aligned
@@ -172,16 +234,27 @@ func writeMemory(memory api.Memory, offset uint32, data []byte, printDebug bool)
 		return fmt.Errorf("unaligned memory write: offset=%d must be aligned to %d", offset, alignmentSize)
 	}
 
+	// Ensure offset is after first page
+	if offset < firstPageOffset {
+		return fmt.Errorf("write offset %d is below first page boundary %d", offset, firstPageOffset)
+	}
+
 	if printDebug {
-		fmt.Printf("[DEBUG] Writing %d bytes to memory at offset 0x%x\n", len(data), offset)
+		fmt.Printf("[DEBUG] Writing %d bytes to memory at offset 0x%x (aligned to %d)\n", dataLen, offset, alignedLen)
 		if len(data) < 1024 {
 			fmt.Printf("[DEBUG] Data: %s\n", string(data))
 		}
 	}
 
-	if !memory.Write(offset, data) {
-		return fmt.Errorf("failed to write %d bytes to memory at offset %d", len(data), offset)
+	// Create aligned buffer and copy data
+	alignedData := make([]byte, alignedLen)
+	copy(alignedData, data)
+
+	// Write aligned data to memory
+	if !memory.Write(offset, alignedData) {
+		return fmt.Errorf("failed to write %d bytes to memory at offset %d", alignedLen, offset)
 	}
+
 	return nil
 }
 
@@ -230,101 +303,33 @@ func (mm *memoryManager) ensureMemory(required uint32) error {
 	return nil
 }
 
-// writeAlignedData writes data to memory with proper alignment
+// writeAlignedData writes data to memory with proper alignment and returns the write location and actual data length
 func (mm *memoryManager) writeAlignedData(data []byte, printDebug bool) (uint32, uint32, error) {
-	if len(data) == 0 {
-		return 0, 0, nil
+	// Check for null data
+	if data == nil {
+		return 0, 0, fmt.Errorf("null data")
 	}
 
-	// If this looks like JSON data, validate it before writing
-	if len(data) > 0 && data[0] == '{' {
-		var js interface{}
-		if err := json.Unmarshal(data, &js); err != nil {
-			if printDebug {
-				fmt.Printf("[DEBUG] JSON validation failed: %v\n", err)
-				// Print the problematic section
-				errPos := 0
-				if serr, ok := err.(*json.SyntaxError); ok {
-					errPos = int(serr.Offset)
-				}
-				start := errPos - 20
-				if start < 0 {
-					start = 0
-				}
-				end := errPos + 20
-				if end > len(data) {
-					end = len(data)
-				}
-				fmt.Printf("[DEBUG] JSON error context: %q\n", string(data[start:end]))
-				fmt.Printf("[DEBUG] Full data: %s\n", hex.Dump(data))
-			}
-			return 0, 0, fmt.Errorf("invalid JSON data: %w", err)
-		}
-		// Re-marshal to ensure consistent formatting
-		cleanData, err := json.Marshal(js)
-		if err != nil {
-			return 0, 0, fmt.Errorf("failed to re-marshal JSON: %w", err)
-		}
-		data = cleanData
+	// Calculate aligned length
+	dataLen := uint32(len(data))
+	alignedLen := align(dataLen, alignmentSize)
+
+	// Ensure we have enough memory
+	if mm.nextOffset > math.MaxUint32-alignedLen {
+		return 0, 0, fmt.Errorf("memory allocation would overflow: offset=%d, length=%d", mm.nextOffset, alignedLen)
 	}
 
-	// Charge gas for the data
-	if err := mm.gasState.ConsumeMemory(uint32(len(data))); err != nil {
-		return 0, 0, err
+	// Write data to memory
+	if err := writeMemory(mm.memory, mm.nextOffset, data, printDebug); err != nil {
+		return 0, 0, fmt.Errorf("failed to write data: %w", err)
 	}
 
-	// Align the write location
-	writeOffset := ensureAlignment(mm.nextOffset, printDebug)
+	// Store current offset and update for next write
+	writeOffset := mm.nextOffset
+	mm.nextOffset += alignedLen
 
-	// Calculate padded length for alignment
-	paddedLen := uint32(len(data))
-	if paddedLen%alignmentSize != 0 {
-		paddedLen = ((paddedLen + alignmentSize - 1) / alignmentSize) * alignmentSize
-	}
-
-	// Ensure enough memory with padding for alignment
-	if err := mm.ensureMemory(paddedLen); err != nil {
-		return 0, 0, err
-	}
-
-	// Write the data
-	if err := writeMemory(mm.memory, writeOffset, data, printDebug); err != nil {
-		return 0, 0, err
-	}
-
-	// Update next offset
-	mm.nextOffset = writeOffset + paddedLen
-
-	// Return the write location and actual data length
-	return writeOffset, uint32(len(data)), nil
-}
-
-// readResultRegion reads and validates a Region struct from memory
-func readResultRegion(memory api.Memory, resultPtr uint32, printDebug bool) (*Region, error) {
-	// First read the Region struct
-	data, err := readMemory(memory, resultPtr, regionStructSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read result region data at ptr=0x%x: %w", resultPtr, err)
-	}
-
-	// Parse the Region struct
-	region, err := RegionFromBytes(data, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse region: %w", err)
-	}
-
-	// Additional validation
-	if region.Offset >= memory.Size() {
-		return nil, fmt.Errorf("region offset out of bounds: offset=0x%x, memory_size=%d",
-			region.Offset, memory.Size())
-	}
-
-	if region.Length > memory.Size()-region.Offset {
-		return nil, fmt.Errorf("region length exceeds memory bounds: offset=0x%x, length=%d, memory_size=%d",
-			region.Offset, region.Length, memory.Size())
-	}
-
-	return region, nil
+	// Return write location and actual data length
+	return writeOffset, dataLen, nil
 }
 
 // prepareRegions allocates and prepares memory regions for input data
@@ -406,28 +411,27 @@ func (mm *memoryManager) writeRegions(env, info, msg *Region) (uint32, uint32, u
 	return envPtr, infoPtr, msgPtr, nil
 }
 
-// readRegionData reads data from a Region with proper alignment and bounds checking
+// readRegionData reads data from a Region with proper alignment and validation
 func readRegionData(memory api.Memory, region *Region, printDebug bool) ([]byte, error) {
-	// Ensure the read is aligned
-	region.Offset = ensureAlignment(region.Offset, printDebug)
-
-	// Read the data with bounds checking
-	data, err := readMemory(memory, region.Offset, region.Length)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read region data: %w", err)
+	// Validate region
+	if region == nil {
+		return nil, fmt.Errorf("null region")
 	}
 
-	if printDebug {
-		fmt.Printf("[DEBUG] Read region data (hex): % x\n", data)
-		if len(data) < 1024 {
-			fmt.Printf("[DEBUG] Read region data (string): %q\n", string(data))
-		}
+	// Validate region fields
+	if region.Length > region.Capacity {
+		return nil, fmt.Errorf("region length %d exceeds capacity %d", region.Length, region.Capacity)
+	}
+
+	// Read data from memory
+	data, err := readMemory(memory, region.Offset, region.Length)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read memory: %w", err)
 	}
 
 	// If this looks like JSON data, validate it
 	if len(data) > 0 && data[0] == '{' {
-		// Try to validate JSON structure
-		var js map[string]interface{}
+		var js interface{}
 		if err := json.Unmarshal(data, &js); err != nil {
 			if printDebug {
 				fmt.Printf("[DEBUG] JSON validation failed: %v\n", err)
@@ -436,49 +440,29 @@ func readRegionData(memory api.Memory, region *Region, printDebug bool) ([]byte,
 				if serr, ok := err.(*json.SyntaxError); ok {
 					errPos = int(serr.Offset)
 				}
-				start := errPos - 10
+				start := errPos - 20
 				if start < 0 {
 					start = 0
 				}
-				end := errPos + 10
+				end := errPos + 20
 				if end > len(data) {
 					end = len(data)
 				}
 				fmt.Printf("[DEBUG] JSON error context: %q\n", string(data[start:end]))
+				fmt.Printf("[DEBUG] Full data: %s\n", string(data))
 			}
-			// Don't return error - let caller handle invalid JSON if needed
+			return nil, fmt.Errorf("invalid JSON data: %w", err)
 		}
+
+		// Re-marshal to ensure consistent formatting
+		cleanData, err := json.Marshal(js)
+		if err != nil {
+			return nil, fmt.Errorf("failed to re-marshal JSON: %w", err)
+		}
+		data = cleanData
 	}
 
 	return data, nil
-}
-
-// writeRegionData writes data to a Region with proper alignment and bounds checking
-func writeRegionData(memory api.Memory, region *Region, data []byte, printDebug bool) error {
-	// Ensure the write is aligned
-	region.Offset = ensureAlignment(region.Offset, printDebug)
-
-	// Verify data fits within region capacity
-	if uint32(len(data)) > region.Capacity {
-		return fmt.Errorf("data length %d exceeds region capacity %d", len(data), region.Capacity)
-	}
-
-	// Write the data
-	if err := writeMemory(memory, region.Offset, data, printDebug); err != nil {
-		return fmt.Errorf("failed to write region data: %w", err)
-	}
-
-	// Update region length
-	region.Length = uint32(len(data))
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Wrote region data (hex): % x\n", data)
-		if len(data) < 1024 {
-			fmt.Printf("[DEBUG] Wrote region data (string): %q\n", string(data))
-		}
-	}
-
-	return nil
 }
 
 // writeToMemory writes data to memory and returns the offset where it was written

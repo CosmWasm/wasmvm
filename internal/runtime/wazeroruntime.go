@@ -441,20 +441,23 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to parse params: %w", err)
 	}
+
+	// Create gas state for tracking memory operations
 	gasState := NewGasState(gasLimit)
 
 	// Initialize runtime environment
 	runtimeEnv := &RuntimeEnvironment{
-		DB:        store,
-		API:       *api,
-		Querier:   *querier,
-		Gas:       *gasMeter,
-		gasLimit:  gasLimit,
-		gasUsed:   0,
-		iterators: make(map[uint64]map[uint64]types.Iterator),
+		DB:         store,
+		API:        *api,
+		Querier:    *querier,
+		Gas:        *gasMeter,
+		gasLimit:   gasLimit,
+		gasUsed:    0,
+		iterators:  make(map[uint64]map[uint64]types.Iterator),
+		nextCallID: 1,
 	}
 
-	// Create context with runtime environment
+	// Create context with environment
 	ctx := context.WithValue(context.Background(), envKey, runtimeEnv)
 
 	// Register host functions
@@ -464,18 +467,15 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	}
 	defer hostModule.Close(ctx)
 
-	// Create module config and instantiate the environment module
-	moduleConfig := wazero.NewModuleConfig().
-		WithName("env").
-		WithStartFunctions()
-
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
+	// Create and instantiate environment module
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule,
+		wazero.NewModuleConfig().WithName("env").WithStartFunctions())
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
 
-	// Get the contract module from our cache
+	// Get the contract module
 	w.mu.Lock()
 	csHex := hex.EncodeToString(checksum)
 	compiledModule, ok := w.compiledModules[csHex]
@@ -485,45 +485,49 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	}
 	w.mu.Unlock()
 
-	// Create contract module config
-	contractConfig := wazero.NewModuleConfig().
-		WithName("contract").
-		WithStartFunctions()
-
-	// Instantiate the contract module
-	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule, contractConfig)
+	// Create and instantiate contract module
+	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule,
+		wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
 	defer contractModule.Close(ctx)
 
-	// Initialize memory manager with gas state
+	// Get contract memory
 	memory := contractModule.Memory()
 	if memory == nil {
 		return nil, types.GasReport{}, fmt.Errorf("contract module has no memory")
 	}
-	memManager := newMemoryManager(memory, gasState)
 
-	// Prepare regions for input data
-	envRegion, infoRegion, msgRegion, err := memManager.prepareRegions(env, info, msg)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to prepare regions: %w", err)
+	// Initialize memory with one page to avoid null pointer issues
+	if memory.Size() == 0 {
+		if _, ok := memory.Grow(1); !ok {
+			return nil, types.GasReport{}, fmt.Errorf("failed to initialize memory with one page")
+		}
 	}
 
-	// Write the regions to memory and get their pointers
-	envPtr, infoPtr, msgPtr, err := memManager.writeRegions(envRegion, infoRegion, msgRegion)
+	// Initialize memory manager
+	memManager := newMemoryManager(memory, gasState)
+
+	// Validate and prepare input data
+	if err := validateInputData(env, info, msg); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("invalid input data: %w", err)
+	}
+
+	// Write input data to memory
+	envPtr, infoPtr, msgPtr, err := writeInputData(memManager, env, info, msg, printDebug)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write regions: %w", err)
+		return nil, types.GasReport{}, fmt.Errorf("failed to write input data: %w", err)
 	}
 
 	if printDebug {
-		fmt.Printf("Memory layout:\n")
-		fmt.Printf("env: offset=%d, size=%d, region_ptr=%d\n", envRegion.Offset, envRegion.Length, envPtr)
-		fmt.Printf("info: offset=%d, size=%d, region_ptr=%d\n", infoRegion.Offset, infoRegion.Length, infoPtr)
-		fmt.Printf("msg: offset=%d, size=%d, region_ptr=%d\n", msgRegion.Offset, msgRegion.Length, msgPtr)
+		fmt.Printf("Memory layout before instantiate:\n")
+		fmt.Printf("- env: ptr=0x%x, size=%d\n", envPtr, len(env))
+		fmt.Printf("- info: ptr=0x%x, size=%d\n", infoPtr, len(info))
+		fmt.Printf("- msg: ptr=0x%x, size=%d\n", msgPtr, len(msg))
 	}
 
-	// Get the instantiate function
+	// Get instantiate function
 	instantiate := contractModule.ExportedFunction("instantiate")
 	if instantiate == nil {
 		return nil, types.GasReport{}, fmt.Errorf("instantiate function not exported")
@@ -534,64 +538,22 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		return nil, types.GasReport{}, err
 	}
 
-	// Call the instantiate function
+	// Call instantiate function
 	ret, err := instantiate.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("instantiate call failed: %w", err)
 	}
 
-	// Get the result using Region
+	// Validate return value
 	if len(ret) != 1 {
-		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(ret))
+		return nil, types.GasReport{}, fmt.Errorf("expected 1 return value, got %d", len(ret))
 	}
 
+	// Read and validate result
 	resultPtr := uint32(ret[0])
-	if printDebug {
-		fmt.Printf("[DEBUG] Result pointer: 0x%x\n", resultPtr)
-	}
-
-	// Ensure result pointer is aligned
-	alignedPtr := align(resultPtr, alignmentSize)
-	if alignedPtr != resultPtr {
-		if printDebug {
-			fmt.Printf("[DEBUG] Aligning result pointer from 0x%x to 0x%x\n", resultPtr, alignedPtr)
-		}
-		resultPtr = alignedPtr
-	}
-
-	data, ok := memory.Read(resultPtr, regionStructSize)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result region data")
-	}
-	if printDebug {
-		fmt.Printf("[DEBUG] Region data: %x\n", data)
-	}
-	resultRegion, err := RegionFromBytes(data, ok)
+	result, err := readAndValidateResult(memory, resultPtr, printDebug)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to parse result region: %w", err)
-	}
-	if printDebug {
-		fmt.Printf("[DEBUG] Result region: offset=0x%x, capacity=%d, length=%d\n",
-			resultRegion.Offset, resultRegion.Capacity, resultRegion.Length)
-	}
-
-	// Ensure data offset is aligned
-	alignedOffset := align(resultRegion.Offset, alignmentSize)
-	if alignedOffset != resultRegion.Offset {
-		if printDebug {
-			fmt.Printf("[DEBUG] Aligning data offset from 0x%x to 0x%x\n", resultRegion.Offset, alignedOffset)
-		}
-		resultRegion.Offset = alignedOffset
-	}
-
-	// Read result data
-	data, ok = memory.Read(resultRegion.Offset, resultRegion.Length)
-	if !ok {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result data")
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Result data: %s\n", string(data))
+		return nil, types.GasReport{}, fmt.Errorf("failed to read result: %w", err)
 	}
 
 	// Create gas report
@@ -602,7 +564,124 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		Limit:          gasLimit,
 	}
 
-	return data, gasReport, nil
+	if printDebug {
+		fmt.Printf("Gas report:\n")
+		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
+		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
+		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
+		fmt.Printf("- Limit: %d\n", gasReport.Limit)
+	}
+
+	return result, gasReport, nil
+}
+
+// Helper functions for the Instantiate implementation
+
+func validateInputData(env, info, msg []byte) error {
+	if len(env) == 0 {
+		return fmt.Errorf("empty environment data")
+	}
+	if len(info) == 0 {
+		return fmt.Errorf("empty info data")
+	}
+	if len(msg) == 0 {
+		return fmt.Errorf("empty message data")
+	}
+
+	// Validate env is proper JSON
+	var envData map[string]interface{}
+	if err := json.Unmarshal(env, &envData); err != nil {
+		return fmt.Errorf("invalid environment JSON: %w", err)
+	}
+
+	// Validate info is proper JSON
+	var infoData map[string]interface{}
+	if err := json.Unmarshal(info, &infoData); err != nil {
+		return fmt.Errorf("invalid info JSON: %w", err)
+	}
+
+	// Validate msg is proper JSON
+	var msgData map[string]interface{}
+	if err := json.Unmarshal(msg, &msgData); err != nil {
+		return fmt.Errorf("invalid message JSON: %w", err)
+	}
+
+	// Re-marshal each JSON to ensure consistent formatting
+	cleanEnv, err := json.Marshal(envData)
+	if err != nil {
+		return fmt.Errorf("failed to re-marshal environment JSON: %w", err)
+	}
+	env = cleanEnv
+
+	cleanInfo, err := json.Marshal(infoData)
+	if err != nil {
+		return fmt.Errorf("failed to re-marshal info JSON: %w", err)
+	}
+	info = cleanInfo
+
+	cleanMsg, err := json.Marshal(msgData)
+	if err != nil {
+		return fmt.Errorf("failed to re-marshal message JSON: %w", err)
+	}
+	msg = cleanMsg
+
+	return nil
+}
+
+func writeInputData(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
+	// Write environment data
+	envPtr, _, err = mm.writeAlignedData(env, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write env data: %w", err)
+	}
+
+	// Write info data
+	infoPtr, _, err = mm.writeAlignedData(info, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write info data: %w", err)
+	}
+
+	// Write message data
+	msgPtr, _, err = mm.writeAlignedData(msg, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write msg data: %w", err)
+	}
+
+	return envPtr, infoPtr, msgPtr, nil
+}
+
+func readAndValidateResult(memory api.Memory, resultPtr uint32, printDebug bool) ([]byte, error) {
+	// Validate result pointer
+	if resultPtr == 0 {
+		return nil, fmt.Errorf("null result pointer")
+	}
+
+	// Read result region
+	resultRegion, err := readResultRegionInternal(memory, resultPtr, printDebug)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read result region: %w", err)
+	}
+
+	// Read result data
+	data, err := readRegionData(memory, resultRegion, printDebug)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read result data: %w", err)
+	}
+
+	// Validate result is proper JSON if it looks like JSON
+	if len(data) > 0 && data[0] == '{' {
+		var js map[string]interface{}
+		if err := json.Unmarshal(data, &js); err != nil {
+			return nil, fmt.Errorf("invalid result JSON: %w", err)
+		}
+		// Re-marshal to ensure consistent formatting
+		data, err = json.Marshal(js)
+		if err != nil {
+			return nil, fmt.Errorf("failed to re-marshal result JSON: %w", err)
+		}
+	}
+
+	return data, nil
 }
 
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
@@ -1152,10 +1231,12 @@ func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, 
 	}
 
 	// Ensure result pointer is aligned
-	resultPtr = ensureAlignment(resultPtr, printDebug)
+	if resultPtr%alignmentSize != 0 {
+		return nil, fmt.Errorf("unaligned result pointer: %d must be aligned to %d", resultPtr, alignmentSize)
+	}
 
 	// Read and validate the result Region
-	resultRegion, err := readResultRegion(memory, resultPtr, printDebug)
+	resultRegion, err := readResultRegionInternal(memory, resultPtr, printDebug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read result region: %w", err)
 	}
@@ -1183,7 +1264,7 @@ func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, 
 
 	// Validate JSON response
 	if len(data) > 0 && data[0] == '{' {
-		var js map[string]interface{}
+		var js interface{}
 		if err := json.Unmarshal(data, &js); err != nil {
 			if printDebug {
 				fmt.Printf("[DEBUG] JSON validation failed: %v\n", err)
@@ -1192,39 +1273,26 @@ func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, 
 				if serr, ok := err.(*json.SyntaxError); ok {
 					errPos = int(serr.Offset)
 				}
-				start := errPos - 10
+				start := errPos - 20
 				if start < 0 {
 					start = 0
 				}
-				end := errPos + 10
+				end := errPos + 20
 				if end > len(data) {
 					end = len(data)
 				}
 				fmt.Printf("[DEBUG] JSON error context: %q\n", string(data[start:end]))
 				fmt.Printf("[DEBUG] Full data: %s\n", string(data))
 			}
-			// Try to repair common corruption patterns
-			repaired := repairJSONResponse(data, printDebug)
-			if repaired != nil {
-				if printDebug {
-					fmt.Printf("[DEBUG] Attempting to repair corrupted JSON\n")
-					fmt.Printf("Original: %s\n", string(data))
-					fmt.Printf("Repaired: %s\n", string(repaired))
-				}
-				// Validate repaired JSON
-				if err := json.Unmarshal(repaired, &js); err == nil {
-					data = repaired
-				} else if printDebug {
-					fmt.Printf("[DEBUG] Repair attempt failed: %v\n", err)
-				}
-			}
-		} else {
-			// Re-marshal to ensure consistent formatting
-			cleanData, err := json.Marshal(js)
-			if err == nil {
-				data = cleanData
-			}
+			return nil, fmt.Errorf("invalid JSON response: %w", err)
 		}
+
+		// Re-marshal to ensure consistent formatting
+		cleanData, err := json.Marshal(js)
+		if err != nil {
+			return nil, fmt.Errorf("failed to re-marshal JSON response: %w", err)
+		}
+		data = cleanData
 	}
 
 	if printDebug {
@@ -1584,13 +1652,38 @@ func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
 	return checksum[:], nil, false
 }
 
-func (w *WazeroRuntime) getContractModule(checksum []byte) (wazero.CompiledModule, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
-	if !ok {
-		return nil, fmt.Errorf("module not found for checksum %x", checksum)
+func readResultRegionInternal(memory api.Memory, resultPtr uint32, printDebug bool) (*Region, error) {
+	// Validate result pointer
+	if resultPtr == 0 {
+		return nil, fmt.Errorf("null result pointer")
 	}
-	return module, nil
+
+	// Ensure pointer is aligned
+	if resultPtr%alignmentSize != 0 {
+		return nil, fmt.Errorf("unaligned result pointer: %d must be aligned to %d", resultPtr, alignmentSize)
+	}
+
+	// Read region data
+	regionData, err := readMemory(memory, resultPtr, regionStructSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read region data: %w", err)
+	}
+
+	// Parse region
+	region, err := RegionFromBytes(regionData, true)
+	if err != nil {
+		return nil, fmt.Errorf("invalid region data: %w", err)
+	}
+
+	// Validate region against memory size
+	if err := region.Validate(memory.Size()); err != nil {
+		return nil, fmt.Errorf("invalid result region: %w", err)
+	}
+
+	if printDebug {
+		fmt.Printf("[DEBUG] Result region: offset=0x%x, capacity=%d, length=%d\n",
+			region.Offset, region.Capacity, region.Length)
+	}
+
+	return region, nil
 }
