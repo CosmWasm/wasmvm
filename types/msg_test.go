@@ -161,3 +161,13 @@ func TestMsgFundCommunityPoolSerialization(t *testing.T) {
 
 	require.Equal(t, Array[Coin]{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
 }
+
+func TestMsgEurekaSendPacketSerialization(t *testing.T) {
+	document := []byte(`{"send_packet":{"amount":[{"amount":"300","denom":"adenom"},{"amount":"400","denom":"bdenom"}]}}`)
+
+	var msg EurekaMsg
+	err := json.Unmarshal(document, &msg)
+	require.NoError(t, err)
+
+	require.Equal(t, Array[Coin]{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
+}

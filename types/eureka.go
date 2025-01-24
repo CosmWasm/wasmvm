@@ -1,8 +1,8 @@
 package types
 
-// EurekaPayload defines a single packet sent in the EurekaSendPacketMsg
+// EurekaPayload defines a single packet sent in the EurekaSendPacketMsg.
 //
-// Payload value should be encoded in a format defined by the channel version,
+// Payload value should be encoded using the method specified in the Encoding field,
 // and the module on the other side should know how to parse this.
 type EurekaPayload struct {
 	// The port id on the chain where the packet is sent to (external chain).
