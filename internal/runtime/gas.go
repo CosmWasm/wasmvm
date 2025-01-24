@@ -13,8 +13,8 @@ const (
 	gasCostQuery = 500
 
 	// Iterator operations
-	gasCostIteratorCreate = 2000
-	gasCostIteratorNext   = 100
+	gasCostIteratorCreate = 10000 // Base cost for creating an iterator
+	gasCostIteratorNext   = 1000  // Base cost for iterator next operations
 )
 
 // GasConfig holds gas costs for different operations

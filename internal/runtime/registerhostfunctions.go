@@ -19,14 +19,16 @@ var requiredHostFunctions = map[string]struct{}{
 
 	// Debug operations
 	"debug": {},
+	"abort": {},
 
 	// DB operations
-	"db_read":     {},
-	"db_write":    {},
-	"db_remove":   {},
-	"db_scan":     {},
-	"db_next":     {},
-	"db_next_key": {},
+	"db_read":       {},
+	"db_write":      {},
+	"db_remove":     {},
+	"db_scan":       {},
+	"db_next":       {},
+	"db_next_key":   {},
+	"db_next_value": {},
 
 	// Address operations
 	"addr_validate":     {},
@@ -34,10 +36,15 @@ var requiredHostFunctions = map[string]struct{}{
 	"addr_humanize":     {},
 
 	// Crypto operations
-	"secp256k1_verify":         {},
-	"secp256k1_recover_pubkey": {},
-	"ed25519_verify":           {},
-	"ed25519_batch_verify":     {},
+	"secp256k1_verify":           {},
+	"secp256k1_recover_pubkey":   {},
+	"ed25519_verify":             {},
+	"ed25519_batch_verify":       {},
+	"bls12_381_aggregate_g1":     {},
+	"bls12_381_aggregate_g2":     {},
+	"bls12_381_pairing_equality": {},
+	"bls12_381_hash_to_g1":       {},
+	"bls12_381_hash_to_g2":       {},
 }
 
 // RegisterHostFunctions registers all required host functions with the wazero runtime.
@@ -73,32 +80,19 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
 			fmt.Printf("Called allocate(size=%d)\n", size)
-
-			// Charge gas for allocation (1 gas per 1KB, minimum 1 gas)
-			gasCharge := (size + 1023) / 1024
-			if gasCharge == 0 {
-				gasCharge = 1
-			}
-			env.gasUsed += uint64(gasCharge)
-
+			env.gasUsed += uint64((size + 1023) / 1024) // 1 gas per 1KB, minimum 1
 			memory := m.Memory()
 			if memory == nil {
 				panic("no memory exported")
 			}
-
 			currentBytes := memory.Size()
-			pageSize := uint32(65536) // 64KB pages
-
-			// Grow memory if needed
+			pageSize := uint32(65536)
 			if size > currentBytes {
 				pagesToGrow := (size - currentBytes + pageSize - 1) / pageSize
-				fmt.Printf("Growing memory by %d pages (current: %d bytes, needed: %d bytes)\n",
-					pagesToGrow, currentBytes, size)
 				if _, ok := memory.Grow(pagesToGrow); !ok {
 					panic("failed to grow memory")
 				}
 			}
-
 			ptr := currentBytes
 			fmt.Printf("Allocated %d bytes at ptr=0x%x\n", size, ptr)
 			return ptr
@@ -108,11 +102,11 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("allocate")
 	logRegistration("allocate")
 
-	// Deallocate function - paired with allocate for memory management
+	// Deallocate function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
 			fmt.Printf("Called deallocate(ptr=0x%x)\n", ptr)
-			env.gasUsed += 1 // Minimal gas charge
+			env.gasUsed += 1
 		}).
 		WithParameterNames("ptr").
 		Export("deallocate")
@@ -126,9 +120,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) uint32 {
 			fmt.Printf("Called db_read(key_ptr=0x%x)\n", keyPtr)
 			ctx = context.WithValue(ctx, envKey, env)
-			result := hostDbRead(ctx, m, keyPtr)
-			fmt.Printf("db_read returned ptr=0x%x\n", result)
-			return result
+			return hostDbRead(ctx, m, keyPtr)
 		}).
 		WithParameterNames("key_ptr").
 		Export("db_read")
@@ -156,14 +148,14 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("db_remove")
 	logRegistration("db_remove")
 
-	// Iterator operations
+	// Iterator Functions
 	fmt.Printf("\nRegistering Iterator Functions...\n")
 
 	// DB scan operation
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
 			fmt.Printf("Called db_scan(start_ptr=0x%x, start_len=%d, order=%d)\n", startPtr, startLen, order)
-			env.gasUsed += gasCostIteratorCreate + uint64(startLen)
+			env.gasUsed += gasCostIteratorCreate + (uint64(startLen) * gasPerByte)
 			return hostScan(ctx, m, startPtr, startLen, order)
 		}).
 		WithParameterNames("start_ptr", "start_len", "order").
@@ -185,6 +177,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
 			fmt.Printf("Called db_next_key(iter_id=%d)\n", iterID)
+			env.gasUsed += gasCostIteratorNext
 			ctx = context.WithValue(ctx, envKey, env)
 			ptr, _, _ := hostNextKey(ctx, m, uint64(iterID), 0)
 			return ptr
@@ -192,6 +185,20 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("iter_id").
 		Export("db_next_key")
 	logRegistration("db_next_key")
+
+	// DB next value operation
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
+			fmt.Printf("Called db_next_value(iter_id=%d)\n", iterID)
+			ctx = context.WithValue(ctx, envKey, env)
+			callID := uint64(iterID >> 16)
+			actualIterID := uint64(iterID & 0xFFFF)
+			ptr, _, _ := hostNextValue(ctx, m, callID, actualIterID)
+			return ptr
+		}).
+		WithParameterNames("iter_id").
+		Export("db_next_value")
+	logRegistration("db_next_value")
 
 	// Address Functions
 	fmt.Printf("\nRegistering Address Functions...\n")
@@ -218,37 +225,87 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("addr_canonicalize")
 	logRegistration("addr_canonicalize")
 
-	// Add this after the db_next function registration:
+	// Address humanization
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, iterID uint32) uint32 {
-			fmt.Printf("Called db_next_value(iter_id=%d)\n", iterID)
+		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
+			fmt.Printf("Called addr_humanize(addr_ptr=0x%x, addr_len=%d)\n", addrPtr, addrLen)
 			ctx = context.WithValue(ctx, envKey, env)
-
-			// Extract call_id and iter_id from the packed uint32
-			callID := uint64(iterID >> 16)
-			actualIterID := uint64(iterID & 0xFFFF)
-			ptr, _, _ := hostNextValue(ctx, m, callID, actualIterID)
-			return ptr
+			return hostHumanizeAddress(ctx, m, addrPtr, addrLen)
 		}).
-		WithParameterNames("iter_id").
-		WithResultNames("value_ptr").
-		Export("db_next_value")
-	logRegistration("db_next_value")
+		WithParameterNames("addr_ptr", "addr_len").
+		Export("addr_humanize")
+	logRegistration("addr_humanize")
 
-	// Query chain function - essential for contract queries to the chain
+	// Query Functions
+	fmt.Printf("\nRegistering Query Functions...\n")
+
+	// Query chain
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, reqPtr uint32) uint32 {
 			fmt.Printf("Called query_chain(req_ptr=0x%x)\n", reqPtr)
 			ctx = context.WithValue(ctx, envKey, env)
-
-			// This function allows contracts to query the chain's state
-			// reqPtr points to a JSON-encoded QueryRequest
 			return hostQueryChain(ctx, m, reqPtr)
 		}).
-		WithParameterNames("request").
-		WithResultNames("result").
+		WithParameterNames("req_ptr").
 		Export("query_chain")
 	logRegistration("query_chain")
+
+	// Crypto Functions
+	fmt.Printf("\nRegistering Crypto Functions...\n")
+
+	// secp256k1 verification
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, pubkeyPtr uint32) uint32 {
+			fmt.Printf("Called secp256k1_verify(hash_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
+				hashPtr, sigPtr, pubkeyPtr)
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostSecp256k1Verify(ctx, m, hashPtr, sigPtr, pubkeyPtr)
+		}).
+		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
+		Export("secp256k1_verify")
+	logRegistration("secp256k1_verify")
+
+	// secp256r1 (NIST P-256) verification
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, pubkeyPtr uint32) uint32 {
+			fmt.Printf("Called secp256r1_verify(hash_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
+				hashPtr, sigPtr, pubkeyPtr)
+			ctx = context.WithValue(ctx, envKey, env)
+			// Assuming standard sizes for NIST P-256: 32 bytes for hash, 64 bytes for signature, 33 bytes for compressed pubkey
+			return hostSecp256r1Verify(ctx, m, hashPtr, 32, sigPtr, 64, pubkeyPtr, 33)
+		}).
+		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
+		WithResultNames("result").
+		Export("secp256r1_verify")
+	logRegistration("secp256r1_verify")
+
+	// secp256r1 (NIST P-256) public key recovery
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, recID uint32) uint64 {
+			fmt.Printf("Called secp256r1_recover_pubkey(hash_ptr=0x%x, sig_ptr=0x%x, rec_id=%d)\n",
+				hashPtr, sigPtr, recID)
+			ctx = context.WithValue(ctx, envKey, env)
+			// Assuming standard sizes for NIST P-256: 32 bytes for hash, 64 bytes for signature
+			resultPtr, resultLen := hostSecp256r1RecoverPubkey(ctx, m, hashPtr, 32, sigPtr, 64, recID)
+			// Pack the pointer and length into a uint64
+			return (uint64(resultLen) << 32) | uint64(resultPtr)
+		}).
+		WithParameterNames("hash_ptr", "sig_ptr", "rec_id").
+		WithResultNames("result").
+		Export("secp256r1_recover_pubkey")
+	logRegistration("secp256r1_recover_pubkey")
+
+	// ed25519 verification
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, msgPtr, sigPtr, pubkeyPtr uint32) uint32 {
+			fmt.Printf("Called ed25519_verify(msg_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
+				msgPtr, sigPtr, pubkeyPtr)
+			ctx = context.WithValue(ctx, envKey, env)
+			return hostEd25519Verify(ctx, m, msgPtr, sigPtr, pubkeyPtr)
+		}).
+		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
+		Export("ed25519_verify")
+	logRegistration("ed25519_verify")
 
 	// BLS12-381 G1 point aggregation with correct signature
 	builder.NewFunctionBuilder().
@@ -399,74 +456,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("ed25519_batch_verify")
 	logRegistration("ed25519_batch_verify")
 
-	// Address humanization
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, addrPtr, addrLen uint32) uint32 {
-			fmt.Printf("Called addr_humanize(addr_ptr=0x%x, addr_len=%d)\n", addrPtr, addrLen)
-			ctx = context.WithValue(ctx, envKey, env)
-			return hostHumanizeAddress(ctx, m, addrPtr, addrLen)
-		}).
-		WithParameterNames("addr_ptr", "addr_len").
-		Export("addr_humanize")
-	logRegistration("addr_humanize")
-
-	// Crypto Functions
-	fmt.Printf("\nRegistering Crypto Functions...\n")
-
-	// secp256k1 verification
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, pubkeyPtr uint32) uint32 {
-			fmt.Printf("Called secp256k1_verify(hash_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
-				hashPtr, sigPtr, pubkeyPtr)
-			ctx = context.WithValue(ctx, envKey, env)
-			return hostSecp256k1Verify(ctx, m, hashPtr, sigPtr, pubkeyPtr)
-		}).
-		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
-		Export("secp256k1_verify")
-	logRegistration("secp256k1_verify")
-
-	// secp256r1 (NIST P-256) verification
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, pubkeyPtr uint32) uint32 {
-			fmt.Printf("Called secp256r1_verify(hash_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
-				hashPtr, sigPtr, pubkeyPtr)
-			ctx = context.WithValue(ctx, envKey, env)
-			// Assuming standard sizes for NIST P-256: 32 bytes for hash, 64 bytes for signature, 33 bytes for compressed pubkey
-			return hostSecp256r1Verify(ctx, m, hashPtr, 32, sigPtr, 64, pubkeyPtr, 33)
-		}).
-		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
-		WithResultNames("result").
-		Export("secp256r1_verify")
-	logRegistration("secp256r1_verify")
-
-	// secp256r1 (NIST P-256) public key recovery
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, recID uint32) uint64 {
-			fmt.Printf("Called secp256r1_recover_pubkey(hash_ptr=0x%x, sig_ptr=0x%x, rec_id=%d)\n",
-				hashPtr, sigPtr, recID)
-			ctx = context.WithValue(ctx, envKey, env)
-			// Assuming standard sizes for NIST P-256: 32 bytes for hash, 64 bytes for signature
-			resultPtr, resultLen := hostSecp256r1RecoverPubkey(ctx, m, hashPtr, 32, sigPtr, 64, recID)
-			// Pack the pointer and length into a uint64
-			return (uint64(resultLen) << 32) | uint64(resultPtr)
-		}).
-		WithParameterNames("hash_ptr", "sig_ptr", "rec_id").
-		WithResultNames("result").
-		Export("secp256r1_recover_pubkey")
-	logRegistration("secp256r1_recover_pubkey")
-
-	// ed25519 verification
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, msgPtr, sigPtr, pubkeyPtr uint32) uint32 {
-			fmt.Printf("Called ed25519_verify(msg_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
-				msgPtr, sigPtr, pubkeyPtr)
-			ctx = context.WithValue(ctx, envKey, env)
-			return hostEd25519Verify(ctx, m, msgPtr, sigPtr, pubkeyPtr)
-		}).
-		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
-		Export("ed25519_verify")
-	logRegistration("ed25519_verify")
-
 	// Debug Functions
 	fmt.Printf("\nRegistering Debug Functions...\n")
 
@@ -522,4 +511,18 @@ func DebugMemory(mem api.Memory, ptr uint32, size uint32) {
 	} else {
 		fmt.Printf("Failed to read memory at ptr=0x%x size=%d\n", ptr, size)
 	}
+}
+
+func mustReadMemoryString(m api.Module, ptr uint32) string {
+	mem := m.Memory()
+	data, ok := mem.Read(ptr, 1024) // Read up to 1024 bytes
+	if !ok {
+		return ""
+	}
+	// Find null terminator
+	length := 0
+	for length < len(data) && data[length] != 0 {
+		length++
+	}
+	return string(data[:length])
 }

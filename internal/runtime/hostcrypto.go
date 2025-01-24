@@ -7,66 +7,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-// hostBls12381AggregateG1 implements bls12_381_aggregate_g1
-func hostBls12381AggregateG1(ctx context.Context, mod api.Module, ptr1 uint32) (uint32, uint32) {
-	mem := mod.Memory()
-
-	// Read first element
-	element1, err := readMemory(mem, ptr1, 48) // BLS12-381 G1 points are 48 bytes
-	if err != nil {
-		panic(fmt.Sprintf("failed to read first element: %v", err))
-	}
-
-	// Perform aggregation with single point
-	result, err := BLS12381AggregateG1([][]byte{element1})
-	if err != nil {
-		panic(fmt.Sprintf("failed to aggregate G1 points: %v", err))
-	}
-
-	// Allocate memory for result
-	resultPtr, err := allocateInContract(ctx, mod, uint32(len(result)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for result: %v", err))
-	}
-
-	// Write result
-	if err := writeMemory(mem, resultPtr, result); err != nil {
-		panic(fmt.Sprintf("failed to write result: %v", err))
-	}
-
-	return resultPtr, uint32(len(result))
-}
-
-// hostBls12381AggregateG2 implements bls12_381_aggregate_g2
-func hostBls12381AggregateG2(ctx context.Context, mod api.Module, ptr1 uint32) (uint32, uint32) {
-	mem := mod.Memory()
-
-	// Read first element
-	element1, err := readMemory(mem, ptr1, 96) // BLS12-381 G2 points are 96 bytes
-	if err != nil {
-		panic(fmt.Sprintf("failed to read first element: %v", err))
-	}
-
-	// Perform aggregation with single point
-	result, err := BLS12381AggregateG2([][]byte{element1})
-	if err != nil {
-		panic(fmt.Sprintf("failed to aggregate G2 points: %v", err))
-	}
-
-	// Allocate memory for result
-	resultPtr, err := allocateInContract(ctx, mod, uint32(len(result)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for result: %v", err))
-	}
-
-	// Write result
-	if err := writeMemory(mem, resultPtr, result); err != nil {
-		panic(fmt.Sprintf("failed to write result: %v", err))
-	}
-
-	return resultPtr, uint32(len(result))
-}
-
 // hostBls12381HashToG1 implements bls12_381_hash_to_g1
 func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen uint32) (uint32, uint32) {
 	mem := mod.Memory()
@@ -162,7 +102,7 @@ func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len
 }
 
 // hostSecp256r1Verify implements secp256r1_verify
-func hostSecp256r1Verify(ctx context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
 	mem := mod.Memory()
 
 	// Read hash

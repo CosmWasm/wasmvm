@@ -6,6 +6,8 @@ dist/
 
 # Ignore all `.log` files
 *.log
+**testlog
 
 # Ignore specific file `config.json`
 config.json
+

@@ -137,52 +137,6 @@ func allocateInContract(ctx context.Context, mod api.Module, size uint32) (uint3
 	return ptr, nil
 }
 
-// hostGet implements db_get
-func hostGet(ctx context.Context, mod api.Module, keyPtr, keyLen uint32) (uint32, uint32) {
-	env := ctx.Value("env").(*RuntimeEnvironment)
-	mem := mod.Memory()
-
-	key, err := readMemory(mem, keyPtr, keyLen)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read key from memory: %v", err))
-	}
-
-	value := env.DB.Get(key)
-	if value == nil {
-		// Return 0,0 for "not found"
-		return 0, 0
-	}
-
-	offset, err := allocateInContract(ctx, mod, uint32(len(value)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for value: %v", err))
-	}
-
-	if err := writeMemory(mem, offset, value); err != nil {
-		panic(fmt.Sprintf("failed to write value to memory: %v", err))
-	}
-
-	return offset, uint32(len(value))
-}
-
-// hostSet implements db_set
-func hostSet(ctx context.Context, mod api.Module, keyPtr, keyLen, valPtr, valLen uint32) {
-	env := ctx.Value("env").(*RuntimeEnvironment)
-	mem := mod.Memory()
-
-	key, err := readMemory(mem, keyPtr, keyLen)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read key from memory: %v", err))
-	}
-
-	val, err := readMemory(mem, valPtr, valLen)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read value from memory: %v", err))
-	}
-
-	env.DB.Set(key, val)
-}
-
 // hostHumanizeAddress implements api_humanize_address
 func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
 	env := ctx.Value("env").(*RuntimeEnvironment)
@@ -216,34 +170,6 @@ func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen u
 
 	// Return 0 on success
 	return 0
-}
-
-// hostQueryExternal implements querier_query
-func hostQueryExternal(ctx context.Context, mod api.Module, reqPtr, reqLen, gasLimit uint32) (resPtr, resLen uint32) {
-	env := ctx.Value("env").(*RuntimeEnvironment)
-	mem := mod.Memory()
-
-	req, err := readMemory(mem, reqPtr, reqLen)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read query request: %v", err))
-	}
-
-	res := types.RustQuery(env.Querier, req, uint64(gasLimit))
-	serialized, err := json.Marshal(res)
-	if err != nil {
-		return 0, 0
-	}
-
-	offset, err := allocateInContract(ctx, mod, uint32(len(serialized)))
-	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory (via contract's allocate): %v", err))
-	}
-
-	if err := writeMemory(mem, offset, serialized); err != nil {
-		panic(fmt.Sprintf("failed to write query response: %v", err))
-	}
-
-	return offset, uint32(len(serialized))
 }
 
 // hostCanonicalizeAddress implements addr_canonicalize
@@ -354,6 +280,9 @@ func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	key := iter.Key()
 	value := iter.Value()
 
+	// Charge gas for the returned data
+	env.gasUsed += uint64(len(key)+len(value)) * gasPerByte
+
 	// Allocate memory for key and value
 	// Format: [key_len(4 bytes)][key][value_len(4 bytes)][value]
 	totalLen := 4 + len(key) + 4 + len(value)
@@ -397,12 +326,6 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	// Check gas for iterator next operation
-	if env.gasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
-		return 0, 0, 1 // Return error code 1 for out of gas
-	}
-	env.gasUsed += gasCostIteratorNext
-
 	// Get iterator from environment
 	iter := env.GetIterator(callID, iterID)
 	if iter == nil {
@@ -417,9 +340,10 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 	// Read value
 	value := iter.Value()
 
-	// Instead of env.Memory.Allocate(...):
-	//     valOffset, err := env.Memory.Allocate(mem, uint32(len(value)))
-	// Use the contract's allocateInContract:
+	// Charge gas for the returned data
+	env.gasUsed += uint64(len(value)) * gasPerByte
+
+	// Allocate memory for value
 	valOffset, err := allocateInContract(ctx, mod, uint32(len(value)))
 	if err != nil {
 		panic(fmt.Sprintf("failed to allocate memory for value (via contract's allocate): %v", err))
@@ -929,12 +853,6 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 	env := ctx.Value("env").(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	// Check gas for iterator next operation
-	if env.gasUsed+gasCostIteratorNext > env.Gas.GasConsumed() {
-		return 0, 0, 1 // Return error code 1 for out of gas
-	}
-	env.gasUsed += gasCostIteratorNext
-
 	// Get iterator from environment
 	iter := env.GetIterator(callID, iterID)
 	if iter == nil {
@@ -948,6 +866,9 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 
 	// Read key
 	key := iter.Key()
+
+	// Charge gas for the returned data
+	env.gasUsed += uint64(len(key)) * gasPerByte
 
 	// Allocate memory for key
 	keyOffset, err := allocateInContract(ctx, mod, uint32(len(key)))
@@ -963,60 +884,4 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 	iter.Next()
 
 	return keyOffset, uint32(len(key)), 0
-}
-
-func hostGetAllocation(ctx context.Context, m api.Module) uint32 {
-	// CosmWasm expects memory to be allocated in a specific way
-	mem := m.Memory()
-	if mem == nil {
-		return 0
-	}
-	// Return next available allocation slot
-	return uint32(mem.Size())
-}
-
-// hostDeallocate implements the deallocate function required by CosmWasm contracts.
-// It is called when contracts want to free memory they previously allocated.
-// While Wazero handles actual memory management, we still need to track these
-// deallocations for proper contract behavior and gas metering.
-func hostDeallocate(ctx context.Context, mod api.Module, ptr uint32) {
-	// Get the environment from context
-	env := ctx.Value(envKey).(*RuntimeEnvironment)
-	if env == nil {
-		// This should never happen in practice, but we check to be safe
-		panic("missing runtime environment in context")
-	}
-
-	// Get memory from the module
-	memory := mod.Memory()
-	if memory == nil {
-		panic("no memory exported from module")
-	}
-
-	// In Wazero, we don't need to manually free memory like in Wasmer,
-	// as Wazero handles memory management automatically.
-	// However, we still need to:
-	// 1. Validate the pointer
-	// 2. Charge gas for the operation
-	// 3. Mark the memory as logically deallocated for the contract
-
-	// Validate that the pointer is within memory bounds
-	if ptr >= memory.Size() {
-		panic(fmt.Sprintf("deallocation of invalid pointer: %d", ptr))
-	}
-
-	// Charge a small amount of gas for the deallocation operation
-	// This matches the CosmWasm gas charging pattern
-	const deallocGas = uint64(25000) // Example gas cost, adjust based on your needs
-	env.gasUsed += deallocGas
-	if env.gasUsed > env.Gas.GasConsumed() {
-		panic("out of gas")
-	}
-
-	// Note: In a more sophisticated implementation, we might want to:
-	// - Track allocated/deallocated regions to catch double-frees
-	// - Zero out the deallocated memory region
-	// - Maintain a free list for future allocations
-	// However, this basic implementation satisfies the contract requirements
-	// while letting Wazero handle the actual memory management
 }

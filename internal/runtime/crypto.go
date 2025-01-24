@@ -142,11 +142,72 @@ func Secp256r1Verify(hash, signature, pubkey []byte) (bool, error) {
 	return verified, nil
 }
 
-// Secp256r1RecoverPubkey tries to recover a P-256 public key from a signature.
-// In general, ECDSA on P-256 is not commonly used with "public key recovery" like secp256k1.
-// This is non-standard and provided here as a placeholder or with specialized tooling only.
+// Secp256r1RecoverPubkey recovers a P-256 public key from a signature.
+// hash is the message digest (NOT the preimage),
+// signature should be 64 bytes (r and s concatenated),
+// recovery is the recovery byte (0 or 1).
 func Secp256r1RecoverPubkey(hash, signature []byte, recovery byte) ([]byte, error) {
-	// ECDSA on secp256r1 (P-256) does not support public key recovery in the standard library.
-	// Typically one would need a specialized library. This stub is included for completeness.
-	return nil, fmt.Errorf("public key recovery is not standard for secp256r1")
+	if len(hash) != 32 {
+		return nil, fmt.Errorf("hash must be 32 bytes")
+	}
+	if len(signature) != 64 {
+		return nil, fmt.Errorf("signature must be 64 bytes")
+	}
+	if recovery > 1 {
+		return nil, fmt.Errorf("recovery id must be 0 or 1")
+	}
+
+	// Parse r and s values from signature
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:])
+
+	// Get curve parameters
+	curve := elliptic.P256()
+	params := curve.Params()
+
+	// Calculate x coordinate
+	rx := r
+	if recovery == 1 {
+		rx = new(big.Int).Add(r, params.N)
+	}
+
+	// Calculate y coordinate
+	y2 := new(big.Int)
+	y2.Mul(rx, rx)
+	y2.Mul(y2, rx)
+	threeX := new(big.Int).Mul(rx, big.NewInt(3))
+	y2.Sub(y2, threeX)
+	y2.Add(y2, params.B)
+	y2.Mod(y2, params.P)
+
+	y := new(big.Int).ModSqrt(y2, params.P)
+	if y == nil {
+		return nil, fmt.Errorf("invalid signature: square root does not exist")
+	}
+
+	// Choose the correct y value based on parity
+	if y.Bit(0) != uint(recovery) {
+		y.Sub(params.P, y)
+	}
+
+	// Create public key point
+	pub := &ecdsa.PublicKey{
+		Curve: curve,
+		X:     rx,
+		Y:     y,
+	}
+
+	// Verify that this public key produces a valid signature
+	if !ecdsa.Verify(pub, hash, r, s) {
+		return nil, fmt.Errorf("invalid signature: verification failed")
+	}
+
+	// Convert to compressed format (33 bytes: 0x02 or 0x03 prefix + 32 bytes X coordinate)
+	compressed := make([]byte, 33)
+	compressed[0] = byte(0x02 + (y.Bit(0)))
+	xBytes := pub.X.Bytes()
+	// Pad X coordinate to 32 bytes if necessary
+	copy(compressed[33-len(xBytes):], xBytes)
+
+	return compressed, nil
 }
