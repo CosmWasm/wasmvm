@@ -27,7 +27,7 @@
 - `QueryRequest.Grpc` was added. It is similar to `QueryRequest.Stargate` but
   unlike that, it should always return protobuf encoded responses on all chains.
 - `VM.StoreCode` now returns a `uint64` containing the gas cost in CosmWasm gas
-  and takes a gas limit as argument. This was previously calculated in wasmd.
+  and takes a gas limit as an argument. This was previously calculated in wasmd.
   The change brings consistency with the other functions that cause gas usage.
 - `GoAPI` now requires an additional `ValidateAddress` function that validates
   whether the given string is a valid address. This was previously done
