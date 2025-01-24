@@ -1,0 +1,51 @@
+# .github/workflows/libwasmvm_sanity.yml
+name: libwasmvm_sanity
+
+on:
+  push:
+    branches:
+      - main
+      - 0.14-dev
+      - GoIter-creation
+      - release/*
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  libwasmvm_sanity:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.83.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Rust version information
+        run: rustc --version && cargo --version && rustup --version
+      - name: Add Rust components
+        run: rustup component add rustfmt
+      - name: Ensure libwasmvm/bindings.h is up-to-date
+        working-directory: libwasmvm
+        run: |
+          cargo check
+          CHANGES_IN_REPO=$(git status --porcelain bindings.h)
+          if [[ -n "$CHANGES_IN_REPO" ]]; then
+            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+            git status && git --no-pager diff
+            exit 1
+          fi
+      - name: Ensure internal/api/bindings.h is up to date
+        run: diff libwasmvm/bindings.h internal/api/bindings.h
+      - name: Check Rust formatting
+        working-directory: libwasmvm
+        run: cargo fmt -- --check
+      - name: Run unit tests
+        working-directory: libwasmvm
+        run: cargo test
+      - name: Build docs
+        working-directory: libwasmvm
+        run: cargo doc --no-deps
+      - name: Test docs
+        working-directory: libwasmvm
+        run: |
+          sed -i  '/^crate-type = \["cdylib"\]/d' Cargo.toml
+          cargo test --doc
