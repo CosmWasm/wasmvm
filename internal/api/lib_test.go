@@ -26,9 +26,6 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-// Add mutex for thread safety
-var testMutex sync.Mutex
-
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
@@ -809,9 +806,7 @@ func BenchmarkContractCall(b *testing.B) {
 		gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter2 := types.GasMeter(gasMeter2)
 		store.SetGasMeter(gasMeter2)
-		testMutex.Lock()
 		info = MockInfoBin(b, "fred")
-		testMutex.Unlock()
 		msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
 		res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(b, err)
@@ -848,9 +843,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
-		testMutex.Lock()
 		info = MockInfoBin(b, "fred")
-		testMutex.Unlock()
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
