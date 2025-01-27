@@ -835,6 +835,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	require.NoError(b, err)
 	requireOkResponse(b, res, 0)
 
+	info = MockInfoBin(b, "fred")
+
 	const callCount = 100 // Calls per benchmark iteration
 
 	b.ResetTimer()
@@ -843,7 +845,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
-		info = MockInfoBin(b, "fred")
+
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -1316,6 +1318,10 @@ func TestCustomReflectQuerier(t *testing.T) {
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
 	}
 
+	type CapitalizedResponse struct {
+		Text string `json:"text"`
+	}
+
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createReflectContract(t, cache)
@@ -1352,10 +1358,6 @@ func TestCustomReflectQuerier(t *testing.T) {
 	err = json.Unmarshal(qResult.Ok, &response)
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
-}
-
-type CapitalizedResponse struct {
-	Text string `json:"text"`
 }
 
 // TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
