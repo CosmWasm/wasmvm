@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -68,9 +69,29 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Register abort function for error handling
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, code uint32) {
-			fmt.Printf("Called abort with code: 0x%x\n", code)
-			ctx = context.WithValue(ctx, envKey, env)
-			hostAbort(ctx, m, code)
+			fmt.Printf("\n=== Abort Called ===\n")
+			fmt.Printf("Code: %d (0x%x)\n", code, code)
+
+			// Log memory state
+			memory := m.Memory()
+			if memory != nil {
+				fmt.Printf("Memory size: %d bytes\n", memory.Size())
+
+				// Read around abort code location
+				start := uint32(code) - 32
+				//				end := uint32(code) + 32
+				if data, ok := memory.Read(start, 64); ok {
+					fmt.Printf("Memory around abort code:\n%s\n", hex.Dump(data))
+				}
+			}
+
+			// Log runtime environment
+			if env, ok := ctx.Value(envKey).(*RuntimeEnvironment); ok {
+				fmt.Printf("Gas used: %d\n", env.gasUsed)
+				fmt.Printf("Gas limit: %d\n", env.gasLimit)
+			}
+
+			fmt.Printf("=== End Abort ===\n\n")
 		}).
 		WithParameterNames("code").
 		Export("abort")

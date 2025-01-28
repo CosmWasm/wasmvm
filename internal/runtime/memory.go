@@ -151,15 +151,6 @@ func align(offset uint32, alignment uint32) uint32 {
 	return (offset + alignment - 1) & ^(alignment - 1)
 }
 
-// ensureAlignment enforces memory alignment requirements
-func ensureAlignment(offset uint32, printDebug bool) uint32 {
-	aligned := align(offset, alignmentSize)
-	if aligned != offset && printDebug {
-		fmt.Printf("[DEBUG] Aligning offset from 0x%x to 0x%x\n", offset, aligned)
-	}
-	return aligned
-}
-
 // readMemory is a helper to read bytes from memory with bounds checking
 func readMemory(memory api.Memory, offset uint32, length uint32) ([]byte, error) {
 	// Check for zero length
@@ -258,55 +249,13 @@ func writeMemory(memory api.Memory, offset uint32, data []byte, printDebug bool)
 	return nil
 }
 
-// ensureMemory grows memory if needed to accommodate required size with overflow protection
-func (mm *memoryManager) ensureMemory(required uint32) error {
-	currentSize := mm.memory.Size()
-
-	// Check for potential overflow in offset + required calculation
-	if mm.nextOffset > math.MaxUint32-required {
-		return fmt.Errorf("memory size calculation would overflow: offset=%d, required=%d",
-			mm.nextOffset, required)
-	}
-
-	// Calculate total required size including alignment padding
-	requiredSize := mm.nextOffset + required
-	alignedSize := align(requiredSize, wasmPageSize)
-
-	// Verify aligned size didn't overflow
-	if alignedSize < requiredSize {
-		return fmt.Errorf("aligned size calculation overflow: required=%d, aligned=%d",
-			requiredSize, alignedSize)
-	}
-
-	if alignedSize > currentSize {
-		// Calculate pages needed with overflow protection
-		if alignedSize > maxMemoryPages*wasmPageSize {
-			return fmt.Errorf("required memory exceeds maximum allowed (%d pages)", maxMemoryPages)
-		}
-
-		pagesToGrow := (alignedSize - currentSize + wasmPageSize - 1) / wasmPageSize
-
-		// Charge gas for memory growth
-		growthSize := pagesToGrow * wasmPageSize
-		if err := mm.gasState.ConsumeMemory(growthSize); err != nil {
-			return fmt.Errorf("insufficient gas for memory growth: %w", err)
-		}
-
-		// Grow memory
-		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
-			return fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
-		}
-
-		// Update size after growth
-		mm.size = mm.memory.Size()
-	}
-	return nil
-}
-
 // writeAlignedData writes data to memory with proper alignment and returns the write location and actual data length
 func (mm *memoryManager) writeAlignedData(data []byte, printDebug bool) (uint32, uint32, error) {
+	fmt.Printf("\n=== Memory Write Operation ===\n")
+
 	// Check for null data
 	if data == nil {
+		fmt.Printf("ERROR: Null data provided\n")
 		return 0, 0, fmt.Errorf("null data")
 	}
 
@@ -314,13 +263,42 @@ func (mm *memoryManager) writeAlignedData(data []byte, printDebug bool) (uint32,
 	dataLen := uint32(len(data))
 	alignedLen := align(dataLen, alignmentSize)
 
-	// Ensure we have enough memory
+	fmt.Printf("Write details:\n")
+	fmt.Printf("- Original length: %d\n", dataLen)
+	fmt.Printf("- Aligned length: %d\n", alignedLen)
+	fmt.Printf("- Current offset: 0x%x\n", mm.nextOffset)
+	fmt.Printf("- Memory size: %d\n", mm.size)
+
+	// Check for overflow
 	if mm.nextOffset > math.MaxUint32-alignedLen {
-		return 0, 0, fmt.Errorf("memory allocation would overflow: offset=%d, length=%d", mm.nextOffset, alignedLen)
+		fmt.Printf("ERROR: Memory allocation would overflow: offset=0x%x, length=%d\n",
+			mm.nextOffset, alignedLen)
+		return 0, 0, fmt.Errorf("memory allocation would overflow: offset=%d, length=%d",
+			mm.nextOffset, alignedLen)
+	}
+
+	// Check if we need to grow memory
+	requiredSize := mm.nextOffset + alignedLen
+	if requiredSize > mm.size {
+		oldSize := mm.size
+		pagesToGrow := (requiredSize - mm.size + wasmPageSize - 1) / wasmPageSize
+
+		fmt.Printf("Growing memory:\n")
+		fmt.Printf("- Current size: %d bytes (%d pages)\n", oldSize, oldSize/wasmPageSize)
+		fmt.Printf("- Growing by: %d pages\n", pagesToGrow)
+		fmt.Printf("- New size will be: %d bytes (%d pages)\n",
+			oldSize+pagesToGrow*wasmPageSize, (oldSize+pagesToGrow*wasmPageSize)/wasmPageSize)
+
+		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
+			fmt.Printf("ERROR: Failed to grow memory\n")
+			return 0, 0, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
+		}
+		mm.size = mm.memory.Size()
 	}
 
 	// Write data to memory
 	if err := writeMemory(mm.memory, mm.nextOffset, data, printDebug); err != nil {
+		fmt.Printf("ERROR: Failed to write data: %v\n", err)
 		return 0, 0, fmt.Errorf("failed to write data: %w", err)
 	}
 
@@ -328,7 +306,11 @@ func (mm *memoryManager) writeAlignedData(data []byte, printDebug bool) (uint32,
 	writeOffset := mm.nextOffset
 	mm.nextOffset += alignedLen
 
-	// Return write location and actual data length
+	fmt.Printf("Write successful:\n")
+	fmt.Printf("- Write offset: 0x%x\n", writeOffset)
+	fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
+	fmt.Printf("=== End Memory Write ===\n\n")
+
 	return writeOffset, dataLen, nil
 }
 

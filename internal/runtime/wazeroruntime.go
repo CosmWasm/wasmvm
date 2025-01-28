@@ -436,9 +436,14 @@ func (w *WazeroRuntime) parseParams(otherParams []interface{}) (*types.GasMeter,
 }
 
 func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
+	fmt.Printf("\n=== Contract Instantiation Debug ===\n")
+	fmt.Printf("Checksum: %x\n", checksum)
+	fmt.Printf("Input sizes - env: %d, info: %d, msg: %d\n", len(env), len(info), len(msg))
+
 	// Parse input parameters and create gas state
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
 	if err != nil {
+		fmt.Printf("ERROR: Failed to parse params: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to parse params: %w", err)
 	}
 
@@ -460,9 +465,23 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Create context with environment
 	ctx := context.WithValue(context.Background(), envKey, runtimeEnv)
 
-	// Register host functions
+	// Log module compilation details
+	w.mu.Lock()
+	csHex := hex.EncodeToString(checksum)
+	compiledModule, ok := w.compiledModules[csHex]
+	if !ok {
+		w.mu.Unlock()
+		fmt.Printf("ERROR: Module not found for checksum\n")
+		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum: %x", checksum)
+	}
+	fmt.Printf("Module exports: %v\n", compiledModule.ExportedFunctions())
+	fmt.Printf("Module memories: %v\n", compiledModule.ExportedMemories())
+	w.mu.Unlock()
+
+	// Register host functions with tracing
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
+		fmt.Printf("ERROR: Failed to register host functions: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hostModule.Close(ctx)
@@ -471,24 +490,16 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	envModule, err := w.runtime.InstantiateModule(ctx, hostModule,
 		wazero.NewModuleConfig().WithName("env").WithStartFunctions())
 	if err != nil {
+		fmt.Printf("ERROR: Failed to instantiate env module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
-
-	// Get the contract module
-	w.mu.Lock()
-	csHex := hex.EncodeToString(checksum)
-	compiledModule, ok := w.compiledModules[csHex]
-	if !ok {
-		w.mu.Unlock()
-		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum: %x", checksum)
-	}
-	w.mu.Unlock()
 
 	// Create and instantiate contract module
 	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule,
 		wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
 	if err != nil {
+		fmt.Printf("ERROR: Failed to instantiate contract module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
 	defer contractModule.Close(ctx)
@@ -496,12 +507,16 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Get contract memory
 	memory := contractModule.Memory()
 	if memory == nil {
+		fmt.Printf("ERROR: Contract module has no memory\n")
 		return nil, types.GasReport{}, fmt.Errorf("contract module has no memory")
 	}
 
-	// Initialize memory with one page to avoid null pointer issues
+	fmt.Printf("Memory size before instantiation: %d bytes\n", memory.Size())
+
+	// Initialize memory with one page if empty
 	if memory.Size() == 0 {
 		if _, ok := memory.Grow(1); !ok {
+			fmt.Printf("ERROR: Failed to initialize memory with one page\n")
 			return nil, types.GasReport{}, fmt.Errorf("failed to initialize memory with one page")
 		}
 	}
@@ -509,43 +524,50 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Initialize memory manager
 	memManager := newMemoryManager(memory, gasState)
 
-	// Validate and prepare input data
-	if err := validateInputData(env, info, msg); err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("invalid input data: %w", err)
-	}
-
 	// Write input data to memory
 	envPtr, infoPtr, msgPtr, err := writeInputData(memManager, env, info, msg, printDebug)
 	if err != nil {
+		fmt.Printf("ERROR: Failed to write input data: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to write input data: %w", err)
 	}
 
-	if printDebug {
-		fmt.Printf("Memory layout before instantiate:\n")
-		fmt.Printf("- env: ptr=0x%x, size=%d\n", envPtr, len(env))
-		fmt.Printf("- info: ptr=0x%x, size=%d\n", infoPtr, len(info))
-		fmt.Printf("- msg: ptr=0x%x, size=%d\n", msgPtr, len(msg))
-	}
+	fmt.Printf("Memory pointers:\n")
+	fmt.Printf("- env: 0x%x\n", envPtr)
+	fmt.Printf("- info: 0x%x\n", infoPtr)
+	fmt.Printf("- msg: 0x%x\n", msgPtr)
 
 	// Get instantiate function
 	instantiate := contractModule.ExportedFunction("instantiate")
 	if instantiate == nil {
+		fmt.Printf("ERROR: instantiate function not found in exports\n")
 		return nil, types.GasReport{}, fmt.Errorf("instantiate function not exported")
 	}
+	fmt.Printf("Found instantiate function\n")
 
 	// Charge gas for instantiation
 	if err := gasState.ConsumeGas(gasState.config.Instantiate, "contract instantiation"); err != nil {
+		fmt.Printf("ERROR: Insufficient gas: %v\n", err)
 		return nil, types.GasReport{}, err
 	}
 
+	// Dump pre-call memory state
+	if data, ok := memory.Read(0, 256); ok {
+		fmt.Printf("First 256 bytes of memory before call:\n%s\n", hex.Dump(data))
+	}
+
 	// Call instantiate function
+	fmt.Printf("Calling instantiate function...\n")
 	ret, err := instantiate.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	if err != nil {
+		fmt.Printf("ERROR: instantiate call failed: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("instantiate call failed: %w", err)
 	}
 
+	fmt.Printf("Call completed. Return values: %v\n", ret)
+
 	// Validate return value
 	if len(ret) != 1 {
+		fmt.Printf("ERROR: Expected 1 return value, got %d\n", len(ret))
 		return nil, types.GasReport{}, fmt.Errorf("expected 1 return value, got %d", len(ret))
 	}
 
@@ -553,6 +575,7 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	resultPtr := uint32(ret[0])
 	result, err := readAndValidateResult(memory, resultPtr, printDebug)
 	if err != nil {
+		fmt.Printf("ERROR: Failed to read result: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to read result: %w", err)
 	}
 
@@ -564,70 +587,17 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		Limit:          gasLimit,
 	}
 
-	if printDebug {
-		fmt.Printf("Gas report:\n")
-		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
-		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
-		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
-		fmt.Printf("- Limit: %d\n", gasReport.Limit)
-	}
+	fmt.Printf("Gas report:\n")
+	fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
+	fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
+	fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
+	fmt.Printf("- Limit: %d\n", gasReport.Limit)
+	fmt.Printf("=== End Contract Instantiation Debug ===\n\n")
 
 	return result, gasReport, nil
 }
 
-// Helper functions for the Instantiate implementation
-
-func validateInputData(env, info, msg []byte) error {
-	if len(env) == 0 {
-		return fmt.Errorf("empty environment data")
-	}
-	if len(info) == 0 {
-		return fmt.Errorf("empty info data")
-	}
-	if len(msg) == 0 {
-		return fmt.Errorf("empty message data")
-	}
-
-	// Validate env is proper JSON
-	var envData map[string]interface{}
-	if err := json.Unmarshal(env, &envData); err != nil {
-		return fmt.Errorf("invalid environment JSON: %w", err)
-	}
-
-	// Validate info is proper JSON
-	var infoData map[string]interface{}
-	if err := json.Unmarshal(info, &infoData); err != nil {
-		return fmt.Errorf("invalid info JSON: %w", err)
-	}
-
-	// Validate msg is proper JSON
-	var msgData map[string]interface{}
-	if err := json.Unmarshal(msg, &msgData); err != nil {
-		return fmt.Errorf("invalid message JSON: %w", err)
-	}
-
-	// Re-marshal each JSON to ensure consistent formatting
-	cleanEnv, err := json.Marshal(envData)
-	if err != nil {
-		return fmt.Errorf("failed to re-marshal environment JSON: %w", err)
-	}
-	env = cleanEnv
-
-	cleanInfo, err := json.Marshal(infoData)
-	if err != nil {
-		return fmt.Errorf("failed to re-marshal info JSON: %w", err)
-	}
-	info = cleanInfo
-
-	cleanMsg, err := json.Marshal(msgData)
-	if err != nil {
-		return fmt.Errorf("failed to re-marshal message JSON: %w", err)
-	}
-	msg = cleanMsg
-
-	return nil
-}
-
+// Helper function to validate and write input data
 func writeInputData(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
 	// Write environment data
 	envPtr, _, err = mm.writeAlignedData(env, printDebug)
@@ -791,7 +761,10 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 
 	// Account for memory view creation
 	if !queryView.IsNil {
-		gasState.ConsumeGas(uint64(len(queryView.Data))*DefaultGasConfig().PerByte, "query memory view")
+		err := gasState.ConsumeGas(uint64(len(queryView.Data))*DefaultGasConfig().PerByte, "query memory view")
+		if err != nil {
+			return nil, types.GasReport{}, fmt.Errorf("failed to consume gas for query memory view: %w", err)
+		}
 	}
 
 	// Set the contract execution environment
@@ -1183,35 +1156,6 @@ func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 	return metrics, nil
 }
 
-// serializeEnvForContract serializes and validates the environment for the contract
-func serializeEnvForContract(env []byte, printDebug bool) ([]byte, error) {
-	// First unmarshal into a map to preserve field order
-	var rawEnv map[string]interface{}
-	if err := json.Unmarshal(env, &rawEnv); err != nil {
-		return nil, fmt.Errorf("failed to deserialize environment: %w", err)
-	}
-
-	// Also unmarshal into a typed struct to validate the data
-	var typedEnv types.Env
-	if err := json.Unmarshal(env, &typedEnv); err != nil {
-		return nil, fmt.Errorf("failed to deserialize environment: %w", err)
-	}
-
-	// Validate required fields
-	if typedEnv.Block.Height == 0 {
-		return nil, fmt.Errorf("block height is required")
-	}
-	if typedEnv.Block.ChainID == "" {
-		return nil, fmt.Errorf("chain id is required")
-	}
-	if typedEnv.Contract.Address == "" {
-		return nil, fmt.Errorf("contract address is required")
-	}
-
-	// If we got here, the original JSON is valid, so return it
-	return env, nil
-}
-
 // readFunctionResult safely reads the result of a function call from memory
 func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, printDebug bool) ([]byte, error) {
 	if printDebug {
@@ -1300,36 +1244,6 @@ func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, 
 	}
 
 	return data, nil
-}
-
-// repairJSONResponse attempts to fix common JSON corruption patterns
-func repairJSONResponse(data []byte, printDebug bool) []byte {
-	s := string(data)
-
-	// Common corruption pattern: missing comma between array end and next field
-	s = strings.ReplaceAll(s, `]"`, `],"`)
-
-	// Common corruption pattern: truncated field names
-	s = strings.ReplaceAll(s, `"hta":`, `"data":`)
-
-	// Common corruption pattern: missing quotes around field names
-	s = strings.ReplaceAll(s, `{instruction:`, `{"instruction":`)
-	s = strings.ReplaceAll(s, `{seed:`, `{"seed":`)
-
-	// Common corruption pattern: missing quotes around string values
-	s = strings.ReplaceAll(s, `:instruction}`, `:"instruction"}`)
-	s = strings.ReplaceAll(s, `:seed}`, `:"seed"}`)
-
-	// Only return repaired data if it's valid JSON
-	var js map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &js); err != nil {
-		if printDebug {
-			fmt.Printf("[DEBUG] Repair attempt failed: %v\n", err)
-		}
-		return nil
-	}
-
-	return []byte(s)
 }
 
 func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte, gasMeter *types.GasMeter, store types.KVStore, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
