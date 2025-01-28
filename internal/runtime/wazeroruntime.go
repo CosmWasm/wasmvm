@@ -441,15 +441,7 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("=== Initial State ===\n")
 	fmt.Printf("Checksum: %x\n", checksum)
 	fmt.Printf("Input sizes - env: %d, info: %d, msg: %d\n", len(env), len(info), len(msg))
-	if len(msg) < 1024 {
-		fmt.Printf("Message content: %s\n", string(msg))
-	}
-
-	// Add detailed logging of input parameters
-	fmt.Printf("\n=== Instantiate Input Parameters ===\n")
-	fmt.Printf("Env: %s\n", string(env))
-	fmt.Printf("Info: %s\n", string(info))
-	fmt.Printf("Msg: %s\n", string(msg))
+	fmt.Printf("Message content: %s\n", string(msg))
 
 	// Parse input parameters and create gas state
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
@@ -498,14 +490,6 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("Exports: %v\n", module.ExportedFunctions())
 	fmt.Printf("Memories: %v\n", module.ExportedMemories())
 
-	// Log import requirements
-	//	if compiled, ok := module.(interface{ Imports() []api.Import }); ok {
-	//		fmt.Printf("\n=== Required Imports ===\n")
-	//		for _, imp := range compiled.Imports() {
-	//			fmt.Printf("Module: %s, Name: %s, Type: %v\n",
-	//				imp.Module(), imp.Name(), imp.Type())
-	//		}
-	//	}
 	w.mu.Unlock()
 
 	// Register host functions with tracing
@@ -588,6 +572,41 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		fmt.Printf("ERROR: Insufficient gas: %v\n", err)
 		return nil, types.GasReport{}, err
 	}
+
+	// Right before calling instantiate.Call(), let's inspect the memory:
+	fmt.Printf("\n=== Inspecting Memory Parameters Before Call ===\n")
+
+	envData, ok := memory.Read(envPtr, 256) // Read enough bytes to see the content
+	if ok {
+		fmt.Printf("Env Data at 0x%x:\n", envPtr)
+		fmt.Printf("Raw bytes: %x\n", envData)
+		fmt.Printf("As string: %s\n", string(envData))
+	} else {
+		fmt.Printf("Failed to read env data at 0x%x\n", envPtr)
+	}
+
+	infoData, ok := memory.Read(infoPtr, 256)
+	if ok {
+		fmt.Printf("\nInfo Data at 0x%x:\n", infoPtr)
+		fmt.Printf("Raw bytes: %x\n", infoData)
+		fmt.Printf("As string: %s\n", string(infoData))
+	} else {
+		fmt.Printf("Failed to read info data at 0x%x\n", infoPtr)
+	}
+
+	msgData, ok := memory.Read(msgPtr, 256)
+	if ok {
+		fmt.Printf("\nMsg Data at 0x%x:\n", msgPtr)
+		fmt.Printf("Raw bytes: %x\n", msgData)
+		fmt.Printf("As string: %s\n", string(msgData))
+	} else {
+		fmt.Printf("Failed to read msg data at 0x%x\n", msgPtr)
+	}
+
+	fmt.Printf("\nCalling instantiate with parameters:\n")
+	fmt.Printf("envPtr:  0x%x\n", envPtr)
+	fmt.Printf("infoPtr: 0x%x\n", infoPtr)
+	fmt.Printf("msgPtr:  0x%x\n", msgPtr)
 
 	// Call instantiate function
 	fmt.Printf("\n=== Executing Instantiate ===\n")
@@ -1699,37 +1718,74 @@ func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
 }
 
 func readResultRegionInternal(memory api.Memory, resultPtr uint32, printDebug bool) (*Region, error) {
-	// Validate result pointer
-	if resultPtr == 0 {
-		return nil, fmt.Errorf("null result pointer")
+	if printDebug {
+		fmt.Printf("\n=== Reading Result Region ===\n")
+		fmt.Printf("Result pointer: 0x%x\n", resultPtr)
+		fmt.Printf("Memory size: %d bytes\n", memory.Size())
 	}
 
-	// Ensure pointer is aligned
-	if resultPtr%alignmentSize != 0 {
-		return nil, fmt.Errorf("unaligned result pointer: %d must be aligned to %d", resultPtr, alignmentSize)
-	}
-
-	// Read region data
-	regionData, err := readMemory(memory, resultPtr, regionStructSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read region data: %w", err)
-	}
-
-	// Parse region
-	region, err := RegionFromBytes(regionData, true)
-	if err != nil {
-		return nil, fmt.Errorf("invalid region data: %w", err)
-	}
-
-	// Validate region against memory size
-	if err := region.Validate(memory.Size()); err != nil {
-		return nil, fmt.Errorf("invalid result region: %w", err)
+	// Read the full 12 bytes of the Region struct
+	data, ok := memory.Read(resultPtr, regionStructSize)
+	if !ok {
+		if printDebug {
+			fmt.Printf("Failed to read region data at ptr=0x%x size=%d\n",
+				resultPtr, regionStructSize)
+		}
+		return nil, fmt.Errorf("failed to read region data at offset=%d size=%d",
+			resultPtr, regionStructSize)
 	}
 
 	if printDebug {
-		fmt.Printf("[DEBUG] Result region: offset=0x%x, capacity=%d, length=%d\n",
-			region.Offset, region.Capacity, region.Length)
+		fmt.Printf("Raw region data: %x\n", data)
+	}
+
+	// Parse the Region struct
+	region := &Region{
+		Offset:   binary.LittleEndian.Uint32(data[0:4]),
+		Capacity: binary.LittleEndian.Uint32(data[4:8]),
+		Length:   binary.LittleEndian.Uint32(data[8:12]),
+	}
+
+	if printDebug {
+		fmt.Printf("Parsed Region:\n")
+		fmt.Printf("- Offset: 0x%x\n", region.Offset)
+		fmt.Printf("- Capacity: %d\n", region.Capacity)
+		fmt.Printf("- Length: %d\n", region.Length)
+	}
+
+	// Validate the region
+	if err := region.Validate(memory.Size()); err != nil {
+		if printDebug {
+			fmt.Printf("Region validation failed: %v\n", err)
+		}
+		return nil, fmt.Errorf("invalid region: %w", err)
+	}
+
+	// Try to read the actual data the region points to
+	if printDebug {
+		if data, ok := memory.Read(region.Offset, region.Length); ok {
+			fmt.Printf("Data preview: %x\n", data[:min(32, len(data))])
+			if isReadableASCII(data) {
+				fmt.Printf("As text: %s\n", string(data))
+			}
+		}
 	}
 
 	return region, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func isReadableASCII(data []byte) bool {
+	for _, b := range data {
+		if b < 32 || b > 126 {
+			return false
+		}
+	}
+	return true
 }

@@ -367,33 +367,66 @@ func (mm *memoryManager) prepareRegions(env, info, msg []byte) (*Region, *Region
 
 // writeRegions writes the regions to memory and returns their pointers
 func (mm *memoryManager) writeRegions(env, info, msg *Region) (uint32, uint32, uint32, error) {
+	fmt.Printf("\n=== Writing Region Structs to Memory ===\n")
+
 	// Write env region
-	envPtr, envLen, err := mm.writeAlignedData(env.ToBytes(), false)
+	envRegionBytes := env.ToBytes()
+	fmt.Printf("Environment Region bytes: %x\n", envRegionBytes)
+	envPtr, envLen, err := mm.writeAlignedData(envRegionBytes, true)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("failed to write env region: %w", err)
 	}
 	if envLen != regionStructSize {
 		return 0, 0, 0, fmt.Errorf("unexpected env region size: got %d, want %d", envLen, regionStructSize)
 	}
+	fmt.Printf("Wrote env region at ptr=0x%x\n", envPtr)
 
-	// Write info region
-	infoPtr, infoLen, err := mm.writeAlignedData(info.ToBytes(), false)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write info region: %w", err)
-	}
-	if infoLen != regionStructSize {
-		return 0, 0, 0, fmt.Errorf("unexpected info region size: got %d, want %d", infoLen, regionStructSize)
+	// Verify region alignment
+	if envPtr%8 != 0 {
+		return 0, 0, 0, fmt.Errorf("env ptr 0x%x not 8-byte aligned", envPtr)
 	}
 
-	// Write msg region
-	msgPtr, msgLen, err := mm.writeAlignedData(msg.ToBytes(), false)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write msg region: %w", err)
-	}
-	if msgLen != regionStructSize {
-		return 0, 0, 0, fmt.Errorf("unexpected msg region size: got %d, want %d", msgLen, regionStructSize)
+	// Write info region if present
+	var infoPtr uint32
+	if info != nil {
+		infoRegionBytes := info.ToBytes()
+		fmt.Printf("Info Region bytes: %x\n", infoRegionBytes)
+		infoPtr, envLen, err = mm.writeAlignedData(infoRegionBytes, true)
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("failed to write info region: %w", err)
+		}
+		if envLen != regionStructSize {
+			return 0, 0, 0, fmt.Errorf("unexpected info region size: got %d, want %d", envLen, regionStructSize)
+		}
+		fmt.Printf("Wrote info region at ptr=0x%x\n", infoPtr)
+
+		// Verify region alignment
+		if infoPtr%8 != 0 {
+			return 0, 0, 0, fmt.Errorf("info ptr 0x%x not 8-byte aligned", infoPtr)
+		}
 	}
 
+	// Write msg region if present
+	var msgPtr uint32
+	if msg != nil {
+		msgRegionBytes := msg.ToBytes()
+		fmt.Printf("Message Region bytes: %x\n", msgRegionBytes)
+		msgPtr, envLen, err = mm.writeAlignedData(msgRegionBytes, true)
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("failed to write msg region: %w", err)
+		}
+		if envLen != regionStructSize {
+			return 0, 0, 0, fmt.Errorf("unexpected msg region size: got %d, want %d", envLen, regionStructSize)
+		}
+		fmt.Printf("Wrote msg region at ptr=0x%x\n", msgPtr)
+
+		// Verify region alignment
+		if msgPtr%8 != 0 {
+			return 0, 0, 0, fmt.Errorf("msg ptr 0x%x not 8-byte aligned", msgPtr)
+		}
+	}
+
+	fmt.Printf("=== Successfully Wrote Region Structs ===\n")
 	return envPtr, infoPtr, msgPtr, nil
 }
 
