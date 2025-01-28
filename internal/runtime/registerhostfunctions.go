@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -117,9 +118,23 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 
 	// Register abort function for error handling
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, code uint32) {
-			fmt.Printf("Contract aborted with code: %d\n", code)
-			panic(fmt.Sprintf("contract aborted with code: %d", code))
+		WithFunc(func(ctx context.Context, mod api.Module, msgPtr uint32) {
+			// Retrieve the contract's memory.
+			mem := mod.Memory()
+
+			// Attempt to read a UTF-8 string from `msgPtr` up to a null terminator,
+			// or some maximum length, so we can see the real error message:
+			msg, err := readZeroTerminatedString(mem, msgPtr)
+			if err != nil {
+				// fallback or log the pointer if reading fails
+				fmt.Printf("Contract aborted with code=0x%x (could not read string: %v)\n", msgPtr, err)
+			} else {
+				// Print the actual text the contract wrote
+				fmt.Printf("Contract aborted: %s\n", msg)
+			}
+
+			// Then actually “panic”, or do a Go-side error:
+			panic(fmt.Sprintf("contract aborted at pointer 0x%x", msgPtr))
 		}).
 		WithParameterNames("code").
 		Export("abort")
@@ -521,4 +536,42 @@ func DebugMemory(mem api.Memory, ptr uint32, size uint32) {
 	} else {
 		fmt.Printf("Failed to read memory at ptr=0x%x size=%d\n", ptr, size)
 	}
+}
+
+// readZeroTerminatedString reads up to maxLen bytes from the given Memory
+// starting at offset, scanning for a null terminator (0 byte). If found,
+// it returns the string up to (but not including) the null terminator. If
+// the terminator is not found within maxLen, it returns the entire slice
+// (capped at maxLen). This prevents runaway reads on malformed data.
+func readZeroTerminatedString(mem api.Memory, offset uint32) (string, error) {
+	// For safety, define a maximum length (e.g. 4KB) to prevent runaway reads.
+	const maxLen = 4096
+
+	// Check that offset is within memory bounds.
+	memSize := uint32(mem.Size())
+	if offset >= memSize {
+		return "", fmt.Errorf("offset 0x%x is out of memory bounds (memory size: %d)", offset, memSize)
+	}
+
+	// Clamp the read length to avoid going past the end of memory.
+	lengthToRead := memSize - offset
+	if lengthToRead > maxLen {
+		lengthToRead = maxLen
+	}
+
+	// Attempt to read up to lengthToRead bytes starting at offset.
+	data, ok := mem.Read(offset, lengthToRead)
+	if !ok {
+		return "", fmt.Errorf("failed to read memory at offset 0x%x (length: %d)", offset, lengthToRead)
+	}
+
+	// Look for the first null (0x00) byte.
+	nullIndex := bytes.IndexByte(data, 0)
+	if nullIndex == -1 {
+		// No null terminator found, so return the entire data slice.
+		nullIndex = len(data)
+	}
+
+	// Convert everything up to the nullIndex into a Go string.
+	return string(data[:nullIndex]), nil
 }

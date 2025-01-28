@@ -644,11 +644,29 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 }
 
 // Helper function to validate memory writes
+// writeInputDataWithValidation modified with enhanced logging
 func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
-	fmt.Printf("\n=== Validating Input Data Write ===\n")
+	fmt.Printf("\n=== Input Data Validation ===\n")
+	fmt.Printf("Memory state before writes:\n")
+	fmt.Printf("- Total size: %d bytes (%d pages)\n", mm.memory.Size(), mm.memory.Size()/wasmPageSize)
+	fmt.Printf("- Current offset: 0x%x\n", mm.nextOffset)
 
 	// Write environment data
-	fmt.Printf("Writing env data (size: %d)\n", len(env))
+	fmt.Printf("\nWriting env data:\n")
+	fmt.Printf("- Raw bytes: %x\n", env)
+	fmt.Printf("- As string: %s\n", string(env))
+	fmt.Printf("- Length: %d\n", len(env))
+
+	alignedEnvLen := align(uint32(len(env)), alignmentSize)
+	fmt.Printf("- Aligned length: %d\n", alignedEnvLen)
+	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
+
+	if mm.nextOffset+alignedEnvLen > mm.size {
+		fmt.Printf("WARNING: Memory growth needed for env data\n")
+		fmt.Printf("- Current size: %d\n", mm.size)
+		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedEnvLen)
+	}
+
 	envPtr, _, err = mm.writeAlignedData(env, printDebug)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("failed to write env data: %w", err)
@@ -657,12 +675,30 @@ func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, prin
 	// Verify env write
 	if data, ok := mm.memory.Read(envPtr, uint32(len(env))); ok {
 		if !bytes.Equal(env, data) {
-			fmt.Printf("WARNING: Env data verification failed\n")
+			fmt.Printf("ERROR: Env data verification failed\n")
+			fmt.Printf("- Written:  %x\n", data)
+			fmt.Printf("- Expected: %x\n", env)
+		} else {
+			fmt.Printf("Env data verification successful\n")
 		}
 	}
 
-	// Write info data
-	fmt.Printf("Writing info data (size: %d)\n", len(info))
+	// Write info data with similar logging
+	fmt.Printf("\nWriting info data:\n")
+	fmt.Printf("- Raw bytes: %x\n", info)
+	fmt.Printf("- As string: %s\n", string(info))
+	fmt.Printf("- Length: %d\n", len(info))
+
+	alignedInfoLen := align(uint32(len(info)), alignmentSize)
+	fmt.Printf("- Aligned length: %d\n", alignedInfoLen)
+	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
+
+	if mm.nextOffset+alignedInfoLen > mm.size {
+		fmt.Printf("WARNING: Memory growth needed for info data\n")
+		fmt.Printf("- Current size: %d\n", mm.size)
+		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedInfoLen)
+	}
+
 	infoPtr, _, err = mm.writeAlignedData(info, printDebug)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("failed to write info data: %w", err)
@@ -671,12 +707,30 @@ func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, prin
 	// Verify info write
 	if data, ok := mm.memory.Read(infoPtr, uint32(len(info))); ok {
 		if !bytes.Equal(info, data) {
-			fmt.Printf("WARNING: Info data verification failed\n")
+			fmt.Printf("ERROR: Info data verification failed\n")
+			fmt.Printf("- Written:  %x\n", data)
+			fmt.Printf("- Expected: %x\n", info)
+		} else {
+			fmt.Printf("Info data verification successful\n")
 		}
 	}
 
-	// Write message data
-	fmt.Printf("Writing msg data (size: %d)\n", len(msg))
+	// Write message data with similar logging
+	fmt.Printf("\nWriting msg data:\n")
+	fmt.Printf("- Raw bytes: %x\n", msg)
+	fmt.Printf("- As string: %s\n", string(msg))
+	fmt.Printf("- Length: %d\n", len(msg))
+
+	alignedMsgLen := align(uint32(len(msg)), alignmentSize)
+	fmt.Printf("- Aligned length: %d\n", alignedMsgLen)
+	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
+
+	if mm.nextOffset+alignedMsgLen > mm.size {
+		fmt.Printf("WARNING: Memory growth needed for msg data\n")
+		fmt.Printf("- Current size: %d\n", mm.size)
+		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedMsgLen)
+	}
+
 	msgPtr, _, err = mm.writeAlignedData(msg, printDebug)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("failed to write msg data: %w", err)
@@ -685,33 +739,21 @@ func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, prin
 	// Verify msg write
 	if data, ok := mm.memory.Read(msgPtr, uint32(len(msg))); ok {
 		if !bytes.Equal(msg, data) {
-			fmt.Printf("WARNING: Msg data verification failed\n")
+			fmt.Printf("ERROR: Msg data verification failed\n")
+			fmt.Printf("- Written:  %x\n", data)
+			fmt.Printf("- Expected: %x\n", msg)
+		} else {
+			fmt.Printf("Msg data verification successful\n")
 		}
 	}
 
-	fmt.Printf("All data written and verified\n")
-	return envPtr, infoPtr, msgPtr, nil
-}
-
-// Helper function to validate and write input data
-func writeInputData(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
-	// Write environment data
-	envPtr, _, err = mm.writeAlignedData(env, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write env data: %w", err)
-	}
-
-	// Write info data
-	infoPtr, _, err = mm.writeAlignedData(info, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write info data: %w", err)
-	}
-
-	// Write message data
-	msgPtr, _, err = mm.writeAlignedData(msg, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write msg data: %w", err)
-	}
+	fmt.Printf("\nFinal memory state:\n")
+	fmt.Printf("- Env ptr:  0x%x\n", envPtr)
+	fmt.Printf("- Info ptr: 0x%x\n", infoPtr)
+	fmt.Printf("- Msg ptr:  0x%x\n", msgPtr)
+	fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
+	fmt.Printf("- Total memory: %d bytes\n", mm.size)
+	fmt.Printf("=== End Input Data Validation ===\n\n")
 
 	return envPtr, infoPtr, msgPtr, nil
 }
@@ -1343,23 +1385,21 @@ func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, 
 }
 
 func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte, gasMeter *types.GasMeter, store types.KVStore, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-	if printDebug {
-		fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
-		fmt.Printf("[DEBUG] Function call: %s\n", name)
-		fmt.Printf("[DEBUG] Checksum: %x\n", checksum)
-		fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
-		if env != nil {
-			fmt.Printf("[DEBUG] Input sizes: env=%d", len(env))
-		}
-		if info != nil {
-			fmt.Printf(", info=%d", len(info))
-		}
-		if msg != nil {
-			fmt.Printf(", msg=%d", len(msg))
-			fmt.Printf("\n[DEBUG] Message content: %s\n", string(msg))
-		}
-		fmt.Printf("\n")
+	fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
+	fmt.Printf("[DEBUG] Function call: %s\n", name)
+	fmt.Printf("[DEBUG] Checksum: %x\n", checksum)
+	fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
+	if env != nil {
+		fmt.Printf("[DEBUG] Input sizes: env=%d", len(env))
 	}
+	if info != nil {
+		fmt.Printf(", info=%d", len(info))
+	}
+	if msg != nil {
+		fmt.Printf(", msg=%d", len(msg))
+		fmt.Printf("\n[DEBUG] Message content: %s\n", string(msg))
+	}
+	fmt.Printf("\n")
 
 	// Create gas state for tracking memory operations
 	gasState := NewGasState(gasLimit)

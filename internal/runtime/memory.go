@@ -252,6 +252,10 @@ func writeMemory(memory api.Memory, offset uint32, data []byte, printDebug bool)
 // writeAlignedData writes data to memory with proper alignment and returns the write location and actual data length
 func (mm *memoryManager) writeAlignedData(data []byte, printDebug bool) (uint32, uint32, error) {
 	fmt.Printf("\n=== Memory Write Operation ===\n")
+	fmt.Printf("Memory interface details:\n")
+	fmt.Printf("- Current pages: %d\n", mm.memory.Size()/wasmPageSize)
+	fmt.Printf("- Page size: %d\n", wasmPageSize)
+	fmt.Printf("- Current memory size: %d bytes\n", mm.memory.Size())
 
 	// Check for null data
 	if data == nil {

@@ -76,7 +76,6 @@ type IteratorID struct {
 // within the WebAssembly module's memory space. This function must be extremely
 // reliable as it's used by many other host functions.
 func allocateInContract(ctx context.Context, mod api.Module, size uint32) (uint32, error) {
-
 	fmt.Printf("\n=== Memory Allocation Request ===\n")
 	fmt.Printf("Requested size: %d\n", size)
 	fmt.Printf("Current memory size: %d\n", mod.Memory().Size())
