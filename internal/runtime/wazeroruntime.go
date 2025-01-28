@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
@@ -436,9 +437,19 @@ func (w *WazeroRuntime) parseParams(otherParams []interface{}) (*types.GasMeter,
 }
 
 func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	fmt.Printf("\n=== Contract Instantiation Debug ===\n")
+	fmt.Printf("\n=== Contract Instantiation Start ===\n")
+	fmt.Printf("=== Initial State ===\n")
 	fmt.Printf("Checksum: %x\n", checksum)
 	fmt.Printf("Input sizes - env: %d, info: %d, msg: %d\n", len(env), len(info), len(msg))
+	if len(msg) < 1024 {
+		fmt.Printf("Message content: %s\n", string(msg))
+	}
+
+	// Add detailed logging of input parameters
+	fmt.Printf("\n=== Instantiate Input Parameters ===\n")
+	fmt.Printf("Env: %s\n", string(env))
+	fmt.Printf("Info: %s\n", string(info))
+	fmt.Printf("Msg: %s\n", string(msg))
 
 	// Parse input parameters and create gas state
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
@@ -449,6 +460,7 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 
 	// Create gas state for tracking memory operations
 	gasState := NewGasState(gasLimit)
+	fmt.Printf("Gas state initialized with limit: %d\n", gasLimit)
 
 	// Initialize runtime environment
 	runtimeEnv := &RuntimeEnvironment{
@@ -462,23 +474,42 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		nextCallID: 1,
 	}
 
-	// Create context with environment
-	ctx := context.WithValue(context.Background(), envKey, runtimeEnv)
+	// Create context with environment and tracing
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, envKey, runtimeEnv)
+	ctx = context.WithValue(ctx, "call_trace", []string{})
 
-	// Log module compilation details
+	// Get the module
 	w.mu.Lock()
-	csHex := hex.EncodeToString(checksum)
-	compiledModule, ok := w.compiledModules[csHex]
+	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
 	if !ok {
 		w.mu.Unlock()
 		fmt.Printf("ERROR: Module not found for checksum\n")
 		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum: %x", checksum)
 	}
-	fmt.Printf("Module exports: %v\n", compiledModule.ExportedFunctions())
-	fmt.Printf("Module memories: %v\n", compiledModule.ExportedMemories())
+
+	fmt.Printf("\n=== Contract Setup ===\n")
+	fmt.Printf("Module exports: %v\n", module.ExportedFunctions())
+	fmt.Printf("Memory sections: %v\n", module.ExportedMemories())
+	fmt.Printf("Required imports: %v\n", module.ImportedFunctions())
+
+	// Log module details
+	fmt.Printf("\n=== Module Details ===\n")
+	fmt.Printf("Exports: %v\n", module.ExportedFunctions())
+	fmt.Printf("Memories: %v\n", module.ExportedMemories())
+
+	// Log import requirements
+	//	if compiled, ok := module.(interface{ Imports() []api.Import }); ok {
+	//		fmt.Printf("\n=== Required Imports ===\n")
+	//		for _, imp := range compiled.Imports() {
+	//			fmt.Printf("Module: %s, Name: %s, Type: %v\n",
+	//				imp.Module(), imp.Name(), imp.Type())
+	//		}
+	//	}
 	w.mu.Unlock()
 
 	// Register host functions with tracing
+	fmt.Printf("\n=== Registering Host Functions ===\n")
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to register host functions: %v\n", err)
@@ -486,18 +517,18 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	}
 	defer hostModule.Close(ctx)
 
-	// Create and instantiate environment module
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule,
-		wazero.NewModuleConfig().WithName("env").WithStartFunctions())
+	// Create and instantiate environment module first
+	fmt.Printf("\n=== Instantiating Environment Module ===\n")
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
 		fmt.Printf("ERROR: Failed to instantiate env module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
 
-	// Create and instantiate contract module
-	contractModule, err := w.runtime.InstantiateModule(ctx, compiledModule,
-		wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
+	// Then create and instantiate contract module
+	fmt.Printf("\n=== Instantiating Contract Module ===\n")
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract"))
 	if err != nil {
 		fmt.Printf("ERROR: Failed to instantiate contract module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
@@ -511,10 +542,12 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		return nil, types.GasReport{}, fmt.Errorf("contract module has no memory")
 	}
 
-	fmt.Printf("Memory size before instantiation: %d bytes\n", memory.Size())
+	fmt.Printf("\n=== Memory Setup ===\n")
+	fmt.Printf("Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
 
 	// Initialize memory with one page if empty
 	if memory.Size() == 0 {
+		fmt.Printf("Initializing empty memory with one page\n")
 		if _, ok := memory.Grow(1); !ok {
 			fmt.Printf("ERROR: Failed to initialize memory with one page\n")
 			return nil, types.GasReport{}, fmt.Errorf("failed to initialize memory with one page")
@@ -524,8 +557,9 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Initialize memory manager
 	memManager := newMemoryManager(memory, gasState)
 
-	// Write input data to memory
-	envPtr, infoPtr, msgPtr, err := writeInputData(memManager, env, info, msg, printDebug)
+	// Write input data to memory with validation
+	fmt.Printf("\n=== Writing Input Data ===\n")
+	envPtr, infoPtr, msgPtr, err := writeInputDataWithValidation(memManager, env, info, msg, printDebug)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to write input data: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to write input data: %w", err)
@@ -542,7 +576,12 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		fmt.Printf("ERROR: instantiate function not found in exports\n")
 		return nil, types.GasReport{}, fmt.Errorf("instantiate function not exported")
 	}
-	fmt.Printf("Found instantiate function\n")
+
+	// Dump pre-call memory state
+	fmt.Printf("\n=== Pre-Call Memory State ===\n")
+	if data, ok := memory.Read(0, 256); ok {
+		fmt.Printf("First 256 bytes of memory:\n%s\n", hex.Dump(data))
+	}
 
 	// Charge gas for instantiation
 	if err := gasState.ConsumeGas(gasState.config.Instantiate, "contract instantiation"); err != nil {
@@ -550,16 +589,15 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		return nil, types.GasReport{}, err
 	}
 
-	// Dump pre-call memory state
-	if data, ok := memory.Read(0, 256); ok {
-		fmt.Printf("First 256 bytes of memory before call:\n%s\n", hex.Dump(data))
-	}
-
 	// Call instantiate function
-	fmt.Printf("Calling instantiate function...\n")
+	fmt.Printf("\n=== Executing Instantiate ===\n")
 	ret, err := instantiate.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	if err != nil {
 		fmt.Printf("ERROR: instantiate call failed: %v\n", err)
+		// Dump memory state on error
+		if data, ok := memory.Read(0, 256); ok {
+			fmt.Printf("Memory dump after error:\n%s\n", hex.Dump(data))
+		}
 		return nil, types.GasReport{}, fmt.Errorf("instantiate call failed: %w", err)
 	}
 
@@ -587,14 +625,72 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		Limit:          gasLimit,
 	}
 
+	fmt.Printf("\n=== Execution Complete ===\n")
 	fmt.Printf("Gas report:\n")
 	fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
 	fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
 	fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
 	fmt.Printf("- Limit: %d\n", gasReport.Limit)
-	fmt.Printf("=== End Contract Instantiation Debug ===\n\n")
+
+	// Log call trace
+	if trace, ok := ctx.Value("call_trace").([]string); ok {
+		fmt.Printf("\n=== Call Trace ===\n")
+		for _, entry := range trace {
+			fmt.Printf("%s\n", entry)
+		}
+	}
 
 	return result, gasReport, nil
+}
+
+// Helper function to validate memory writes
+func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
+	fmt.Printf("\n=== Validating Input Data Write ===\n")
+
+	// Write environment data
+	fmt.Printf("Writing env data (size: %d)\n", len(env))
+	envPtr, _, err = mm.writeAlignedData(env, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write env data: %w", err)
+	}
+
+	// Verify env write
+	if data, ok := mm.memory.Read(envPtr, uint32(len(env))); ok {
+		if !bytes.Equal(env, data) {
+			fmt.Printf("WARNING: Env data verification failed\n")
+		}
+	}
+
+	// Write info data
+	fmt.Printf("Writing info data (size: %d)\n", len(info))
+	infoPtr, _, err = mm.writeAlignedData(info, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write info data: %w", err)
+	}
+
+	// Verify info write
+	if data, ok := mm.memory.Read(infoPtr, uint32(len(info))); ok {
+		if !bytes.Equal(info, data) {
+			fmt.Printf("WARNING: Info data verification failed\n")
+		}
+	}
+
+	// Write message data
+	fmt.Printf("Writing msg data (size: %d)\n", len(msg))
+	msgPtr, _, err = mm.writeAlignedData(msg, printDebug)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to write msg data: %w", err)
+	}
+
+	// Verify msg write
+	if data, ok := mm.memory.Read(msgPtr, uint32(len(msg))); ok {
+		if !bytes.Equal(msg, data) {
+			fmt.Printf("WARNING: Msg data verification failed\n")
+		}
+	}
+
+	fmt.Printf("All data written and verified\n")
+	return envPtr, infoPtr, msgPtr, nil
 }
 
 // Helper function to validate and write input data
@@ -1299,19 +1395,15 @@ func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []b
 	}
 	w.mu.Unlock()
 
-	// Create new module instance with host functions
-	moduleConfig := wazero.NewModuleConfig().
-		WithName("env").
-		WithStartFunctions()
-
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig)
+	// Create and instantiate environment module first
+	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
 
-	// Create contract module instance
-	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
+	// Then create and instantiate contract module
+	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract"))
 	if err != nil {
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}

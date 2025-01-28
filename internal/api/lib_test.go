@@ -24,7 +24,7 @@ const (
 	TESTING_CACHE_SIZE   = 2048                      // MiB (2GB)
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "cosmwasm_2_1", "cosmwasm_2_2"}
 
 type CapitalizedResponse struct {
 	Text string `json:"text"`
@@ -293,7 +293,7 @@ func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
 
 	// StoreCode should fail
 	_, err = StoreCode(cache, wasm, true)
-	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_")
+	require.ErrorContains(t, err, "contract has unknown")
 
 	// StoreCodeUnchecked should not fail
 	checksum, err := StoreCodeUnchecked(cache, wasm)

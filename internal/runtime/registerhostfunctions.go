@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -66,38 +65,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 	// Memory Management Functions
 	fmt.Printf("\nRegistering Memory Management Functions...\n")
 
-	// Register abort function for error handling
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, code uint32) {
-			fmt.Printf("\n=== Abort Called ===\n")
-			fmt.Printf("Code: %d (0x%x)\n", code, code)
-
-			// Log memory state
-			memory := m.Memory()
-			if memory != nil {
-				fmt.Printf("Memory size: %d bytes\n", memory.Size())
-
-				// Read around abort code location
-				start := uint32(code) - 32
-				//				end := uint32(code) + 32
-				if data, ok := memory.Read(start, 64); ok {
-					fmt.Printf("Memory around abort code:\n%s\n", hex.Dump(data))
-				}
-			}
-
-			// Log runtime environment
-			if env, ok := ctx.Value(envKey).(*RuntimeEnvironment); ok {
-				fmt.Printf("Gas used: %d\n", env.gasUsed)
-				fmt.Printf("Gas limit: %d\n", env.gasLimit)
-			}
-
-			fmt.Printf("=== End Abort ===\n\n")
-		}).
-		WithParameterNames("code").
-		Export("abort")
-	logRegistration("abort")
-
-	// Allocate function - critical for contract memory management
+	// Register allocate function - critical for contract memory management
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
 			fmt.Printf("Called allocate(size=%d)\n", size)
@@ -106,6 +74,14 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 			if memory == nil {
 				panic("no memory exported")
 			}
+
+			// Initialize memory with one page if empty
+			if memory.Size() == 0 {
+				if _, ok := memory.Grow(1); !ok {
+					panic("failed to initialize memory with one page")
+				}
+			}
+
 			currentBytes := memory.Size()
 			pageSize := uint32(65536)
 			if size > currentBytes {
@@ -114,7 +90,13 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 					panic("failed to grow memory")
 				}
 			}
-			ptr := currentBytes
+
+			// Ensure we're not in the reserved first page
+			ptr := uint32(65536) // Start after first page
+			if currentBytes > ptr {
+				ptr = currentBytes
+			}
+
 			fmt.Printf("Allocated %d bytes at ptr=0x%x\n", size, ptr)
 			return ptr
 		}).
@@ -123,7 +105,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		Export("allocate")
 	logRegistration("allocate")
 
-	// Deallocate function
+	// Register deallocate function
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
 			fmt.Printf("Called deallocate(ptr=0x%x)\n", ptr)
@@ -132,6 +114,27 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithParameterNames("ptr").
 		Export("deallocate")
 	logRegistration("deallocate")
+
+	// Register abort function for error handling
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, code uint32) {
+			fmt.Printf("Contract aborted with code: %d\n", code)
+			panic(fmt.Sprintf("contract aborted with code: %d", code))
+		}).
+		WithParameterNames("code").
+		Export("abort")
+	logRegistration("abort")
+
+	// Register debug function
+	builder.NewFunctionBuilder().
+		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
+			fmt.Printf("Called debug(msg_ptr=0x%x)\n", msgPtr)
+			ctx = context.WithValue(ctx, envKey, env)
+			hostDebug(ctx, m, msgPtr)
+		}).
+		WithParameterNames("msg_ptr").
+		Export("debug")
+	logRegistration("debug")
 
 	// Storage Functions
 	fmt.Printf("\nRegistering Storage Functions...\n")
@@ -476,20 +479,6 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 		WithResultNames("result").
 		Export("ed25519_batch_verify")
 	logRegistration("ed25519_batch_verify")
-
-	// Debug Functions
-	fmt.Printf("\nRegistering Debug Functions...\n")
-
-	// Debug logging
-	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
-			fmt.Printf("Called debug(msg_ptr=0x%x)\n", msgPtr)
-			ctx = context.WithValue(ctx, envKey, env)
-			hostDebug(ctx, m, msgPtr)
-		}).
-		WithParameterNames("msg_ptr").
-		Export("debug")
-	logRegistration("debug")
 
 	// Check for missing required functions
 	fmt.Printf("\n=== Checking Required Host Functions ===\n")
