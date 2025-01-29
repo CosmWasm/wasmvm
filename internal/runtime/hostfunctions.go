@@ -101,52 +101,18 @@ type IteratorID struct {
 // within the WebAssembly module's memory space. This function must be extremely
 // reliable as it's used by many other host functions.
 func allocateInContract(ctx context.Context, mod api.Module, size uint32) (uint32, error) {
-	fmt.Printf("\n=== Memory Allocation Request ===\n")
-	fmt.Printf("Requested size: %d\n", size)
-	fmt.Printf("Current memory size: %d\n", mod.Memory().Size())
-	fmt.Printf("Memory contents before allocation:\n")
-	fmt.Printf("Requested size: %d bytes\n", size)
-
-	// Get the allocate function from the contract module
-	allocate := mod.ExportedFunction("allocate")
-	if allocate == nil {
-		return 0, fmt.Errorf("allocate function not found in module")
+	allocateFn := mod.ExportedFunction("allocate")
+	if allocateFn == nil {
+		return 0, fmt.Errorf("contract does not export 'allocate' function")
 	}
-
-	// Track memory before allocation
-	memory := mod.Memory()
-	beforeSize := memory.Size()
-	fmt.Printf("Memory size before allocation: %d bytes\n", beforeSize)
-
-	// Call the contract's allocate function
-	results, err := allocate.Call(ctx, uint64(size))
+	results, err := allocateFn.Call(ctx, uint64(size))
 	if err != nil {
-		fmt.Printf("ERROR: Allocation failed: %v\n", err)
-		return 0, fmt.Errorf("failed to allocate memory: %w", err)
+		return 0, fmt.Errorf("failed to call 'allocate': %w", err)
 	}
-
-	// Check memory after allocation
-	afterSize := memory.Size()
-	if afterSize > beforeSize {
-		fmt.Printf("Memory grew from %d to %d bytes (grew by %d bytes)\n",
-			beforeSize, afterSize, afterSize-beforeSize)
+	if len(results) != 1 {
+		return 0, fmt.Errorf("expected 1 result from 'allocate', got %d", len(results))
 	}
-
-	ptr := uint32(results[0])
-	fmt.Printf("Allocated at pointer: 0x%x\n", ptr)
-
-	// Validate the returned pointer
-	if ptr == 0 {
-		return 0, fmt.Errorf("allocation returned null pointer")
-	}
-
-	// Verify the allocated memory is within bounds
-	if ptr >= memory.Size() {
-		return 0, fmt.Errorf("allocation returned out of bounds pointer: 0x%x", ptr)
-	}
-
-	fmt.Printf("=== End allocateInContract ===\n\n")
-	return ptr, nil
+	return uint32(results[0]), nil
 }
 
 // hostHumanizeAddress implements api_humanize_address
@@ -376,82 +342,43 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 // It reads data from the contract's storage and handles all memory management.
 // This function is called whenever a contract wants to read its state.
 func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
-	// Start debug logging for this call
-	fmt.Printf("\n=== Host Function: db_read ===\n")
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+	fmt.Printf("=== Host Function: db_read ===\n")
 	fmt.Printf("Input keyPtr: 0x%x\n", keyPtr)
 
-	// Get the environment from context
-	env := ctx.Value(envKey).(*RuntimeEnvironment)
-	if env == nil {
-		fmt.Printf("ERROR: Missing runtime environment in context\n")
-		return 0
-	}
-
-	memory := mod.Memory()
-	if memory == nil {
-		fmt.Printf("ERROR: No memory exported from module\n")
-		return 0
-	}
-
-	// Read length prefix (4 bytes) from the key pointer
-	lenBytes, err := readMemory(memory, keyPtr, 4)
+	keyLenBytes, err := readMemory(mem, keyPtr, 4)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read key length: %v\n", err)
 		return 0
 	}
-	keyLen := binary.LittleEndian.Uint32(lenBytes)
+	keyLen := binary.LittleEndian.Uint32(keyLenBytes)
 	fmt.Printf("Key length: %d bytes\n", keyLen)
 
-	// Read the actual key
-	key, err := readMemory(memory, keyPtr+4, keyLen)
+	key, err := readMemory(mem, keyPtr+4, keyLen)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read key data: %v\n", err)
 		return 0
 	}
 	fmt.Printf("Key data: %x\n", key)
 
-	// Query the environment's key-value store
 	value := env.DB.Get(key)
-	if len(value) == 0 {
-		fmt.Printf("Key not found in storage\n")
-		return 0
-	}
-	fmt.Printf("Found value in storage, length: %d bytes\n", len(value))
+	fmt.Printf("Value found: %x\n", value)
 
-	// Allocate memory for the result: 4 bytes for length + actual value
-	totalLen := 4 + len(value)
-	offset, err := allocateInContract(ctx, mod, uint32(totalLen))
+	// Allocate memory for the value
+	valuePtr, err := allocateInContract(ctx, mod, uint32(len(value)))
 	if err != nil {
-		fmt.Printf("ERROR: Failed to allocate memory for result: %v\n", err)
-		return 0
-	}
-	fmt.Printf("Allocated memory at offset: 0x%x\n", offset)
-
-	// Write length prefix
-	lenData := make([]byte, 4)
-	binary.LittleEndian.PutUint32(lenData, uint32(len(value)))
-	if err := writeMemory(memory, offset, lenData, true); err != nil {
-		fmt.Printf("ERROR: Failed to write value length: %v\n", err)
+		fmt.Printf("ERROR: Failed to allocate memory: %v\n", err)
 		return 0
 	}
 
-	// Write actual value
-	if err := writeMemory(memory, offset+4, value, true); err != nil {
-		fmt.Printf("ERROR: Failed to write value data: %v\n", err)
+	// Write value to memory
+	if !mem.Write(valuePtr, value) {
+		fmt.Printf("ERROR: Failed to write value to memory\n")
 		return 0
 	}
-	fmt.Printf("Successfully wrote result to memory\n")
 
-	// Charge gas for the operation
-	gasToCharge := uint64(len(key) + len(value))
-	env.gasUsed += gasToCharge
-	if env.gasUsed > env.Gas.GasConsumed() {
-		panic(fmt.Sprintf("out of gas: used %d, limit %d", env.gasUsed, env.Gas.GasConsumed()))
-	}
-	fmt.Printf("Charged %d gas for operation\n", gasToCharge)
-
-	fmt.Printf("=== End db_read ===\n\n")
-	return offset
+	return valuePtr
 }
 
 // hostDbWrite implements db_write
