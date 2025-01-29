@@ -26,9 +26,6 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-// Add mutex for thread safety
-var testMutex sync.Mutex
-
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
@@ -276,6 +273,28 @@ func TestStoreCodeUnchecked(t *testing.T) {
 	code, err := GetCode(cache, checksum)
 	require.NoError(t, err)
 	require.Equal(t, wasm, code)
+}
+
+func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	// Look for "interface_version_8" in the wasm file and replace it with "interface_version_9".
+	// This makes the wasm file invalid.
+	wasm = bytes.Replace(wasm, []byte("interface_version_8"), []byte("interface_version_9"), 1)
+
+	// StoreCode should fail
+	_, err = StoreCode(cache, wasm, true)
+	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
+
+	// StoreCodeUnchecked should not fail
+	checksum, err := StoreCodeUnchecked(cache, wasm)
+	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	assert.Equal(t, expectedChecksum[:], checksum)
 }
 
 func TestPin(t *testing.T) {
@@ -810,9 +829,7 @@ func BenchmarkContractCall(b *testing.B) {
 		gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter2 := types.GasMeter(gasMeter2)
 		store.SetGasMeter(gasMeter2)
-		testMutex.Lock()
 		info = MockInfoBin(b, "fred")
-		testMutex.Unlock()
 		msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
 		res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(b, err)
@@ -841,6 +858,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	require.NoError(b, err)
 	requireOkResponse(b, res, 0)
 
+	info = MockInfoBin(b, "fred")
+
 	const callCount = 100 // Calls per benchmark iteration
 
 	b.ResetTimer()
@@ -849,7 +868,11 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
+
 		info = mockInfoBinNoAssert("fred")
+
+
+
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -1332,6 +1355,10 @@ func TestCustomReflectQuerier(t *testing.T) {
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
 	}
 
+	type CapitalizedResponse struct {
+		Text string `json:"text"`
+	}
+
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createReflectContract(t, cache)
@@ -1368,10 +1395,6 @@ func TestCustomReflectQuerier(t *testing.T) {
 	err = json.Unmarshal(qResult.Ok, &response)
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
-}
-
-type CapitalizedResponse struct {
-	Text string `json:"text"`
 }
 
 // TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
