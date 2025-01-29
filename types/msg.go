@@ -239,17 +239,6 @@ type TransferMsg struct {
 	Memo      string     `json:"memo,omitempty"`
 }
 
-type Token struct {
-	Amount string     `json:"amount"`
-	Base   string     `json:"base"`
-	Trace  Array[Hop] `json:"trace"`
-}
-
-type Forwarding struct {
-	Hops Array[Hop] `json:"hops"`
-	Memo string     `json:"memo"`
-}
-
 type Hop struct {
 	ChannelID string `json:"channel_id"`
 	PortID    string `json:"port_id"`
@@ -257,8 +246,10 @@ type Hop struct {
 
 type TransferV2Msg struct {
 	// existing channel to send the tokens over
-	ChannelID  string     `json:"channel_id"`
-	Forwarding Forwarding `json:"forwarding"`
+	ChannelID string `json:"channel_id"`
+	// A struct containing the list of next hops,
+	// determining where the tokens must be forwarded next.
+	Forwarding Array[Hop] `json:"forwarding"`
 	// An optional memo. See the blog post
 	// ["Moving Beyond Simple Token Transfers"](https://medium.com/the-interchain-foundation/moving-beyond-simple-token-transfers-d42b2b1dc29b)
 	// for more information.
@@ -273,9 +264,8 @@ type TransferV2Msg struct {
 	Timeout IBCTimeout `json:"timeout"`
 	// address on the remote chain to receive these tokens
 	ToAddress string `json:"to_address"`
-	// packet data only supports one coin
-	// https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20
-	Tokens Array[Token] `json:"tokens"`
+	// MsgTransfer in v2 version supports multiple coins
+	Tokens Array[Coin] `json:"tokens"`
 }
 
 type SendPacketMsg struct {
