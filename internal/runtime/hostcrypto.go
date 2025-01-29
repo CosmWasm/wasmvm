@@ -8,63 +8,81 @@ import (
 )
 
 // hostBls12381HashToG1 implements bls12_381_hash_to_g1
-func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen uint32) (uint32, uint32) {
-	mem := mod.Memory()
+func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
+	env := ctx.Value(envKey).(*RuntimeEnvironment)
 
-	// Read hash
-	hash, err := readMemory(mem, hashPtr, hashLen)
+	// Read the input message
+	message, err := readMemory(mod.Memory(), hashPtr, hashLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read hash: %v", err))
+		return 0
 	}
 
-	// Perform hash-to-curve
-	result, err := BLS12381HashToG1(hash)
+	// Read the domain separation tag
+	dst, err := readMemory(mod.Memory(), dstPtr, dstLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to hash to G1: %v", err))
+		return 0
 	}
 
-	// Allocate memory for result
+	// Charge gas for the operation
+	env.gasUsed += uint64(hashLen+dstLen) * gasPerByte
+
+	// Hash to curve
+	result, err := BLS12381HashToG1(message, dst)
+	if err != nil {
+		return 0
+	}
+
+	// Allocate memory for the result
 	resultPtr, err := allocateInContract(ctx, mod, uint32(len(result)))
 	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for result: %v", err))
+		return 0
 	}
 
-	// Write result
-	if err := writeMemory(mem, resultPtr, result, false); err != nil {
-		panic(fmt.Sprintf("failed to write result: %v", err))
+	// Write the result
+	if err := writeMemory(mod.Memory(), resultPtr, result, false); err != nil {
+		return 0
 	}
 
-	return resultPtr, uint32(len(result))
+	return resultPtr
 }
 
 // hostBls12381HashToG2 implements bls12_381_hash_to_g2
-func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen uint32) (uint32, uint32) {
-	mem := mod.Memory()
+func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
+	env := ctx.Value(envKey).(*RuntimeEnvironment)
 
-	// Read hash
-	hash, err := readMemory(mem, hashPtr, hashLen)
+	// Read the input message
+	message, err := readMemory(mod.Memory(), hashPtr, hashLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read hash: %v", err))
+		return 0
 	}
 
-	// Perform hash-to-curve
-	result, err := BLS12381HashToG2(hash)
+	// Read the domain separation tag
+	dst, err := readMemory(mod.Memory(), dstPtr, dstLen)
 	if err != nil {
-		panic(fmt.Sprintf("failed to hash to G2: %v", err))
+		return 0
 	}
 
-	// Allocate memory for result
+	// Charge gas for the operation
+	env.gasUsed += uint64(hashLen+dstLen) * gasPerByte
+
+	// Hash to curve
+	result, err := BLS12381HashToG2(message, dst)
+	if err != nil {
+		return 0
+	}
+
+	// Allocate memory for the result
 	resultPtr, err := allocateInContract(ctx, mod, uint32(len(result)))
 	if err != nil {
-		panic(fmt.Sprintf("failed to allocate memory for result: %v", err))
+		return 0
 	}
 
-	// Write result
-	if err := writeMemory(mem, resultPtr, result, false); err != nil {
-		panic(fmt.Sprintf("failed to write result: %v", err))
+	// Write the result
+	if err := writeMemory(mod.Memory(), resultPtr, result, false); err != nil {
+		return 0
 	}
 
-	return resultPtr, uint32(len(result))
+	return resultPtr
 }
 
 // hostBls12381PairingEquality implements bls12_381_pairing_equality

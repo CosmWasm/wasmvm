@@ -38,6 +38,18 @@ type GasConfig struct {
 	// Contract operations
 	Instantiate uint64
 	Execute     uint64
+
+	Bls12381AggregateG1Cost GasCost
+	Bls12381AggregateG2Cost GasCost
+}
+
+type GasCost struct {
+	BaseCost uint64
+	PerPoint uint64
+}
+
+func (c GasCost) TotalCost(pointCount uint64) uint64 {
+	return c.BaseCost + c.PerPoint*pointCount
 }
 
 // DefaultGasConfig returns the default gas configuration
@@ -59,6 +71,10 @@ type GasState struct {
 	config GasConfig
 	limit  uint64
 	used   uint64
+}
+
+func (g *GasState) GasConsumed() uint64 {
+	return g.GetGasUsed()
 }
 
 // NewGasState creates a new GasState with the given limit

@@ -51,11 +51,9 @@ func BLS12381AggregateG2(elements [][]byte) ([]byte, error) {
 }
 
 // BLS12381HashToG1 hashes arbitrary bytes to a compressed G1 point.
-func BLS12381HashToG1(message []byte) ([]byte, error) {
+func BLS12381HashToG1(message, dst []byte) ([]byte, error) {
 	g1 := bls12381.NewG1()
-	// You can choose a domain separation string of your liking.
-	// Here, we use a placeholder domain: "BLS12381G1_XMD:SHA-256_SSWU_RO_"
-	point, err := g1.HashToCurve(message, []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_"))
+	point, err := g1.HashToCurve(message, dst)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash to G1: %w", err)
 	}
@@ -63,10 +61,9 @@ func BLS12381HashToG1(message []byte) ([]byte, error) {
 }
 
 // BLS12381HashToG2 hashes arbitrary bytes to a compressed G2 point.
-func BLS12381HashToG2(message []byte) ([]byte, error) {
+func BLS12381HashToG2(message, dst []byte) ([]byte, error) {
 	g2 := bls12381.NewG2()
-	// Similar domain separation string for G2.
-	point, err := g2.HashToCurve(message, []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_"))
+	point, err := g2.HashToCurve(message, dst)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash to G2: %w", err)
 	}

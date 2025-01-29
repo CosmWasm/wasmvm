@@ -11,14 +11,39 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
+const (
+	// Return codes for cryptographic operations
+	SECP256K1_VERIFY_CODE_VALID   uint32 = 0
+	SECP256K1_VERIFY_CODE_INVALID uint32 = 1
+
+	// BLS12-381 return codes
+	BLS12_381_VALID_PAIRING   uint32 = 0
+	BLS12_381_INVALID_PAIRING uint32 = 1
+
+	BLS12_381_AGGREGATE_SUCCESS     uint32 = 0
+	BLS12_381_HASH_TO_CURVE_SUCCESS uint32 = 0
+
+	// Size limits for BLS12-381 operations (MI = 1024*1024, KI = 1024)
+	BLS12_381_MAX_AGGREGATE_SIZE = 2 * 1024 * 1024 // 2 MiB
+	BLS12_381_MAX_MESSAGE_SIZE   = 5 * 1024 * 1024 // 5 MiB
+	BLS12_381_MAX_DST_SIZE       = 5 * 1024        // 5 KiB
+)
+
 // RuntimeEnvironment holds the environment for contract execution
 
 // NewRuntimeEnvironment creates a new runtime environment
-func NewRuntimeEnvironment(db types.KVStore, api *types.GoAPI, querier types.Querier) *RuntimeEnvironment {
+func NewRuntimeEnvironment(db types.KVStore, api types.GoAPI, querier types.Querier, gasLimit uint64) *RuntimeEnvironment {
 	return &RuntimeEnvironment{
-		DB:        db,
-		API:       *api,
-		Querier:   querier,
+		DB:       db,
+		API:      api,
+		Querier:  querier,
+		Gas:      NewGasState(gasLimit), // Initialize gas meter
+		gasLimit: gasLimit,
+		gasUsed:  0,
+
+		// Initialize GasConfig with default values
+		GasConfig: DefaultGasConfig(),
+
 		iterators: make(map[uint64]map[uint64]types.Iterator),
 	}
 }
@@ -790,4 +815,98 @@ func hostNextKey(ctx context.Context, mod api.Module, callID, iterID uint64) (ke
 	iter.Next()
 
 	return keyOffset, uint32(len(key)), 0
+}
+
+// hostBls12381AggregateG1 implements bls12_381_aggregate_g1.
+func hostBls12381AggregateG1(ctx context.Context, mod api.Module, g1sPtr, outPtr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read the input G1 points from memory
+	g1s, err := readMemory(mem, g1sPtr, BLS12_381_MAX_AGGREGATE_SIZE)
+	if err != nil {
+		fmt.Printf("ERROR: Failed to read G1 points from memory: %v\n", err)
+		return 0
+	}
+
+	// Estimate the number of points for gas metering
+	pointCount := len(g1s) / BLS12_381_G1_POINT_LEN
+	if pointCount == 0 {
+		fmt.Printf("ERROR: No G1 points to aggregate\n")
+		return 0
+	}
+
+	// Charge gas for the operation
+	gasCost := env.GasConfig.Bls12381AggregateG1Cost.TotalCost(uint64(pointCount))
+	env.gasUsed += gasCost
+	if env.gasUsed > env.Gas.GasConsumed() {
+		fmt.Printf("ERROR: Out of gas during aggregation: used %d, limit %d\n", env.gasUsed, env.Gas.GasConsumed())
+		return 0
+	}
+
+	// Perform the aggregation
+	result, err := BLS12381AggregateG1(splitIntoPoints(g1s, BLS12_381_G1_POINT_LEN))
+	if err != nil {
+		fmt.Printf("ERROR: Failed to aggregate G1 points: %v\n", err)
+		return 0
+	}
+
+	// Write the result to the output pointer
+	if err := writeMemory(mem, outPtr, result, false); err != nil {
+		fmt.Printf("ERROR: Failed to write aggregated G1 point to memory: %v\n", err)
+		return 0
+	}
+
+	return BLS12_381_AGGREGATE_SUCCESS
+}
+
+func splitIntoPoints(data []byte, pointLen int) [][]byte {
+	var points [][]byte
+	for i := 0; i < len(data); i += pointLen {
+		points = append(points, data[i:i+pointLen])
+	}
+	return points
+}
+
+// hostBls12381AggregateG2 implements bls12_381_aggregate_g2.
+func hostBls12381AggregateG2(ctx context.Context, mod api.Module, g2sPtr, outPtr uint32) uint32 {
+	env := ctx.Value("env").(*RuntimeEnvironment)
+	mem := mod.Memory()
+
+	// Read the input G2 points from memory
+	g2s, err := readMemory(mem, g2sPtr, BLS12_381_MAX_AGGREGATE_SIZE)
+	if err != nil {
+		fmt.Printf("ERROR: Failed to read G2 points from memory: %v\n", err)
+		return 0
+	}
+
+	// Estimate the number of points for gas metering
+	pointCount := len(g2s) / BLS12_381_G2_POINT_LEN
+	if pointCount == 0 {
+		fmt.Printf("ERROR: No G2 points to aggregate\n")
+		return 0
+	}
+
+	// Charge gas for the operation
+	gasCost := env.GasConfig.Bls12381AggregateG2Cost.TotalCost(uint64(pointCount))
+	env.gasUsed += gasCost
+	if env.gasUsed > env.Gas.GasConsumed() {
+		fmt.Printf("ERROR: Out of gas during aggregation: used %d, limit %d\n", env.gasUsed, env.Gas.GasConsumed())
+		return 0
+	}
+
+	// Perform the aggregation
+	result, err := BLS12381AggregateG2(splitIntoPoints(g2s, BLS12_381_G2_POINT_LEN))
+	if err != nil {
+		fmt.Printf("ERROR: Failed to aggregate G2 points: %v\n", err)
+		return 0
+	}
+
+	// Write the result to the output pointer
+	if err := writeMemory(mem, outPtr, result, false); err != nil {
+		fmt.Printf("ERROR: Failed to write aggregated G2 point to memory: %v\n", err)
+		return 0
+	}
+
+	return BLS12_381_AGGREGATE_SUCCESS
 }

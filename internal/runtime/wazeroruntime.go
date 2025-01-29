@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
@@ -37,6 +36,7 @@ type WazeroRuntime struct {
 }
 
 // RuntimeEnvironment holds all execution context for the contract
+// RuntimeEnvironment holds all execution context for the contract
 type RuntimeEnvironment struct {
 	DB       types.KVStore
 	API      types.GoAPI
@@ -44,6 +44,9 @@ type RuntimeEnvironment struct {
 	Gas      types.GasMeter
 	gasLimit uint64 // Maximum gas that can be used
 	gasUsed  uint64 // Current gas usage
+
+	// Add GasConfig field
+	GasConfig GasConfig
 
 	// Iterator management
 	iteratorsMutex sync.RWMutex
@@ -446,7 +449,6 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Parse input parameters and create gas state
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
 	if err != nil {
-		fmt.Printf("ERROR: Failed to parse params: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to parse params: %w", err)
 	}
 
@@ -466,37 +468,22 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		nextCallID: 1,
 	}
 
-	// Create context with environment and tracing
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, envKey, runtimeEnv)
-	ctx = context.WithValue(ctx, "call_trace", []string{})
+	// Create context with environment
+	ctx := context.WithValue(context.Background(), envKey, runtimeEnv)
 
 	// Get the module
 	w.mu.Lock()
 	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
 	if !ok {
 		w.mu.Unlock()
-		fmt.Printf("ERROR: Module not found for checksum\n")
 		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum: %x", checksum)
 	}
-
-	fmt.Printf("\n=== Contract Setup ===\n")
-	fmt.Printf("Module exports: %v\n", module.ExportedFunctions())
-	fmt.Printf("Memory sections: %v\n", module.ExportedMemories())
-	fmt.Printf("Required imports: %v\n", module.ImportedFunctions())
-
-	// Log module details
-	fmt.Printf("\n=== Module Details ===\n")
-	fmt.Printf("Exports: %v\n", module.ExportedFunctions())
-	fmt.Printf("Memories: %v\n", module.ExportedMemories())
-
 	w.mu.Unlock()
 
-	// Register host functions with tracing
+	// Register host functions
 	fmt.Printf("\n=== Registering Host Functions ===\n")
 	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
 	if err != nil {
-		fmt.Printf("ERROR: Failed to register host functions: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
 	}
 	defer hostModule.Close(ctx)
@@ -505,7 +492,6 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("\n=== Instantiating Environment Module ===\n")
 	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
 	if err != nil {
-		fmt.Printf("ERROR: Failed to instantiate env module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
 	}
 	defer envModule.Close(ctx)
@@ -514,7 +500,6 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	fmt.Printf("\n=== Instantiating Contract Module ===\n")
 	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract"))
 	if err != nil {
-		fmt.Printf("ERROR: Failed to instantiate contract module: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
 	}
 	defer contractModule.Close(ctx)
@@ -522,7 +507,6 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	// Get contract memory
 	memory := contractModule.Memory()
 	if memory == nil {
-		fmt.Printf("ERROR: Contract module has no memory\n")
 		return nil, types.GasReport{}, fmt.Errorf("contract module has no memory")
 	}
 
@@ -531,100 +515,108 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 
 	// Initialize memory with one page if empty
 	if memory.Size() == 0 {
-		fmt.Printf("Initializing empty memory with one page\n")
 		if _, ok := memory.Grow(1); !ok {
-			fmt.Printf("ERROR: Failed to initialize memory with one page\n")
 			return nil, types.GasReport{}, fmt.Errorf("failed to initialize memory with one page")
 		}
 	}
 
-	// Initialize memory manager
-	memManager := newMemoryManager(memory, gasState)
+	// Calculate required memory layout
+	envSize := align(uint32(len(env)), alignmentSize)
+	infoSize := align(uint32(len(info)), alignmentSize)
+	msgSize := align(uint32(len(msg)), alignmentSize)
 
-	// Write input data to memory with validation
-	fmt.Printf("\n=== Writing Input Data ===\n")
-	envPtr, infoPtr, msgPtr, err := writeInputDataWithValidation(memManager, env, info, msg, printDebug)
-	if err != nil {
-		fmt.Printf("ERROR: Failed to write input data: %v\n", err)
-		return nil, types.GasReport{}, fmt.Errorf("failed to write input data: %w", err)
+	// Create regions with proper memory layout
+	envRegion := &Region{
+		Offset:   firstPageOffset, // Start at first page boundary
+		Capacity: envSize,
+		Length:   uint32(len(env)),
 	}
 
-	fmt.Printf("Memory pointers:\n")
-	fmt.Printf("- env: 0x%x\n", envPtr)
-	fmt.Printf("- info: 0x%x\n", infoPtr)
-	fmt.Printf("- msg: 0x%x\n", msgPtr)
+	infoRegion := &Region{
+		Offset:   align(envRegion.Offset+envRegion.Capacity, alignmentSize),
+		Capacity: infoSize,
+		Length:   uint32(len(info)),
+	}
+
+	msgRegion := &Region{
+		Offset:   align(infoRegion.Offset+infoRegion.Capacity, alignmentSize),
+		Capacity: msgSize,
+		Length:   uint32(len(msg)),
+	}
+
+	// Ensure we have enough memory
+	totalSize := msgRegion.Offset + msgRegion.Capacity
+	currentSize := memory.Size()
+	if totalSize > currentSize {
+		pagesToGrow := (totalSize - currentSize + wasmPageSize - 1) / wasmPageSize
+		if _, ok := memory.Grow(pagesToGrow); !ok {
+			return nil, types.GasReport{}, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
+		}
+	}
+
+	fmt.Printf("\n=== Writing Data to Memory ===\n")
+
+	// Write data
+	if err := writeMemory(memory, envRegion.Offset, env, printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env data: %w", err)
+	}
+
+	if err := writeMemory(memory, infoRegion.Offset, info, printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write info data: %w", err)
+	}
+
+	if err := writeMemory(memory, msgRegion.Offset, msg, printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write msg data: %w", err)
+	}
+
+	// Write region structs to a separate area
+	regionStructsOffset := align(msgRegion.Offset+msgRegion.Capacity, alignmentSize)
+
+	envPtr := regionStructsOffset
+	if err := writeMemory(memory, envPtr, envRegion.ToBytes(), printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write env region: %w", err)
+	}
+
+	infoPtr := align(envPtr+regionStructSize, alignmentSize)
+	if err := writeMemory(memory, infoPtr, infoRegion.ToBytes(), printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write info region: %w", err)
+	}
+
+	msgPtr := align(infoPtr+regionStructSize, alignmentSize)
+	if err := writeMemory(memory, msgPtr, msgRegion.ToBytes(), printDebug); err != nil {
+		return nil, types.GasReport{}, fmt.Errorf("failed to write msg region: %w", err)
+	}
+
+	fmt.Printf("\n=== Memory Layout ===\n")
+	fmt.Printf("env  data: offset=0x%x, size=%d\n", envRegion.Offset, envRegion.Length)
+	fmt.Printf("info data: offset=0x%x, size=%d\n", infoRegion.Offset, infoRegion.Length)
+	fmt.Printf("msg  data: offset=0x%x, size=%d\n", msgRegion.Offset, msgRegion.Length)
+	fmt.Printf("Region structs:\n")
+	fmt.Printf("env:  ptr=0x%x\n", envPtr)
+	fmt.Printf("info: ptr=0x%x\n", infoPtr)
+	fmt.Printf("msg:  ptr=0x%x\n", msgPtr)
 
 	// Get instantiate function
 	instantiate := contractModule.ExportedFunction("instantiate")
 	if instantiate == nil {
-		fmt.Printf("ERROR: instantiate function not found in exports\n")
 		return nil, types.GasReport{}, fmt.Errorf("instantiate function not exported")
-	}
-
-	// Dump pre-call memory state
-	fmt.Printf("\n=== Pre-Call Memory State ===\n")
-	if data, ok := memory.Read(0, 256); ok {
-		fmt.Printf("First 256 bytes of memory:\n%s\n", hex.Dump(data))
 	}
 
 	// Charge gas for instantiation
 	if err := gasState.ConsumeGas(gasState.config.Instantiate, "contract instantiation"); err != nil {
-		fmt.Printf("ERROR: Insufficient gas: %v\n", err)
 		return nil, types.GasReport{}, err
 	}
 
-	// Right before calling instantiate.Call(), let's inspect the memory:
-	fmt.Printf("\n=== Inspecting Memory Parameters Before Call ===\n")
-
-	envData, ok := memory.Read(envPtr, 256) // Read enough bytes to see the content
-	if ok {
-		fmt.Printf("Env Data at 0x%x:\n", envPtr)
-		fmt.Printf("Raw bytes: %x\n", envData)
-		fmt.Printf("As string: %s\n", string(envData))
-	} else {
-		fmt.Printf("Failed to read env data at 0x%x\n", envPtr)
-	}
-
-	infoData, ok := memory.Read(infoPtr, 256)
-	if ok {
-		fmt.Printf("\nInfo Data at 0x%x:\n", infoPtr)
-		fmt.Printf("Raw bytes: %x\n", infoData)
-		fmt.Printf("As string: %s\n", string(infoData))
-	} else {
-		fmt.Printf("Failed to read info data at 0x%x\n", infoPtr)
-	}
-
-	msgData, ok := memory.Read(msgPtr, 256)
-	if ok {
-		fmt.Printf("\nMsg Data at 0x%x:\n", msgPtr)
-		fmt.Printf("Raw bytes: %x\n", msgData)
-		fmt.Printf("As string: %s\n", string(msgData))
-	} else {
-		fmt.Printf("Failed to read msg data at 0x%x\n", msgPtr)
-	}
-
-	fmt.Printf("\nCalling instantiate with parameters:\n")
-	fmt.Printf("envPtr:  0x%x\n", envPtr)
-	fmt.Printf("infoPtr: 0x%x\n", infoPtr)
-	fmt.Printf("msgPtr:  0x%x\n", msgPtr)
+	fmt.Printf("\n=== Calling instantiate ===\n")
+	fmt.Printf("Parameters: envPtr=0x%x, infoPtr=0x%x, msgPtr=0x%x\n", envPtr, infoPtr, msgPtr)
 
 	// Call instantiate function
-	fmt.Printf("\n=== Executing Instantiate ===\n")
 	ret, err := instantiate.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
 	if err != nil {
-		fmt.Printf("ERROR: instantiate call failed: %v\n", err)
-		// Dump memory state on error
-		if data, ok := memory.Read(0, 256); ok {
-			fmt.Printf("Memory dump after error:\n%s\n", hex.Dump(data))
-		}
 		return nil, types.GasReport{}, fmt.Errorf("instantiate call failed: %w", err)
 	}
 
-	fmt.Printf("Call completed. Return values: %v\n", ret)
-
-	// Validate return value
 	if len(ret) != 1 {
-		fmt.Printf("ERROR: Expected 1 return value, got %d\n", len(ret))
 		return nil, types.GasReport{}, fmt.Errorf("expected 1 return value, got %d", len(ret))
 	}
 
@@ -632,11 +624,9 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 	resultPtr := uint32(ret[0])
 	result, err := readAndValidateResult(memory, resultPtr, printDebug)
 	if err != nil {
-		fmt.Printf("ERROR: Failed to read result: %v\n", err)
 		return nil, types.GasReport{}, fmt.Errorf("failed to read result: %w", err)
 	}
 
-	// Create gas report
 	gasReport := types.GasReport{
 		UsedInternally: runtimeEnv.gasUsed,
 		UsedExternally: gasState.GetGasUsed(),
@@ -644,137 +634,11 @@ func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, ms
 		Limit:          gasLimit,
 	}
 
-	fmt.Printf("\n=== Execution Complete ===\n")
-	fmt.Printf("Gas report:\n")
-	fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
-	fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
-	fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
-	fmt.Printf("- Limit: %d\n", gasReport.Limit)
-
-	// Log call trace
-	if trace, ok := ctx.Value("call_trace").([]string); ok {
-		fmt.Printf("\n=== Call Trace ===\n")
-		for _, entry := range trace {
-			fmt.Printf("%s\n", entry)
-		}
-	}
+	fmt.Printf("\n=== Instantiation Complete ===\n")
+	fmt.Printf("Gas used: %d\n", gasReport.UsedInternally+gasReport.UsedExternally)
+	fmt.Printf("Gas remaining: %d\n", gasReport.Remaining)
 
 	return result, gasReport, nil
-}
-
-// Helper function to validate memory writes
-// writeInputDataWithValidation modified with enhanced logging
-func writeInputDataWithValidation(mm *memoryManager, env, info, msg []byte, printDebug bool) (envPtr, infoPtr, msgPtr uint32, err error) {
-	fmt.Printf("\n=== Input Data Validation ===\n")
-	fmt.Printf("Memory state before writes:\n")
-	fmt.Printf("- Total size: %d bytes (%d pages)\n", mm.memory.Size(), mm.memory.Size()/wasmPageSize)
-	fmt.Printf("- Current offset: 0x%x\n", mm.nextOffset)
-
-	// Write environment data
-	fmt.Printf("\nWriting env data:\n")
-	fmt.Printf("- Raw bytes: %x\n", env)
-	fmt.Printf("- As string: %s\n", string(env))
-	fmt.Printf("- Length: %d\n", len(env))
-
-	alignedEnvLen := align(uint32(len(env)), alignmentSize)
-	fmt.Printf("- Aligned length: %d\n", alignedEnvLen)
-	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
-
-	if mm.nextOffset+alignedEnvLen > mm.size {
-		fmt.Printf("WARNING: Memory growth needed for env data\n")
-		fmt.Printf("- Current size: %d\n", mm.size)
-		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedEnvLen)
-	}
-
-	envPtr, _, err = mm.writeAlignedData(env, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write env data: %w", err)
-	}
-
-	// Verify env write
-	if data, ok := mm.memory.Read(envPtr, uint32(len(env))); ok {
-		if !bytes.Equal(env, data) {
-			fmt.Printf("ERROR: Env data verification failed\n")
-			fmt.Printf("- Written:  %x\n", data)
-			fmt.Printf("- Expected: %x\n", env)
-		} else {
-			fmt.Printf("Env data verification successful\n")
-		}
-	}
-
-	// Write info data with similar logging
-	fmt.Printf("\nWriting info data:\n")
-	fmt.Printf("- Raw bytes: %x\n", info)
-	fmt.Printf("- As string: %s\n", string(info))
-	fmt.Printf("- Length: %d\n", len(info))
-
-	alignedInfoLen := align(uint32(len(info)), alignmentSize)
-	fmt.Printf("- Aligned length: %d\n", alignedInfoLen)
-	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
-
-	if mm.nextOffset+alignedInfoLen > mm.size {
-		fmt.Printf("WARNING: Memory growth needed for info data\n")
-		fmt.Printf("- Current size: %d\n", mm.size)
-		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedInfoLen)
-	}
-
-	infoPtr, _, err = mm.writeAlignedData(info, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write info data: %w", err)
-	}
-
-	// Verify info write
-	if data, ok := mm.memory.Read(infoPtr, uint32(len(info))); ok {
-		if !bytes.Equal(info, data) {
-			fmt.Printf("ERROR: Info data verification failed\n")
-			fmt.Printf("- Written:  %x\n", data)
-			fmt.Printf("- Expected: %x\n", info)
-		} else {
-			fmt.Printf("Info data verification successful\n")
-		}
-	}
-
-	// Write message data with similar logging
-	fmt.Printf("\nWriting msg data:\n")
-	fmt.Printf("- Raw bytes: %x\n", msg)
-	fmt.Printf("- As string: %s\n", string(msg))
-	fmt.Printf("- Length: %d\n", len(msg))
-
-	alignedMsgLen := align(uint32(len(msg)), alignmentSize)
-	fmt.Printf("- Aligned length: %d\n", alignedMsgLen)
-	fmt.Printf("- Target offset: 0x%x\n", mm.nextOffset)
-
-	if mm.nextOffset+alignedMsgLen > mm.size {
-		fmt.Printf("WARNING: Memory growth needed for msg data\n")
-		fmt.Printf("- Current size: %d\n", mm.size)
-		fmt.Printf("- Required size: %d\n", mm.nextOffset+alignedMsgLen)
-	}
-
-	msgPtr, _, err = mm.writeAlignedData(msg, printDebug)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to write msg data: %w", err)
-	}
-
-	// Verify msg write
-	if data, ok := mm.memory.Read(msgPtr, uint32(len(msg))); ok {
-		if !bytes.Equal(msg, data) {
-			fmt.Printf("ERROR: Msg data verification failed\n")
-			fmt.Printf("- Written:  %x\n", data)
-			fmt.Printf("- Expected: %x\n", msg)
-		} else {
-			fmt.Printf("Msg data verification successful\n")
-		}
-	}
-
-	fmt.Printf("\nFinal memory state:\n")
-	fmt.Printf("- Env ptr:  0x%x\n", envPtr)
-	fmt.Printf("- Info ptr: 0x%x\n", infoPtr)
-	fmt.Printf("- Msg ptr:  0x%x\n", msgPtr)
-	fmt.Printf("- Next offset: 0x%x\n", mm.nextOffset)
-	fmt.Printf("- Total memory: %d bytes\n", mm.size)
-	fmt.Printf("=== End Input Data Validation ===\n\n")
-
-	return envPtr, infoPtr, msgPtr, nil
 }
 
 func readAndValidateResult(memory api.Memory, resultPtr uint32, printDebug bool) ([]byte, error) {
