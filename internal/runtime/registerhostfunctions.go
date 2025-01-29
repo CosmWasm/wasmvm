@@ -187,7 +187,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 			fmt.Printf("Called bls12_381_pairing_equality(a1_ptr=0x%x, a2_ptr=0x%x, b1_ptr=0x%x, b2_ptr=0x%x)\n",
 				a1Ptr, a2Ptr, b1Ptr, b2Ptr)
 			ctx = context.WithValue(ctx, envKey, env)
-			// Each pairing point needs 4 coordinates
 			return hostBls12381PairingEquality(ctx, m, a1Ptr, a2Ptr, 0, 0, b1Ptr, b2Ptr, 0, 0)
 		}).
 		WithParameterNames("a1_ptr", "a2_ptr", "b1_ptr", "b2_ptr").
@@ -224,7 +223,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 			fmt.Printf("Called secp256r1_verify(msg_ptr=0x%x, sig_ptr=0x%x, pubkey_ptr=0x%x)\n",
 				msgPtr, sigPtr, pubkeyPtr)
 			ctx = context.WithValue(ctx, envKey, env)
-			// Assuming fixed lengths: 32 bytes for message, 64 bytes for signature, 33 bytes for pubkey
 			return hostSecp256r1Verify(ctx, m, msgPtr, 32, sigPtr, 64, pubkeyPtr, 33)
 		}).
 		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
@@ -237,9 +235,7 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 			fmt.Printf("Called secp256r1_recover_pubkey(hash_ptr=0x%x, sig_ptr=0x%x, recovery=%d)\n",
 				hashPtr, sigPtr, recoveryParam)
 			ctx = context.WithValue(ctx, envKey, env)
-			// Assuming fixed lengths: 32 bytes for hash, 64 bytes for signature
 			resultPtr, resultLen := hostSecp256r1RecoverPubkey(ctx, m, hashPtr, 32, sigPtr, 64, recoveryParam)
-			// Pack pointer and length into uint64 (high 32 bits = ptr, low 32 bits = len)
 			return (uint64(resultPtr) << 32) | uint64(resultLen)
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "recovery").
@@ -350,24 +346,14 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
 			fmt.Printf("Called allocate(size=%d)\n", size)
-			env.gasUsed += uint64((size + 1023) / 1024) // 1 gas per 1KB, minimum 1
-			memory := m.Memory()
-			if memory == nil {
-				panic("no memory exported")
+			ctx = context.WithValue(ctx, envKey, env)
+			ptr, err := allocateInContract(ctx, m, size)
+			if err != nil {
+				return 0
 			}
-			// Initialize memory with one page if empty
-			if memory.Size() == 0 {
-				if _, ok := memory.Grow(1); !ok {
-					panic("failed to initialize memory with one page")
-				}
-			}
-			currentBytes := memory.Size()
-			ptr := currentBytes // Start after first page
-			fmt.Printf("Allocated %d bytes at ptr=0x%x\n", size, ptr)
 			return ptr
 		}).
 		WithParameterNames("size").
-		WithResultNames("ptr").
 		Export("allocate")
 	log("allocate")
 
@@ -375,7 +361,8 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
 			fmt.Printf("Called deallocate(ptr=0x%x)\n", ptr)
-			env.gasUsed += 1
+			ctx = context.WithValue(ctx, envKey, env)
+			// Deallocate is a no-op in our implementation
 		}).
 		WithParameterNames("ptr").
 		Export("deallocate")
@@ -399,12 +386,11 @@ func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnviro
 
 	// Abort Function
 	builder.NewFunctionBuilder().
-		WithFunc(func(ctx context.Context, mod api.Module, msgPtr uint32) {
-			fmt.Printf("\n=== Contract Abort ===\n")
-			fmt.Printf("Abort pointer: 0x%x\n", msgPtr)
+		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
+			fmt.Printf("Called abort(msg_ptr=0x%x)\n", msgPtr)
 			panic(fmt.Sprintf("contract aborted at pointer 0x%x", msgPtr))
 		}).
-		WithParameterNames("code").
+		WithParameterNames("msg_ptr").
 		Export("abort")
 	log("abort")
 }
