@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
+
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 func (w *WazeroRuntime) Instantiate(checksum []byte, env []byte, info []byte, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {

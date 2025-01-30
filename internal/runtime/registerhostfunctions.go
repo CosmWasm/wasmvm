@@ -361,7 +361,6 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, ptr uint32) {
 			fmt.Printf("Called deallocate(ptr=0x%x)\n", ptr)
-			ctx = context.WithValue(ctx, envKey, env)
 			// Deallocate is a no-op in our implementation
 		}).
 		WithParameterNames("ptr").

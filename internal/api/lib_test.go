@@ -30,9 +30,6 @@ type CapitalizedResponse struct {
 	Text string `json:"text"`
 }
 
-// Add mutex for thread safety
-var testMutex sync.Mutex
-
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)

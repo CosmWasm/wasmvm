@@ -438,40 +438,6 @@ func (w *WazeroRuntime) parseParams(otherParams []interface{}) (*types.GasMeter,
 	return gasMeter, store, api, querier, gasLimit, printDebug, nil
 }
 
-func readAndValidateResult(memory api.Memory, resultPtr uint32, printDebug bool) ([]byte, error) {
-	// Validate result pointer
-	if resultPtr == 0 {
-		return nil, fmt.Errorf("null result pointer")
-	}
-
-	// Read result region
-	resultRegion, err := readResultRegionInternal(memory, resultPtr, printDebug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read result region: %w", err)
-	}
-
-	// Read result data
-	data, err := readRegionData(memory, resultRegion, printDebug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read result data: %w", err)
-	}
-
-	// Validate result is proper JSON if it looks like JSON
-	if len(data) > 0 && data[0] == '{' {
-		var js map[string]interface{}
-		if err := json.Unmarshal(data, &js); err != nil {
-			return nil, fmt.Errorf("invalid result JSON: %w", err)
-		}
-		// Re-marshal to ensure consistent formatting
-		data, err = json.Marshal(js)
-		if err != nil {
-			return nil, fmt.Errorf("failed to re-marshal result JSON: %w", err)
-		}
-	}
-
-	return data, nil
-}
-
 func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
 	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
 	if err != nil {
