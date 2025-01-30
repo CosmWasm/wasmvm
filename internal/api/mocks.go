@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,8 @@ import (
 
 const MOCK_CONTRACT_ADDR = "contract"
 
+// MockEnv returns a mock environment for testing
+// this is the original, and should not be changed.
 func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
@@ -35,9 +38,31 @@ func MockEnv() types.Env {
 	}
 }
 
-func MockEnvBin(t testing.TB) []byte {
-	bin, err := json.Marshal(MockEnv())
-	require.NoError(t, err)
+func MockEnvBin(tb testing.TB) []byte {
+	tb.Helper()
+	env := MockEnv()
+	// Create a map with fields in the exact order we want
+	envMap := map[string]interface{}{
+		"block": map[string]interface{}{
+			"height":   env.Block.Height,
+			"time":     env.Block.Time,
+			"chain_id": env.Block.ChainID,
+		},
+		"transaction": map[string]interface{}{
+			"index": env.Transaction.Index,
+		},
+		"contract": map[string]interface{}{
+			"address": env.Contract.Address,
+		},
+	}
+	// Use a custom encoder to preserve field order
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(envMap)
+	require.NoError(tb, err)
+	bin := bytes.TrimSpace(buf.Bytes())
+	fmt.Printf("[DEBUG] MockEnvBin JSON: %s\n", string(bin))
 	return bin
 }
 
@@ -55,9 +80,10 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
-func MockInfoBin(t testing.TB, sender types.HumanAddress) []byte {
+func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
+	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return bin
 }
 
@@ -536,7 +562,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"

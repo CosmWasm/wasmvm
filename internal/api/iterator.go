@@ -28,7 +28,7 @@ var (
 func startCall() uint64 {
 	latestCallIDMutex.Lock()
 	defer latestCallIDMutex.Unlock()
-	latestCallID += 1
+	latestCallID++
 	return latestCallID
 }
 
