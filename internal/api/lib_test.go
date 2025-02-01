@@ -871,8 +871,6 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 
 		info = mockInfoBinNoAssert("fred")
 
-
-
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
