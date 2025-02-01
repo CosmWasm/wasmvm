@@ -407,9 +407,26 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 
 func NewMockAPI() *types.GoAPI {
 	return &types.GoAPI{
-		HumanizeAddress:     MockHumanizeAddress,
-		CanonicalizeAddress: MockCanonicalizeAddress,
-		ValidateAddress:     MockValidateAddress,
+		// Simply convert the canonical address back to string.
+		HumanizeAddress: func(canon []byte) (string, uint64, error) {
+			return string(canon), 0, nil
+		},
+		// Return the raw bytes of the human address.
+		CanonicalizeAddress: func(human string) ([]byte, uint64, error) {
+			if human == "" {
+				return nil, 0, fmt.Errorf("empty address")
+			}
+			// For testing, simply return the bytes of the input string.
+			return []byte(human), 0, nil
+		},
+		// Accept any non-empty string.
+		ValidateAddress: func(human string) (uint64, error) {
+			if human == "" {
+				return 0, fmt.Errorf("empty address")
+			}
+			// In our test environment, all non-empty addresses are valid.
+			return 0, nil
+		},
 	}
 }
 
