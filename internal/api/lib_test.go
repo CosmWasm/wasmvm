@@ -305,6 +305,28 @@ func TestStoreCodeUnchecked(t *testing.T) {
 	require.Equal(t, wasm, code)
 }
 
+func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	// Look for "interface_version_8" in the wasm file and replace it with "interface_version_9".
+	// This makes the wasm file invalid.
+	wasm = bytes.Replace(wasm, []byte("interface_version_8"), []byte("interface_version_9"), 1)
+
+	// StoreCode should fail
+	_, err = StoreCode(cache, wasm, true)
+	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
+
+	// StoreCodeUnchecked should not fail
+	checksum, err := StoreCodeUnchecked(cache, wasm)
+	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	assert.Equal(t, expectedChecksum[:], checksum)
+}
+
 func TestPin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
@@ -866,6 +888,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	require.NoError(b, err)
 	requireOkResponse(b, res, 0)
 
+	info = MockInfoBin(b, "fred")
+
 	const callCount = 100 // Calls per benchmark iteration
 
 	b.ResetTimer()
@@ -874,7 +898,9 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
+
 		info = mockInfoBinNoAssert("fred")
+
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -1356,6 +1382,10 @@ func TestCustomReflectQuerier(t *testing.T) {
 		Capitalized *CapitalizedQuery `json:"capitalized,omitempty"`
 		// There are more queries but we don't use them yet
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
+	}
+
+	type CapitalizedResponse struct {
+		Text string `json:"text"`
 	}
 
 	cache, cleanup := withCache(t)
