@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,19 +10,6 @@ import (
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
-
-// prettyJSON returns a properly indented JSON string for debugging
-func prettyJSON(data []byte) string {
-	if !json.Valid(data) {
-		return fmt.Sprintf("%q", string(data))
-	}
-	var prettyJSON bytes.Buffer
-	err := json.Indent(&prettyJSON, data, "", "  ")
-	if err != nil {
-		return fmt.Sprintf("%q", string(data))
-	}
-	return prettyJSON.String()
-}
 
 // prettyPrint returns a properly formatted string representation of a struct
 func prettyPrint(v interface{}) string {
@@ -61,7 +47,7 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 
-	//DEBUG: print all calls with proper formatting and deserialization
+	// DEBUG: print all calls with proper formatting and deserialization
 	fmt.Printf("\n=== Debug Information ===\n")
 	fmt.Printf("Cache:     %#v\n", cache)
 	fmt.Printf("Checksum:  %x\n", checksum)
