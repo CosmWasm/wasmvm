@@ -70,12 +70,13 @@ type AccountInfo struct {
 	ChannelID string `json:"channel_id"`
 }
 
-// We just check if an error is returned or not
+// We just check if an error is returned or not.
 type AcknowledgeDispatch struct {
 	Err string `json:"error"`
 }
 
 func toBytes(t *testing.T, v interface{}) []byte {
+	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	return bz

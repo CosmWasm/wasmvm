@@ -31,7 +31,11 @@ var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
 
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -51,7 +55,11 @@ func TestInitAndReleaseCache(t *testing.T) {
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
 	config := types.VMConfig{
@@ -87,7 +95,11 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -134,9 +146,21 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 	require.NoError(t, err)
 	tmpdir3, err := os.MkdirTemp("", "wasmvm-testing3")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir1)
-	defer os.RemoveAll(tmpdir2)
-	defer os.RemoveAll(tmpdir3)
+	defer func() {
+		if err := os.RemoveAll(tmpdir1); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
+	defer func() {
+		if err := os.RemoveAll(tmpdir2); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
+	defer func() {
+		if err := os.RemoveAll(tmpdir3); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -177,7 +201,11 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 func TestInitCacheEmptyCapabilities(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Errorf("failed to remove temp dir: %v", err)
+		}
+	}()
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -191,9 +219,10 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (Cache, func()) {
+	tb.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -203,10 +232,12 @@ func withCache(t testing.TB) (Cache, func()) {
 		},
 	}
 	cache, err := InitCache(config)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	cleanup := func() {
-		os.RemoveAll(tmpdir)
+		if err := os.RemoveAll(tmpdir); err != nil {
+			tb.Errorf("failed to remove temp dir: %v", err)
+		}
 		ReleaseCache(cache)
 	}
 	return cache, cleanup
@@ -799,7 +830,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
 	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
-	require.Equal(t, int64(maxGas), int64(totalCost))
+	require.Equal(t, uint64(maxGas), totalCost)
 }
 
 func BenchmarkContractCall(b *testing.B) {
@@ -867,6 +898,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
+
+		info = mockInfoBinNoAssert("fred")
 
 		for i := 0; i < callCount; i++ {
 			go func() {
@@ -1189,6 +1222,7 @@ func TestReplyAndQuery(t *testing.T) {
 }
 
 func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
+	tb.Helper()
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(tb, err)
@@ -1197,6 +1231,7 @@ func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
 }
 
 func requireQueryError(t *testing.T, res []byte) {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1205,6 +1240,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1213,36 +1249,44 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+func createHackatomContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+func createQueueContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+func createReflectContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+func createFloaty2(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
+func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
+	tb.Helper()
+	// #nosec G304 - used for test files only
 	wasm, err := os.ReadFile(wasmFile)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return checksum
 }
 
-// exec runs the handle tx with the given signer
+// exec runs the handle tx with the given signer.
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -1382,7 +1426,11 @@ func TestCustomReflectQuerier(t *testing.T) {
 	require.Equal(t, "SMALL FRYS :)", response.Text)
 }
 
-// TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
+type CapitalizedResponse struct {
+	Text string `json:"text"`
+}
+
+// TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm.
 func TestFloats(t *testing.T) {
 	type Value struct {
 		U32 *uint32 `json:"u32,omitempty"`
@@ -1393,15 +1441,16 @@ func TestFloats(t *testing.T) {
 
 	// helper to print the value in the same format as Rust's Debug trait
 	debugStr := func(value Value) string {
-		if value.U32 != nil {
+		switch {
+		case value.U32 != nil:
 			return fmt.Sprintf("U32(%d)", *value.U32)
-		} else if value.U64 != nil {
+		case value.U64 != nil:
 			return fmt.Sprintf("U64(%d)", *value.U64)
-		} else if value.F32 != nil {
+		case value.F32 != nil:
 			return fmt.Sprintf("F32(%d)", *value.F32)
-		} else if value.F64 != nil {
+		case value.F64 != nil:
 			return fmt.Sprintf("F64(%d)", *value.F64)
-		} else {
+		default:
 			t.FailNow()
 			return ""
 		}
@@ -1477,4 +1526,17 @@ func TestFloats(t *testing.T) {
 
 	hash := hasher.Sum(nil)
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+}
+
+// mockInfoBinNoAssert creates the message binary without using testify assertions.
+func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
+	info := types.MessageInfo{
+		Sender: sender,
+		Funds:  types.Array[types.Coin]{},
+	}
+	res, err := json.Marshal(info)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
