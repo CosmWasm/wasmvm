@@ -255,10 +255,6 @@ type TransferV2Msg struct {
 	// for more information.
 	//
 	// There is no difference between setting this to `None` or an empty string.
-	//
-	// This field is only supported on chains with CosmWasm >= 2.0 and silently ignored on older chains.
-	// If you need support for both 1.x and 2.x chain with the same codebase, it is recommended to use
-	// `CosmosMsg::Stargate` with a custom MsgTransfer protobuf encoder instead.
 	Memo string `json:"memo,omitempty"`
 	// when packet times out, measured on remote chain
 	Timeout IBCTimeout `json:"timeout"`
