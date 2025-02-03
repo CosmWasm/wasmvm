@@ -244,12 +244,19 @@ type Hop struct {
 	PortID    string `json:"port_id"`
 }
 
+type Forwarding struct {
+	Hops   Array[Hop] `json:"hops"`
+	Unwind bool       `json:"unwind"`
+}
+
 type TransferV2Msg struct {
 	// existing channel to send the tokens over
 	ChannelID string `json:"channel_id"`
 	// A struct containing the list of next hops,
 	// determining where the tokens must be forwarded next.
-	Forwarding Array[Hop] `json:"forwarding"`
+	// More info can be found in the `MsgTransfer` IBC docs:
+	// https://ibc.cosmos.network/main/apps/transfer/messages/
+	Forwarding *Forwarding `json:"forwarding,omitempty"`
 	// An optional memo. See the blog post
 	// ["Moving Beyond Simple Token Transfers"](https://medium.com/the-interchain-foundation/moving-beyond-simple-token-transfers-d42b2b1dc29b)
 	// for more information.
