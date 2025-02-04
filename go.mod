@@ -4,8 +4,10 @@ go 1.21
 
 require (
 	github.com/google/btree v1.0.0
+	github.com/kilic/bls12-381 v0.1.0
 	github.com/shamaton/msgpack/v2 v2.2.0
 	github.com/stretchr/testify v1.8.1
+	github.com/tetratelabs/wazero v1.8.3-0.20250117122819-451d3fb51fcc
 	golang.org/x/sys v0.16.0
 )
 

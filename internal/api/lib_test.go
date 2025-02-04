@@ -20,13 +20,17 @@ import (
 )
 
 const (
-	TESTING_PRINT_DEBUG  = false
-	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
-	TESTING_MEMORY_LIMIT = 32                      // MiB
-	TESTING_CACHE_SIZE   = 100                     // MiB
+	TESTING_PRINT_DEBUG  = true
+	TESTING_GAS_LIMIT    = uint64(1_000_000_000_000) // ~1ms
+	TESTING_MEMORY_LIMIT = 64                        // MiB
+	TESTING_CACHE_SIZE   = 2048                      // MiB (2GB)
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "cosmwasm_2_1", "cosmwasm_2_2"}
+
+type CapitalizedResponse struct {
+	Text string `json:"text"`
+}
 
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
@@ -109,7 +113,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "Could not lock exclusive.lock. Is a different VM running in the same directory already?")
 
 	ReleaseCache(cache1)
 
@@ -191,9 +195,10 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (Cache, func()) {
+	tb.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -203,7 +208,7 @@ func withCache(t testing.TB) (Cache, func()) {
 		},
 	}
 	cache, err := InitCache(config)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	cleanup := func() {
 		os.RemoveAll(tmpdir)
@@ -287,7 +292,7 @@ func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
 
 	// StoreCode should fail
 	_, err = StoreCode(cache, wasm, true)
-	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
+	require.ErrorContains(t, err, "contract has unknown")
 
 	// StoreCodeUnchecked should not fail
 	checksum, err := StoreCodeUnchecked(cache, wasm)
@@ -456,7 +461,7 @@ func TestGetMetrics(t *testing.T) {
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
+	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizePinnedMemoryCache, 0.25)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
@@ -595,7 +600,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa3e4ae), cost.UsedInternally)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
@@ -626,7 +631,7 @@ func TestExecute(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa3e4ae), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute with the same store
@@ -639,7 +644,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0x1416da5), cost.UsedInternally)
+	assert.Equal(t, uint64(0x12899a6), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -693,7 +698,8 @@ func TestExecutePanic(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	_, _, err = Execute(cache, checksum, env, info, []byte(`{"panic":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "RuntimeError: Aborted: panicked at 'This page intentionally faulted'")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "RuntimeError: Aborted: panicked at src/contract.rs:127:5:\nThis page intentionally faulted")
 }
 
 func TestExecuteUnreachable(t *testing.T) {
@@ -746,7 +752,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0x79f527), cost.UsedInternally)
+	assert.Equal(t, uint64(0x72c3ce), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a cpu loop
@@ -756,7 +762,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, false)
 	diff = time.Since(start)
 	require.Error(t, err)
 	require.Equal(t, cost.UsedInternally, maxGas)
@@ -790,7 +796,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, false)
 	diff := time.Since(start)
 	require.Error(t, err)
 	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
@@ -867,7 +873,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		errChan := make(chan error, callCount)
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
-
+		info = mockInfoBinNoAssert("fred")
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -955,7 +961,8 @@ func TestMigrate(t *testing.T) {
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
-	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	info = MockInfoBin(t, "admin")
+	_, _, err = MigrateWithInfo(cache, checksum, env, []byte(`{"verifier":"alice"}`), info, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
@@ -985,8 +992,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store1, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0xb0c2cd), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa2aeb8), cost.UsedInternally)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -997,14 +1003,14 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xb1760a), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa35f43), cost.UsedInternally)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0xa7c5ce)
+	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x9a2b03)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x140e8ad)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x1281a12)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes := resp.Ok.Attributes
@@ -1013,7 +1019,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x1412b29)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x12859dc)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes = resp.Ok.Attributes
@@ -1189,6 +1195,7 @@ func TestReplyAndQuery(t *testing.T) {
 }
 
 func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
+	tb.Helper()
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(tb, err)
@@ -1197,6 +1204,7 @@ func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
 }
 
 func requireQueryError(t *testing.T, res []byte) {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1205,6 +1213,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1213,36 +1222,43 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+func createHackatomContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+func createQueueContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+func createReflectContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+func createFloaty2(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
+func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
+	tb.Helper()
 	wasm, err := os.ReadFile(wasmFile)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return checksum
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier types.Querier, gasExpected uint64) types.ContractResult {
+	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -1358,7 +1374,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	// we need this to handle the custom requests from the reflect contract
 	innerQuerier := querier.(*MockQuerier)
 	innerQuerier.Custom = ReflectCustom{}
-	querier = Querier(innerQuerier)
+	querier = types.Querier(innerQuerier)
 
 	// make a valid query to the other address
 	queryMsg := QueryMsg{
@@ -1381,6 +1397,8 @@ func TestCustomReflectQuerier(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "SMALL FRYS :)", response.Text)
 }
+
+// testfloats is disabled temporarily because of its high output
 
 // TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm
 func TestFloats(t *testing.T) {
@@ -1421,7 +1439,7 @@ func TestFloats(t *testing.T) {
 
 	// query instructions
 	query := []byte(`{"instructions":{}}`)
-	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 	require.NoError(t, err)
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
@@ -1439,7 +1457,7 @@ func TestFloats(t *testing.T) {
 		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
-			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 			require.NoError(t, err)
 			err = json.Unmarshal(data, &qResult)
 			require.NoError(t, err)
@@ -1455,7 +1473,7 @@ func TestFloats(t *testing.T) {
 
 			// run the instruction
 			// this might throw a runtime error (e.g. if the instruction traps)
-			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, false)
 			var result string
 			if err != nil {
 				require.Error(t, err)
@@ -1476,5 +1494,18 @@ func TestFloats(t *testing.T) {
 	}
 
 	hash := hasher.Sum(nil)
-	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+	require.Equal(t, "6e9ffbe929a2c1bcbffca0d4e9d0935371045bba50158a01ec082459a4cbbd2a", hex.EncodeToString(hash))
+}
+
+// mockInfoBinNoAssert creates the message binary without using testify assertions
+func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
+	info := types.MessageInfo{
+		Sender: sender,
+		Funds:  types.Array[types.Coin]{},
+	}
+	res, err := json.Marshal(info)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }

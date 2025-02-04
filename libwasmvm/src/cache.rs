@@ -797,10 +797,10 @@ mod tests {
         assert!(!hackatom_report.has_ibc_entry_points);
         assert_eq!(
             hackatom_report.required_capabilities.consume().unwrap(),
-            b""
+            b"cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2"
         );
         assert!(hackatom_report.contract_migrate_version.is_some);
-        assert_eq!(hackatom_report.contract_migrate_version.value, 42);
+        assert_eq!(hackatom_report.contract_migrate_version.value, 420);
 
         let mut error_msg: UnmanagedVector = UnmanagedVector::default();
         let ibc_reflect_report = analyze_code(
@@ -813,7 +813,10 @@ mod tests {
         let required_capabilities =
             String::from_utf8_lossy(&ibc_reflect_report.required_capabilities.consume().unwrap())
                 .to_string();
-        assert_eq!(required_capabilities, "iterator,stargate");
+        assert_eq!(
+            required_capabilities,
+            "cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,cosmwasm_2_0,cosmwasm_2_1,cosmwasm_2_2,iterator,stargate"
+        );
 
         release_cache(cache_ptr);
     }
