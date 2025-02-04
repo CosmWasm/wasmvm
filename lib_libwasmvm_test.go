@@ -210,47 +210,76 @@ func TestRemoveCode(t *testing.T) {
 }
 
 func TestHappyPath(t *testing.T) {
+	t.Log("TestHappyPath: starting test")
+
+	// Set up the VM and store the contract.
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
+	t.Logf("TestHappyPath: contract stored with checksum: %x", checksum)
 
+	// Define deserialization cost and set up gas and store.
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
 
-	// instantiate
+	// Prepare instantiation parameters.
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	i, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	t.Logf("TestHappyPath: Instantiating contract with msg: %s", msg)
+	t.Logf("TestHappyPath: Using env: %+v", env)
+	t.Logf("TestHappyPath: Using info: %+v", info)
+
+	// Instantiate the contract.
+	instRes, gasUsedInst, err := vm.Instantiate(
+		checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost,
+	)
+	if err != nil {
+		t.Logf("TestHappyPath: Instantiation failed with error: %v", err)
+	}
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires := i.Ok
+	require.NotNil(t, instRes.Ok)
+	t.Logf("TestHappyPath: Instantiation succeeded. Gas used: %d", gasUsedInst)
+	ires := instRes.Ok
 	require.Empty(t, ires.Messages)
 
-	// execute
+	// Execute the contract (release funds).
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	info = api.MockInfo("fred", nil)
-	h, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
-	require.NoError(t, err)
-	require.NotNil(t, h.Ok)
-	hres := h.Ok
-	require.Len(t, hres.Messages, 1)
+	t.Logf("TestHappyPath: Executing contract with msg: %s", `{"release":{}}`)
 
-	// make sure it read the balance properly and we got 250 atoms
+	execRes, gasUsedExec, err := vm.Execute(
+		checksum, env, info, []byte(`{"release":{}}`),
+		store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost,
+	)
+	if err != nil {
+		t.Logf("TestHappyPath: Execution failed with error: %v", err)
+	}
+	require.NoError(t, err)
+	require.NotNil(t, execRes.Ok)
+	t.Logf("TestHappyPath: Execution succeeded. Gas used: %d", gasUsedExec)
+	hres := execRes.Ok
+	require.Len(t, hres.Messages, 1)
+	t.Logf("TestHappyPath: Execution messages: %+v", hres.Messages)
+
+	// Log dispatch message details.
 	dispatch := hres.Messages[0].Msg
-	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
-	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
+	require.NotNil(t, dispatch.Bank, "Dispatch message is missing the Bank field: %#v", dispatch)
+	require.NotNil(t, dispatch.Bank.Send, "Dispatch message is missing the Send field: %#v", dispatch)
 	send := dispatch.Bank.Send
+	t.Logf("TestHappyPath: Dispatch message details: to_address=%s, amount=%+v", send.ToAddress, send.Amount)
 	assert.Equal(t, "bob", send.ToAddress)
 	assert.Equal(t, balance, send.Amount)
-	// check the data is properly formatted
+
+	// Check and log the returned data.
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
+	t.Logf("TestHappyPath: Expected data (hex): %x", expectedData)
+	t.Logf("TestHappyPath: Actual data (hex):   %x", hres.Data)
 	assert.Equal(t, expectedData, hres.Data)
 }
 

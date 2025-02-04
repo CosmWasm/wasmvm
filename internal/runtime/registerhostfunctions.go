@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -12,49 +11,30 @@ import (
 // RegisterHostFunctions registers all required host functions with the wazero runtime.
 // It provides detailed logging and ensures all CosmWasm‐required functions are implemented.
 func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (wazero.CompiledModule, error) {
-	fmt.Printf("\n=== Starting Host Function Registration ===\n")
-	startTime := time.Now()
-
-	// Map to track registered functions.
-	registeredFuncs := make(map[string]bool)
-
-	// Helper function to log function registration.
-	logRegistration := func(name string) {
-		registeredFuncs[name] = true
-		fmt.Printf("Registered host function: %s\n", name)
-	}
-
 	// Create a builder for the "env" module.
 	builder := runtime.NewHostModuleBuilder("env")
 
 	// Register Memory Management Functions.
-	registerMemoryFunctions(builder, env, logRegistration)
+	registerMemoryFunctions(builder, env)
 
 	// Register Debug Functions.
-	registerDebugFunctions(builder, env, logRegistration)
+	registerDebugFunctions(builder, env)
 
 	// Register Storage Functions.
-	registerStorageFunctions(builder, env, logRegistration)
+	registerStorageFunctions(builder, env)
 
 	// Register Iterator Functions.
-	registerIteratorFunctions(builder, env, logRegistration)
+	registerIteratorFunctions(builder, env)
 
 	// Register Address Functions.
-	registerAddressFunctions(builder, env, logRegistration)
+	registerAddressFunctions(builder, env)
 
 	// Register Query Functions.
-	registerQueryFunctions(builder, env, logRegistration)
+	registerQueryFunctions(builder, env)
 
 	// Register Crypto Functions.
-	registerCryptoFunctions(builder, env, logRegistration)
+	registerCryptoFunctions(builder, env)
 	// (Note: registerCryptoFunctions no longer calls registerIteratorFunctions.)
-
-	// Registration Summary.
-	fmt.Printf("\n=== Registration Summary ===\n")
-	fmt.Printf("Registered %d host functions in %v\n", len(registeredFuncs), time.Since(startTime))
-	fmt.Printf("Memory model: wazero with 64KB pages\n")
-	fmt.Printf("Gas metering: enabled\n")
-	fmt.Printf("===================================\n\n")
 
 	// Compile and return the module.
 	return builder.Compile(context.Background())
@@ -63,9 +43,7 @@ func RegisterHostFunctions(runtime wazero.Runtime, env *RuntimeEnvironment) (waz
 // --- Registration Helpers ---
 
 // registerCryptoFunctions registers cryptographic functions like secp256k1_verify and ed25519_verify.
-func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Crypto Functions...\n")
-
+func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 	// secp256k1 Verify Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, hashPtr, sigPtr, pubkeyPtr uint32) uint32 {
@@ -75,7 +53,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "pubkey_ptr").
 		Export("secp256k1_verify")
-	log("secp256k1_verify")
 
 	// secp256k1 Recover Pubkey Function.
 	builder.NewFunctionBuilder().
@@ -86,7 +63,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "rec_id").
 		Export("secp256k1_recover_pubkey")
-	log("secp256k1_recover_pubkey")
 
 	// ed25519 Verify Function.
 	builder.NewFunctionBuilder().
@@ -97,7 +73,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
 		Export("ed25519_verify")
-	log("ed25519_verify")
 
 	// ed25519 Batch Verify Function.
 	builder.NewFunctionBuilder().
@@ -108,7 +83,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("msgs_ptr", "sigs_ptr", "pubkeys_ptr").
 		Export("ed25519_batch_verify")
-	log("ed25519_batch_verify")
 
 	// BLS12-381 Aggregate G1 Function.
 	builder.NewFunctionBuilder().
@@ -119,7 +93,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("ptr1", "ptr2").
 		Export("bls12_381_aggregate_g1")
-	log("bls12_381_aggregate_g1")
 
 	// BLS12-381 Aggregate G2 Function.
 	builder.NewFunctionBuilder().
@@ -130,7 +103,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("ptr1", "ptr2").
 		Export("bls12_381_aggregate_g2")
-	log("bls12_381_aggregate_g2")
 
 	// BLS12-381 Pairing Equality Function.
 	builder.NewFunctionBuilder().
@@ -142,7 +114,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("a1_ptr", "a2_ptr", "b1_ptr", "b2_ptr").
 		Export("bls12_381_pairing_equality")
-	log("bls12_381_pairing_equality")
 
 	// BLS12-381 Hash to G1 Function.
 	builder.NewFunctionBuilder().
@@ -154,7 +125,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("hash_ptr", "hash_len", "dst_ptr", "dst_len").
 		Export("bls12_381_hash_to_g1")
-	log("bls12_381_hash_to_g1")
 
 	// BLS12-381 Hash to G2 Function.
 	builder.NewFunctionBuilder().
@@ -166,7 +136,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("hash_ptr", "hash_len", "dst_ptr", "dst_len").
 		Export("bls12_381_hash_to_g2")
-	log("bls12_381_hash_to_g2")
 
 	// Secp256r1 Verify Function.
 	builder.NewFunctionBuilder().
@@ -178,7 +147,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("msg_ptr", "sig_ptr", "pubkey_ptr").
 		Export("secp256r1_verify")
-	log("secp256r1_verify")
 
 	// Secp256r1 Recover Pubkey Function.
 	builder.NewFunctionBuilder().
@@ -191,12 +159,10 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("hash_ptr", "sig_ptr", "recovery").
 		Export("secp256r1_recover_pubkey")
-	log("secp256r1_recover_pubkey")
 }
 
 // registerIteratorFunctions registers iterator-related functions like db_scan, db_next, db_next_key, and db_next_value.
-func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Iterator Functions...\n")
+func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// DB Scan Function.
 	builder.NewFunctionBuilder().
@@ -208,7 +174,6 @@ func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnv
 		}).
 		WithParameterNames("start_ptr", "start_len", "order").
 		Export("db_scan")
-	log("db_scan")
 
 	// DB Next Function.
 	builder.NewFunctionBuilder().
@@ -220,7 +185,6 @@ func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnv
 		}).
 		WithParameterNames("iter_id").
 		Export("db_next")
-	log("db_next")
 
 	// DB Next Key Function.
 	builder.NewFunctionBuilder().
@@ -233,7 +197,6 @@ func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnv
 		}).
 		WithParameterNames("iter_id").
 		Export("db_next_key")
-	log("db_next_key")
 
 	// DB Next Value Function.
 	builder.NewFunctionBuilder().
@@ -247,12 +210,10 @@ func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnv
 		}).
 		WithParameterNames("iter_id").
 		Export("db_next_value")
-	log("db_next_value")
 }
 
 // registerAddressFunctions registers address-related functions like addr_validate, addr_canonicalize, and addr_humanize.
-func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Address Functions...\n")
+func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// Address Validation Function.
 	builder.NewFunctionBuilder().
@@ -263,7 +224,6 @@ func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("addr_ptr").
 		Export("addr_validate")
-	log("addr_validate")
 
 	// Address Canonicalization Function.
 	builder.NewFunctionBuilder().
@@ -274,7 +234,6 @@ func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
 		Export("addr_canonicalize")
-	log("addr_canonicalize")
 
 	// Address Humanization Function.
 	builder.NewFunctionBuilder().
@@ -285,12 +244,10 @@ func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("addr_ptr", "addr_len").
 		Export("addr_humanize")
-	log("addr_humanize")
 }
 
 // registerMemoryFunctions registers memory management functions like allocate and deallocate.
-func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Memory Management Functions...\n")
+func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// Allocate Function.
 	builder.NewFunctionBuilder().
@@ -305,7 +262,6 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("size").
 		Export("allocate")
-	log("allocate")
 
 	// Deallocate Function (no-op).
 	builder.NewFunctionBuilder().
@@ -315,12 +271,10 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 		}).
 		WithParameterNames("ptr").
 		Export("deallocate")
-	log("deallocate")
 }
 
 // registerDebugFunctions registers debug-related functions like debug and abort.
-func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Debug Functions...\n")
+func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// Debug Function.
 	builder.NewFunctionBuilder().
@@ -331,7 +285,6 @@ func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnviro
 		}).
 		WithParameterNames("msg_ptr").
 		Export("debug")
-	log("debug")
 
 	// Abort Function.
 	builder.NewFunctionBuilder().
@@ -357,12 +310,10 @@ func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnviro
 		}).
 		WithParameterNames("msg_ptr").
 		Export("abort")
-	log("abort")
 }
 
 // registerStorageFunctions registers storage-related functions like db_read, db_write, and db_remove.
-func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Storage Functions...\n")
+func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// DB Read Function.
 	builder.NewFunctionBuilder().
@@ -373,7 +324,6 @@ func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("key_ptr").
 		Export("db_read")
-	log("db_read")
 
 	// DB Write Function.
 	builder.NewFunctionBuilder().
@@ -384,7 +334,6 @@ func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("key_ptr", "value_ptr").
 		Export("db_write")
-	log("db_write")
 
 	// DB Remove Function.
 	builder.NewFunctionBuilder().
@@ -395,12 +344,10 @@ func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 		}).
 		WithParameterNames("key_ptr").
 		Export("db_remove")
-	log("db_remove")
 }
 
 // registerQueryFunctions registers query-related functions like query_chain.
-func registerQueryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment, log func(string)) {
-	fmt.Printf("\nRegistering Query Functions...\n")
+func registerQueryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
 
 	// Query Chain Function.
 	builder.NewFunctionBuilder().
@@ -411,5 +358,4 @@ func registerQueryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnviro
 		}).
 		WithParameterNames("req_ptr").
 		Export("query_chain")
-	log("query_chain")
 }

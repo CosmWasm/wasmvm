@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -122,8 +121,13 @@ func allocateInContract(ctx context.Context, mod api.Module, size uint32) (uint3
 	return uint32(results[0]), nil
 }
 
-// hostHumanizeAddress implements api_humanize_address.
-func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
+// hostHumanizeAddress implements addr_humanize.
+// It reads a null-terminated address from memory (ignoring addrLen),
+// calls the API's HumanizeAddress function, and writes back the result.
+// hostHumanizeAddress reads a null-terminated address from memory,
+// calls the API to humanize it, logs intermediate results, and writes
+// the humanized address back into memory.
+func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uint32) uint32 {
 	envVal := ctx.Value(envKey)
 	if envVal == nil {
 		fmt.Println("[ERROR] hostHumanizeAddress: runtime environment not found in context")
@@ -132,29 +136,35 @@ func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen u
 	env := envVal.(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	addr, err := readMemory(mem, addrPtr, addrLen)
+	// Read the address as a null-terminated byte slice.
+	addr, err := readNullTerminatedString(mem, addrPtr)
 	if err != nil {
+		fmt.Printf("[ERROR] hostHumanizeAddress: failed to read address from memory: %v\n", err)
 		return 1
 	}
+	fmt.Printf("[DEBUG] hostHumanizeAddress: read address (hex): %x, as string: '%s'\n", addr, string(addr))
 
+	// Call the API to convert to a human-readable address.
 	human, _, err := env.API.HumanizeAddress(addr)
 	if err != nil {
+		fmt.Printf("[ERROR] hostHumanizeAddress: API.HumanizeAddress failed: %v\n", err)
 		return 1
 	}
+	fmt.Printf("[DEBUG] hostHumanizeAddress: humanized address: '%s'\n", human)
 
-	if uint32(len(human)) > addrLen {
-		return 1
-	}
-
+	// Write the result back into memory.
 	if err := writeMemory(mem, addrPtr, []byte(human), false); err != nil {
+		fmt.Printf("[ERROR] hostHumanizeAddress: failed to write humanized address back to memory: %v\n", err)
 		return 1
 	}
-
+	fmt.Printf("[DEBUG] hostHumanizeAddress: successfully wrote humanized address back to memory at 0x%x\n", addrPtr)
 	return 0
 }
 
-// hostCanonicalizeAddress implements addr_canonicalize.
-func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrLen uint32) uint32 {
+// hostCanonicalizeAddress reads a null-terminated address from memory,
+// calls the API to canonicalize it, logs intermediate results, and writes
+// the canonical address back into memory.
+func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uint32) uint32 {
 	envVal := ctx.Value(envKey)
 	if envVal == nil {
 		fmt.Println("[ERROR] hostCanonicalizeAddress: runtime environment not found in context")
@@ -163,44 +173,70 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, addrL
 	env := envVal.(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	addr, err := readMemory(mem, addrPtr, addrLen)
+	// Read the address as a null-terminated byte slice.
+	addr, err := readNullTerminatedString(mem, addrPtr)
 	if err != nil {
+		fmt.Printf("[ERROR] hostCanonicalizeAddress: failed to read address from memory: %v\n", err)
 		return 1
 	}
+	fmt.Printf("[DEBUG] hostCanonicalizeAddress: read address (hex): %x, as string: '%s'\n", addr, string(addr))
 
+	// Call the API to canonicalize the address.
 	canonical, _, err := env.API.CanonicalizeAddress(string(addr))
 	if err != nil {
+		fmt.Printf("[ERROR] hostCanonicalizeAddress: API.CanonicalizeAddress failed: %v\n", err)
 		return 1
 	}
+	fmt.Printf("[DEBUG] hostCanonicalizeAddress: canonical address (hex): %x\n", canonical)
 
-	if uint32(len(canonical)) > addrLen {
-		return 1
-	}
-
+	// Write the canonical address back to memory.
 	if err := writeMemory(mem, addrPtr, canonical, false); err != nil {
+		fmt.Printf("[ERROR] hostCanonicalizeAddress: failed to write canonical address back to memory: %v\n", err)
 		return 1
 	}
-
+	fmt.Printf("[DEBUG] hostCanonicalizeAddress: successfully wrote canonical address back to memory at 0x%x\n", addrPtr)
 	return 0
 }
 
-// hostValidateAddress implements addr_validate.
-
+// hostValidateAddress reads a null-terminated address from memory,
+// calls the API to validate it, and logs the process.
+// Returns 1 if the address is valid and 0 otherwise.
 func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr uint32) uint32 {
 	env := ctx.Value(envKey).(*RuntimeEnvironment)
 	mem := mod.Memory()
-	addr, err := readMemory(mem, addrPtr, 32)
+
+	// Read the address as a null-terminated string.
+	addr, err := readNullTerminatedString(mem, addrPtr)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read address from memory: %v", err))
+		panic(fmt.Sprintf("[ERROR] hostValidateAddress: failed to read address from memory: %v", err))
 	}
-	// Trim any trailing null bytes.
-	addr = bytes.TrimRight(addr, "\x00")
-	// Now validate the (trimmed) address.
+	fmt.Printf("[DEBUG] hostValidateAddress: read address (hex): %x, as string: '%s'\n", addr, string(addr))
+
+	// Validate the address.
 	_, err = env.API.ValidateAddress(string(addr))
 	if err != nil {
+		fmt.Printf("[DEBUG] hostValidateAddress: API.ValidateAddress failed: %v\n", err)
 		return 0 // reject invalid address
 	}
+	fmt.Printf("[DEBUG] hostValidateAddress: address validated successfully\n")
 	return 1 // valid
+}
+
+// --- Helper: readNullTerminatedString ---
+// Reads bytes from memory starting at addrPtr until a null byte is found.
+func readNullTerminatedString(mem api.Memory, addrPtr uint32) ([]byte, error) {
+	var buf []byte
+	for i := addrPtr; ; i++ {
+		b, ok := mem.ReadByte(i)
+		if !ok {
+			return nil, fmt.Errorf("memory access error at offset %d", i)
+		}
+		if b == 0 {
+			break
+		}
+		buf = append(buf, b)
+	}
+	return buf, nil
 }
 
 // hostScan implements db_scan.

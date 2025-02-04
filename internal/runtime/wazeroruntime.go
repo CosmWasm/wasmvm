@@ -696,27 +696,25 @@ func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interf
 			fmt.Printf("Error: %v\n", err)
 
 			// Try to read and deserialize memory at various locations
-			if memory != nil {
-				// Try the env region
-				if envRegionData, ok := memory.Read(envRegionPtr, 12); ok {
-					fmt.Printf("\nEnvironment Region:\n")
-					offset := binary.LittleEndian.Uint32(envRegionData[0:4])
-					length := binary.LittleEndian.Uint32(envRegionData[8:12])
-					if data, err := readMemoryAndDeserialize(memory, offset, length); err == nil {
-						fmt.Printf("Data: %s\n", data)
-					}
+			// Try the env region
+			if envRegionData, ok := contractModule.Memory().Read(envRegionPtr, 12); ok {
+				fmt.Printf("\nEnvironment Region:\n")
+				offset := binary.LittleEndian.Uint32(envRegionData[0:4])
+				length := binary.LittleEndian.Uint32(envRegionData[8:12])
+				if data, err := readMemoryAndDeserialize(contractModule.Memory(), offset, length); err == nil {
+					fmt.Printf("Data: %s\n", data)
 				}
+			}
 
-				// Try reading around the error location
-				errPtr := uint32(1047844) // Common error location
-				if data, err := readMemoryAndDeserialize(memory, errPtr-100, 200); err == nil {
-					fmt.Printf("\nAround error location (offset=%d):\n%s\n", errPtr, data)
-				}
+			// Try reading around the error location
+			errPtr := uint32(1047844) // Common error location
+			if data, err := readMemoryAndDeserialize(contractModule.Memory(), errPtr-100, 200); err == nil {
+				fmt.Printf("\nAround error location (offset=%d):\n%s\n", errPtr, data)
+			}
 
-				// Try reading the first page of memory
-				if data, err := readMemoryAndDeserialize(memory, 0, 256); err == nil {
-					fmt.Printf("\nFirst 256 bytes of memory:\n%s\n", data)
-				}
+			// Try reading the first page of memory
+			if data, err := readMemoryAndDeserialize(contractModule.Memory(), 0, 256); err == nil {
+				fmt.Printf("\nFirst 256 bytes of memory:\n%s\n", data)
 			}
 
 			fmt.Printf("=====================================\n\n")
