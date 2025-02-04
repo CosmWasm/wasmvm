@@ -163,7 +163,6 @@ func registerCryptoFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 
 // registerIteratorFunctions registers iterator-related functions like db_scan, db_next, db_next_key, and db_next_value.
 func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// DB Scan Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, startPtr, startLen, order uint32) uint32 {
@@ -214,7 +213,6 @@ func registerIteratorFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnv
 
 // registerAddressFunctions registers address-related functions like addr_validate, addr_canonicalize, and addr_humanize.
 func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// Address Validation Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, addrPtr uint32) uint32 {
@@ -248,7 +246,6 @@ func registerAddressFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 
 // registerMemoryFunctions registers memory management functions like allocate and deallocate.
 func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// Allocate Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, size uint32) uint32 {
@@ -275,7 +272,6 @@ func registerMemoryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvir
 
 // registerDebugFunctions registers debug-related functions like debug and abort.
 func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// Debug Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, msgPtr uint32) {
@@ -314,7 +310,6 @@ func registerDebugFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnviro
 
 // registerStorageFunctions registers storage-related functions like db_read, db_write, and db_remove.
 func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// DB Read Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, keyPtr uint32) uint32 {
@@ -348,7 +343,6 @@ func registerStorageFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvi
 
 // registerQueryFunctions registers query-related functions like query_chain.
 func registerQueryFunctions(builder wazero.HostModuleBuilder, env *RuntimeEnvironment) {
-
 	// Query Chain Function.
 	builder.NewFunctionBuilder().
 		WithFunc(func(ctx context.Context, m api.Module, reqPtr uint32) uint32 {
