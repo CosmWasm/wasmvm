@@ -118,7 +118,7 @@ func TestWasmQuerySerialization(t *testing.T) {
 	var err error
 
 	// ContractInfo
-	document := []byte(`{"contract_info":{"contract_addr":"aabbccdd456"}}`)
+	document := []byte(`{"contract_info":{"contract_addr":"aabbccdd456", "eureka_port":"wasm"}}`)
 	var query WasmQuery
 	err = json.Unmarshal(document, &query)
 	require.NoError(t, err)
@@ -128,6 +128,7 @@ func TestWasmQuerySerialization(t *testing.T) {
 	require.Nil(t, query.CodeInfo)
 	require.NotNil(t, query.ContractInfo)
 	require.Equal(t, "aabbccdd456", query.ContractInfo.ContractAddr)
+	require.Equal(t, "wasm", query.ContractInfo.EurekaPort)
 
 	// CodeInfo
 	document = []byte(`{"code_info":{"code_id":70}}`)
