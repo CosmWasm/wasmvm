@@ -125,6 +125,7 @@ type BurnMsg struct {
 
 type IBCMsg struct {
 	Transfer             *TransferMsg             `json:"transfer,omitempty"`
+	TransferV2           *TransferV2Msg           `json:"transfer_v2,omitempty"`
 	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
 	WriteAcknowledgement *WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 	CloseChannel         *CloseChannelMsg         `json:"close_channel,omitempty"`
@@ -239,6 +240,29 @@ type TransferMsg struct {
 	Amount    Coin       `json:"amount"`
 	Timeout   IBCTimeout `json:"timeout"`
 	Memo      string     `json:"memo,omitempty"`
+}
+
+type Hop struct {
+	ChannelID string `json:"channel_id"`
+	PortID    string `json:"port_id"`
+}
+
+type TransferV2Msg struct {
+	// An optional memo. See the blog post
+	// ["Moving Beyond Simple Token Transfers"](https://medium.com/the-interchain-foundation/moving-beyond-simple-token-transfers-d42b2b1dc29b)
+	// for more information.
+	//
+	// There is no difference between setting this to `None` or an empty string.
+	Memo string `json:"memo,omitempty"`
+	// Address on the remote chain to receive these tokens.
+	ToAddress string `json:"to_address"`
+	// MsgTransfer in v2 version supports multiple coins.
+	Tokens Array[Coin] `json:"tokens"`
+	// The transfer can be of type:
+	// * Direct,
+	// * Forwarding,
+	// * Forwarding with unwind flag set.
+	TransferType TransferV2Type `json:"transfer_type"`
 }
 
 type SendPacketMsg struct {
@@ -443,4 +467,28 @@ type UpdateAdminMsg struct {
 type ClearAdminMsg struct {
 	// ContractAddr is the sdk.AccAddress of the target contract.
 	ContractAddr string `json:"contract_addr"`
+}
+
+type DirectType struct {
+	// Existing channel to send the tokens over.
+	ChannelID string `json:"channel_id"`
+	// When packet times out, measured on remote chain.
+	IBCTimeout IBCTimeout `json:"ibc_timeout"`
+}
+type MultiHopType struct {
+	// Existing channel to send the tokens over.
+	ChannelID string     `json:"channel_id"`
+	Hops      Array[Hop] `json:"hops"`
+	// When packet times out, measured on remote chain. TimestampHeight is not supported in ibc-go Transfer V2.
+	Timeout Uint64 `json:"timeout"`
+}
+type UnwindingType struct {
+	Hops Array[Hop] `json:"hops"`
+	// When packet times out, measured on remote chain. TimestampHeight is not supported in ibc-go Transfer V2.
+	Timeout Uint64 `json:"timeout"`
+}
+type TransferV2Type struct {
+	Direct    *DirectType    `json:"direct,omitempty"`
+	MultiHop  *MultiHopType  `json:"multi_hop,omitempty"`
+	Unwinding *UnwindingType `json:"unwinding,omitempty"`
 }
