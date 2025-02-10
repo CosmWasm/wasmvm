@@ -26,15 +26,17 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.2.0", features = [
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "tkulik/feat/eureka_recv_endpoint", features = [
   "staking",
   "stargate",
   "iterator",
+  "eureka",
 ] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.2.0", features = [
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "tkulik/feat/eureka_recv_endpoint", features = [
   "staking",
   "stargate",
   "iterator",
+  "eureka",
 ] }
 errno = "0.3.8"
 rmp-serde = "1.3.0"
