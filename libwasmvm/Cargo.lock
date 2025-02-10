@@ -437,13 +437,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -465,8 +465,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -475,8 +475,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 dependencies = [
  "base64",
  "bech32",
@@ -498,8 +498,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 dependencies = [
  "bech32",
  "blake2",
@@ -510,7 +510,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-vm-derive",
  "crc32fast",
- "derivative",
+ "derive_more",
  "hex",
  "rand_core",
  "schemars",
@@ -527,8 +527,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "2.2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.0#b9a149fde2a787b7221918b0651532ca2668d761"
+version = "2.2.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik/feat/eureka_recv_endpoint#1dbc4219900db75de0c2d6fef7342b58dca25411"
 dependencies = [
  "blake2",
  "proc-macro2",
