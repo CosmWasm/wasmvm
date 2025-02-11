@@ -15,8 +15,8 @@ The Go version here has the following goals:
   versions reasonably wide to avoid unnecessary friction for users. I.e. just
   because Cosmos SDK now uses Go 1.19 does not mean we make 1.19 the minimal
   supported version here. However, the project should work with the latest
-  stable Go version. When the majority of our users are between 1.18 and 1.19, we
-  can slowly remove 1.17 support by bumping the min version to 1.18.
+  stable Go version. When the majority of our users are between 1.18 and 1.19,
+  we can slowly remove 1.17 support by bumping the min version to 1.18.
 - Be stable enough to test Go code. We always pin the patch version to ensure CI
   runs are reproducible. Those versions will contain security issues from time
   to time, but that's fine for how they are used here.
@@ -64,5 +64,5 @@ We currently use the following version:
 | Type                     | Rust version | Note                              |
 | ------------------------ | ------------ | --------------------------------- |
 | Production Rust compiler | 1.82.0       | Builders version 0102             |
-| Min Rust compiler        | 1.74.0       | Supports builder versions >= 0019 |
-| Tooling Rust compiler    | 1.75.0       |                                   |
+| Min Rust compiler        | 1.81.0       | Supports builder versions >= 0101 |
+| Tooling Rust compiler    | 1.81.0       |                                   |
