@@ -267,7 +267,8 @@ jobs:
 
   build_shared_library:
     docker:
-      - image: cimg/rust:1.81.0
+      # libwasmvm versions built with 1.81 are broken, so we use 1.82 here
+      - image: cimg/rust:1.82.0
     steps:
       - checkout
       - run:
@@ -275,8 +276,8 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-v3-build_shared_library-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
-            - cargocache-v3-build_shared_library-rust:1.81.0-
+            - cargocache-v3-build_shared_library-rust:1.82.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - cargocache-v3-build_shared_library-rust:1.82.0-
       - run:
           name: Create release build of libwasmvm
           command: make build-libwasmvm
