@@ -162,9 +162,11 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	}
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+	hasEurekaEntryPoints := strings.Contains(entrypoints, "eu_recv_packet")
 
 	res := types.AnalysisReport{
 		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		HasEurekaEntryPoints:   hasEurekaEntryPoints,
 		RequiredCapabilities:   requiredCapabilities,
 		Entrypoints:            strings.Split(entrypoints, ","),
 		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
