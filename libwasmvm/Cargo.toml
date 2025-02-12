@@ -44,6 +44,7 @@ cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "mai
   "staking",
   "stargate",
   "iterator",
+  "eureka",
 ] }
 cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
   "staking",
