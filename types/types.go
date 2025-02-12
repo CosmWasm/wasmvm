@@ -175,6 +175,7 @@ func EmptyGasReport(limit uint64) GasReport {
 // This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
 	HasIBCEntryPoints    bool
+	HasEurekaEntryPoints bool
 	RequiredCapabilities string
 	Entrypoints          []string
 	// ContractMigrateVersion is the migrate version of the contract
