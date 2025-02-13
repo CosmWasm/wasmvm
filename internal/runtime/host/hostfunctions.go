@@ -1,4 +1,4 @@
-package runtime
+package host
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
 	"github.com/tetratelabs/wazero/api"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
@@ -290,7 +291,7 @@ func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	value := iter.Value()
 
 	// Charge gas for the returned data.
-	env.gasUsed += uint64(len(key)+len(value)) * gasPerByte
+	env.gasUsed += uint64(len(key)+len(value)) * constants.GasPerByte
 
 	totalLen := 4 + len(key) + 4 + len(value)
 	offset, err := allocateInContract(ctx, mod, uint32(totalLen))
@@ -341,7 +342,7 @@ func hostNextValue(ctx context.Context, mod api.Module, callID, iterID uint64) (
 	}
 
 	value := iter.Value()
-	env.gasUsed += uint64(len(value)) * gasPerByte
+	env.gasUsed += uint64(len(value)) * constants.GasPerByte
 
 	valOffset, err := allocateInContract(ctx, mod, uint32(len(value)))
 	if err != nil {

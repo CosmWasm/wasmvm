@@ -19,9 +19,9 @@ import (
 // It manages module compilation, instantiation, and memory via MemoryManager.
 type WazeroVM struct {
 	runtime     wazero.Runtime
-	cache       map[types.Checksum]wazero.CompiledModule // cache compiled modules by checksum
-	debug       bool                                     // print debug logs if true
-	memoryLimit uint32                                   // memory limit (in MiB) for each instance
+	cache       map[string]wazero.CompiledModule // cache compiled modules by checksum (hex-encoded)
+	debug       bool                             // print debug logs if true
+	memoryLimit uint32                           // memory limit (in MiB) for each instance
 }
 
 // NewWazeroVM creates a new WazeroVM. It compiles modules on the fly or from cache.
@@ -29,7 +29,7 @@ type WazeroVM struct {
 func NewWazeroVM(runtime wazero.Runtime, memoryLimit uint32, debug bool) *WazeroVM {
 	return &WazeroVM{
 		runtime:     runtime,
-		cache:       make(map[types.Checksum]wazero.CompiledModule),
+		cache:       make(map[string]wazero.CompiledModule),
 		debug:       debug,
 		memoryLimit: memoryLimit,
 	}
@@ -483,7 +483,7 @@ func (vm *WazeroVM) checkInterfaceVersion(ctx context.Context, module api.Module
 
 // getCompiledModule retrieves a compiled module for the given code (checksum). It compiles the WASM if not cached.
 func (vm *WazeroVM) getCompiledModule(code types.Checksum, store types.KVStore) (wazero.CompiledModule, error) {
-	if compiled, ok := vm.cache[code]; ok {
+	if compiled, ok := vm.cache[code.String()]; ok {
 		return compiled, nil
 	}
 	// Load WASM code bytes from the KVStore (the code must have been stored already)
@@ -495,7 +495,7 @@ func (vm *WazeroVM) getCompiledModule(code types.Checksum, store types.KVStore) 
 	if err != nil {
 		return nil, fmt.Errorf("WASM compile error: %w", err)
 	}
-	vm.cache[code] = compiled
+	vm.cache[code.String()] = compiled
 	return compiled, nil
 }
 

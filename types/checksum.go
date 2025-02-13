@@ -10,6 +10,7 @@ import (
 // The length of a checksum must always be ChecksumLen.
 type Checksum []byte
 
+// String returns the hex encoding of the checksum bytes
 func (cs Checksum) String() string {
 	return hex.EncodeToString(cs)
 }
