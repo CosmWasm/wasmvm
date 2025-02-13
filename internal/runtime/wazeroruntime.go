@@ -367,7 +367,7 @@ func (vm *WazeroVM) Migrate(code types.Checksum, env, info, migrateMsg []byte, s
 		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
 	defer vm.cleanupModule(module)
-	mm, err := NewMemoryManager(module)
+	mm, err := memory.NewMemoryManager(module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
@@ -487,9 +487,9 @@ func (vm *WazeroVM) getCompiledModule(code types.Checksum, store types.KVStore) 
 		return compiled, nil
 	}
 	// Load WASM code bytes from the KVStore (the code must have been stored already)
-	wasmCode, err := store.Get(code[:])
-	if err != nil || wasmCode == nil {
-		return nil, fmt.Errorf("unable to load contract code for %X: %w", code, err)
+	wasmCode := store.Get(code[:])
+	if wasmCode == nil {
+		return nil, fmt.Errorf("unable to load contract code for %X", code)
 	}
 	compiled, err := vm.runtime.CompileModule(context.Background(), wasmCode)
 	if err != nil {
