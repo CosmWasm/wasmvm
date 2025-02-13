@@ -7,8 +7,11 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
-func (w *WazeroRuntime) analyzeForValidation(compiled wazero.CompiledModule) error {
-	// Check memory constraints
+// AnalyzeForValidation validates a compiled module to ensure it meets the CosmWasm requirements.
+// It ensures the module has exactly one exported memory, that the required exports ("allocate", "deallocate")
+// are present, and that the contract's interface marker export is exactly "interface_version_8".
+func AnalyzeForValidation(compiled wazero.CompiledModule) error {
+	// Check memory constraints: exactly one memory export is required.
 	memoryCount := 0
 	for _, exp := range compiled.ExportedMemories() {
 		if exp != nil {
@@ -16,10 +19,10 @@ func (w *WazeroRuntime) analyzeForValidation(compiled wazero.CompiledModule) err
 		}
 	}
 	if memoryCount != 1 {
-		return fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory")
+		return fmt.Errorf("static Wasm validation error: contract must contain exactly one memory (found %d)", memoryCount)
 	}
 
-	// Ensure required exports (e.g., "allocate", "deallocate")
+	// Ensure required exports (e.g., "allocate" and "deallocate") are present.
 	requiredExports := []string{"allocate", "deallocate"}
 	exports := compiled.ExportedFunctions()
 	for _, r := range requiredExports {
@@ -31,22 +34,22 @@ func (w *WazeroRuntime) analyzeForValidation(compiled wazero.CompiledModule) err
 			}
 		}
 		if !found {
-			return fmt.Errorf("Wasm contract doesn't have required export: %q", r)
+			return fmt.Errorf("static Wasm validation error: contract missing required export %q", r)
 		}
 	}
 
-	// Ensure interface_version_8
+	// Ensure the interface version marker is present.
 	var interfaceVersionCount int
 	for name := range exports {
 		if strings.HasPrefix(name, "interface_version_") {
 			interfaceVersionCount++
 			if name != "interface_version_8" {
-				return fmt.Errorf("Wasm contract has unknown %q marker", name)
+				return fmt.Errorf("static Wasm validation error: unknown interface version marker %q", name)
 			}
 		}
 	}
 	if interfaceVersionCount == 0 {
-		return fmt.Errorf("Wasm contract missing required marker export: interface_version_*")
+		return fmt.Errorf("static Wasm validation error: contract missing required interface version marker (interface_version_*)")
 	}
 
 	return nil

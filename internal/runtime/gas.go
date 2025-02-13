@@ -1,6 +1,10 @@
 package runtime
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
+)
 
 // GasConfig holds gas costs for different operations
 type GasConfig struct {
@@ -36,14 +40,14 @@ func (c GasCost) TotalCost(pointCount uint64) uint64 {
 // DefaultGasConfig returns the default gas configuration
 func DefaultGasConfig() GasConfig {
 	return GasConfig{
-		PerByte:        gasPerByte,
-		DatabaseRead:   gasCostRead,
-		DatabaseWrite:  gasCostWrite,
-		ExternalQuery:  gasCostQuery,
-		IteratorCreate: gasCostIteratorCreate,
-		IteratorNext:   gasCostIteratorNext,
-		Instantiate:    gasCostInstantiate,
-		Execute:        gasCostExecute,
+		PerByte:        constants.GasPerByte,
+		DatabaseRead:   constants.GasCostRead,
+		DatabaseWrite:  constants.GasCostWrite,
+		ExternalQuery:  constants.GasCostQuery,
+		IteratorCreate: constants.GasCostIteratorCreate,
+		IteratorNext:   constants.GasCostIteratorNext,
+		Instantiate:    constants.GasCostInstantiate,
+		Execute:        constants.GasCostExecute,
 	}
 }
 
