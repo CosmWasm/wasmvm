@@ -11,7 +11,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	// Assume types and memory packages are in same module
-	"github.com/CosmWasm/wasmvm/internal/api/types"
+	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 // WazeroVM is a CosmWasm VM implementation using the Wazero runtime.

@@ -40,11 +40,12 @@ var defaultPerByteUncompressCost = wasmvmtypes.UFraction{
 	Denominator: 100,
 }
 
+// DefaultPerByteUncompressCost returns the default uncompress cost fraction.
 func DefaultPerByteUncompressCost() wasmvmtypes.UFraction {
 	return defaultPerByteUncompressCost
 }
 
-// GasRegister interface (same as in 1.x)
+// GasRegister defines the gas registration interface.
 type GasRegister interface {
 	UncompressCosts(byteLength int) types.Gas
 	SetupContractCost(discount bool, msgLen int) types.Gas
@@ -54,7 +55,7 @@ type GasRegister interface {
 	FromWasmVMGas(source uint64) types.Gas
 }
 
-// Configuration struct for gas costs
+// WasmGasRegisterConfig holds configuration parameters for gas costs.
 type WasmGasRegisterConfig struct {
 	InstanceCost               types.Gas
 	InstanceCostDiscount       types.Gas
@@ -68,7 +69,7 @@ type WasmGasRegisterConfig struct {
 	CustomEventCost            types.Gas
 }
 
-// Default configuration (CosmWasm 2.x defaults)
+// DefaultGasRegisterConfig returns the default configuration for CosmWasm 2.x.
 func DefaultGasRegisterConfig() WasmGasRegisterConfig {
 	return WasmGasRegisterConfig{
 		InstanceCost:               InstanceCost,
@@ -84,14 +85,17 @@ func DefaultGasRegisterConfig() WasmGasRegisterConfig {
 	}
 }
 
+// WasmGasRegister implements GasRegister.
 type WasmGasRegister struct {
 	c WasmGasRegisterConfig
 }
 
+// NewDefaultWasmGasRegister creates a new gas register with default config.
 func NewDefaultWasmGasRegister() WasmGasRegister {
 	return NewWasmGasRegister(DefaultGasRegisterConfig())
 }
 
+// NewWasmGasRegister creates a new gas register with the given configuration.
 func NewWasmGasRegister(c WasmGasRegisterConfig) WasmGasRegister {
 	if c.GasMultiplier == 0 {
 		panic(errorsmod.Wrap(sdkerrors.ErrLogic, "GasMultiplier cannot be 0"))
@@ -99,19 +103,18 @@ func NewWasmGasRegister(c WasmGasRegisterConfig) WasmGasRegister {
 	return WasmGasRegister{c: c}
 }
 
-// UncompressCosts – gas to uncompress a WASM bytecode of given length.
+// UncompressCosts returns the gas cost to uncompress a WASM bytecode of the given length.
 func (g WasmGasRegister) UncompressCosts(byteLength int) types.Gas {
 	if byteLength < 0 {
 		panic(errorsmod.Wrap(sdkerrors.ErrLogic, "byteLength cannot be negative"))
 	}
-	// Gas = floor(byteLength * Numerator / Denominator)
 	numerator := g.c.UncompressCost.Numerator
 	denom := g.c.UncompressCost.Denominator
 	gasCost := uint64(byteLength) * numerator / denom
 	return types.Gas(gasCost)
 }
 
-// SetupContractCost – gas to set up contract execution/instantiation.
+// SetupContractCost returns the gas cost to set up contract execution/instantiation.
 func (g WasmGasRegister) SetupContractCost(discount bool, msgLen int) types.Gas {
 	if msgLen < 0 {
 		panic(errorsmod.Wrap(sdkerrors.ErrLogic, "msgLen cannot be negative"))
@@ -124,30 +127,24 @@ func (g WasmGasRegister) SetupContractCost(discount bool, msgLen int) types.Gas 
 	return baseCost + msgDataCost
 }
 
-// ReplyCosts – gas for handling a submessage reply.
+// ReplyCosts returns the gas cost for handling a submessage reply.
+// CosmWasm 2.x no longer includes event attributes or error messages in reply,
+// so we only charge the base cost.
 func (g WasmGasRegister) ReplyCosts(discount bool, reply wasmvmtypes.Reply) types.Gas {
-	var base types.Gas = g.c.InstanceCost
+	baseCost := g.c.InstanceCost
 	if discount {
-		base = g.c.InstanceCostDiscount
+		baseCost = g.c.InstanceCostDiscount
 	}
-	var eventGas types.Gas = 0
-	if reply.Result != nil {
-		eventGas = g.EventCosts(reply.Result.Attributes, reply.Result.Events)
-	}
-	var dataLen int
-	if reply.Result != nil && reply.Result.Data != nil {
-		dataLen = len(reply.Result.Data)
-	} else if reply.Error != "" {
-		dataLen = len(reply.Error)
-	}
-	msgDataGas := types.Gas(dataLen) * g.c.ContractMessageDataCost
-	return base + eventGas + msgDataGas
+	// In v2.x, additional reply data is not charged.
+	return baseCost
 }
 
-// EventCosts – gas for contract-emitted events.
+// EventCosts returns the gas cost for contract-emitted events.
+// It computes the cost for a list of event attributes and events.
 func (g WasmGasRegister) EventCosts(attrs []wasmvmtypes.EventAttribute, events wasmvmtypes.Array[wasmvmtypes.Event]) types.Gas {
 	gasUsed, remainingFree := g.eventAttributeCosts(attrs, g.c.EventAttributeDataFreeTier)
 	for _, evt := range events {
+		// Charge for any event attributes that exist.
 		gasEvt, newFree := g.eventAttributeCosts(evt.Attributes, remainingFree)
 		gasUsed += gasEvt
 		remainingFree = newFree
@@ -156,7 +153,7 @@ func (g WasmGasRegister) EventCosts(attrs []wasmvmtypes.EventAttribute, events w
 	return gasUsed
 }
 
-// Helper to compute gas for a set of attributes with a given free byte allowance.
+// eventAttributeCosts computes the gas cost for a set of event attributes given a free byte allowance.
 func (g WasmGasRegister) eventAttributeCosts(attrs []wasmvmtypes.EventAttribute, freeTier uint64) (types.Gas, uint64) {
 	if len(attrs) == 0 {
 		return 0, freeTier
@@ -166,30 +163,24 @@ func (g WasmGasRegister) eventAttributeCosts(attrs []wasmvmtypes.EventAttribute,
 		totalBytes += uint64(len(attr.Key)) + uint64(len(attr.Value))
 	}
 	if totalBytes <= freeTier {
-		// All data is within free tier.
 		remainingFree := freeTier - totalBytes
 		return 0, remainingFree
 	}
-	// Charge for bytes beyond the free tier.
-	var chargeBytes = totalBytes
-	if freeTier > 0 {
-		chargeBytes = totalBytes - freeTier
-		freeTier = 0
-	}
+	chargeBytes := totalBytes - freeTier
 	gasCost := types.Gas(chargeBytes) * g.c.EventAttributeDataCost
 	return gasCost, 0
 }
 
-// ToWasmVMGas – convert SDK gas to CosmWasm VM gas.
+// ToWasmVMGas converts SDK gas to CosmWasm VM gas.
 func (g WasmGasRegister) ToWasmVMGas(source types.Gas) uint64 {
 	x := uint64(source) * uint64(g.c.GasMultiplier)
 	if x < uint64(source) {
-		panic(types.ErrorOutOfGas{Descriptor: "CosmWasm gas overflow"})
+		panic(wasmvmtypes.ErrorOutOfGas{Descriptor: "CosmWasm gas overflow"})
 	}
 	return x
 }
 
-// FromWasmVMGas – convert CosmWasm VM gas to SDK gas.
+// FromWasmVMGas converts CosmWasm VM gas to SDK gas.
 func (g WasmGasRegister) FromWasmVMGas(source uint64) types.Gas {
 	return types.Gas(source / uint64(g.c.GasMultiplier))
 }

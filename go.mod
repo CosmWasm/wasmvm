@@ -1,11 +1,10 @@
 module github.com/CosmWasm/wasmvm/v2
 
-go 1.21
+go 1.23
 
 require (
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/store v1.1.1
-	github.com/CosmWasm/wasmvm v1.5.8
 	github.com/cosmos/cosmos-sdk v0.50.11
 	github.com/google/btree v1.1.3
 	github.com/kilic/bls12-381 v0.1.0
