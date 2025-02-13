@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -65,7 +66,7 @@ func TraceMemory(memory api.Memory, msg string) {
 	}
 
 	fmt.Printf("\n=== Memory State: %s ===\n", msg)
-	fmt.Printf("Size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
+	fmt.Printf("Size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/constants.WasmPageSize)
 
 	// Print first page contents
 	if data, ok := memory.Read(0, TraceConf.MaxDataSize); ok {

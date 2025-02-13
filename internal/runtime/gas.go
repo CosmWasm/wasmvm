@@ -2,25 +2,6 @@ package runtime
 
 import "fmt"
 
-// Gas costs for various operations
-const (
-	// Memory operations
-	gasPerByte = 1
-
-	// Database operations
-	gasCostRead  = 100
-	gasCostWrite = 200
-	gasCostQuery = 500
-
-	// Iterator operations
-	gasCostIteratorCreate = 10000 // Base cost for creating an iterator
-	gasCostIteratorNext   = 1000  // Base cost for iterator next operations
-
-	// Contract operations
-	gasCostInstantiate = 40000 // Base cost for contract instantiation
-	gasCostExecute     = 20000 // Base cost for contract execution
-)
-
 // GasConfig holds gas costs for different operations
 type GasConfig struct {
 	// Memory operations
