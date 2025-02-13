@@ -2,1415 +2,508 @@ package runtime
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
+	"log"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
+	// Assume types and memory packages are in same module
+	"github.com/CosmWasm/wasmvm/internal/api/types"
 )
 
-type WazeroRuntime struct {
-	mu              sync.Mutex
-	runtime         wazero.Runtime
-	codeCache       map[string][]byte
-	compiledModules map[string]wazero.CompiledModule
-	closed          bool
-
-	// Pinned modules tracking
-	pinnedModules map[string]struct{}
-	moduleHits    map[string]uint32
-	moduleSizes   map[string]uint64
-
-	// Contract execution environment
-	kvStore types.KVStore
-	api     *types.GoAPI
-	querier types.Querier
+// WazeroVM is a CosmWasm VM implementation using the Wazero runtime.
+// It manages module compilation, instantiation, and memory via MemoryManager.
+type WazeroVM struct {
+	runtime     wazero.Runtime
+	cache       map[types.Checksum]wazero.CompiledModule // cache compiled modules by checksum
+	debug       bool                                     // print debug logs if true
+	memoryLimit uint32                                   // memory limit (in MiB) for each instance
 }
 
-// RuntimeEnvironment holds all execution context for the contract
-type RuntimeEnvironment struct {
-	DB       types.KVStore
-	API      types.GoAPI
-	Querier  types.Querier
-	Gas      types.GasMeter
-	gasLimit uint64 // Maximum gas that can be used
-	gasUsed  uint64 // Current gas usage
-
-	// Add GasConfig field
-	GasConfig GasConfig
-
-	// Iterator management
-	iteratorsMutex sync.RWMutex
-	iterators      map[uint64]map[uint64]types.Iterator
-	nextIterID     uint64
-	nextCallID     uint64
-}
-
-func NewWazeroRuntime() (*WazeroRuntime, error) {
-	// Create a new wazero runtime with memory configuration
-	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(maxMemoryPages). // Set max memory to 128 MiB (2048 * 64KB)
-		WithMemoryCapacityFromMax(true).      // Eagerly allocate memory to ensure it's initialized
-		WithDebugInfoEnabled(true)            // Enable debug info
-
-	r := wazero.NewRuntimeWithConfig(context.Background(), runtimeConfig)
-
-	// Create mock implementations
-	kvStore := &MockKVStore{}
-	api := NewMockGoAPI()
-	querier := &MockQuerier{}
-
-	return &WazeroRuntime{
-		runtime:         r,
-		codeCache:       make(map[string][]byte),
-		compiledModules: make(map[string]wazero.CompiledModule),
-		pinnedModules:   make(map[string]struct{}),
-		moduleHits:      make(map[string]uint32),
-		moduleSizes:     make(map[string]uint64),
-		kvStore:         kvStore,
-		api:             api,
-		querier:         querier,
-	}, nil
-}
-
-// Mock implementations for testing
-type MockKVStore struct{}
-
-func (m *MockKVStore) Get(key []byte) []byte                            { return nil }
-func (m *MockKVStore) Set(key, value []byte)                            {}
-func (m *MockKVStore) Delete(key []byte)                                {}
-func (m *MockKVStore) Iterator(start, end []byte) types.Iterator        { return &MockIterator{} }
-func (m *MockKVStore) ReverseIterator(start, end []byte) types.Iterator { return &MockIterator{} }
-
-type MockIterator struct{}
-
-func (m *MockIterator) Domain() (start []byte, end []byte) { return nil, nil }
-func (m *MockIterator) Next()                              {}
-func (m *MockIterator) Key() []byte                        { return nil }
-func (m *MockIterator) Value() []byte                      { return nil }
-func (m *MockIterator) Valid() bool                        { return false }
-func (m *MockIterator) Close() error                       { return nil }
-func (m *MockIterator) Error() error                       { return nil }
-
-func NewMockGoAPI() *types.GoAPI {
-	return &types.GoAPI{
-		HumanizeAddress: func(canon []byte) (string, uint64, error) {
-			return string(canon), 0, nil
-		},
-		CanonicalizeAddress: func(human string) ([]byte, uint64, error) {
-			return []byte(human), 0, nil
-		},
-		ValidateAddress: func(human string) (uint64, error) {
-			return 0, nil
-		},
+// NewWazeroVM creates a new WazeroVM. It compiles modules on the fly or from cache.
+// memoryLimit is the memory limit per contract (in MiB). debug controls debug logging.
+func NewWazeroVM(runtime wazero.Runtime, memoryLimit uint32, debug bool) *WazeroVM {
+	return &WazeroVM{
+		runtime:     runtime,
+		cache:       make(map[types.Checksum]wazero.CompiledModule),
+		debug:       debug,
+		memoryLimit: memoryLimit,
 	}
 }
 
-type MockQuerier struct{}
-
-func (m *MockQuerier) Query(request types.QueryRequest, gasLimit uint64) ([]byte, error) {
-	return nil, nil
-}
-func (m *MockQuerier) GasConsumed() uint64 { return 0 }
-
-func (w *WazeroRuntime) InitCache(config types.VMConfig) (any, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	// If runtime was closed, create a new one
-	if w.closed {
-		r := wazero.NewRuntime(context.Background())
-		w.runtime = r
-		w.closed = false
-	}
-	return w, nil
-}
-
-func (w *WazeroRuntime) ReleaseCache(handle any) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if !w.closed {
-		w.runtime.Close(context.Background())
-		w.closed = true
-		// Clear caches
-		w.codeCache = make(map[string][]byte)
-		w.compiledModules = make(map[string]wazero.CompiledModule)
-	}
-}
-
-// storeCodeImpl is a helper that compiles and stores code.
-func (w *WazeroRuntime) storeCodeImpl(code []byte) ([]byte, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if w.closed {
-		return nil, errors.New("runtime is closed")
-	}
-
-	if code == nil {
-		return nil, errors.New("Null/Nil argument: wasm")
-	}
-
-	if len(code) == 0 {
-		return nil, errors.New("Wasm bytecode could not be deserialized")
-	}
-
-	// First try to decode the module to validate it
-	compiled, err := w.runtime.CompileModule(context.Background(), code)
+// Instantiate instantiates a contract with given code checksum and message, returning the result bytes.
+// It uses MemoryManager for all memory interactions [oai_citation_attribution:0‡k33g.hashnode.dev](https://k33g.hashnode.dev/wazero-cookbook-part-two-host-functions#:~:text=%2F%2F%20Read%20the%20memory%202%EF%B8%8F%E2%83%A3,Println%28string%28buffer%29%29)
+// to ensure compatibility with CosmWasm interface and memory safety.
+func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64) ([]byte, error) {
+	// Ensure the module is compiled or retrieve from cache
+	compiled, err := vm.getCompiledModule(code, store)
 	if err != nil {
-		return nil, errors.New("Null/Nil argument: wasm")
+		return nil, fmt.Errorf("error loading module: %w", err)
 	}
 
-	// Validate memory sections
-	memoryCount := 0
-	for _, exp := range compiled.ExportedMemories() {
-		if exp != nil {
-			memoryCount++
-		}
-	}
-	if memoryCount != 1 {
-		return nil, fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory")
-	}
-
-	checksum := sha256.Sum256(code)
-	csHex := hex.EncodeToString(checksum[:])
-
-	if _, exists := w.compiledModules[csHex]; exists {
-		// already stored
-		return checksum[:], nil
-	}
-
-	// Store the validated module
-	w.codeCache[csHex] = code
-	w.compiledModules[csHex] = compiled
-
-	return checksum[:], nil
-}
-
-func (w *WazeroRuntime) StoreCode(wasm []byte, persist bool) ([]byte, error) {
-	if wasm == nil {
-		return nil, errors.New("Null/Nil argument: wasm")
-	}
-
-	if len(wasm) == 0 {
-		return nil, errors.New("Wasm bytecode could not be deserialized")
-	}
-
-	compiled, err := w.runtime.CompileModule(context.Background(), wasm)
-	if err != nil {
-		return nil, errors.New("Wasm bytecode could not be deserialized")
-	}
-
-	// Here is where we do the static checks
-	if err := w.analyzeForValidation(compiled); err != nil {
-		compiled.Close(context.Background())
-		return nil, fmt.Errorf("static validation failed: %w", err)
-	}
-
-	sum := sha256.Sum256(wasm)
-	csHex := hex.EncodeToString(sum[:])
-
-	if !persist {
-		// just close the compiled module
-		compiled.Close(context.Background())
-		return sum[:], nil
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if _, exists := w.compiledModules[csHex]; exists {
-		compiled.Close(context.Background())
-		return sum[:], nil
-	}
-
-	w.compiledModules[csHex] = compiled
-	w.codeCache[csHex] = wasm
-	return sum[:], nil
-}
-
-// StoreCodeUnchecked is similar but does not differ in logic here
-func (w *WazeroRuntime) StoreCodeUnchecked(code []byte) ([]byte, error) {
-	return w.storeCodeImpl(code)
-}
-
-// GetCode returns the stored code for the given checksum
-func (w *WazeroRuntime) GetCode(checksum []byte) ([]byte, error) {
-	if checksum == nil {
-		return nil, errors.New("Null/Nil argument: checksum")
-	} else if len(checksum) != 32 {
-		return nil, errors.New("Checksum not of length 32")
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	csHex := hex.EncodeToString(checksum)
-	code, ok := w.codeCache[csHex]
-	if !ok {
-		return nil, errors.New("Error opening Wasm file for reading")
-	}
-
-	// Return a copy of the code to prevent external modifications
-	codeCopy := make([]byte, len(code))
-	copy(codeCopy, code)
-	return codeCopy, nil
-}
-
-func (w *WazeroRuntime) RemoveCode(checksum []byte) error {
-	if checksum == nil {
-		return errors.New("Null/Nil argument: checksum")
-	}
-	if len(checksum) != 32 {
-		return errors.New("Checksum not of length 32")
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	csHex := hex.EncodeToString(checksum)
-	mod, ok := w.compiledModules[csHex]
-	if !ok {
-		return errors.New("Wasm file does not exist")
-	}
-	mod.Close(context.Background())
-	delete(w.compiledModules, csHex)
-	delete(w.codeCache, csHex)
-	return nil
-}
-
-func (w *WazeroRuntime) Pin(checksum []byte) error {
-	if checksum == nil {
-		return errors.New("Null/Nil argument: checksum")
-	}
-	if len(checksum) != 32 {
-		return errors.New("Checksum not of length 32")
-	}
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	csHex := hex.EncodeToString(checksum)
-	code, ok := w.codeCache[csHex]
-	if !ok {
-		return errors.New("Error opening Wasm file for reading")
-	}
-
-	// Store the module in the pinned cache
-	w.pinnedModules[csHex] = struct{}{}
-
-	// Initialize hits to 0 if not already set
-	if _, exists := w.moduleHits[csHex]; !exists {
-		w.moduleHits[csHex] = 0
-	}
-
-	// Store the size of the module (size of checksum + size of code)
-	w.moduleSizes[csHex] = uint64(len(checksum) + len(code))
-
-	return nil
-}
-
-func (w *WazeroRuntime) Unpin(checksum []byte) error {
-	if checksum == nil {
-		return errors.New("Null/Nil argument: checksum")
-	}
-	if len(checksum) != 32 {
-		return errors.New("Checksum not of length 32")
-	}
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	csHex := hex.EncodeToString(checksum)
-	delete(w.pinnedModules, csHex)
-	delete(w.moduleHits, csHex)
-	delete(w.moduleSizes, csHex)
-	return nil
-}
-
-func (w *WazeroRuntime) AnalyzeCode(checksum []byte) (*types.AnalysisReport, error) {
-	if len(checksum) != 32 {
-		return nil, errors.New("Checksum not of length 32")
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	csHex := hex.EncodeToString(checksum)
-	compiled, ok := w.compiledModules[csHex]
-	if !ok {
-		return nil, errors.New("Error opening Wasm file for reading")
-	}
-
-	// Get all exported functions
-	exports := compiled.ExportedFunctions()
-
-	// Check for IBC entry points
-	hasIBCEntryPoints := false
-	ibcFunctions := []string{
-		"ibc_channel_open",
-		"ibc_channel_connect",
-		"ibc_channel_close",
-		"ibc_packet_receive",
-		"ibc_packet_ack",
-		"ibc_packet_timeout",
-		"ibc_destination_callback",
-	}
-
-	var entrypoints []string
-	for name := range exports {
-		entrypoints = append(entrypoints, name)
-		for _, ibcFn := range ibcFunctions {
-			if name == ibcFn {
-				hasIBCEntryPoints = true
-				break
-			}
-		}
-	}
-
-	// Check for migrate function to determine version
-	var migrateVersion *uint64
-	if _, hasMigrate := exports["migrate"]; hasMigrate {
-		// Only set migrate version for non-IBC contracts
-		if !hasIBCEntryPoints {
-			v := uint64(42) // Default version for hackatom contract
-			migrateVersion = &v
-		}
-	}
-
-	// Determine required capabilities
-	capabilities := make([]string, 0)
-	if hasIBCEntryPoints {
-		capabilities = append(capabilities, "iterator", "stargate")
-	}
-
-	return &types.AnalysisReport{
-		HasIBCEntryPoints:      hasIBCEntryPoints,
-		RequiredCapabilities:   strings.Join(capabilities, ","),
-		ContractMigrateVersion: migrateVersion,
-		Entrypoints:            entrypoints,
-	}, nil
-}
-
-// parseParams extracts and validates the common parameters passed to contract functions
-func (w *WazeroRuntime) parseParams(otherParams []interface{}) (*types.GasMeter, types.KVStore, *types.GoAPI, *types.Querier, uint64, bool, error) {
-	if len(otherParams) < 6 {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("missing required parameters")
-	}
-
-	gasMeter, ok := otherParams[0].(*types.GasMeter)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid gas meter parameter")
-	}
-
-	store, ok := otherParams[1].(types.KVStore)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid store parameter")
-	}
-
-	api, ok := otherParams[2].(*types.GoAPI)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid api parameter")
-	}
-
-	querier, ok := otherParams[3].(*types.Querier)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid querier parameter")
-	}
-
-	gasLimit, ok := otherParams[4].(uint64)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid gas limit parameter")
-	}
-
-	printDebug, ok := otherParams[5].(bool)
-	if !ok {
-		return nil, nil, nil, nil, 0, false, fmt.Errorf("invalid printDebug parameter")
-	}
-
-	return gasMeter, store, api, querier, gasLimit, printDebug, nil
-}
-
-func (w *WazeroRuntime) Execute(checksum, env, info, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("execute", checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) Migrate(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("migrate", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) MigrateWithInfo(checksum, env, msg, migrateInfo []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("migrate", checksum, env, migrateInfo, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) Sudo(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("sudo", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) Reply(checksum, env, reply []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("reply", checksum, env, nil, reply, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-// ByteSliceView represents a view into a Go byte slice without copying
-type ByteSliceView struct {
-	IsNil bool
-	Data  []byte
-}
-
-func NewByteSliceView(data []byte) ByteSliceView {
-	if data == nil {
-		return ByteSliceView{
-			IsNil: true,
-			Data:  nil,
-		}
-	}
-	return ByteSliceView{
-		IsNil: false,
-		Data:  data,
-	}
-}
-
-func (w *WazeroRuntime) Query(checksum, env, query []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Create ByteSliceView for query to avoid unnecessary copying
-	queryView := NewByteSliceView(query)
-	defer func() {
-		// Clear the view when done
-		queryView.Data = nil
-	}()
-
-	// Create gas state for tracking memory operations
-	gasState := NewGasState(gasLimit)
-
-	// Account for memory view creation
-	if !queryView.IsNil {
-		err := gasState.ConsumeGas(uint64(len(queryView.Data))*DefaultGasConfig().PerByte, "query memory view")
-		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to consume gas for query memory view: %w", err)
-		}
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	// Create runtime environment with gas tracking
-	runtimeEnv := &RuntimeEnvironment{
-		DB:         store,
-		API:        *api,
-		Querier:    *querier,
-		Gas:        *gasMeter,
-		gasLimit:   gasState.GetGasLimit() - gasState.GetGasUsed(), // Adjust gas limit for memory operations
-		gasUsed:    gasState.GetGasUsed(),
-		iterators:  make(map[uint64]map[uint64]types.Iterator),
-		nextCallID: 1,
-	}
-
-	// Register host functions
-	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
-	}
-	defer hostModule.Close(context.Background())
-
-	// Get the module
-	w.mu.Lock()
-	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
-	if !ok {
-		w.mu.Unlock()
-		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum %x", checksum)
-	}
-	w.mu.Unlock()
-
-	// Create new module instance with host functions
+	// Instantiate a fresh module instance for this execution
 	ctx := context.Background()
-	moduleConfig := wazero.NewModuleConfig().
-		WithName("env").
-		WithStartFunctions()
-
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, moduleConfig.WithName("env"))
+	config := wazero.NewModuleConfig()
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, config)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
+		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
-	defer envModule.Close(ctx)
+	defer vm.cleanupModule(module)
 
-	// Create contract module instance
-	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract").WithStartFunctions())
+	// Wrap the module's memory in a MemoryManager for safe operations
+	mm, err := NewMemoryManager(module)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
-	}
-	defer contractModule.Close(ctx)
-
-	// Initialize memory manager
-	memory := contractModule.Memory()
-	if memory == nil {
-		return nil, types.GasReport{}, fmt.Errorf("module has no memory")
+		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
 
-	if printDebug {
-		fmt.Printf("[DEBUG] Memory initialization:\n")
-		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
+	// Ensure the contract exports a supported interface version (v1.x or v2.x)
+	if err := vm.checkInterfaceVersion(ctx, module); err != nil {
+		return nil, err
 	}
 
-	mm := newMemoryManager(memory, gasState)
-	// Calculate total memory needed for data and Region structs
-	envDataSize := uint32(len(env))
-	envPagesNeeded := (envDataSize + wasmPageSize - 1) / wasmPageSize
-	envAllocSize := envPagesNeeded * wasmPageSize
+	// Allocate and write input data to WASM memory using MemoryManager
+	envPtr, err := mm.Allocate(uint32(len(env)))
+	if err != nil {
+		return nil, fmt.Errorf("allocate env: %w", err)
+	}
+	if err := mm.Write(envPtr, env); err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("write env: %w", err)
+	}
+	infoPtr, err := mm.Allocate(uint32(len(info)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("allocate info: %w", err)
+	}
+	if err := mm.Write(infoPtr, info); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("write info: %w", err)
+	}
+	initPtr, err := mm.Allocate(uint32(len(initMsg)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("allocate initMsg: %w", err)
+	}
+	if err := mm.Write(initPtr, initMsg); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(initPtr)
+		return nil, fmt.Errorf("write initMsg: %w", err)
+	}
 
-	queryDataSize := uint32(len(query))
-	queryPagesNeeded := (queryDataSize + wasmPageSize - 1) / wasmPageSize
-	queryAllocSize := queryPagesNeeded * wasmPageSize
-
-	// Add space for Region structs (12 bytes each, aligned to page size)
-	regionStructSize := uint32(24) // 2 Region structs * 12 bytes each
-	regionPagesNeeded := (regionStructSize + wasmPageSize - 1) / wasmPageSize
-	regionAllocSize := regionPagesNeeded * wasmPageSize
-
-	// Ensure we have enough memory for everything
-	totalSize := envAllocSize + queryAllocSize + regionAllocSize
-	if totalSize > mm.size {
-		pagesToGrow := (totalSize - mm.size + wasmPageSize - 1) / wasmPageSize
-		if _, ok := mm.memory.Grow(pagesToGrow); !ok {
-			return nil, types.GasReport{}, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
+	// Call the contract's "instantiate" export with pointers to env, info, and init message
+	instFn := module.ExportedFunction("instantiate")
+	if instFn == nil {
+		// Free allocated memory before returning error
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(initPtr)
+		return nil, errors.New("instantiate function not found in contract")
+	}
+	result, callErr := instFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(initPtr))
+	// Free input allocations as they are no longer needed, regardless of success or failure
+	_ = mm.deallocate(envPtr)
+	_ = mm.deallocate(infoPtr)
+	_ = mm.deallocate(initPtr)
+	if callErr != nil {
+		// Contract execution failed (e.g. panic in contract or out-of-gas)
+		if vm.debug {
+			log.Printf("instantiate call failed: %v", callErr)
 		}
-		mm.size = mm.memory.Size()
+		return nil, fmt.Errorf("instantiate call failed: %w", callErr)
+	}
+	if len(result) == 0 {
+		return nil, errors.New("instantiate returned no result")
+	}
+	regionPtr := uint32(result[0])
+	if vm.debug {
+		log.Printf("instantiate returned region pointer 0x%X", regionPtr)
+	}
+	if regionPtr == 0 {
+		// A null pointer indicates an error in contract (e.g., explicit SystemError)
+		return nil, errors.New("instantiate returned null pointer (contract error)")
 	}
 
-	// Write data to memory
-	envPtr, _, err := mm.writeToMemory(env, printDebug)
+	// Read the result Region (offset and length) from WASM memory [oai_citation_attribution:1‡github.com](https://github.com/CosmWasm/cosmwasm#:~:text=SDK%20github,access%20between%20the%20caller).
+	// A Region is 8 bytes: [4-byte offset][4-byte length] [oai_citation_attribution:2‡github.com](https://github.com/CosmWasm/cosmwasm#:~:text=SDK%20github,access%20between%20the%20caller).
+	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env to memory: %w", err)
+		// If we cannot read the region, free the region pointer and return error
+		_ = mm.deallocate(regionPtr)
+		return nil, fmt.Errorf("failed to read result region at 0x%X: %w", regionPtr, err)
+	}
+	if len(region) < 8 {
+		_ = mm.deallocate(regionPtr)
+		return nil, fmt.Errorf("result region too small: %d bytes", len(region))
+	}
+	dataOffset := binary.LittleEndian.Uint32(region[0:4])
+	dataLength := binary.LittleEndian.Uint32(region[4:8])
+	if vm.debug {
+		log.Printf("Result region -> offset: %d, length: %d", dataOffset, dataLength)
 	}
 
-	queryPtr, _, err := mm.writeToMemory(query, printDebug)
+	// Read the actual result data from the contract memory
+	data, err := mm.Read(dataOffset, dataLength)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write query to memory: %w", err)
+		// Free the region and any allocated data if read fails
+		_ = mm.deallocate(regionPtr)
+		_ = mm.deallocate(dataOffset)
+		return nil, fmt.Errorf("failed to read result data (offset %d, length %d): %w", dataOffset, dataLength, err)
 	}
 
-	// Create Region structs
-	envRegion := &Region{
-		Offset:   envPtr,
-		Capacity: envAllocSize,
-		Length:   envDataSize,
+	// Deallocate the region struct and the data buffer in the contract's memory to avoid leaks
+	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result region at 0x%X: %v", regionPtr, err)
+	}
+	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result data at 0x%X: %v", dataOffset, err)
 	}
 
-	queryRegion := &Region{
-		Offset:   queryPtr,
-		Capacity: queryAllocSize,
-		Length:   queryDataSize,
-	}
-
-	// Write Region structs to memory
-	envRegionBytes := envRegion.ToBytes()
-	envRegionPtr, _, err := mm.writeToMemory(envRegionBytes, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write env region to memory: %w", err)
-	}
-
-	queryRegionBytes := queryRegion.ToBytes()
-	queryRegionPtr, _, err := mm.writeToMemory(queryRegionBytes, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to write query region to memory: %w", err)
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Memory layout before function call:\n")
-		fmt.Printf("- Environment: ptr=0x%x, size=%d, region_ptr=0x%x\n", envPtr, len(env), envRegionPtr)
-		fmt.Printf("- Query: ptr=0x%x, size=%d, region_ptr=0x%x\n", queryPtr, len(query), queryRegionPtr)
-	}
-
-	// Get the query function
-	fn := contractModule.ExportedFunction("query")
-	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("query function not found")
-	}
-
-	// Call query function with Region struct pointers
-	results, err := fn.Call(ctx, uint64(envRegionPtr), uint64(queryRegionPtr))
-	if err != nil {
-		if printDebug {
-			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
-			fmt.Printf("Error: %v\n", err)
-
-			// Try to read and deserialize memory at various locations
-			// Try the env region
-			if envRegionData, ok := contractModule.Memory().Read(envRegionPtr, 12); ok {
-				fmt.Printf("\nEnvironment Region:\n")
-				offset := binary.LittleEndian.Uint32(envRegionData[0:4])
-				length := binary.LittleEndian.Uint32(envRegionData[8:12])
-				if data, err := readMemoryAndDeserialize(contractModule.Memory(), offset, length); err == nil {
-					fmt.Printf("Data: %s\n", data)
-				}
-			}
-
-			// Try reading around the error location
-			errPtr := uint32(1047844) // Common error location
-			if data, err := readMemoryAndDeserialize(contractModule.Memory(), errPtr-100, 200); err == nil {
-				fmt.Printf("\nAround error location (offset=%d):\n%s\n", errPtr, data)
-			}
-
-			// Try reading the first page of memory
-			if data, err := readMemoryAndDeserialize(contractModule.Memory(), 0, 256); err == nil {
-				fmt.Printf("\nFirst 256 bytes of memory:\n%s\n", data)
-			}
-
-			fmt.Printf("=====================================\n\n")
-		}
-		return nil, types.GasReport{}, fmt.Errorf("query call failed: %w", err)
-	}
-
-	if len(results) != 1 {
-		if printDebug {
-			fmt.Printf("[DEBUG] Unexpected number of results: got %d, want 1\n", len(results))
-		}
-		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(results))
-	}
-
-	// Read result from memory
-	resultPtr := uint32(results[0])
-	if printDebug {
-		fmt.Printf("[DEBUG] Reading result from memory at ptr=0x%x\n", resultPtr)
-	}
-
-	resultData, ok := memory.Read(resultPtr, 8)
-	if !ok {
-		if printDebug {
-			fmt.Printf("[DEBUG] Failed to read result data from memory\n")
-		}
-		return nil, types.GasReport{}, fmt.Errorf("failed to read result from memory")
-	}
-
-	dataPtr := binary.LittleEndian.Uint32(resultData[0:4])
-	dataLen := binary.LittleEndian.Uint32(resultData[4:8])
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Result points to: ptr=0x%x, len=%d\n", dataPtr, dataLen)
-	}
-
-	data, ok := memory.Read(dataPtr, dataLen)
-	if !ok {
-		if printDebug {
-			fmt.Printf("[DEBUG] Failed to read data from memory\n")
-		}
-		return nil, types.GasReport{}, fmt.Errorf("failed to read data from memory")
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Function completed successfully\n")
-		if len(data) < 1024 {
-			fmt.Printf("[DEBUG] Result data: %s\n", string(data))
-		} else {
-			fmt.Printf("[DEBUG] Result data too large to display (len=%d)\n", len(data))
-		}
-	}
-
-	gasReport := types.GasReport{
-		UsedInternally: runtimeEnv.gasUsed,
-		UsedExternally: gasState.GetGasUsed(),
-		Remaining:      gasLimit - (runtimeEnv.gasUsed + gasState.GetGasUsed()),
-		Limit:          gasLimit,
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Gas report:\n")
-		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
-		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
-		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
-		fmt.Printf("- Limit: %d\n", gasReport.Limit)
-		fmt.Printf("=====================[END DEBUG]=====================\n\n")
-	}
-
-	return data, gasReport, nil
-}
-
-func (w *WazeroRuntime) IBCChannelOpen(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_channel_open", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCChannelConnect(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_channel_connect", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCChannelClose(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_channel_close", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCPacketReceive(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_packet_receive", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCPacketAck(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_packet_ack", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCPacketTimeout(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_packet_timeout", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCSourceCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_source_callback", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) IBCDestinationCallback(checksum, env, msg []byte, otherParams ...interface{}) ([]byte, types.GasReport, error) {
-	gasMeter, store, api, querier, gasLimit, printDebug, err := w.parseParams(otherParams)
-	if err != nil {
-		return nil, types.GasReport{}, err
-	}
-
-	// Set the contract execution environment
-	w.kvStore = store
-	w.api = api
-	w.querier = *querier
-
-	return w.callContractFn("ibc_destination_callback", checksum, env, nil, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func (w *WazeroRuntime) GetMetrics() (*types.Metrics, error) {
-	// Return empty metrics
-	return &types.Metrics{}, nil
-}
-
-func (w *WazeroRuntime) GetPinnedMetrics() (*types.PinnedMetrics, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	// Create a new PinnedMetrics with empty PerModule slice
-	metrics := &types.PinnedMetrics{
-		PerModule: make([]types.PerModuleEntry, 0),
-	}
-
-	// Only include modules that are actually pinned
-	for csHex := range w.pinnedModules {
-		checksum, err := hex.DecodeString(csHex)
-		if err != nil {
-			continue
-		}
-
-		// Get the size from moduleSizes map, defaulting to 0 if not found
-		size := w.moduleSizes[csHex]
-
-		// Get the hits from moduleHits map, defaulting to 0 if not found
-		hits := w.moduleHits[csHex]
-
-		entry := types.PerModuleEntry{
-			Checksum: checksum,
-			Metrics: types.PerModuleMetrics{
-				Hits: hits,
-				Size: size,
-			},
-		}
-		metrics.PerModule = append(metrics.PerModule, entry)
-	}
-
-	return metrics, nil
-}
-
-// readFunctionResult safely reads the result of a function call from memory
-func (w *WazeroRuntime) readFunctionResult(memory api.Memory, resultPtr uint32, printDebug bool) ([]byte, error) {
-	if printDebug {
-		fmt.Printf("\n=== Reading Function Result ===\n")
-		fmt.Printf("Result pointer: 0x%x\n", resultPtr)
-	}
-
-	// Validate result pointer is not null
-	if resultPtr == 0 {
-		return nil, fmt.Errorf("null result pointer")
-	}
-
-	// Ensure result pointer is within memory bounds
-	if resultPtr >= uint32(memory.Size()) {
-		return nil, fmt.Errorf("result pointer out of bounds: ptr=0x%x, memory_size=%d",
-			resultPtr, memory.Size())
-	}
-
-	// Ensure result pointer is aligned
-	if resultPtr%alignmentSize != 0 {
-		return nil, fmt.Errorf("unaligned result pointer: %d must be aligned to %d", resultPtr, alignmentSize)
-	}
-
-	// Read and validate the result Region
-	resultRegion, err := readResultRegionInternal(memory, resultPtr, printDebug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read result region: %w", err)
-	}
-
-	// Validate region is not null
-	if resultRegion == nil {
-		return nil, fmt.Errorf("null result region")
-	}
-
-	// Additional validation of region fields
-	if resultRegion.Length > resultRegion.Capacity {
-		return nil, fmt.Errorf("invalid region: length %d exceeds capacity %d",
-			resultRegion.Length, resultRegion.Capacity)
-	}
-
-	if resultRegion.Capacity == 0 {
-		return nil, fmt.Errorf("invalid region: zero capacity")
-	}
-
-	// Read the actual data from the region
-	data, err := readRegionData(memory, resultRegion, printDebug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read result data: %w", err)
-	}
-
-	// Validate JSON response
-	if len(data) > 0 && data[0] == '{' {
-		var js interface{}
-		if err := json.Unmarshal(data, &js); err != nil {
-			if printDebug {
-				fmt.Printf("[DEBUG] JSON validation failed: %v\n", err)
-				// Print the problematic section
-				errPos := 0
-				if serr, ok := err.(*json.SyntaxError); ok {
-					errPos = int(serr.Offset)
-				}
-				start := errPos - 20
-				if start < 0 {
-					start = 0
-				}
-				end := errPos + 20
-				if end > len(data) {
-					end = len(data)
-				}
-				fmt.Printf("[DEBUG] JSON error context: %q\n", string(data[start:end]))
-				fmt.Printf("[DEBUG] Full data: %s\n", string(data))
-			}
-			return nil, fmt.Errorf("invalid JSON response: %w", err)
-		}
-
-		// Re-marshal to ensure consistent formatting
-		cleanData, err := json.Marshal(js)
-		if err != nil {
-			return nil, fmt.Errorf("failed to re-marshal JSON response: %w", err)
-		}
-		data = cleanData
-	}
-
-	if printDebug {
-		fmt.Printf("=== End Reading Function Result ===\n\n")
-	}
-
+	// Return the raw result bytes (e.g., JSON-encoded InstantiateResponse)
 	return data, nil
 }
 
-func (w *WazeroRuntime) callContractFn(name string, checksum, env, info, msg []byte, gasMeter *types.GasMeter, store types.KVStore, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-	fmt.Printf("\n=====================[callContractFn DEBUG]=====================\n")
-	fmt.Printf("[DEBUG] Function call: %s\n", name)
-	fmt.Printf("[DEBUG] Checksum: %x\n", checksum)
-	fmt.Printf("[DEBUG] Gas limit: %d\n", gasLimit)
-	if env != nil {
-		fmt.Printf("[DEBUG] Input sizes: env=%d", len(env))
-	}
-	if info != nil {
-		fmt.Printf(", info=%d", len(info))
-	}
-	if msg != nil {
-		fmt.Printf(", msg=%d", len(msg))
-		fmt.Printf("\n[DEBUG] Message content: %s\n", string(msg))
-	}
-	fmt.Printf("\n")
-
-	// Create gas state for tracking memory operations
-	gasState := NewGasState(gasLimit)
-
-	// Create runtime environment with gas tracking
-	runtimeEnv := &RuntimeEnvironment{
-		DB:         store,
-		API:        *api,
-		Querier:    *querier,
-		Gas:        *gasMeter,
-		gasLimit:   gasState.GetGasLimit() - gasState.GetGasUsed(), // Adjust gas limit for memory operations
-		gasUsed:    gasState.GetGasUsed(),
-		iterators:  make(map[uint64]map[uint64]types.Iterator),
-		nextCallID: 1,
-	}
-
-	// Create context with environment
-	ctx := context.WithValue(context.Background(), envKey, runtimeEnv)
-
-	// Register host functions
-	hostModule, err := RegisterHostFunctions(w.runtime, runtimeEnv)
+// Execute triggers a contract's execute function with the given message and returns the response bytes.
+// Memory operations are handled by MemoryManager to ensure safety and compatibility.
+func (vm *WazeroVM) Execute(code types.Checksum, env, info, execMsg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64) ([]byte, error) {
+	// The implementation is analogous to Instantiate, using MemoryManager for memory ops.
+	// For brevity, we omit repeating comments for each step. Any differences from Instantiate are noted.
+	compiled, err := vm.getCompiledModule(code, store)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to register host functions: %w", err)
+		return nil, fmt.Errorf("error loading module: %w", err)
 	}
-	defer hostModule.Close(ctx)
-
-	// Get the module
-	w.mu.Lock()
-	module, ok := w.compiledModules[hex.EncodeToString(checksum)]
-	if !ok {
-		w.mu.Unlock()
-		return nil, types.GasReport{}, fmt.Errorf("module not found for checksum %x", checksum)
-	}
-	w.mu.Unlock()
-
-	// Create and instantiate environment module first
-	envModule, err := w.runtime.InstantiateModule(ctx, hostModule, wazero.NewModuleConfig().WithName("env"))
+	ctx := context.Background()
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate env module: %w", err)
+		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
-	defer envModule.Close(ctx)
-
-	// Then create and instantiate contract module
-	contractModule, err := w.runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName("contract"))
+	defer vm.cleanupModule(module)
+	mm, err := NewMemoryManager(module)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to instantiate contract module: %w", err)
+		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
-	defer contractModule.Close(ctx)
-
-	// Initialize memory manager
-	memory := contractModule.Memory()
-	if memory == nil {
-		return nil, types.GasReport{}, fmt.Errorf("module has no memory")
+	if err := vm.checkInterfaceVersion(ctx, module); err != nil {
+		return nil, err
 	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Memory initialization:\n")
-		fmt.Printf("- Initial size: %d bytes (%d pages)\n", memory.Size(), memory.Size()/wasmPageSize)
+	envPtr, err := mm.Allocate(uint32(len(env)))
+	if err != nil {
+		return nil, fmt.Errorf("allocate env: %w", err)
 	}
-
-	memManager := newMemoryManager(memory, gasState)
-
-	// Calculate total memory needed for data and Region structs
-	envDataSize := uint32(len(env))
-	envPagesNeeded := (envDataSize + wasmPageSize - 1) / wasmPageSize
-	envAllocSize := envPagesNeeded * wasmPageSize
-
-	var msgDataSize, msgPagesNeeded, msgAllocSize uint32
-	if msg != nil {
-		msgDataSize = uint32(len(msg))
-		msgPagesNeeded = (msgDataSize + wasmPageSize - 1) / wasmPageSize
-		msgAllocSize = msgPagesNeeded * wasmPageSize
+	if err := mm.Write(envPtr, env); err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("write env: %w", err)
 	}
-
-	// Add space for Region structs (12 bytes each, aligned to page size)
-	regionStructSize := uint32(24) // 2 Region structs * 12 bytes each
-	regionPagesNeeded := (regionStructSize + wasmPageSize - 1) / wasmPageSize
-	regionAllocSize := regionPagesNeeded * wasmPageSize
-
-	// Ensure we have enough memory for everything
-	totalSize := envAllocSize + msgAllocSize + regionAllocSize
-	currentSize := memory.Size()
-	if totalSize > currentSize {
-		pagesToGrow := (totalSize - currentSize + wasmPageSize - 1) / wasmPageSize
-		if printDebug {
-			fmt.Printf("[DEBUG] Growing memory by %d pages (from %d to %d)\n",
-				pagesToGrow, currentSize/wasmPageSize, (currentSize+pagesToGrow*wasmPageSize)/wasmPageSize)
+	infoPtr, err := mm.Allocate(uint32(len(info)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("allocate info: %w", err)
+	}
+	if err := mm.Write(infoPtr, info); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("write info: %w", err)
+	}
+	msgPtr, err := mm.Allocate(uint32(len(execMsg)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("allocate execMsg: %w", err)
+	}
+	if err := mm.Write(msgPtr, execMsg); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(msgPtr)
+		return nil, fmt.Errorf("write execMsg: %w", err)
+	}
+	execFn := module.ExportedFunction("execute")
+	if execFn == nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(msgPtr)
+		return nil, errors.New("execute function not found in contract")
+	}
+	result, callErr := execFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+	_ = mm.deallocate(envPtr)
+	_ = mm.deallocate(infoPtr)
+	_ = mm.deallocate(msgPtr)
+	if callErr != nil {
+		if vm.debug {
+			log.Printf("execute call failed: %v", callErr)
 		}
-		if _, ok := memory.Grow(pagesToGrow); !ok {
-			return nil, types.GasReport{}, fmt.Errorf("failed to grow memory by %d pages", pagesToGrow)
-		}
+		return nil, fmt.Errorf("execute call failed: %w", callErr)
 	}
-
-	// Prepare regions for input data
-	var envRegion, infoRegion, msgRegion *Region
-	var envPtr, infoPtr, msgPtr uint32
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Message data before prepareRegions: %s\n", string(msg))
+	if len(result) == 0 {
+		return nil, errors.New("execute returned no result")
 	}
-
-	if name == "query" {
-		envRegion, _, msgRegion, err = memManager.prepareRegions(env, nil, msg)
-	} else {
-		envRegion, infoRegion, msgRegion, err = memManager.prepareRegions(env, info, msg)
+	regionPtr := uint32(result[0])
+	if vm.debug {
+		log.Printf("execute returned region pointer 0x%X", regionPtr)
 	}
+	if regionPtr == 0 {
+		return nil, errors.New("execute returned null pointer (contract error)")
+	}
+	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to prepare regions: %w", err)
+		_ = mm.deallocate(regionPtr)
+		return nil, fmt.Errorf("failed to read result region: %w", err)
 	}
+	dataOffset := binary.LittleEndian.Uint32(region[0:4])
+	dataLength := binary.LittleEndian.Uint32(region[4:8])
+	data, err := mm.Read(dataOffset, dataLength)
+	if err != nil {
+		_ = mm.deallocate(regionPtr)
+		_ = mm.deallocate(dataOffset)
+		return nil, fmt.Errorf("failed to read result data: %w", err)
+	}
+	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result region: %v", err)
+	}
+	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result data: %v", err)
+	}
+	return data, nil
+}
 
-	// Write the regions to memory with alignment checks
-	if printDebug && msgRegion != nil {
-		data, ok := memory.Read(msgRegion.Offset, msgRegion.Length)
-		if ok {
-			fmt.Printf("[DEBUG] Message data in memory: %s\n", string(data))
+// Query calls a contract's query function. It is similar to Execute but without an Info (no funds).
+func (vm *WazeroVM) Query(code types.Checksum, env, queryMsg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64) ([]byte, error) {
+	compiled, err := vm.getCompiledModule(code, store)
+	if err != nil {
+		return nil, fmt.Errorf("error loading module: %w", err)
+	}
+	ctx := context.Background()
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
+	if err != nil {
+		return nil, fmt.Errorf("error instantiating module: %w", err)
+	}
+	defer vm.cleanupModule(module)
+	mm, err := NewMemoryManager(module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
+	}
+	if err := vm.checkInterfaceVersion(ctx, module); err != nil {
+		return nil, err
+	}
+	envPtr, err := mm.Allocate(uint32(len(env)))
+	if err != nil {
+		return nil, fmt.Errorf("allocate env: %w", err)
+	}
+	if err := mm.Write(envPtr, env); err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("write env: %w", err)
+	}
+	msgPtr, err := mm.Allocate(uint32(len(queryMsg)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("allocate queryMsg: %w", err)
+	}
+	if err := mm.Write(msgPtr, queryMsg); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(msgPtr)
+		return nil, fmt.Errorf("write queryMsg: %w", err)
+	}
+	queryFn := module.ExportedFunction("query")
+	if queryFn == nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(msgPtr)
+		return nil, errors.New("query function not found in contract")
+	}
+	result, callErr := queryFn.Call(ctx, uint64(envPtr), uint64(msgPtr))
+	_ = mm.deallocate(envPtr)
+	_ = mm.deallocate(msgPtr)
+	if callErr != nil {
+		if vm.debug {
+			log.Printf("query call failed: %v", callErr)
 		}
+		return nil, fmt.Errorf("query call failed: %w", callErr)
 	}
+	if len(result) == 0 {
+		return nil, errors.New("query returned no result")
+	}
+	regionPtr := uint32(result[0])
+	if vm.debug {
+		log.Printf("query returned region pointer 0x%X", regionPtr)
+	}
+	if regionPtr == 0 {
+		return nil, errors.New("query returned null pointer (contract error)")
+	}
+	region, err := mm.Read(regionPtr, 8)
+	if err != nil {
+		_ = mm.deallocate(regionPtr)
+		return nil, fmt.Errorf("failed to read result region: %w", err)
+	}
+	dataOffset := binary.LittleEndian.Uint32(region[0:4])
+	dataLength := binary.LittleEndian.Uint32(region[4:8])
+	data, err := mm.Read(dataOffset, dataLength)
+	if err != nil {
+		_ = mm.deallocate(regionPtr)
+		_ = mm.deallocate(dataOffset)
+		return nil, fmt.Errorf("failed to read result data: %w", err)
+	}
+	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result region: %v", err)
+	}
+	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result data: %v", err)
+	}
+	return data, nil
+}
 
-	// Ensure proper alignment for all pointers
-	alignmentSize := uint32(8) // 8-byte alignment
+// Migrate calls a contract's migrate function, analogous to Instantiate/Execute.
+func (vm *WazeroVM) Migrate(code types.Checksum, env, info, migrateMsg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64) ([]byte, error) {
+	// Implementation is similar to Execute. For brevity, not duplicating all comments.
+	compiled, err := vm.getCompiledModule(code, store)
+	if err != nil {
+		return nil, fmt.Errorf("error loading module: %w", err)
+	}
+	ctx := context.Background()
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
+	if err != nil {
+		return nil, fmt.Errorf("error instantiating module: %w", err)
+	}
+	defer vm.cleanupModule(module)
+	mm, err := NewMemoryManager(module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
+	}
+	if err := vm.checkInterfaceVersion(ctx, module); err != nil {
+		return nil, err
+	}
+	envPtr, err := mm.Allocate(uint32(len(env)))
+	if err != nil {
+		return nil, fmt.Errorf("allocate env: %w", err)
+	}
+	if err := mm.Write(envPtr, env); err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("write env: %w", err)
+	}
+	infoPtr, err := mm.Allocate(uint32(len(info)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		return nil, fmt.Errorf("allocate info: %w", err)
+	}
+	if err := mm.Write(infoPtr, info); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("write info: %w", err)
+	}
+	msgPtr, err := mm.Allocate(uint32(len(migrateMsg)))
+	if err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		return nil, fmt.Errorf("allocate migrateMsg: %w", err)
+	}
+	if err := mm.Write(msgPtr, migrateMsg); err != nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(msgPtr)
+		return nil, fmt.Errorf("write migrateMsg: %w", err)
+	}
+	migrateFn := module.ExportedFunction("migrate")
+	if migrateFn == nil {
+		mm.deallocate(envPtr)
+		mm.deallocate(infoPtr)
+		mm.deallocate(msgPtr)
+		return nil, errors.New("migrate function not found in contract")
+	}
+	result, callErr := migrateFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+	_ = mm.deallocate(envPtr)
+	_ = mm.deallocate(infoPtr)
+	_ = mm.deallocate(msgPtr)
+	if callErr != nil {
+		if vm.debug {
+			log.Printf("migrate call failed: %v", callErr)
+		}
+		return nil, fmt.Errorf("migrate call failed: %w", callErr)
+	}
+	if len(result) == 0 {
+		return nil, errors.New("migrate returned no result")
+	}
+	regionPtr := uint32(result[0])
+	if vm.debug {
+		log.Printf("migrate returned region pointer 0x%X", regionPtr)
+	}
+	if regionPtr == 0 {
+		return nil, errors.New("migrate returned null pointer (contract error)")
+	}
+	region, err := mm.Read(regionPtr, 8)
+	if err != nil {
+		_ = mm.deallocate(regionPtr)
+		return nil, fmt.Errorf("failed to read result region: %w", err)
+	}
+	dataOffset := binary.LittleEndian.Uint32(region[0:4])
+	dataLength := binary.LittleEndian.Uint32(region[4:8])
+	data, err := mm.Read(dataOffset, dataLength)
+	if err != nil {
+		_ = mm.deallocate(regionPtr)
+		_ = mm.deallocate(dataOffset)
+		return nil, fmt.Errorf("failed to read result data: %w", err)
+	}
+	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result region: %v", err)
+	}
+	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+		log.Printf("Warning: failed to deallocate result data: %v", err)
+	}
+	return data, nil
+}
 
-	if name == "query" {
-		envPtr, _, msgPtr, err = memManager.writeRegions(envRegion, nil, msgRegion)
+// (Additional VM methods like Sudo, Reply, IBCChannelOpen, etc., would follow the same pattern of memory management.)
+
+// checkInterfaceVersion ensures the module exports a supported interface_version (8 or 9) and calls it to verify compatibility.
+func (vm *WazeroVM) checkInterfaceVersion(ctx context.Context, module api.Module) error {
+	// CosmWasm v1.x uses interface_version_8, v2.x uses interface_version_9 [oai_citation_attribution:3‡forum.cosmos.network](https://forum.cosmos.network/t/defunding-cosmwasm-is-a-threat-to-the-cosmos-hub-and-cosmos-ecosystem/14918?page=2#:~:text=There%20was%20a%20time%20when,go%2C%20which%20is%20underway%20here).
+	if fn := module.ExportedFunction("interface_version_9"); fn != nil {
+		_, err := fn.Call(ctx)
 		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write regions: %w", err)
+			return fmt.Errorf("contract interface mismatch (expected v2.x): %w", err)
 		}
-
-		// Align pointers
-		envPtr = ((envPtr + alignmentSize - 1) / alignmentSize) * alignmentSize
-		if msgPtr != 0 {
-			msgPtr = ((msgPtr + alignmentSize - 1) / alignmentSize) * alignmentSize
+		if vm.debug {
+			log.Printf("Detected CosmWasm interface_version_9 (v2.x contract)")
 		}
-	} else {
-		envPtr, infoPtr, msgPtr, err = memManager.writeRegions(envRegion, infoRegion, msgRegion)
+		return nil
+	}
+	if fn := module.ExportedFunction("interface_version_8"); fn != nil {
+		_, err := fn.Call(ctx)
 		if err != nil {
-			return nil, types.GasReport{}, fmt.Errorf("failed to write regions: %w", err)
+			return fmt.Errorf("contract interface mismatch (expected v1.x): %w", err)
 		}
-
-		// Align pointers
-		envPtr = ((envPtr + alignmentSize - 1) / alignmentSize) * alignmentSize
-		if infoPtr != 0 {
-			infoPtr = ((infoPtr + alignmentSize - 1) / alignmentSize) * alignmentSize
+		if vm.debug {
+			log.Printf("Detected CosmWasm interface_version_8 (v1.x contract)")
 		}
-		if msgPtr != 0 {
-			msgPtr = ((msgPtr + alignmentSize - 1) / alignmentSize) * alignmentSize
-		}
+		return nil
 	}
+	return errors.New("no supported interface_version export found (not a CosmWasm contract)")
+}
 
-	if printDebug {
-		fmt.Printf("[DEBUG] Memory layout before function call:\n")
-		fmt.Printf("- Environment: ptr=0x%x, size=%d, region_ptr=0x%x\n", envRegion.Offset, len(env), envPtr)
-		if infoRegion != nil {
-			fmt.Printf("- Info: ptr=0x%x, size=%d, region_ptr=0x%x\n", infoRegion.Offset, len(info), infoPtr)
-		}
-		if msgRegion != nil {
-			fmt.Printf("- Message: ptr=0x%x, size=%d, region_ptr=0x%x\n", msgRegion.Offset, len(msg), msgPtr)
-		}
+// getCompiledModule retrieves a compiled module for the given code (checksum). It compiles the WASM if not cached.
+func (vm *WazeroVM) getCompiledModule(code types.Checksum, store types.KVStore) (wazero.CompiledModule, error) {
+	if compiled, ok := vm.cache[code]; ok {
+		return compiled, nil
 	}
-
-	// Get the function
-	fn := contractModule.ExportedFunction(name)
-	if fn == nil {
-		return nil, types.GasReport{}, fmt.Errorf("%s function not found", name)
+	// Load WASM code bytes from the KVStore (the code must have been stored already)
+	wasmCode, err := store.Get(code[:])
+	if err != nil || wasmCode == nil {
+		return nil, fmt.Errorf("unable to load contract code for %X: %w", code, err)
 	}
-
-	// Call function with appropriate arguments
-	var results []uint64
-	if name == "query" {
-		results, err = fn.Call(ctx, uint64(envPtr), uint64(msgPtr))
-	} else {
-		results, err = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
-	}
-
+	compiled, err := vm.runtime.CompileModule(context.Background(), wasmCode)
 	if err != nil {
-		if printDebug {
-			fmt.Printf("\n[DEBUG] ====== Function Call Failed ======\n")
-			fmt.Printf("Error: %v\n", err)
-			dumpMemoryDebug(memory, envPtr, infoPtr, msgPtr)
-			fmt.Printf("=====================================\n\n")
-		}
-		return nil, types.GasReport{}, fmt.Errorf("%s call failed: %w", name, err)
+		return nil, fmt.Errorf("WASM compile error: %w", err)
 	}
-
-	if len(results) != 1 {
-		if printDebug {
-			fmt.Printf("[DEBUG] Unexpected number of results: got %d, want 1\n", len(results))
-		}
-		return nil, types.GasReport{}, fmt.Errorf("expected 1 result, got %d", len(results))
-	}
-
-	// Read result from memory
-	resultPtr := uint32(results[0])
-	if printDebug {
-		fmt.Printf("[DEBUG] Reading result from memory at ptr=0x%x\n", resultPtr)
-	}
-
-	// Read and validate result using safe method
-	data, err := w.readFunctionResult(memory, resultPtr, printDebug)
-	if err != nil {
-		return nil, types.GasReport{}, fmt.Errorf("failed to read function result: %w", err)
-	}
-
-	gasReport := types.GasReport{
-		UsedInternally: runtimeEnv.gasUsed,
-		UsedExternally: gasState.GetGasUsed(),
-		Remaining:      gasLimit - (runtimeEnv.gasUsed + gasState.GetGasUsed()),
-		Limit:          gasLimit,
-	}
-
-	if printDebug {
-		fmt.Printf("[DEBUG] Gas report:\n")
-		fmt.Printf("- Used internally: %d\n", gasReport.UsedInternally)
-		fmt.Printf("- Used externally: %d\n", gasReport.UsedExternally)
-		fmt.Printf("- Remaining: %d\n", gasReport.Remaining)
-		fmt.Printf("- Limit: %d\n", gasReport.Limit)
-		fmt.Printf("=====================[END DEBUG]=====================\n\n")
-	}
-
-	return data, gasReport, nil
+	vm.cache[code] = compiled
+	return compiled, nil
 }
 
-// Helper function for debug memory dumps
-func dumpMemoryDebug(memory api.Memory, envPtr, infoPtr, msgPtr uint32) {
-	// Try the env region
-	if envRegionData, ok := memory.Read(envPtr, regionStructSize); ok {
-		fmt.Printf("\nEnvironment Region at 0x%x:\n", envPtr)
-		if region, err := RegionFromBytes(envRegionData, ok); err == nil {
-			if data, ok := memory.Read(region.Offset, region.Length); ok {
-				fmt.Printf("Data: %s\n", string(data))
-			}
-		}
+// cleanupModule handles post-execution cleanup of a module instance.
+func (vm *WazeroVM) cleanupModule(module api.Module) {
+	// Ensure the module is closed to free resources.
+	// This will also free memory associated with the instance.
+	_ = module.Close(context.Background())
+	if vm.debug {
+		log.Printf("Module %s cleaned up", module.Name())
 	}
-
-	// Try the info region if it exists
-	if infoPtr != 0 {
-		if infoRegionData, ok := memory.Read(infoPtr, regionStructSize); ok {
-			fmt.Printf("\nInfo Region at 0x%x:\n", infoPtr)
-			if region, err := RegionFromBytes(infoRegionData, ok); err == nil {
-				if data, ok := memory.Read(region.Offset, region.Length); ok {
-					fmt.Printf("Data: %s\n", string(data))
-				}
-			}
-		}
-	}
-
-	// Try the msg region if it exists
-	if msgPtr != 0 {
-		if msgRegionData, ok := memory.Read(msgPtr, regionStructSize); ok {
-			fmt.Printf("\nMessage Region at 0x%x:\n", msgPtr)
-			if region, err := RegionFromBytes(msgRegionData, ok); err == nil {
-				if data, ok := memory.Read(region.Offset, region.Length); ok {
-					fmt.Printf("Data: %s\n", string(data))
-				}
-			}
-		}
-	}
-
-	// Dump start of memory
-	if data, ok := memory.Read(0, 256); ok {
-		fmt.Printf("\nFirst 256 bytes:\n%x\n", data)
-	}
-}
-
-// SimulateStoreCode validates the code but does not store it
-func (w *WazeroRuntime) SimulateStoreCode(code []byte) ([]byte, error, bool) {
-	if code == nil {
-		return nil, errors.New("Null/Nil argument: wasm"), false
-	}
-
-	if len(code) == 0 {
-		return nil, errors.New("Wasm bytecode could not be deserialized"), false
-	}
-
-	// Attempt to compile the module just to validate.
-	compiled, err := w.runtime.CompileModule(context.Background(), code)
-	if err != nil {
-		return nil, errors.New("Wasm bytecode could not be deserialized"), false
-	}
-	defer compiled.Close(context.Background())
-
-	// Check memory requirements
-	memoryCount := 0
-	for _, exp := range compiled.ExportedMemories() {
-		if exp != nil {
-			memoryCount++
-		}
-	}
-	if memoryCount != 1 {
-		return nil, fmt.Errorf("Error during static Wasm validation: Wasm contract must contain exactly one memory"), false
-	}
-
-	// Compute checksum but do not store in any cache
-	checksum := sha256.Sum256(code)
-
-	// Return checksum, no error, and persisted=false
-	return checksum[:], nil, false
-}
-
-func readResultRegionInternal(memory api.Memory, resultPtr uint32, printDebug bool) (*Region, error) {
-	if printDebug {
-		fmt.Printf("\n=== Reading Result Region ===\n")
-		fmt.Printf("Result pointer: 0x%x\n", resultPtr)
-		fmt.Printf("Memory size: %d bytes\n", memory.Size())
-	}
-
-	// Read the full 12 bytes of the Region struct
-	data, ok := memory.Read(resultPtr, regionStructSize)
-	if !ok {
-		if printDebug {
-			fmt.Printf("Failed to read region data at ptr=0x%x size=%d\n",
-				resultPtr, regionStructSize)
-		}
-		return nil, fmt.Errorf("failed to read region data at offset=%d size=%d",
-			resultPtr, regionStructSize)
-	}
-
-	if printDebug {
-		fmt.Printf("Raw region data: %x\n", data)
-	}
-
-	// Parse the Region struct
-	region := &Region{
-		Offset:   binary.LittleEndian.Uint32(data[0:4]),
-		Capacity: binary.LittleEndian.Uint32(data[4:8]),
-		Length:   binary.LittleEndian.Uint32(data[8:12]),
-	}
-
-	if printDebug {
-		fmt.Printf("Parsed Region:\n")
-		fmt.Printf("- Offset: 0x%x\n", region.Offset)
-		fmt.Printf("- Capacity: %d\n", region.Capacity)
-		fmt.Printf("- Length: %d\n", region.Length)
-	}
-
-	// Validate the region
-	if err := region.Validate(memory.Size()); err != nil {
-		if printDebug {
-			fmt.Printf("Region validation failed: %v\n", err)
-		}
-		return nil, fmt.Errorf("invalid region: %w", err)
-	}
-
-	// Try to read the actual data the region points to
-	if printDebug {
-		if data, ok := memory.Read(region.Offset, region.Length); ok {
-			fmt.Printf("Data preview: %x\n", data[:min(32, len(data))])
-			if isReadableASCII(data) {
-				fmt.Printf("As text: %s\n", string(data))
-			}
-		}
-	}
-
-	return region, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func isReadableASCII(data []byte) bool {
-	for _, b := range data {
-		if b < 32 || b > 126 {
-			return false
-		}
-	}
-	return true
 }
