@@ -4,17 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	internalapi "github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
-	"github.com/tetratelabs/wazero/api"
+	wazerotypes "github.com/tetratelabs/wazero/api"
 )
+
+type contextKey string
+
+const envKey contextKey = "env"
 
 // hostBls12381HashToG1 implements bls12_381_hash_to_g1.
 // It reads the message and domain separation tag from contract memory using MemoryManager,
 // charges gas, calls BLS12381HashToG1, allocates space for the result, writes it, and returns the pointer.
-func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
+func hostBls12381HashToG1(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
 	// Retrieve the runtime environment from context.
-	env := ctx.Value(envKey).(*RuntimeEnvironment)
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
 
 	// Create a MemoryManager for the contract module.
 	mm, err := memory.NewMemoryManager(mod)
@@ -35,7 +41,7 @@ func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen,
 	}
 
 	// Charge gas for the operation.
-	env.gasUsed += uint64(hashLen+dstLen) * gasPerByte
+	env.Gas.(internalapi.MockGasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
 
 	// Hash to curve.
 	result, err := BLS12381HashToG1(message, dst)
@@ -59,8 +65,8 @@ func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen,
 
 // hostBls12381HashToG2 implements bls12_381_hash_to_g2.
 // It follows the same pattern as hostBls12381HashToG1.
-func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
-	env := ctx.Value(envKey).(*RuntimeEnvironment)
+func hostBls12381HashToG2(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -76,7 +82,8 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen,
 		return 0
 	}
 
-	env.gasUsed += uint64(hashLen+dstLen) * constants.GasPerByte
+	// Charge gas for the operation.
+	env.Gas.(internalapi.MockGasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
 
 	result, err := BLS12381HashToG2(message, dst)
 	if err != nil {
@@ -97,7 +104,7 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen,
 
 // hostBls12381PairingEquality implements bls12_381_pairing_equality.
 // It reads the four compressed points from memory and calls BLS12381PairingEquality.
-func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
+func hostBls12381PairingEquality(_ context.Context, mod wazerotypes.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -134,7 +141,7 @@ func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len
 // hostSecp256r1Verify implements secp256r1_verify.
 // It reads the hash, signature, and public key from memory via MemoryManager,
 // calls Secp256r1Verify, and returns 1 if valid.
-func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+func hostSecp256r1Verify(_ context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -169,7 +176,7 @@ func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, si
 // hostSecp256r1RecoverPubkey implements secp256r1_recover_pubkey.
 // It reads the hash and signature from memory, recovers the public key,
 // allocates memory for it, writes it, and returns the pointer and length.
-func hostSecp256r1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
+func hostSecp256r1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))

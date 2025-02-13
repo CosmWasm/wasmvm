@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/CosmWasm/wasmvm/v2/memory"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
@@ -301,7 +301,8 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("addr_validate: failed to read address: %v", err))
 			return 1
 		}
-		if err := api.ValidateAddress(string(addrBytes)); err != nil {
+		_, err = api.ValidateAddress(string(addrBytes))
+		if err != nil {
 			logger.Debug(fmt.Sprintf("addr_validate: address %q is INVALID: %v", addrBytes, err))
 			return 1
 		}
@@ -316,7 +317,7 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("addr_canonicalize: failed to read human address: %v", err))
 			return 1
 		}
-		canon, err := api.CanonicalAddress(string(humanAddr))
+		canon, _, err := api.CanonicalizeAddress(string(humanAddr))
 		if err != nil {
 			logger.Debug(fmt.Sprintf("addr_canonicalize: invalid address %q: %v", humanAddr, err))
 			return 1
@@ -336,7 +337,7 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("addr_humanize: failed to read canonical address: %v", err))
 			return 1
 		}
-		human, err := api.HumanAddress(canonAddr)
+		human, _, err := api.HumanizeAddress(canonAddr)
 		if err != nil {
 			logger.Debug(fmt.Sprintf("addr_humanize: invalid canonical addr %X: %v", canonAddr, err))
 			return 1
@@ -366,7 +367,7 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("secp256k1_verify: failed to read public key: %v", err))
 			return 2
 		}
-		valid, err := api.Secp256k1Verify(msgHash, sig, pubKey)
+		valid, _, err := api.Secp256k1Verify(msgHash, sig, pubKey)
 		if err != nil {
 			logger.Error(fmt.Sprintf("secp256k1_verify: crypto error: %v", err))
 			return 3
@@ -426,7 +427,7 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("ed25519_verify: failed to read public key: %v", err))
 			return 2
 		}
-		valid, err := api.Ed25519Verify(msg, sig, pubKey)
+		valid, _, err := api.Ed25519Verify(msg, sig, pubKey)
 		if err != nil {
 			logger.Error(fmt.Sprintf("ed25519_verify: crypto error: %v", err))
 			return 3
@@ -456,7 +457,21 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to read public keys: %v", err))
 			return 2
 		}
-		valid, err := api.Ed25519BatchVerify(msgs, sigs, pubKeys)
+		// Deserialize the inputs from the flat byte arrays into slices of byte slices
+		var msgsArray, sigsArray, pubKeysArray [][]byte
+		if err := json.Unmarshal(msgs, &msgsArray); err != nil {
+			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize messages: %v", err))
+			return 2
+		}
+		if err := json.Unmarshal(sigs, &sigsArray); err != nil {
+			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize signatures: %v", err))
+			return 2
+		}
+		if err := json.Unmarshal(pubKeys, &pubKeysArray); err != nil {
+			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize public keys: %v", err))
+			return 2
+		}
+		valid, _, err := api.Ed25519BatchVerify(msgsArray, sigsArray, pubKeysArray)
 		if err != nil {
 			logger.Error(fmt.Sprintf("ed25519_batch_verify: crypto error: %v", err))
 			return 3

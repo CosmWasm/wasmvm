@@ -17,6 +17,16 @@ type (
 	Ed25519VerifyFunc func(message, signature, pubkey []byte) (bool, uint64, error)
 	// Ed25519BatchVerifyFunc verifies multiple ed25519 signatures in a batch
 	Ed25519BatchVerifyFunc func(messages [][]byte, signatures [][]byte, pubkeys [][]byte) (bool, uint64, error)
+	// BLS12381AggregateG1Func aggregates multiple G1 points into a single compressed G1 point
+	Bls12381AggregateG1Func func(elements []byte) ([]byte, error)
+	// BLS12381AggregateG2Func aggregates multiple G2 points into a single compressed G2 point
+	Bls12381AggregateG2Func func(elements []byte) ([]byte, error)
+	// BLS12381HashToG1Func hashes arbitrary bytes to a compressed G1 point
+	Bls12381HashToG1Func func(message, dst []byte) ([]byte, error)
+	// BLS12381HashToG2Func hashes arbitrary bytes to a compressed G2 point
+	Bls12381HashToG2Func func(message, dst []byte) ([]byte, error)
+	// BLS12381PairingCheckFunc checks if e(a1, a2) == e(b1, b2) in the BLS12-381 pairing
+	Bls12381PairingCheckFunc func(pairs []byte) (bool, error)
 )
 
 type GoAPI struct {
@@ -27,4 +37,9 @@ type GoAPI struct {
 	Secp256k1RecoverPubkey Secp256k1RecoverPubkeyFunc
 	Ed25519Verify          Ed25519VerifyFunc
 	Ed25519BatchVerify     Ed25519BatchVerifyFunc
+	Bls12381AggregateG1    Bls12381AggregateG1Func
+	Bls12381AggregateG2    Bls12381AggregateG2Func
+	Bls12381HashToG1       Bls12381HashToG1Func
+	Bls12381HashToG2       Bls12381HashToG2Func
+	Bls12381PairingCheck   Bls12381PairingCheckFunc
 }
