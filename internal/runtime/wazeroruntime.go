@@ -11,6 +11,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	// Assume types and memory packages are in same module
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
@@ -54,7 +55,7 @@ func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, 
 	defer vm.cleanupModule(module)
 
 	// Wrap the module's memory in a MemoryManager for safe operations
-	mm, err := NewMemoryManager(module)
+	mm, err := memory.NewMemoryManager(module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
