@@ -63,47 +63,6 @@ type RuntimeEnvironment struct {
 	nextIterID     uint64
 }
 
-// NewRuntimeEnvironment creates a new RuntimeEnvironment.
-func NewRuntimeEnvironment(db types.KVStore, api API, querier Querier, gasLimit uint64) *RuntimeEnvironment {
-	return &RuntimeEnvironment{
-		DB:        db,
-		API:       api,
-		Querier:   querier,
-		Gas:       types.NewGasState(gasLimit),
-		gasLimit:  gasLimit,
-		gasUsed:   0,
-		GasConfig: types.DefaultGasConfig(),
-		iterators: make(map[uint64]map[uint64]types.Iterator),
-	}
-}
-
-func (env *RuntimeEnvironment) StartCall() uint64 {
-	// For simplicity we don’t show the locking here, but in production this should be thread‐safe.
-	env.nextCallID++
-	env.iterators[env.nextCallID] = make(map[uint64]types.Iterator)
-	return env.nextCallID
-}
-
-func (env *RuntimeEnvironment) StoreIterator(callID uint64, iter types.Iterator) uint64 {
-	env.nextIterID++
-	if env.iterators[callID] == nil {
-		env.iterators[callID] = make(map[uint64]types.Iterator)
-	}
-	env.iterators[callID][env.nextIterID] = iter
-	return env.nextIterID
-}
-
-func (env *RuntimeEnvironment) GetIterator(callID, iterID uint64) types.Iterator {
-	if callMap, exists := env.iterators[callID]; exists {
-		return callMap[iterID]
-	}
-	return nil
-}
-
-func (env *RuntimeEnvironment) EndCall(callID uint64) {
-	delete(env.iterators, callID)
-}
-
 // --- Helper: writeToRegion ---
 // writeToRegion uses MemoryManager to update a Region struct and write the provided data.
 func writeToRegion(mem MemoryManager, regionPtr uint32, data []byte) error {
@@ -432,7 +391,7 @@ func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Sto
 			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: failed to read signature: %v", err))
 			return 0
 		}
-		pubKey, err := api.Secp256k1RecoverPubkey(msgHash, sig, byte(param))
+		pubKey, _, err := api.Secp256k1RecoverPubkey(msgHash, sig, byte(param))
 		if err != nil {
 			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: recover failed: %v", err))
 			return 0
