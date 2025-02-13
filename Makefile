@@ -1,5 +1,5 @@
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0102
+BUILDERS_PREFIX := cosmwasm/libwasmvm-builder:0103
 # Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
 # This image is currently not published.
 ALPINE_TESTER := cosmwasm/alpine-tester:local
@@ -76,7 +76,11 @@ bench:
 # Creates a release build in a containerized build environment of the static library for Alpine Linux (.a)
 release-build-alpine:
 	# build the muslc *.a file
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-alpine
+	docker run --rm -v $(shell pwd)/libwasmvm:/code \
+		-e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc \
+		-e CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc \
+		-e CFLAGS_aarch64_unknown_linux_musl="" \
+		$(BUILDERS_PREFIX)-alpine
 	cp libwasmvm/artifacts/libwasmvm_muslc.x86_64.a internal/api
 	cp libwasmvm/artifacts/libwasmvm_muslc.aarch64.a internal/api
 	make update-bindings
