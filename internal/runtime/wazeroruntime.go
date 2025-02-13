@@ -71,29 +71,29 @@ func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, 
 		return nil, fmt.Errorf("allocate env: %w", err)
 	}
 	if err := mm.Write(envPtr, env); err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("write env: %w", err)
 	}
 	infoPtr, err := mm.Allocate(uint32(len(info)))
 	if err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("allocate info: %w", err)
 	}
 	if err := mm.Write(infoPtr, info); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("write info: %w", err)
 	}
 	initPtr, err := mm.Allocate(uint32(len(initMsg)))
 	if err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("allocate initMsg: %w", err)
 	}
 	if err := mm.Write(initPtr, initMsg); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(initPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(initPtr)
 		return nil, fmt.Errorf("write initMsg: %w", err)
 	}
 
@@ -101,16 +101,16 @@ func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, 
 	instFn := module.ExportedFunction("instantiate")
 	if instFn == nil {
 		// Free allocated memory before returning error
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(initPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(initPtr)
 		return nil, errors.New("instantiate function not found in contract")
 	}
 	result, callErr := instFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(initPtr))
 	// Free input allocations as they are no longer needed, regardless of success or failure
-	_ = mm.deallocate(envPtr)
-	_ = mm.deallocate(infoPtr)
-	_ = mm.deallocate(initPtr)
+	_ = mm.Deallocate(envPtr)
+	_ = mm.Deallocate(infoPtr)
+	_ = mm.Deallocate(initPtr)
 	if callErr != nil {
 		// Contract execution failed (e.g. panic in contract or out-of-gas)
 		if vm.debug {
@@ -135,11 +135,11 @@ func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, 
 	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
 		// If we cannot read the region, free the region pointer and return error
-		_ = mm.deallocate(regionPtr)
+		_ = mm.Deallocate(regionPtr)
 		return nil, fmt.Errorf("failed to read result region at 0x%X: %w", regionPtr, err)
 	}
 	if len(region) < 8 {
-		_ = mm.deallocate(regionPtr)
+		_ = mm.Deallocate(regionPtr)
 		return nil, fmt.Errorf("result region too small: %d bytes", len(region))
 	}
 	dataOffset := binary.LittleEndian.Uint32(region[0:4])
@@ -152,16 +152,16 @@ func (vm *WazeroVM) Instantiate(code types.Checksum, env, info, initMsg []byte, 
 	data, err := mm.Read(dataOffset, dataLength)
 	if err != nil {
 		// Free the region and any allocated data if read fails
-		_ = mm.deallocate(regionPtr)
-		_ = mm.deallocate(dataOffset)
+		_ = mm.Deallocate(regionPtr)
+		_ = mm.Deallocate(dataOffset)
 		return nil, fmt.Errorf("failed to read result data (offset %d, length %d): %w", dataOffset, dataLength, err)
 	}
 
 	// Deallocate the region struct and the data buffer in the contract's memory to avoid leaks
-	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+	if err := mm.Deallocate(regionPtr); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result region at 0x%X: %v", regionPtr, err)
 	}
-	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+	if err := mm.Deallocate(dataOffset); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result data at 0x%X: %v", dataOffset, err)
 	}
 
@@ -179,12 +179,12 @@ func (vm *WazeroVM) Execute(code types.Checksum, env, info, execMsg []byte, stor
 		return nil, fmt.Errorf("error loading module: %w", err)
 	}
 	ctx := context.Background()
-	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimit(vm.memoryLimit*64*1024))
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig())
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
 	defer vm.cleanupModule(module)
-	mm, err := NewMemoryManager(module)
+	mm, err := memory.NewMemoryManager(module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
@@ -196,42 +196,42 @@ func (vm *WazeroVM) Execute(code types.Checksum, env, info, execMsg []byte, stor
 		return nil, fmt.Errorf("allocate env: %w", err)
 	}
 	if err := mm.Write(envPtr, env); err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("write env: %w", err)
 	}
 	infoPtr, err := mm.Allocate(uint32(len(info)))
 	if err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("allocate info: %w", err)
 	}
 	if err := mm.Write(infoPtr, info); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("write info: %w", err)
 	}
 	msgPtr, err := mm.Allocate(uint32(len(execMsg)))
 	if err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("allocate execMsg: %w", err)
 	}
 	if err := mm.Write(msgPtr, execMsg); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(msgPtr)
 		return nil, fmt.Errorf("write execMsg: %w", err)
 	}
 	execFn := module.ExportedFunction("execute")
 	if execFn == nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(msgPtr)
 		return nil, errors.New("execute function not found in contract")
 	}
 	result, callErr := execFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
-	_ = mm.deallocate(envPtr)
-	_ = mm.deallocate(infoPtr)
-	_ = mm.deallocate(msgPtr)
+	_ = mm.Deallocate(envPtr)
+	_ = mm.Deallocate(infoPtr)
+	_ = mm.Deallocate(msgPtr)
 	if callErr != nil {
 		if vm.debug {
 			log.Printf("execute call failed: %v", callErr)
@@ -250,21 +250,21 @@ func (vm *WazeroVM) Execute(code types.Checksum, env, info, execMsg []byte, stor
 	}
 	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
+		_ = mm.Deallocate(regionPtr)
 		return nil, fmt.Errorf("failed to read result region: %w", err)
 	}
 	dataOffset := binary.LittleEndian.Uint32(region[0:4])
 	dataLength := binary.LittleEndian.Uint32(region[4:8])
 	data, err := mm.Read(dataOffset, dataLength)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
-		_ = mm.deallocate(dataOffset)
+		_ = mm.Deallocate(regionPtr)
+		_ = mm.Deallocate(dataOffset)
 		return nil, fmt.Errorf("failed to read result data: %w", err)
 	}
-	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+	if err := mm.Deallocate(regionPtr); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result region: %v", err)
 	}
-	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+	if err := mm.Deallocate(dataOffset); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result data: %v", err)
 	}
 	return data, nil
@@ -277,12 +277,12 @@ func (vm *WazeroVM) Query(code types.Checksum, env, queryMsg []byte, store types
 		return nil, fmt.Errorf("error loading module: %w", err)
 	}
 	ctx := context.Background()
-	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig())
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
 	defer vm.cleanupModule(module)
-	mm, err := NewMemoryManager(module)
+	mm, err := memory.NewMemoryManager(module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MemoryManager: %w", err)
 	}
@@ -294,28 +294,28 @@ func (vm *WazeroVM) Query(code types.Checksum, env, queryMsg []byte, store types
 		return nil, fmt.Errorf("allocate env: %w", err)
 	}
 	if err := mm.Write(envPtr, env); err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("write env: %w", err)
 	}
 	msgPtr, err := mm.Allocate(uint32(len(queryMsg)))
 	if err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("allocate queryMsg: %w", err)
 	}
 	if err := mm.Write(msgPtr, queryMsg); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(msgPtr)
 		return nil, fmt.Errorf("write queryMsg: %w", err)
 	}
 	queryFn := module.ExportedFunction("query")
 	if queryFn == nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(msgPtr)
 		return nil, errors.New("query function not found in contract")
 	}
 	result, callErr := queryFn.Call(ctx, uint64(envPtr), uint64(msgPtr))
-	_ = mm.deallocate(envPtr)
-	_ = mm.deallocate(msgPtr)
+	_ = mm.Deallocate(envPtr)
+	_ = mm.Deallocate(msgPtr)
 	if callErr != nil {
 		if vm.debug {
 			log.Printf("query call failed: %v", callErr)
@@ -334,21 +334,21 @@ func (vm *WazeroVM) Query(code types.Checksum, env, queryMsg []byte, store types
 	}
 	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
+		_ = mm.Deallocate(regionPtr)
 		return nil, fmt.Errorf("failed to read result region: %w", err)
 	}
 	dataOffset := binary.LittleEndian.Uint32(region[0:4])
 	dataLength := binary.LittleEndian.Uint32(region[4:8])
 	data, err := mm.Read(dataOffset, dataLength)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
-		_ = mm.deallocate(dataOffset)
+		_ = mm.Deallocate(regionPtr)
+		_ = mm.Deallocate(dataOffset)
 		return nil, fmt.Errorf("failed to read result data: %w", err)
 	}
-	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+	if err := mm.Deallocate(regionPtr); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result region: %v", err)
 	}
-	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+	if err := mm.Deallocate(dataOffset); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result data: %v", err)
 	}
 	return data, nil
@@ -362,7 +362,7 @@ func (vm *WazeroVM) Migrate(code types.Checksum, env, info, migrateMsg []byte, s
 		return nil, fmt.Errorf("error loading module: %w", err)
 	}
 	ctx := context.Background()
-	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig())
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
@@ -379,42 +379,42 @@ func (vm *WazeroVM) Migrate(code types.Checksum, env, info, migrateMsg []byte, s
 		return nil, fmt.Errorf("allocate env: %w", err)
 	}
 	if err := mm.Write(envPtr, env); err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("write env: %w", err)
 	}
 	infoPtr, err := mm.Allocate(uint32(len(info)))
 	if err != nil {
-		mm.deallocate(envPtr)
+		mm.Deallocate(envPtr)
 		return nil, fmt.Errorf("allocate info: %w", err)
 	}
 	if err := mm.Write(infoPtr, info); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("write info: %w", err)
 	}
 	msgPtr, err := mm.Allocate(uint32(len(migrateMsg)))
 	if err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
 		return nil, fmt.Errorf("allocate migrateMsg: %w", err)
 	}
 	if err := mm.Write(msgPtr, migrateMsg); err != nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(msgPtr)
 		return nil, fmt.Errorf("write migrateMsg: %w", err)
 	}
 	migrateFn := module.ExportedFunction("migrate")
 	if migrateFn == nil {
-		mm.deallocate(envPtr)
-		mm.deallocate(infoPtr)
-		mm.deallocate(msgPtr)
+		mm.Deallocate(envPtr)
+		mm.Deallocate(infoPtr)
+		mm.Deallocate(msgPtr)
 		return nil, errors.New("migrate function not found in contract")
 	}
 	result, callErr := migrateFn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
-	_ = mm.deallocate(envPtr)
-	_ = mm.deallocate(infoPtr)
-	_ = mm.deallocate(msgPtr)
+	_ = mm.Deallocate(envPtr)
+	_ = mm.Deallocate(infoPtr)
+	_ = mm.Deallocate(msgPtr)
 	if callErr != nil {
 		if vm.debug {
 			log.Printf("migrate call failed: %v", callErr)
@@ -433,21 +433,21 @@ func (vm *WazeroVM) Migrate(code types.Checksum, env, info, migrateMsg []byte, s
 	}
 	region, err := mm.Read(regionPtr, 8)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
+		_ = mm.Deallocate(regionPtr)
 		return nil, fmt.Errorf("failed to read result region: %w", err)
 	}
 	dataOffset := binary.LittleEndian.Uint32(region[0:4])
 	dataLength := binary.LittleEndian.Uint32(region[4:8])
 	data, err := mm.Read(dataOffset, dataLength)
 	if err != nil {
-		_ = mm.deallocate(regionPtr)
-		_ = mm.deallocate(dataOffset)
+		_ = mm.Deallocate(regionPtr)
+		_ = mm.Deallocate(dataOffset)
 		return nil, fmt.Errorf("failed to read result data: %w", err)
 	}
-	if err := mm.deallocate(regionPtr); err != nil && vm.debug {
+	if err := mm.Deallocate(regionPtr); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result region: %v", err)
 	}
-	if err := mm.deallocate(dataOffset); err != nil && vm.debug {
+	if err := mm.Deallocate(dataOffset); err != nil && vm.debug {
 		log.Printf("Warning: failed to deallocate result data: %v", err)
 	}
 	return data, nil

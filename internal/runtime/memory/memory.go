@@ -19,10 +19,10 @@ type Region struct {
 
 // MemoryManager manages a Wasm instance's memory and allocation.
 type MemoryManager struct {
-	memory     WasmMemory                   // interface to Wasm memory (e.g., provides Read, Write)
-	allocate   func(uint32) (uint32, error) // function to call Wasm allocate
-	deallocate func(uint32) error           // function to call Wasm deallocate
-	memorySize uint32                       // size of the memory (for bounds checking, if available)
+	Memory       WasmMemory                   // interface to Wasm memory (e.g., provides Read, Write)
+	WasmAllocate func(uint32) (uint32, error) // function to call Wasm allocate
+	Deallocate   func(uint32) error           // function to call Wasm deallocate
+	MemorySize   uint32                       // size of the memory (for bounds checking, if available)
 }
 
 // NewMemoryManager creates and initializes a MemoryManager from the given module.
@@ -57,19 +57,19 @@ func NewMemoryManager(module api.Module) (*MemoryManager, error) {
 	}
 
 	return &MemoryManager{
-		memory:     mem,
-		allocate:   allocateWrapper,
-		deallocate: deallocateWrapper,
-		memorySize: size,
+		Memory:       mem,
+		WasmAllocate: allocateWrapper,
+		Deallocate:   deallocateWrapper,
+		MemorySize:   size,
 	}, nil
 }
 
 // Read copies `length` bytes from Wasm memory at the given offset into a new byte slice.
 func (m *MemoryManager) Read(offset uint32, length uint32) ([]byte, error) {
-	if offset+length > m.memorySize {
+	if offset+length > m.MemorySize {
 		return nil, errors.New("memory read out of bounds")
 	}
-	data, ok := m.memory.Read(offset, uint32(length))
+	data, ok := m.Memory.Read(offset, uint32(length))
 	if !ok {
 		return nil, errors.New("failed to read memory")
 	}
@@ -79,10 +79,10 @@ func (m *MemoryManager) Read(offset uint32, length uint32) ([]byte, error) {
 // Write copies the given data into Wasm memory starting at the given offset.
 func (m *MemoryManager) Write(offset uint32, data []byte) error {
 	length := uint32(len(data))
-	if offset+length > m.memorySize {
+	if offset+length > m.MemorySize {
 		return errors.New("memory write out of bounds")
 	}
-	if !m.memory.Write(offset, data) {
+	if !m.Memory.Write(offset, data) {
 		return errors.New("failed to write memory")
 	}
 	return nil
@@ -106,7 +106,7 @@ func (m *MemoryManager) ReadRegion(regionPtr uint32) ([]byte, error) {
 		Length:   littleEndianToUint32(raw[8:12]),
 	}
 	// Basic sanity checks
-	if region.Offset+region.Length > m.memorySize {
+	if region.Offset+region.Length > m.MemorySize {
 		return nil, errors.New("region out of bounds")
 	}
 	if region.Length > region.Capacity {
@@ -119,7 +119,7 @@ func (m *MemoryManager) ReadRegion(regionPtr uint32) ([]byte, error) {
 // Allocate requests a new memory region of given size from the Wasm instance.
 func (m *MemoryManager) Allocate(size uint32) (uint32, error) {
 	// Call the contract's allocate function via the provided callback
-	offset, err := m.allocate(size)
+	offset, err := m.WasmAllocate(size)
 	if err != nil {
 		return 0, err
 	}
@@ -128,7 +128,7 @@ func (m *MemoryManager) Allocate(size uint32) (uint32, error) {
 		return 0, errors.New("allocation failed")
 	}
 	// Optionally, ensure offset is within memory bounds (if allocate doesn't already guarantee it)
-	if offset >= m.memorySize {
+	if offset >= m.MemorySize {
 		return 0, errors.New("allocation returned out-of-bounds pointer")
 	}
 	return offset, nil
@@ -136,7 +136,7 @@ func (m *MemoryManager) Allocate(size uint32) (uint32, error) {
 
 // Free releases previously allocated memory back to the contract.
 func (m *MemoryManager) Free(offset uint32) error {
-	return m.deallocate(offset)
+	return m.Deallocate(offset)
 }
 
 // CreateRegion allocates a Region struct in Wasm memory for a given data buffer.
