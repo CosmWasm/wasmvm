@@ -178,7 +178,7 @@ func (vm *WazeroVM) Execute(code types.Checksum, env, info, execMsg []byte, stor
 		return nil, fmt.Errorf("error loading module: %w", err)
 	}
 	ctx := context.Background()
-	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimitPages(vm.memoryLimit*(1<<16)))
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithMemoryLimit(vm.memoryLimit*64*1024))
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating module: %w", err)
 	}
