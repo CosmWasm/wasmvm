@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -15,7 +17,7 @@ func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen,
 	env := ctx.Value(envKey).(*RuntimeEnvironment)
 
 	// Create a MemoryManager for the contract module.
-	mm, err := NewMemoryManager(mod)
+	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
 	}
@@ -59,7 +61,7 @@ func hostBls12381HashToG1(ctx context.Context, mod api.Module, hashPtr, hashLen,
 // It follows the same pattern as hostBls12381HashToG1.
 func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
 	env := ctx.Value(envKey).(*RuntimeEnvironment)
-	mm, err := NewMemoryManager(mod)
+	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
 	}
@@ -74,7 +76,7 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen,
 		return 0
 	}
 
-	env.gasUsed += uint64(hashLen+dstLen) * gasPerByte
+	env.gasUsed += uint64(hashLen+dstLen) * constants.GasPerByte
 
 	result, err := BLS12381HashToG2(message, dst)
 	if err != nil {
@@ -96,7 +98,7 @@ func hostBls12381HashToG2(ctx context.Context, mod api.Module, hashPtr, hashLen,
 // hostBls12381PairingEquality implements bls12_381_pairing_equality.
 // It reads the four compressed points from memory and calls BLS12381PairingEquality.
 func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len, a2Ptr, a2Len, b1Ptr, b1Len, b2Ptr, b2Len uint32) uint32 {
-	mm, err := NewMemoryManager(mod)
+	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
 	}
@@ -133,7 +135,7 @@ func hostBls12381PairingEquality(_ context.Context, mod api.Module, a1Ptr, a1Len
 // It reads the hash, signature, and public key from memory via MemoryManager,
 // calls Secp256r1Verify, and returns 1 if valid.
 func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
-	mm, err := NewMemoryManager(mod)
+	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
 	}
@@ -168,7 +170,7 @@ func hostSecp256r1Verify(_ context.Context, mod api.Module, hashPtr, hashLen, si
 // It reads the hash and signature from memory, recovers the public key,
 // allocates memory for it, writes it, and returns the pointer and length.
 func hostSecp256r1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
-	mm, err := NewMemoryManager(mod)
+	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
 	}
