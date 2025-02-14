@@ -899,7 +899,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
 
-		info = mockInfoBinNoAssert("fred")
+		info = MockInfoBin(b, "fred")
 
 		for i := 0; i < callCount; i++ {
 			go func() {
@@ -1526,17 +1526,4 @@ func TestFloats(t *testing.T) {
 
 	hash := hasher.Sum(nil)
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
-}
-
-// mockInfoBinNoAssert creates the message binary without using testify assertions.
-func mockInfoBinNoAssert(sender types.HumanAddress) []byte {
-	info := types.MessageInfo{
-		Sender: sender,
-		Funds:  types.Array[types.Coin]{},
-	}
-	res, err := json.Marshal(info)
-	if err != nil {
-		panic(err)
-	}
-	return res
 }
