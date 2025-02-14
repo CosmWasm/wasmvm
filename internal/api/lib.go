@@ -5,15 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.org/x/sys/unix"
-
-	"github.com/CosmWasm/wasmvm/v2/internal/runtime"
+	wasm "github.com/CosmWasm/wasmvm/v2/internal/runtime/wasm"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 func init() {
-	// Create a new wazero runtime instance and assign it to currentRuntime
-	r, err := runtime.NewWazeroRuntime()
+	// Create a new Wazero runtime instance and assign it to currentRuntime
+	r, err := wasm.NewWazeroRuntime()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create wazero runtime: %v", err))
 	}
@@ -26,8 +24,9 @@ type Cache struct {
 }
 
 // currentRuntime should be initialized with an instance of WazeroRuntime or another runtime.
-var currentRuntime runtime.WasmRuntime
+var currentRuntime wasm.WazeroRuntime
 
+// InitCache initializes a new cache for the WASM runtime.
 func InitCache(config types.VMConfig) (Cache, error) {
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
@@ -37,94 +36,80 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	lockPath := filepath.Join(config.Cache.BaseDir, "exclusive.lock")
 	lockfile, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
+		return Cache{}, fmt.Errorf("Could not open exclusive.lock: %w", err)
 	}
 
 	// Write the lockfile content
-	_, err = lockfile.WriteString("This is a lockfile that prevents two VM instances from operating on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
+	_, err = lockfile.WriteString("lock")
 	if err != nil {
 		lockfile.Close()
-		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
-	}
-
-	// Try to acquire the lock
-	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
-	if err != nil {
-		lockfile.Close()
-		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
-	}
-
-	// Initialize the runtime with the config
-	handle, err := currentRuntime.InitCache(config)
-	if err != nil {
-		if err := unix.Flock(int(lockfile.Fd()), unix.LOCK_UN); err != nil {
-			fmt.Printf("Error unlocking file: %v\n", err)
-		}
-		lockfile.Close()
-		return Cache{}, err
+		return Cache{}, fmt.Errorf("Could not write to exclusive.lock: %w", err)
 	}
 
 	return Cache{
-		handle:   handle,
+		handle:   currentRuntime.InitCache(config),
 		lockfile: *lockfile,
 	}, nil
 }
 
+// ReleaseCache releases resources associated with the cache.
 func ReleaseCache(cache Cache) {
-	if cache.handle != nil {
-		currentRuntime.ReleaseCache(cache.handle)
-	}
-
-	// Release the file lock and close the lockfile
-	if cache.lockfile != (os.File{}) {
-		if err := unix.Flock(int(cache.lockfile.Fd()), unix.LOCK_UN); err != nil {
-			fmt.Printf("Error unlocking cache file: %v\n", err)
-		}
-		cache.lockfile.Close()
-	}
+	cache.lockfile.Close()
+	currentRuntime.ReleaseCache(cache.handle)
 }
 
+// StoreCode stores the given WASM code in the cache.
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
-	if cache.handle == nil {
-		return nil, fmt.Errorf("cache handle is nil")
-	}
 	checksum, err := currentRuntime.StoreCode(wasm, persist)
-	return checksum, err
+	if err != nil {
+		return nil, fmt.Errorf("Failed to store code: %w", err)
+	}
+	return checksum, nil
 }
 
+// StoreCodeUnchecked stores the given WASM code without performing checks.
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	checksum, err := currentRuntime.StoreCodeUnchecked(wasm)
-	return checksum, err
+	if err != nil {
+		return nil, fmt.Errorf("Failed to store code unchecked: %w", err)
+	}
+	return checksum, nil
 }
 
+// GetCode retrieves the WASM code for the given checksum.
+func GetCode(cache Cache, checksum []byte) ([]byte, error) {
+	code, err := currentRuntime.GetCode(checksum)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get code: %w", err)
+	}
+	return code, nil
+}
+
+// RemoveCode removes the WASM code for the given checksum.
 func RemoveCode(cache Cache, checksum []byte) error {
 	return currentRuntime.RemoveCode(checksum)
 }
 
-func GetCode(cache Cache, checksum []byte) ([]byte, error) {
-	return currentRuntime.GetCode(checksum)
-}
-
+// Pin pins the given checksum in the cache.
 func Pin(cache Cache, checksum []byte) error {
 	return currentRuntime.Pin(checksum)
 }
 
+// Unpin unpins the given checksum in the cache.
 func Unpin(cache Cache, checksum []byte) error {
 	return currentRuntime.Unpin(checksum)
 }
 
+// AnalyzeCode analyzes the given checksum for metrics.
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
-	return currentRuntime.AnalyzeCode(checksum)
+	report, err := currentRuntime.AnalyzeCode(checksum)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to analyze code: %w", err)
+	}
+	return report, nil
 }
 
-func GetMetrics(cache Cache) (*types.Metrics, error) {
-	return currentRuntime.GetMetrics()
-}
-
-func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
-	return currentRuntime.GetPinnedMetrics()
-}
-
+// Instantiate instantiates a contract with the given parameters.
 func Instantiate(
 	cache Cache,
 	checksum []byte,
@@ -141,6 +126,7 @@ func Instantiate(
 	return currentRuntime.Instantiate(checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// Execute executes a contract with the given parameters.
 func Execute(
 	cache Cache,
 	checksum []byte,
@@ -157,72 +143,12 @@ func Execute(
 	return currentRuntime.Execute(checksum, env, info, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
-func Migrate(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *types.Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	return currentRuntime.Migrate(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func MigrateWithInfo(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	migrateInfo []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *types.Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	return currentRuntime.MigrateWithInfo(checksum, env, msg, migrateInfo, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func Sudo(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *types.Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	return currentRuntime.Sudo(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
-func Reply(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	reply []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *types.Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	return currentRuntime.Reply(checksum, env, reply, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
+// Query queries a contract with the given parameters.
 func Query(
 	cache Cache,
 	checksum []byte,
 	env []byte,
-	msg []byte,
+	query []byte,
 	gasMeter *types.GasMeter,
 	store types.KVStore,
 	api *types.GoAPI,
@@ -230,9 +156,10 @@ func Query(
 	gasLimit uint64,
 	printDebug bool,
 ) ([]byte, types.GasReport, error) {
-	return currentRuntime.Query(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
+	return currentRuntime.Query(checksum, env, query, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCChannelOpen handles IBC channel opening.
 func IBCChannelOpen(
 	cache Cache,
 	checksum []byte,
@@ -248,6 +175,7 @@ func IBCChannelOpen(
 	return currentRuntime.IBCChannelOpen(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCChannelConnect handles IBC channel connection.
 func IBCChannelConnect(
 	cache Cache,
 	checksum []byte,
@@ -263,21 +191,7 @@ func IBCChannelConnect(
 	return currentRuntime.IBCChannelConnect(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
-func IBCChannelClose(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *types.Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	return currentRuntime.IBCChannelClose(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
-}
-
+// IBCPacketReceive handles IBC packet reception.
 func IBCPacketReceive(
 	cache Cache,
 	checksum []byte,
@@ -293,6 +207,7 @@ func IBCPacketReceive(
 	return currentRuntime.IBCPacketReceive(checksum, env, packet, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCPacketAck handles IBC packet acknowledgment.
 func IBCPacketAck(
 	cache Cache,
 	checksum []byte,
@@ -308,6 +223,7 @@ func IBCPacketAck(
 	return currentRuntime.IBCPacketAck(checksum, env, ack, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCPacketTimeout handles IBC packet timeout.
 func IBCPacketTimeout(
 	cache Cache,
 	checksum []byte,
@@ -323,6 +239,7 @@ func IBCPacketTimeout(
 	return currentRuntime.IBCPacketTimeout(checksum, env, packet, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCSourceCallback handles IBC source callbacks.
 func IBCSourceCallback(
 	cache Cache,
 	checksum []byte,
@@ -338,6 +255,7 @@ func IBCSourceCallback(
 	return currentRuntime.IBCSourceCallback(checksum, env, msg, gasMeter, store, api, querier, gasLimit, printDebug)
 }
 
+// IBCDestinationCallback handles IBC destination callbacks.
 func IBCDestinationCallback(
 	cache Cache,
 	checksum []byte,

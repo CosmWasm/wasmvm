@@ -1,5 +1,4 @@
-// file: internal/runtime/wasm_runtime.go
-package runtime
+package inteface
 
 import "github.com/CosmWasm/wasmvm/v2/types"
 

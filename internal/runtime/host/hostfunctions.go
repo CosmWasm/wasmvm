@@ -310,7 +310,7 @@ func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
 	fmt.Printf("=== Host Function: db_read ===\n")
 	fmt.Printf("Input keyPtr: 0x%x\n", keyPtr)
 
-	keyLenBytes, err := env.memManager.Read(keyPtr, 4)
+	keyLenBytes, err := env.MemManager.Read(keyPtr, 4)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read key length: %v\n", err)
 		return 0
