@@ -651,7 +651,7 @@ func hostBls12381AggregateG1(ctx context.Context, mod api.Module, g1sPtr, outPtr
 		return 0
 	}
 
-	pointCount := len(g1s) / BLS12_381_G1_POINT_LEN
+	pointCount := len(g1s) / constants.BLS12_381_G1_POINT_LEN
 	if pointCount == 0 {
 		fmt.Printf("ERROR: No G1 points to aggregate\n")
 		return 0
@@ -664,7 +664,7 @@ func hostBls12381AggregateG1(ctx context.Context, mod api.Module, g1sPtr, outPtr
 		return 0
 	}
 
-	result, err := BLS12381AggregateG1(splitIntoPoints(g1s, BLS12_381_G1_POINT_LEN))
+	result, err := constants.BLS12381AggregateG1(splitIntoPoints(g1s, constants.BLS12_381_G1_POINT_LEN))
 	if err != nil {
 		fmt.Printf("ERROR: Failed to aggregate G1 points: %v\n", err)
 		return 0
@@ -696,13 +696,13 @@ func hostBls12381AggregateG2(ctx context.Context, mod api.Module, g2sPtr, outPtr
 	env := envVal.(*RuntimeEnvironment)
 	mem := mod.Memory()
 
-	g2s, err := readMemory(mem, g2sPtr, BLS12_381_MAX_AGGREGATE_SIZE)
+	g2s, err := readMemory(mem, g2sPtr, constants.BLS12_381_MAX_AGGREGATE_SIZE)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read G2 points from memory: %v\n", err)
 		return 0
 	}
 
-	pointCount := len(g2s) / BLS12_381_G2_POINT_LEN
+	pointCount := len(g2s) / constants.BLS12_381_G2_POINT_LEN
 	if pointCount == 0 {
 		fmt.Printf("ERROR: No G2 points to aggregate\n")
 		return 0
@@ -715,7 +715,7 @@ func hostBls12381AggregateG2(ctx context.Context, mod api.Module, g2sPtr, outPtr
 		return 0
 	}
 
-	result, err := BLS12381AggregateG2(splitIntoPoints(g2s, BLS12_381_G2_POINT_LEN))
+	result, err := BLS12381AggregateG2(splitIntoPoints(g2s, constants.BLS12_381_G2_POINT_LEN))
 	if err != nil {
 		fmt.Printf("ERROR: Failed to aggregate G2 points: %v\n", err)
 		return 0
