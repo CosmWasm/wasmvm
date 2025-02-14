@@ -1,4 +1,4 @@
-package inteface
+package wasmvmint
 
 import "github.com/CosmWasm/wasmvm/v2/types"
 
