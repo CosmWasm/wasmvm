@@ -8,6 +8,9 @@ linters:
     - gofumpt
     - gci
     - testifylint
+    - errcheck
+    - thelper
+    - staticcheck
 
 linters-settings:
   gci:
