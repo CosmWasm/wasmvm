@@ -143,17 +143,18 @@ func TestWasmQuerySerialization(t *testing.T) {
 }
 
 func TestContractInfoResponseSerialization(t *testing.T) {
-	document := []byte(`{"code_id":67,"creator":"jane","admin":"king","pinned":true,"ibc_port":"wasm.123"}`)
+	document := []byte(`{"code_id":67,"creator":"jane","admin":"king","pinned":true,"ibc_port":"wasm.123", "eureka_port":"wasm.123"}`)
 	var res ContractInfoResponse
 	err := json.Unmarshal(document, &res)
 	require.NoError(t, err)
 
 	require.Equal(t, ContractInfoResponse{
-		CodeID:  uint64(67),
-		Creator: "jane",
-		Admin:   "king",
-		Pinned:  true,
-		IBCPort: "wasm.123",
+		CodeID:     uint64(67),
+		Creator:    "jane",
+		Admin:      "king",
+		Pinned:     true,
+		IBCPort:    "wasm.123",
+		EurekaPort: "wasm.123",
 	}, res)
 }
 
