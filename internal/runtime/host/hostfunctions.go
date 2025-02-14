@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/tetratelabs/wazero/api"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
@@ -37,72 +39,22 @@ const (
 	envKey contextKey = "env"
 )
 
-// RuntimeEnvironment holds the environment for contract execution.
-// (Its full definition is assumed to be defined elsewhere.)
-//
-// NewRuntimeEnvironment creates a new runtime environment.
-func NewRuntimeEnvironment(db types.KVStore, api types.GoAPI, querier types.Querier, gasLimit uint64) *RuntimeEnvironment {
-	return &RuntimeEnvironment{
-		DB:       db,
-		API:      api,
-		Querier:  querier,
-		Gas:      NewGasState(gasLimit), // Initialize gas meter
-		gasLimit: gasLimit,
-		gasUsed:  0,
+// GasState tracks gas consumption
+type GasState struct {
+	limit uint64
+	used  uint64
+}
 
-		// Initialize GasConfig with default values
-		GasConfig: DefaultGasConfig(),
-
-		iterators: make(map[uint64]map[uint64]types.Iterator),
+func NewGasState(limit uint64) GasState {
+	return GasState{
+		limit: limit,
+		used:  0,
 	}
 }
 
-// StartCall starts a new contract call and returns a call ID.
-func (e *RuntimeEnvironment) StartCall() uint64 {
-	e.iteratorsMutex.Lock()
-	defer e.iteratorsMutex.Unlock()
-
-	e.nextCallID++
-	e.iterators[e.nextCallID] = make(map[uint64]types.Iterator)
-	return e.nextCallID
-}
-
-// StoreIterator stores an iterator and returns its ID.
-func (e *RuntimeEnvironment) StoreIterator(callID uint64, iter types.Iterator) uint64 {
-	e.iteratorsMutex.Lock()
-	defer e.iteratorsMutex.Unlock()
-
-	e.nextIterID++
-	if e.iterators[callID] == nil {
-		e.iterators[callID] = make(map[uint64]types.Iterator)
-	}
-	e.iterators[callID][e.nextIterID] = iter
-	return e.nextIterID
-}
-
-// GetIterator retrieves an iterator by its IDs.
-func (e *RuntimeEnvironment) GetIterator(callID, iterID uint64) types.Iterator {
-	e.iteratorsMutex.RLock()
-	defer e.iteratorsMutex.RUnlock()
-
-	if callMap, exists := e.iterators[callID]; exists {
-		return callMap[iterID]
-	}
-	return nil
-}
-
-// EndCall cleans up all iterators for a call.
-func (e *RuntimeEnvironment) EndCall(callID uint64) {
-	e.iteratorsMutex.Lock()
-	defer e.iteratorsMutex.Unlock()
-
-	delete(e.iterators, callID)
-}
-
-// IteratorID represents a unique identifier for an iterator.
-type IteratorID struct {
-	CallID     uint64
-	IteratorID uint64
+// GasConsumed implements types.GasMeter
+func (g GasState) GasConsumed() uint64 {
+	return g.used
 }
 
 // allocateInContract calls the contract's allocate function.
@@ -122,23 +74,33 @@ func allocateInContract(ctx context.Context, mod api.Module, size uint32) (uint3
 	return uint32(results[0]), nil
 }
 
+// readNullTerminatedString reads bytes from memory starting at addrPtr until a null byte is found.
+func readNullTerminatedString(memManager *memory.MemoryManager, addrPtr uint32) ([]byte, error) {
+	var buf []byte
+	for i := addrPtr; ; i++ {
+		b, err := memManager.Read(i, 1)
+		if err != nil {
+			return nil, fmt.Errorf("memory access error at offset %d: %w", i, err)
+		}
+		if b[0] == 0 {
+			break
+		}
+		buf = append(buf, b[0])
+	}
+	return buf, nil
+}
+
 // hostHumanizeAddress implements addr_humanize.
-// It reads a null-terminated address from memory (ignoring addrLen),
-// calls the API's HumanizeAddress function, and writes back the result.
-// hostHumanizeAddress reads a null-terminated address from memory,
-// calls the API to humanize it, logs intermediate results, and writes
-// the humanized address back into memory.
 func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uint32) uint32 {
 	envVal := ctx.Value(envKey)
 	if envVal == nil {
 		fmt.Println("[ERROR] hostHumanizeAddress: runtime environment not found in context")
 		return 1
 	}
-	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
+	env := envVal.(*runtime.RuntimeEnvironment)
 
 	// Read the address as a null-terminated byte slice.
-	addr, err := readNullTerminatedString(mem, addrPtr)
+	addr, err := readNullTerminatedString(env.MemManager, addrPtr)
 	if err != nil {
 		fmt.Printf("[ERROR] hostHumanizeAddress: failed to read address from memory: %v\n", err)
 		return 1
@@ -154,7 +116,7 @@ func hostHumanizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uint32)
 	fmt.Printf("[DEBUG] hostHumanizeAddress: humanized address: '%s'\n", human)
 
 	// Write the result back into memory.
-	if err := writeMemory(mem, addrPtr, []byte(human), false); err != nil {
+	if err := env.MemManager.Write(addrPtr, []byte(human)); err != nil {
 		fmt.Printf("[ERROR] hostHumanizeAddress: failed to write humanized address back to memory: %v\n", err)
 		return 1
 	}
@@ -172,10 +134,9 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uin
 		return 1
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
 	// Read the address as a null-terminated byte slice.
-	addr, err := readNullTerminatedString(mem, addrPtr)
+	addr, err := readNullTerminatedString(env.memManager, addrPtr)
 	if err != nil {
 		fmt.Printf("[ERROR] hostCanonicalizeAddress: failed to read address from memory: %v\n", err)
 		return 1
@@ -191,7 +152,7 @@ func hostCanonicalizeAddress(ctx context.Context, mod api.Module, addrPtr, _ uin
 	fmt.Printf("[DEBUG] hostCanonicalizeAddress: canonical address (hex): %x\n", canonical)
 
 	// Write the canonical address back to memory.
-	if err := writeMemory(mem, addrPtr, canonical, false); err != nil {
+	if err := env.memManager.Write(addrPtr, canonical); err != nil {
 		fmt.Printf("[ERROR] hostCanonicalizeAddress: failed to write canonical address back to memory: %v\n", err)
 		return 1
 	}
@@ -207,7 +168,7 @@ func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr uint32) ui
 	mem := mod.Memory()
 
 	// Read the address as a null-terminated string.
-	addr, err := readNullTerminatedString(mem, addrPtr)
+	addr, err := readNullTerminatedString(env.memManager, addrPtr)
 	if err != nil {
 		panic(fmt.Sprintf("[ERROR] hostValidateAddress: failed to read address from memory: %v", err))
 	}
@@ -221,23 +182,6 @@ func hostValidateAddress(ctx context.Context, mod api.Module, addrPtr uint32) ui
 	}
 	fmt.Printf("[DEBUG] hostValidateAddress: address validated successfully\n")
 	return 1 // valid
-}
-
-// --- Helper: readNullTerminatedString ---
-// Reads bytes from memory starting at addrPtr until a null byte is found.
-func readNullTerminatedString(mem api.Memory, addrPtr uint32) ([]byte, error) {
-	var buf []byte
-	for i := addrPtr; ; i++ {
-		b, ok := mem.ReadByte(i)
-		if !ok {
-			return nil, fmt.Errorf("memory access error at offset %d", i)
-		}
-		if b == 0 {
-			break
-		}
-		buf = append(buf, b)
-	}
-	return buf, nil
 }
 
 // hostScan implements db_scan.
@@ -267,14 +211,13 @@ func hostScan(ctx context.Context, mod api.Module, startPtr, startLen, order uin
 	return uint32(callID<<16 | iterID&0xFFFF)
 }
 
-// hostNext implements db_next.
-func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
+// hostDbNext implements db_next.
+func hostDbNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	envVal := ctx.Value(envKey)
 	if envVal == nil {
-		panic("[ERROR] hostNext: runtime environment not found in context")
+		panic("[ERROR] hostDbNext: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
 	callID := uint64(iterID >> 16)
 	actualIterID := uint64(iterID & 0xFFFF)
@@ -294,28 +237,28 @@ func hostNext(ctx context.Context, mod api.Module, iterID uint32) uint32 {
 	env.gasUsed += uint64(len(key)+len(value)) * constants.GasPerByte
 
 	totalLen := 4 + len(key) + 4 + len(value)
-	offset, err := allocateInContract(ctx, mod, uint32(totalLen))
+	offset, err := env.memManager.Allocate(uint32(totalLen))
 	if err != nil {
 		panic(fmt.Sprintf("failed to allocate memory: %v", err))
 	}
 
 	keyLenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(keyLenData, uint32(len(key)))
-	if err := writeMemory(mem, offset, keyLenData, false); err != nil {
+	if err := env.memManager.Write(offset, keyLenData); err != nil {
 		panic(fmt.Sprintf("failed to write key length: %v", err))
 	}
 
-	if err := writeMemory(mem, offset+4, key, false); err != nil {
+	if err := env.memManager.Write(offset+4, key); err != nil {
 		panic(fmt.Sprintf("failed to write key: %v", err))
 	}
 
 	valLenData := make([]byte, 4)
 	binary.LittleEndian.PutUint32(valLenData, uint32(len(value)))
-	if err := writeMemory(mem, offset+4+uint32(len(key)), valLenData, false); err != nil {
+	if err := env.memManager.Write(offset+4+uint32(len(key)), valLenData); err != nil {
 		panic(fmt.Sprintf("failed to write value length: %v", err))
 	}
 
-	if err := writeMemory(mem, offset+8+uint32(len(key)), value, false); err != nil {
+	if err := env.memManager.Write(offset+8+uint32(len(key)), value); err != nil {
 		panic(fmt.Sprintf("failed to write value: %v", err))
 	}
 
@@ -364,11 +307,10 @@ func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
 		panic("[ERROR] hostDbRead: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 	fmt.Printf("=== Host Function: db_read ===\n")
 	fmt.Printf("Input keyPtr: 0x%x\n", keyPtr)
 
-	keyLenBytes, err := readMemory(mem, keyPtr, 4)
+	keyLenBytes, err := env.memManager.Read(keyPtr, 4)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read key length: %v\n", err)
 		return 0
@@ -376,7 +318,7 @@ func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
 	keyLen := binary.LittleEndian.Uint32(keyLenBytes)
 	fmt.Printf("Key length: %d bytes\n", keyLen)
 
-	key, err := readMemory(mem, keyPtr+4, keyLen)
+	key, err := env.memManager.Read(keyPtr+4, keyLen)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to read key data: %v\n", err)
 		return 0
@@ -386,14 +328,14 @@ func hostDbRead(ctx context.Context, mod api.Module, keyPtr uint32) uint32 {
 	value := env.DB.Get(key)
 	fmt.Printf("Value found: %x\n", value)
 
-	valuePtr, err := allocateInContract(ctx, mod, uint32(len(value)))
+	valuePtr, err := env.memManager.Allocate(uint32(len(value)))
 	if err != nil {
 		fmt.Printf("ERROR: Failed to allocate memory: %v\n", err)
 		return 0
 	}
 
-	if !mem.Write(valuePtr, value) {
-		fmt.Printf("ERROR: Failed to write value to memory\n")
+	if err := env.memManager.Write(valuePtr, value); err != nil {
+		fmt.Printf("ERROR: Failed to write value to memory: %v\n", err)
 		return 0
 	}
 
@@ -407,26 +349,25 @@ func hostDbWrite(ctx context.Context, mod api.Module, keyPtr, valuePtr uint32) {
 		panic("[ERROR] hostDbWrite: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
-	keyLenBytes, err := readMemory(mem, keyPtr, 4)
+	keyLenBytes, err := env.memManager.Read(keyPtr, 4)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read key length from memory: %v", err))
 	}
 	keyLen := binary.LittleEndian.Uint32(keyLenBytes)
 
-	valLenBytes, err := readMemory(mem, valuePtr, 4)
+	valLenBytes, err := env.memManager.Read(valuePtr, 4)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read value length from memory: %v", err))
 	}
 	valLen := binary.LittleEndian.Uint32(valLenBytes)
 
-	key, err := readMemory(mem, keyPtr+4, keyLen)
+	key, err := env.memManager.Read(keyPtr+4, keyLen)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read key from memory: %v", err))
 	}
 
-	value, err := readMemory(mem, valuePtr+4, valLen)
+	value, err := env.memManager.Read(valuePtr+4, valLen)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read value from memory: %v", err))
 	}
@@ -441,19 +382,18 @@ func hostSecp256k1Verify(ctx context.Context, mod api.Module, hash_ptr, sig_ptr,
 		panic("[ERROR] hostSecp256k1Verify: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
-	message, err := readMemory(mem, hash_ptr, 32)
+	message, err := env.memManager.Read(hash_ptr, 32)
 	if err != nil {
 		return 0
 	}
 
-	signature, err := readMemory(mem, sig_ptr, 64)
+	signature, err := env.memManager.Read(sig_ptr, 64)
 	if err != nil {
 		return 0
 	}
 
-	pubKey, err := readMemory(mem, pubkey_ptr, 33)
+	pubKey, err := env.memManager.Read(pubkey_ptr, 33)
 	if err != nil {
 		return 0
 	}
@@ -475,14 +415,13 @@ func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, si
 		panic("[ERROR] hostSecp256k1RecoverPubkey: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
-	hash, err := readMemory(mem, hashPtr, 32)
+	hash, err := env.memManager.Read(hashPtr, 32)
 	if err != nil {
 		return 0
 	}
 
-	sig, err := readMemory(mem, sigPtr, 64)
+	sig, err := env.memManager.Read(sigPtr, 64)
 	if err != nil {
 		return 0
 	}
@@ -492,12 +431,12 @@ func hostSecp256k1RecoverPubkey(ctx context.Context, mod api.Module, hashPtr, si
 		return 0
 	}
 
-	offset, err := allocateInContract(ctx, mod, uint32(len(pubkey)))
+	offset, err := env.memManager.Allocate(uint32(len(pubkey)))
 	if err != nil {
 		return 0
 	}
 
-	if err := writeMemory(mem, offset, pubkey, false); err != nil {
+	if err := env.memManager.Write(offset, pubkey); err != nil {
 		return 0
 	}
 
@@ -511,19 +450,18 @@ func hostEd25519Verify(ctx context.Context, mod api.Module, msg_ptr, sig_ptr, pu
 		panic("[ERROR] hostEd25519Verify: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
-	message, err := readMemory(mem, msg_ptr, 32)
+	message, err := env.memManager.Read(msg_ptr, 32)
 	if err != nil {
 		return 0
 	}
 
-	signature, err := readMemory(mem, sig_ptr, 64)
+	signature, err := env.memManager.Read(sig_ptr, 64)
 	if err != nil {
 		return 0
 	}
 
-	pubKey, err := readMemory(mem, pubkey_ptr, 32)
+	pubKey, err := env.memManager.Read(pubkey_ptr, 32)
 	if err != nil {
 		return 0
 	}
@@ -545,9 +483,8 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 		panic("[ERROR] hostEd25519BatchVerify: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
-	countBytes, err := readMemory(mem, msgs_ptr, 4)
+	countBytes, err := env.memManager.Read(msgs_ptr, 4)
 	if err != nil {
 		return 0
 	}
@@ -556,13 +493,13 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 	messages := make([][]byte, count)
 	msgPtr := msgs_ptr + 4
 	for i := uint32(0); i < count; i++ {
-		lenBytes, err := readMemory(mem, msgPtr, 4)
+		lenBytes, err := env.memManager.Read(msgPtr, 4)
 		if err != nil {
 			return 0
 		}
 		msgLen := binary.LittleEndian.Uint32(lenBytes)
 		msgPtr += 4
-		msg, err := readMemory(mem, msgPtr, msgLen)
+		msg, err := env.memManager.Read(msgPtr, msgLen)
 		if err != nil {
 			return 0
 		}
@@ -573,7 +510,7 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 	signatures := make([][]byte, count)
 	sigPtr := sigs_ptr
 	for i := uint32(0); i < count; i++ {
-		sig, err := readMemory(mem, sigPtr, 64)
+		sig, err := env.memManager.Read(sigPtr, 64)
 		if err != nil {
 			return 0
 		}
@@ -584,7 +521,7 @@ func hostEd25519BatchVerify(ctx context.Context, mod api.Module, msgs_ptr, sigs_
 	pubkeys := make([][]byte, count)
 	pubkeyPtr := pubkeys_ptr
 	for i := uint32(0); i < count; i++ {
-		pubkey, err := readMemory(mem, pubkeyPtr, 32)
+		pubkey, err := env.memManager.Read(pubkeyPtr, 32)
 		if err != nil {
 			return 0
 		}
@@ -799,17 +736,16 @@ func hostDbRemove(ctx context.Context, mod api.Module, keyPtr uint32) {
 		panic("[ERROR] hostDbRemove: runtime environment not found in context")
 	}
 	env := envVal.(*RuntimeEnvironment)
-	mem := mod.Memory()
 
 	// Read the 4-byte length prefix from the key pointer.
-	lenBytes, err := readMemory(mem, keyPtr, 4)
+	lenBytes, err := env.memManager.Read(keyPtr, 4)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read key length from memory: %v", err))
 	}
 	keyLen := binary.LittleEndian.Uint32(lenBytes)
 
 	// Read the actual key.
-	key, err := readMemory(mem, keyPtr+4, keyLen)
+	key, err := env.memManager.Read(keyPtr+4, keyLen)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read key from memory: %v", err))
 	}

@@ -11,6 +11,8 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	// Assume types and memory packages are in same module
+
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/gas"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
@@ -507,4 +509,48 @@ func (vm *WazeroVM) cleanupModule(module api.Module) {
 	if vm.debug {
 		log.Printf("Module %s cleaned up", module.Name())
 	}
+}
+
+// RuntimeEnvironment holds all execution context for a contract call.
+type RuntimeEnvironment struct {
+	DB        types.KVStore
+	API       types.GoAPI
+	Querier   types.Querier
+	Gas       types.GasMeter
+	GasConfig types.GasConfig
+
+	// internal gas limit and gas used for host functions:
+	gasLimit uint64
+	gasUsed  uint64
+
+	// Iterator management.
+	iterators      map[uint64]map[uint64]types.Iterator
+	iteratorsMutex types.RWMutex // alias for sync.RWMutex from types package if desired
+	nextCallID     uint64
+	nextIterID     uint64
+
+	MemManager *memory.MemoryManager
+}
+
+// NewRuntimeEnvironment creates a new runtime environment for contract execution
+func NewRuntimeEnvironment(db types.KVStore, api types.GoAPI, querier types.Querier, gasLimit uint64, mod api.Module) (*RuntimeEnvironment, error) {
+	mm, err := memory.NewMemoryManager(mod)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create memory manager: %w", err)
+	}
+
+	return &RuntimeEnvironment{
+		DB:             db,
+		API:            api,
+		Querier:        querier,
+		Gas:            gas.NewGasState(gasLimit),
+		GasConfig:      gas.DefaultGasConfig(),
+		gasLimit:       gasLimit,
+		gasUsed:        0,
+		iterators:      make(map[uint64]map[uint64]types.Iterator),
+		iteratorsMutex: types.RWMutex{},
+		nextCallID:     1,
+		nextIterID:     1,
+		MemManager:     mm,
+	}, nil
 }
