@@ -158,7 +158,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*val).is_none {
+	if !val.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -231,7 +231,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -272,19 +272,13 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 
 //export cNext
 func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
-	// typical usage of iterator
-	// 	for ; itr.Valid(); itr.Next() {
-	// 		k, v := itr.Key(); itr.Value()
-	// 		...
-	// 	}
-
 	defer recoverPanic(&ret)
 	if ref.call_id == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*key).is_none || !(*val).is_none {
+	if !key.is_none || !val.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -336,7 +330,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*output).is_none {
+	if !output.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -384,7 +378,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -412,7 +406,7 @@ func cCanonicalizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVect
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -439,7 +433,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	if errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -479,7 +473,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*result).is_none || !(*errOut).is_none {
+	if !result.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 

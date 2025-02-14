@@ -13,7 +13,7 @@ const (
 	bTreeDegree = 32
 )
 
-// item is a btree.Item with byte slices as keys and values
+// item is a btree.Item with byte slices as keys and values.
 type item struct {
 	key   []byte
 	value []byte
