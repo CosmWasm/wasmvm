@@ -3,6 +3,7 @@ package api
 import (
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -15,9 +16,9 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-//-------------------------------------
-// Example tests for memory bridging
-//-------------------------------------
+//-----------------------------------------------------------------------------
+// Existing Table-Driven Tests for Memory Bridging and Unmanaged Vectors
+//-----------------------------------------------------------------------------
 
 func TestMakeView_TableDriven(t *testing.T) {
 	type testCase struct {
@@ -155,9 +156,7 @@ func TestCopyDestroyUnmanagedVector_Concurrent(t *testing.T) {
 	wg.Wait()
 }
 
-// table-driven tests to highlight potential memory/resource leaks in the API changes.
 func TestMemoryLeakScenarios(t *testing.T) {
-	// Define test cases in a table-driven style.
 	tests := []struct {
 		name string
 		run  func(t *testing.T)
@@ -165,178 +164,122 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "Iterator_NoClose_WithGC",
 			run: func(t *testing.T) {
-				// This test simulates not closing an iterator and relying on GC to cleanup.
-				// Expected behavior: GC triggers any finalizers to release resources (no memory/lock leak).
-				// If the iterator is not properly freed (no finalizer), a write will hang, indicating a leak.
 				db := testdb.NewMemDB()
-				defer db.Close() // ensure DB is closed at end to avoid any persistent resource usage
+				defer db.Close()
 
-				// Prepare some data in the DB.
 				key := []byte("key1")
 				val := []byte("value1")
 				db.Set(key, val)
 
-				// Create an iterator over a range including the key. Do NOT close it explicitly.
 				iter := db.Iterator([]byte("key1"), []byte("zzzz"))
 				require.NoError(t, iter.Error(), "creating iterator should not error")
-				// Normally, users must call iter.Close(), but here we simulate a bug (forgetting to close).
-				// Remove the only reference to the iterator so it becomes garbage.
+				// Simulate leak by not closing the iterator.
 				iter = nil
 
-				// Force garbage collection to run any finalizers for the iterator.
 				runtime.GC()
 
-				// Now attempt to write to the DB. If the iterator's lock was not freed, this write will block.
 				writeDone := make(chan error, 1)
 				go func() {
-					// Try to set a new key; this will block if the iterator's read-lock is still held (leak).
 					db.Set([]byte("key2"), []byte("value2"))
 					writeDone <- nil
 				}()
 
-				// Wait for the write to complete or time out.
 				select {
 				case err := <-writeDone:
-					// The write completed. We expect it to succeed if no leak (lock freed via finalizer).
-					require.NoError(t, err, "DB write should not error after iterator is garbage-collected")
+					require.NoError(t, err, "DB write should succeed after GC")
 				case <-time.After(200 * time.Millisecond):
-					// Timeout: The write likely hung due to an unfreed lock (iterator leak).
-					// This indicates a memory/lock leak because the iterator was not closed and not finalized.
-					require.FailNow(t,
-						"DB write timed out, indicating the iterator's lock was never released (potential leak)",
-					)
+					require.FailNow(t, "DB write timed out; iterator lock may not have been released")
 				}
 			},
 		},
 		{
 			name: "Iterator_ProperClose_NoLeak",
 			run: func(t *testing.T) {
-				// This test ensures that closing the iterator releases resources immediately (no leak).
 				db := testdb.NewMemDB()
 				defer db.Close()
 
-				// Insert some data.
 				db.Set([]byte("a"), []byte("value-a"))
 				db.Set([]byte("b"), []byte("value-b"))
 
-				// Create an iterator and then properly close it.
 				iter := db.Iterator([]byte("a"), []byte("z"))
 				require.NoError(t, iter.Error(), "creating iterator")
-				// Consume the iterator (optional: read all items to simulate usage).
 				for iter.Valid() {
-					_ = iter.Key()   // access key (would be "a", then "b")
-					_ = iter.Value() // access value
+					_ = iter.Key()
+					_ = iter.Value()
 					iter.Next()
 				}
-				// Close the iterator to free its resources.
 				require.NoError(t, iter.Close(), "closing iterator should succeed")
 
-				// After proper close, a write should proceed without any delay or issue.
 				db.Set([]byte("c"), []byte("value-c"))
 			},
 		},
 		{
 			name: "Cache_Release_Frees_Memory",
 			run: func(t *testing.T) {
-				// This test creates and releases VM caches to ensure no RAM leakage.
-				// It measures memory usage to verify that releasing the cache frees most allocated memory.
-				// If memory is not freed (e.g., missing ReleaseCache call or underlying leak), the test will detect it.
-				// Note: This test may be sensitive to GC timing and memory fragmentation, so it allows some slack.
-
-				// Helper to get current memory allocation.
+				// Test that releasing caches frees memory.
 				getAlloc := func() uint64 {
 					var m runtime.MemStats
 					runtime.ReadMemStats(&m)
 					return m.HeapAlloc
 				}
 
-				// Use a temporary directory for the cache (simulate disk cache if needed).
 				dir, err := os.MkdirTemp("", "wasmvm-cache-*")
 				require.NoError(t, err, "should create temp dir for cache")
 				defer os.RemoveAll(dir)
 
-				// Baseline memory usage.
 				runtime.GC()
 				baseAlloc := getAlloc()
 
-				// Number of caches to create for the test.
 				const N = 5
-				caches := make([]Cache, 0, N) // Cache is the interface for VM cache
+				caches := make([]Cache, 0, N)
 				for i := 0; i < N; i++ {
-					// Initialize a new cache with small cache size and memory limit for testing.
 					config := types.VMConfig{
 						Cache: types.CacheOptions{
 							BaseDir:                  dir,
 							AvailableCapabilities:    []string{},
-							MemoryCacheSizeBytes:     types.NewSizeMebi(0),  // no persistent limit
-							InstanceMemoryLimitBytes: types.NewSizeMebi(32), // 32 MiB instance memory limit
+							MemoryCacheSizeBytes:     types.NewSizeMebi(0),
+							InstanceMemoryLimitBytes: types.NewSizeMebi(32),
 						},
 					}
 					cache, err := InitCache(config)
 					require.NoError(t, err, "InitCache should succeed")
 					caches = append(caches, cache)
-
-					// (Optional) If available, store a small WASM code to force some memory allocation in Rust.
-					// In case a compiled contract is needed to amplify memory usage:
-					// code := []byte{...} // a small valid WASM module bytes could be inserted here
-					// _, _, err = StoreCode(cache, code)
-					// require.NoError(t, err, "StoreCode should succeed")
 				}
 
-				// Measure memory after creating caches (without releasing yet).
 				runtime.GC()
 				allocAfterCreate := getAlloc()
 
-				// Release all caches to free their allocated memory.
 				for _, c := range caches {
 					ReleaseCache(c)
 				}
-
-				// Force GC to collect any freed resources.
 				runtime.GC()
 				allocAfterRelease := getAlloc()
 
-				// There should be no significant increase in allocated heap memory after releasing caches
-				// compared to the baseline. We allow some overhead for runtime allocations.
 				require.Less(t, allocAfterRelease, baseAlloc*2,
-					"Heap allocation after releasing caches is too high, indicating a memory leak in cache release. base=%d, afterRelease=%d",
-					baseAlloc, allocAfterRelease,
-				)
-				// Also, the memory after releasing should be much lower than after creating (most allocated memory freed).
+					"Heap allocation after releasing caches too high: base=%d, after=%d", baseAlloc, allocAfterRelease)
 				require.Less(t, allocAfterRelease*2, allocAfterCreate,
-					"Releasing caches did not free expected memory: before=%d, after=%d (possible leak in VM cache)",
-					allocAfterCreate, allocAfterRelease,
-				)
+					"Releasing caches did not free expected memory: before=%d, after=%d", allocAfterCreate, allocAfterRelease)
 			},
 		},
 		{
 			name: "MemDB_Iterator_Range_Correctness",
 			run: func(t *testing.T) {
-				// This test ensures the MemDB iterator respects range boundaries (logic correctness, not leak-related).
-				// It populates some keys and tests iterator results for various start/end ranges.
 				db := testdb.NewMemDB()
 				defer db.Close()
 
-				// Insert sample keys.
 				keys := [][]byte{[]byte("a"), []byte("b"), []byte("c")}
 				for _, k := range keys {
 					db.Set(k, []byte("val:"+string(k)))
 				}
 
-				// Table of sub-cases for different range queries.
 				subCases := []struct {
 					start, end []byte
 					expKeys    [][]byte
 				}{
-					// Full range (nil, nil) should return all keys in ascending order.
 					{nil, nil, [][]byte{[]byte("a"), []byte("b"), []byte("c")}},
-					// Range [a, c) should include "a", "b" (end is exclusive).
 					{[]byte("a"), []byte("c"), [][]byte{[]byte("a"), []byte("b")}},
-					// Range [a, b) should include "a" only.
 					{[]byte("a"), []byte("b"), [][]byte{[]byte("a")}},
-					// Range [b, b) should yield nothing (start == end).
 					{[]byte("b"), []byte("b"), [][]byte{}},
-					// Range [b, c] where end is not strictly greater than start; MemDB expects end exclusive, so treat "c" as exclusive boundary.
 					{[]byte("b"), []byte("c"), [][]byte{[]byte("b")}},
 				}
 
@@ -345,7 +288,6 @@ func TestMemoryLeakScenarios(t *testing.T) {
 					require.NoError(t, iter.Error(), "Iterator(%q, %q) should not error", sub.start, sub.end)
 					var gotKeys [][]byte
 					for ; iter.Valid(); iter.Next() {
-						// Copy the key because the underlying key is a pointer into the DB (modifying it would alter the DB).
 						k := append([]byte{}, iter.Key()...)
 						gotKeys = append(gotKeys, k)
 					}
@@ -356,8 +298,300 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		},
 	}
 
-	// Run each test case as a subtest.
 	for _, tc := range tests {
 		t.Run(tc.name, tc.run)
 	}
+}
+
+//-----------------------------------------------------------------------------
+// New Stress Tests
+//-----------------------------------------------------------------------------
+
+// TestStressHighVolumeInsert inserts a large number of items and tracks peak memory.
+func TestStressHighVolumeInsert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping high-volume insert test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const totalInserts = 100000
+	t.Logf("Inserting %d items...", totalInserts)
+
+	var mStart, mEnd runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&mStart)
+
+	for i := 0; i < totalInserts; i++ {
+		// Create a unique key (note: using Sprintf might be clearer in production)
+		key := []byte("key_" + time.Now().Format("150405.000000") + "_" + strconv.Itoa(i))
+		db.Set(key, []byte("value"))
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&mEnd)
+	t.Logf("Memory before: %d bytes, after: %d bytes", mStart.Alloc, mEnd.Alloc)
+
+	// Allow for some growth due to operational overhead.
+	require.LessOrEqual(t, mEnd.Alloc, mStart.Alloc+50*1024*1024,
+		"Memory usage exceeded expected threshold after high-volume insert")
+}
+
+// TestBulkDeletionMemoryRecovery verifies that deleting many entries frees memory.
+func TestBulkDeletionMemoryRecovery(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping bulk deletion test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const totalInserts = 50000
+	keys := make([][]byte, totalInserts)
+	for i := 0; i < totalInserts; i++ {
+		key := []byte("bulk_key_" + strconv.Itoa(i))
+		keys[i] = key
+		db.Set(key, []byte("bulk_value"))
+	}
+	runtime.GC()
+	var mBefore runtime.MemStats
+	runtime.ReadMemStats(&mBefore)
+
+	// Delete all keys.
+	for _, key := range keys {
+		db.Delete(key)
+	}
+	runtime.GC()
+	var mAfter runtime.MemStats
+	runtime.ReadMemStats(&mAfter)
+	t.Logf("Memory before deletion: %d bytes, after deletion: %d bytes", mBefore.Alloc, mAfter.Alloc)
+
+	require.Less(t, mAfter.Alloc, mBefore.Alloc, "Memory usage did not recover after bulk deletion")
+}
+
+// TestPeakMemoryTracking tracks the peak memory usage during high-load operations.
+func TestPeakMemoryTracking(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping peak memory tracking test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const totalOps = 100000
+	var peakAlloc uint64
+	var m runtime.MemStats
+	for i := 0; i < totalOps; i++ {
+		key := []byte("peak_key_" + strconv.Itoa(i))
+		db.Set(key, []byte("peak_value"))
+		if i%1000 == 0 {
+			runtime.GC()
+			runtime.ReadMemStats(&m)
+			if m.Alloc > peakAlloc {
+				peakAlloc = m.Alloc
+			}
+		}
+	}
+	t.Logf("Peak memory allocation observed: %d bytes", peakAlloc)
+	require.LessOrEqual(t, peakAlloc, uint64(200*1024*1024), "Peak memory usage too high")
+}
+
+//-----------------------------------------------------------------------------
+// New Edge Case Tests for Memory Leaks
+//-----------------------------------------------------------------------------
+
+// TestRepeatedCreateDestroyCycles repeatedly creates and destroys MemDB instances.
+func TestRepeatedCreateDestroyCycles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping repeated create/destroy cycles test in short mode")
+	}
+	const cycles = 100
+	var mStart, mEnd runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&mStart)
+	for i := 0; i < cycles; i++ {
+		db := testdb.NewMemDB()
+		db.Set([]byte("cycle_key"), []byte("cycle_value"))
+		db.Close()
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&mEnd)
+	t.Logf("Memory before cycles: %d bytes, after cycles: %d bytes", mStart.Alloc, mEnd.Alloc)
+	require.LessOrEqual(t, mEnd.Alloc, mStart.Alloc+10*1024*1024, "Memory leak detected over create/destroy cycles")
+}
+
+// TestSmallAllocationsLeak repeatedly allocates small objects to detect leaks.
+func TestSmallAllocationsLeak(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping small allocations leak test in short mode")
+	}
+	const iterations = 100000
+	var data [][]byte
+	for i := 0; i < iterations; i++ {
+		b := make([]byte, 32)
+		data = append(data, b)
+	}
+	data = nil
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	t.Logf("Memory after small allocations GC: %d bytes", m.Alloc)
+	require.Less(t, m.Alloc, uint64(50*1024*1024), "Memory leak detected in small allocations")
+}
+
+//-----------------------------------------------------------------------------
+// New Concurrency Tests
+//-----------------------------------------------------------------------------
+
+// TestConcurrentAccess performs parallel read/write operations on the MemDB.
+func TestConcurrentAccess(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrent access test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const numWriters = 10
+	const numReaders = 10
+	const opsPerGoroutine = 1000
+	var wg sync.WaitGroup
+
+	// Writers.
+	for i := 0; i < numWriters; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < opsPerGoroutine; j++ {
+				key := []byte("concurrent_key_" + strconv.Itoa(id) + "_" + strconv.Itoa(j))
+				db.Set(key, []byte("concurrent_value"))
+			}
+		}(i)
+	}
+
+	// Readers.
+	for i := 0; i < numReaders; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < opsPerGoroutine; j++ {
+				iter := db.Iterator(nil, nil)
+				for iter.Valid() {
+					_ = iter.Key()
+					iter.Next()
+				}
+				iter.Close()
+			}
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("Concurrent access test timed out; potential deadlock or race condition")
+	}
+}
+
+// TestLockingAndRelease simulates read-write conflicts to ensure proper lock handling.
+func TestLockingAndRelease(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping locking and release test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	db.Set([]byte("conflict_key"), []byte("initial"))
+
+	ready := make(chan struct{})
+	release := make(chan struct{})
+	go func() {
+		iter := db.Iterator([]byte("conflict_key"), []byte("zzzz"))
+		require.NoError(t, iter.Error(), "Iterator creation error")
+		close(ready) // signal iterator is active
+		<-release    // hold the iterator
+		iter.Close()
+	}()
+
+	<-ready
+	done := make(chan struct{})
+	go func() {
+		db.Set([]byte("conflict_key"), []byte("updated"))
+		close(done)
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+	close(release)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Exclusive lock not acquired after read lock release; potential deadlock")
+	}
+}
+
+//-----------------------------------------------------------------------------
+// New Sustained Memory Usage Tests
+//-----------------------------------------------------------------------------
+
+// TestLongRunningWorkload simulates a long-running workload and verifies memory stability.
+func TestLongRunningWorkload(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long-running workload test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const iterations = 10000
+	const reportInterval = 1000
+	var mInitial runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&mInitial)
+
+	for i := 0; i < iterations; i++ {
+		key := []byte("workload_key_" + strconv.Itoa(i))
+		db.Set(key, []byte("workload_value"))
+		if i%2 == 0 {
+			db.Delete(key)
+		}
+		if i%reportInterval == 0 {
+			runtime.GC()
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			t.Logf("Iteration %d: HeapAlloc=%d bytes", i, m.HeapAlloc)
+		}
+	}
+	runtime.GC()
+	var mFinal runtime.MemStats
+	runtime.ReadMemStats(&mFinal)
+	t.Logf("Initial HeapAlloc=%d bytes, Final HeapAlloc=%d bytes", mInitial.HeapAlloc, mFinal.HeapAlloc)
+
+	require.LessOrEqual(t, mFinal.HeapAlloc, mInitial.HeapAlloc+20*1024*1024, "Memory usage increased over long workload")
+}
+
+//-----------------------------------------------------------------------------
+// Additional Utility Test for Memory Metrics
+//-----------------------------------------------------------------------------
+
+// TestMemoryMetrics verifies that allocation and free counters remain balanced.
+func TestMemoryMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping memory metrics test in short mode")
+	}
+	var mBefore, mAfter runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&mBefore)
+
+	const allocCount = 10000
+	var temp [][]byte
+	for i := 0; i < allocCount; i++ {
+		temp = append(temp, make([]byte, 128))
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&mAfter)
+	t.Logf("Mallocs: before=%d, after=%d, diff=%d", mBefore.Mallocs, mAfter.Mallocs, mAfter.Mallocs-mBefore.Mallocs)
+	t.Logf("Frees: before=%d, after=%d, diff=%d", mBefore.Frees, mAfter.Frees, mAfter.Frees-mBefore.Frees)
+
+	require.LessOrEqual(t, (mAfter.Mallocs - mAfter.Frees), uint64(allocCount/10), "Unexpected allocation leak detected")
 }
