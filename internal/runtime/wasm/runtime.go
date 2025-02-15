@@ -1,4 +1,4 @@
-package wasmvmint
+package wasm
 
 import "github.com/CosmWasm/wasmvm/v2/types"
 
