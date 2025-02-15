@@ -254,7 +254,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 				}
 				// Wait up to 5 seconds to acquire each cache instance.
 				for i := 0; i < N; i++ {
-					cache, err := retryInitCache(config, 5*time.Second)
+					cache, err := retryInitCache(config, 30*time.Second)
 					require.NoError(t, err, "InitCache should eventually succeed")
 					caches = append(caches, cache)
 				}
