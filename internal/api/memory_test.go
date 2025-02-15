@@ -5,6 +5,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -140,7 +141,7 @@ func TestCopyDestroyUnmanagedVector_Concurrent(t *testing.T) {
 				defer wg.Done()
 				uv := newUnmanagedVector(data)
 				out := copyAndDestroyUnmanagedVector(uv)
-				require.Equal(t, data, out,
+				assert.Equal(t, data, out,
 					"Mismatch in concurrency test for input=%v", data)
 			}()
 		}
