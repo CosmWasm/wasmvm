@@ -7,8 +7,6 @@ export TARGET_DIR="/target" # write to /target in the guest's file system to avo
 # No stripping implemented (see https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-2260007943).
 
 echo "Starting aarch64-unknown-linux-gnu build"
-export CC=clang
-export CXX=clang++
 export qemu_aarch64="qemu-aarch64 -L /usr/aarch64-linux-gnu"
 export CC_aarch64_unknown_linux_gnu=clang
 export AR_aarch64_unknown_linux_gnu=llvm-ar

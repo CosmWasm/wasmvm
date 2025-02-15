@@ -1,6 +1,6 @@
 FROM --platform=linux/amd64 rust:1.82.0-alpine
 
-RUN apk add --no-cache ca-certificates build-base
+RUN apk add --no-cache ca-certificates build-base llvm17-dev clang17-static
 
 # Install C compiler for cross-compilation. This is required by
 # Wasmer in https://github.com/wasmerio/wasmer/blob/2.2.1/lib/vm/build.rs.

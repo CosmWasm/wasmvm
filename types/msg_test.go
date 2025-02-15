@@ -25,7 +25,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 
 	require.Equal(t, "", msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
-	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate.Msg)
+	require.JSONEq(t, `{"claim":{}}`, string(msg.Instantiate.Msg))
 	require.Equal(t, Array[Coin]{
 		{"stones", "321"},
 	}, msg.Instantiate.Funds)
@@ -46,7 +46,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 
 	require.Equal(t, "king", msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
-	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate.Msg)
+	require.JSONEq(t, `{"claim":{}}`, string(msg.Instantiate.Msg))
 	require.Equal(t, Array[Coin]{}, msg.Instantiate.Funds)
 	require.Equal(t, "my instance", msg.Instantiate.Label)
 }
@@ -67,7 +67,7 @@ func TestWasmMsgInstantiate2Serialization(t *testing.T) {
 
 	require.Equal(t, "", msg.Instantiate2.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate2.CodeID)
-	require.Equal(t, []byte(`{"claim":{}}`), msg.Instantiate2.Msg)
+	require.JSONEq(t, `{"claim":{}}`, string(msg.Instantiate2.Msg))
 	require.Equal(t, Array[Coin]{
 		{"stones", "321"},
 	}, msg.Instantiate2.Funds)
@@ -160,4 +160,21 @@ func TestMsgFundCommunityPoolSerialization(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, Array[Coin]{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
+}
+
+func TestMsgEurekaSendPacketSerialization(t *testing.T) {
+	document := []byte(`{"send_packet":{"channel_id":"channel-432", "payloads": [{"destination_port": "wasm.123", "version": "random_version", "encoding": "json", "value": ""}], "timeout": "0"}}`)
+
+	var msg EurekaMsg
+	err := json.Unmarshal(document, &msg)
+	require.NoError(t, err)
+
+	require.Equal(t, "channel-432", msg.SendPacket.ChannelID)
+	require.Equal(t, []EurekaPayload{{
+		DestinationPort: "wasm.123",
+		Version:         "random_version",
+		Encoding:        "json",
+		Value:           []byte(""),
+	}}, msg.SendPacket.Payloads)
+	require.Equal(t, uint64(0), msg.SendPacket.Timeout)
 }

@@ -15,8 +15,8 @@ The Go version here has the following goals:
   versions reasonably wide to avoid unnecessary friction for users. I.e. just
   because Cosmos SDK now uses Go 1.19 does not mean we make 1.19 the minimal
   supported version here. However, the project should work with the latest
-  stable Go version. When the majority of our users is between 1.18 and 1.19, we
-  can slowly remove 1.17 support by bumping the min version to 1.18.
+  stable Go version. When the majority of our users are between 1.18 and 1.19,
+  we can slowly remove 1.17 support by bumping the min version to 1.18.
 - Be stable enough to test Go code. We always pin the patch version to ensure CI
   runs are reproducible. Those versions will contain security issues from time
   to time, but that's fine for how they are used here.
@@ -31,10 +31,10 @@ Go version locations:
 ## Rust
 
 In contrast to Go, the Rust compiler used here produces actual artifacts used
-directly by consumer projects. This are the shared .dylib, .so, .dll libraries
+directly by consumer projects. These are the shared .dylib, .so, .dll libraries
 as well as the static .a libraries. Those libwasmvm builds contain all the Rust
 code executing contracts, especially cosmwasm-vm. New Rust versions usually add
-features which are not necessarily used or needed. But we should move with the
+features that are not necessarily used or needed. But we should move with the
 ecosystem to keep the dependency tree compiling. Also new Rust versions tend to
 increase runtime speed through optimizer improvements, which never hurts.
 
@@ -63,6 +63,6 @@ We currently use the following version:
 
 | Type                     | Rust version | Note                              |
 | ------------------------ | ------------ | --------------------------------- |
-| Production Rust compiler | 1.82.0       | Builders version 0102             |
-| Min Rust compiler        | 1.74.0       | Supports builder versions >= 0019 |
-| Tooling Rust compiler    | 1.75.0       |                                   |
+| Production Rust compiler | 1.82.0       | Builders version 0103             |
+| Min Rust compiler        | 1.82.0       | Supports builder versions >= 0103 |
+| Tooling Rust compiler    | 1.81.0       |                                   |

@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
@@ -352,8 +351,7 @@ func TestQueueIteratorRaces_TableDriven(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	// initially no frames
-	assert.Equal(t, 0, len(iteratorFrames))
+	require.Empty(t, iteratorFrames)
 
 	contract1 := setupQueueContractWithData(t, cache, 17, 22)
 	contract2 := setupQueueContractWithData(t, cache, 1, 19, 6, 35, 8)
@@ -403,8 +401,8 @@ func TestQueueIteratorRaces_TableDriven(t *testing.T) {
 	}
 	wg.Wait()
 
-	// all frames should be removed
-	assert.Equal(t, 0, len(iteratorFrames))
+	// when they finish, we should have removed all frames
+	require.Empty(t, iteratorFrames)
 }
 
 func TestQueueIteratorLimit_TableDriven(t *testing.T) {
