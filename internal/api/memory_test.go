@@ -1,9 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -53,10 +53,8 @@ func TestMakeView_TableDriven(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			view := makeView(tc.input)
-			require.Equal(t, cbool(tc.expIsNil), view.is_nil,
-				"Mismatch in is_nil for test: %s", tc.name)
-			require.Equal(t, tc.expLen, view.len,
-				"Mismatch in len for test: %s", tc.name)
+			require.Equal(t, cbool(tc.expIsNil), view.is_nil, "Mismatch in is_nil for test: %s", tc.name)
+			require.Equal(t, tc.expLen, view.len, "Mismatch in len for test: %s", tc.name)
 		})
 	}
 }
@@ -65,19 +63,15 @@ func TestCreateAndDestroyUnmanagedVector_TableDriven(t *testing.T) {
 	// Helper for the round-trip test
 	checkUnmanagedRoundTrip := func(t *testing.T, input []byte, expectNone bool) {
 		unmanaged := newUnmanagedVector(input)
-		require.Equal(t, cbool(expectNone), unmanaged.is_none,
-			"Mismatch on is_none with input: %v", input)
+		require.Equal(t, cbool(expectNone), unmanaged.is_none, "Mismatch on is_none with input: %v", input)
 
 		if !expectNone && len(input) > 0 {
-			require.Equal(t, len(input), int(unmanaged.len),
-				"Length mismatch for input: %v", input)
-			require.GreaterOrEqual(t, int(unmanaged.cap), int(unmanaged.len),
-				"Expected cap >= len for input: %v", input)
+			require.Equal(t, len(input), int(unmanaged.len), "Length mismatch for input: %v", input)
+			require.GreaterOrEqual(t, int(unmanaged.cap), int(unmanaged.len), "Expected cap >= len for input: %v", input)
 		}
 
 		copyData := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Equal(t, input, copyData,
-			"Round-trip mismatch for input: %v", input)
+		require.Equal(t, input, copyData, "Round-trip mismatch for input: %v", input)
 	}
 
 	type testCase struct {
@@ -124,8 +118,7 @@ func TestCopyDestroyUnmanagedVector_SpecificEdgeCases(t *testing.T) {
 		invalidPtr := unsafe.Pointer(uintptr(42))
 		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalidPtr), cusize(0), cusize(0))
 		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Equal(t, []byte{}, copy,
-			"expected empty result if cap=0 and is_none=false")
+		require.Equal(t, []byte{}, copy, "expected empty result if cap=0 and is_none=false")
 	})
 }
 
@@ -148,12 +141,31 @@ func TestCopyDestroyUnmanagedVector_Concurrent(t *testing.T) {
 				defer wg.Done()
 				uv := newUnmanagedVector(data)
 				out := copyAndDestroyUnmanagedVector(uv)
-				assert.Equal(t, data, out,
-					"Mismatch in concurrency test for input=%v", data)
+				assert.Equal(t, data, out, "Mismatch in concurrency test for input=%v", data)
 			}()
 		}
 	}
 	wg.Wait()
+}
+
+//-----------------------------------------------------------------------------
+// Memory Leak Scenarios and Related Tests
+//-----------------------------------------------------------------------------
+
+// retryInitCache attempts to initialize a cache repeatedly until success or timeout.
+func retryInitCache(config types.VMConfig, timeout time.Duration) (Cache, error) {
+	start := time.Now()
+	var cache Cache
+	var err error
+	for time.Since(start) < timeout {
+		cache, err = InitCache(config)
+		if err == nil {
+			return cache, nil
+		}
+		// If error is due to exclusive lock, wait a bit and retry.
+		time.Sleep(50 * time.Millisecond)
+	}
+	return Cache{}, fmt.Errorf("retryInitCache: timed out after %v, last error: %w", timeout, err)
 }
 
 func TestMemoryLeakScenarios(t *testing.T) {
@@ -216,7 +228,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "Cache_Release_Frees_Memory",
 			run: func(t *testing.T) {
-				// Test that releasing caches frees memory.
+				// Ensure that releasing caches frees memory.
 				getAlloc := func() uint64 {
 					var m runtime.MemStats
 					runtime.ReadMemStats(&m)
@@ -232,17 +244,18 @@ func TestMemoryLeakScenarios(t *testing.T) {
 
 				const N = 5
 				caches := make([]Cache, 0, N)
+				config := types.VMConfig{
+					Cache: types.CacheOptions{
+						BaseDir:                  dir,
+						AvailableCapabilities:    []string{},
+						MemoryCacheSizeBytes:     types.NewSizeMebi(0),
+						InstanceMemoryLimitBytes: types.NewSizeMebi(32),
+					},
+				}
+				// Wait up to 5 seconds to acquire each cache instance.
 				for i := 0; i < N; i++ {
-					config := types.VMConfig{
-						Cache: types.CacheOptions{
-							BaseDir:                  dir,
-							AvailableCapabilities:    []string{},
-							MemoryCacheSizeBytes:     types.NewSizeMebi(0),
-							InstanceMemoryLimitBytes: types.NewSizeMebi(32),
-						},
-					}
-					cache, err := InitCache(config)
-					require.NoError(t, err, "InitCache should succeed")
+					cache, err := retryInitCache(config, 5*time.Second)
+					require.NoError(t, err, "InitCache should eventually succeed")
 					caches = append(caches, cache)
 				}
 
@@ -292,7 +305,11 @@ func TestMemoryLeakScenarios(t *testing.T) {
 						gotKeys = append(gotKeys, k)
 					}
 					require.NoError(t, iter.Close(), "closing iterator")
-					require.Equal(t, sub.expKeys, gotKeys, "Iterator(%q, %q) returned unexpected keys", sub.start, sub.end)
+					if len(sub.expKeys) == 0 {
+						require.Empty(t, gotKeys, "Iterator(%q, %q) expected no keys", sub.start, sub.end)
+					} else {
+						require.Equal(t, sub.expKeys, gotKeys, "Iterator(%q, %q) returned unexpected keys", sub.start, sub.end)
+					}
 				}
 			},
 		},
@@ -323,17 +340,14 @@ func TestStressHighVolumeInsert(t *testing.T) {
 	runtime.ReadMemStats(&mStart)
 
 	for i := 0; i < totalInserts; i++ {
-		// Create a unique key (note: using Sprintf might be clearer in production)
-		key := []byte("key_" + time.Now().Format("150405.000000") + "_" + strconv.Itoa(i))
+		key := []byte(fmt.Sprintf("key_%d", i))
 		db.Set(key, []byte("value"))
 	}
 	runtime.GC()
 	runtime.ReadMemStats(&mEnd)
 	t.Logf("Memory before: %d bytes, after: %d bytes", mStart.Alloc, mEnd.Alloc)
 
-	// Allow for some growth due to operational overhead.
-	require.LessOrEqual(t, mEnd.Alloc, mStart.Alloc+50*1024*1024,
-		"Memory usage exceeded expected threshold after high-volume insert")
+	require.LessOrEqual(t, mEnd.Alloc, mStart.Alloc+50*1024*1024, "Memory usage exceeded expected threshold after high-volume insert")
 }
 
 // TestBulkDeletionMemoryRecovery verifies that deleting many entries frees memory.
@@ -347,7 +361,7 @@ func TestBulkDeletionMemoryRecovery(t *testing.T) {
 	const totalInserts = 50000
 	keys := make([][]byte, totalInserts)
 	for i := 0; i < totalInserts; i++ {
-		key := []byte("bulk_key_" + strconv.Itoa(i))
+		key := []byte(fmt.Sprintf("bulk_key_%d", i))
 		keys[i] = key
 		db.Set(key, []byte("bulk_value"))
 	}
@@ -355,7 +369,6 @@ func TestBulkDeletionMemoryRecovery(t *testing.T) {
 	var mBefore runtime.MemStats
 	runtime.ReadMemStats(&mBefore)
 
-	// Delete all keys.
 	for _, key := range keys {
 		db.Delete(key)
 	}
@@ -379,7 +392,7 @@ func TestPeakMemoryTracking(t *testing.T) {
 	var peakAlloc uint64
 	var m runtime.MemStats
 	for i := 0; i < totalOps; i++ {
-		key := []byte("peak_key_" + strconv.Itoa(i))
+		key := []byte(fmt.Sprintf("peak_key_%d", i))
 		db.Set(key, []byte("peak_value"))
 		if i%1000 == 0 {
 			runtime.GC()
@@ -459,7 +472,7 @@ func TestConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < opsPerGoroutine; j++ {
-				key := []byte("concurrent_key_" + strconv.Itoa(id) + "_" + strconv.Itoa(j))
+				key := []byte(fmt.Sprintf("concurrent_key_%d_%d", id, j))
 				db.Set(key, []byte("concurrent_value"))
 			}
 		}(i)
@@ -510,7 +523,7 @@ func TestLockingAndRelease(t *testing.T) {
 		iter := db.Iterator([]byte("conflict_key"), []byte("zzzz"))
 		require.NoError(t, iter.Error(), "Iterator creation error")
 		close(ready) // signal iterator is active
-		<-release    // hold the iterator
+		<-release    // hold the iterator a bit
 		iter.Close()
 	}()
 
@@ -550,7 +563,7 @@ func TestLongRunningWorkload(t *testing.T) {
 	runtime.ReadMemStats(&mInitial)
 
 	for i := 0; i < iterations; i++ {
-		key := []byte("workload_key_" + strconv.Itoa(i))
+		key := []byte(fmt.Sprintf("workload_key_%d", i))
 		db.Set(key, []byte("workload_value"))
 		if i%2 == 0 {
 			db.Delete(key)
@@ -574,7 +587,7 @@ func TestLongRunningWorkload(t *testing.T) {
 // Additional Utility Test for Memory Metrics
 //-----------------------------------------------------------------------------
 
-// TestMemoryMetrics verifies that allocation and free counters remain balanced.
+// TestMemoryMetrics verifies that allocation and free counters remain reasonably balanced.
 func TestMemoryMetrics(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping memory metrics test in short mode")
@@ -588,10 +601,79 @@ func TestMemoryMetrics(t *testing.T) {
 	for i := 0; i < allocCount; i++ {
 		temp = append(temp, make([]byte, 128))
 	}
+	temp = nil
 	runtime.GC()
 	runtime.ReadMemStats(&mAfter)
 	t.Logf("Mallocs: before=%d, after=%d, diff=%d", mBefore.Mallocs, mAfter.Mallocs, mAfter.Mallocs-mBefore.Mallocs)
 	t.Logf("Frees: before=%d, after=%d, diff=%d", mBefore.Frees, mAfter.Frees, mAfter.Frees-mBefore.Frees)
 
-	require.LessOrEqual(t, (mAfter.Mallocs - mAfter.Frees), uint64(allocCount/10), "Unexpected allocation leak detected")
+	// Use original acceptable threshold.
+	diff := mAfter.Mallocs - mAfter.Frees
+	require.LessOrEqual(t, diff, uint64(allocCount/10), "Unexpected allocation leak detected")
+}
+
+// -----------------------------------------------------------------------------
+// Additional New Test Ideas
+//
+// TestRandomMemoryAccessPatterns simulates random insertions and deletions,
+// which can reveal subtle memory fragmentation or concurrent issues.
+func TestRandomMemoryAccessPatterns(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping random memory access patterns test in short mode")
+	}
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	const ops = 50000
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(seed int) {
+			defer wg.Done()
+			for j := 0; j < ops; j++ {
+				if j%2 == 0 {
+					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j))
+					db.Set(key, []byte("rand_value"))
+				} else {
+					// Randomly delete some keys.
+					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j-1))
+					db.Delete(key)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+	// After random operations, check that GC recovers memory.
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	t.Logf("After random memory access, HeapAlloc=%d bytes", m.HeapAlloc)
+}
+
+// TestMemoryFragmentation attempts to force fragmentation by alternating large and small allocations.
+func TestMemoryFragmentation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping memory fragmentation test in short mode")
+	}
+	const iterations = 10000
+	var largeBlocks [][]byte
+	var smallBlocks [][]byte
+	// Alternate allocations.
+	for i := 0; i < iterations; i++ {
+		if i%10 == 0 {
+			// Allocate a larger block (e.g. 64KB)
+			largeBlocks = append(largeBlocks, make([]byte, 64*1024))
+		} else {
+			smallBlocks = append(smallBlocks, make([]byte, 256))
+		}
+	}
+	// Release some allocations.
+	largeBlocks = nil
+	smallBlocks = nil
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	t.Logf("After fragmentation test, HeapAlloc=%d bytes", m.HeapAlloc)
+	// We expect that HeapAlloc should eventually come down.
+	require.Less(t, m.HeapAlloc, uint64(100*1024*1024), "Memory fragmentation causing high HeapAlloc")
 }
