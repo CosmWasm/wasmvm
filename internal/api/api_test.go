@@ -285,8 +285,8 @@ func buildTestJSON(fieldRepeat, valueRepeat int) string {
 	fieldName := "thisFieldDoesNotExistInSchema" + strings.Repeat("thisFieldDoesNotExistInSchema", fieldRepeat)
 
 	// We'll build up the value by repeating the "THIS IS ENORMOUS..." string a bunch of times.
-	fieldValue := "THIS IS ENORMOUS ADDITIONAL SUPERFLOUS CONTENT WE ARE PUTTING INTO THE VM LIKE WHOA"
-	fieldValue = fieldValue + strings.Repeat("THIS IS ENORMOUS ADDITIONAL SUPERFLOUS CONTENT WE ARE PUTTING INTO THE VM LIKE WHOA", valueRepeat)
+	fieldValue := "THIS IS ENORMOUS ADDITIONAL CONTENT WE ARE PUTTING INTO THE VM LIKE WHOA"
+	fieldValue = fieldValue + strings.Repeat("THIS IS ENORMOUS ADDITIONAL CONTENT WE ARE PUTTING INTO THE VM LIKE WHOA", valueRepeat)
 
 	return fmt.Sprintf(`{
 		"verifier": "someone",
