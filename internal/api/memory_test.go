@@ -436,12 +436,9 @@ func TestSmallAllocationsLeak(t *testing.T) {
 		t.Skip("Skipping small allocations leak test in short mode")
 	}
 	const iterations = 100000
-	var data [][]byte
 	for i := 0; i < iterations; i++ {
-		b := make([]byte, 32)
-		data = append(data, b)
+		_ = make([]byte, 32)
 	}
-	data = nil
 	runtime.GC()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -521,7 +518,7 @@ func TestLockingAndRelease(t *testing.T) {
 	release := make(chan struct{})
 	go func() {
 		iter := db.Iterator([]byte("conflict_key"), []byte("zzzz"))
-		require.NoError(t, iter.Error(), "Iterator creation error")
+		assert.NoError(t, iter.Error(), "Iterator creation error")
 		close(ready) // signal iterator is active
 		<-release    // hold the iterator a bit
 		iter.Close()
@@ -597,11 +594,9 @@ func TestMemoryMetrics(t *testing.T) {
 	runtime.ReadMemStats(&mBefore)
 
 	const allocCount = 10000
-	var temp [][]byte
 	for i := 0; i < allocCount; i++ {
-		temp = append(temp, make([]byte, 128))
+		_ = make([]byte, 128)
 	}
-	temp = nil
 	runtime.GC()
 	runtime.ReadMemStats(&mAfter)
 	t.Logf("Mallocs: before=%d, after=%d, diff=%d", mBefore.Mallocs, mAfter.Mallocs, mAfter.Mallocs-mBefore.Mallocs)
@@ -656,20 +651,14 @@ func TestMemoryFragmentation(t *testing.T) {
 		t.Skip("Skipping memory fragmentation test in short mode")
 	}
 	const iterations = 10000
-	var largeBlocks [][]byte
-	var smallBlocks [][]byte
-	// Alternate allocations.
 	for i := 0; i < iterations; i++ {
 		if i%10 == 0 {
 			// Allocate a larger block (e.g. 64KB)
-			largeBlocks = append(largeBlocks, make([]byte, 64*1024))
+			_ = make([]byte, 64*1024)
 		} else {
-			smallBlocks = append(smallBlocks, make([]byte, 256))
+			_ = make([]byte, 256)
 		}
 	}
-	// Release some allocations.
-	largeBlocks = nil
-	smallBlocks = nil
 	runtime.GC()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
