@@ -534,7 +534,7 @@ func TestConcurrentContractOperations(t *testing.T) {
 			for j := 0; j < operations; j++ {
 				msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test%d"}`, gid, j))
 				_, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 
 				// Occasionally execute to mix operations
 				if j%10 == 0 {
@@ -542,7 +542,7 @@ func TestConcurrentContractOperations(t *testing.T) {
 					gasMeter = api.NewMockGasMeter(TESTING_GAS_LIMIT)
 					store = api.NewLookup(gasMeter) // New store with fresh gas meter
 					_, _, err = vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
-					require.NoError(t, err)
+					assert.NoError(t, err)
 				}
 			}
 		}(i)

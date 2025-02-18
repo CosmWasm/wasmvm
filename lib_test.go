@@ -173,7 +173,7 @@ func TestCreateChecksumConcurrent(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < iterations; j++ {
 				checksum, err := CreateChecksum(validInput)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, expected, checksum)
 			}
 		}()

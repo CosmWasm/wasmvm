@@ -791,7 +791,7 @@ func TestConcurrentWasmOperations(t *testing.T) {
 
 				msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test%d"}`, j, j))
 				_, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, 1000000, false)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		}(i)
 	}
