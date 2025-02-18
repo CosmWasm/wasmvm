@@ -152,20 +152,17 @@ func TestCopyDestroyUnmanagedVector_Concurrent(t *testing.T) {
 // Memory Leak Scenarios and Related Tests
 //-----------------------------------------------------------------------------
 
-// retryInitCache attempts to initialize a cache repeatedly until success or timeout.
+// retryInitCache attempts to initialize a cache with retry logic
 func retryInitCache(config types.VMConfig, timeout time.Duration) (Cache, error) {
 	start := time.Now()
-	var cache Cache
-	var err error
 	for time.Since(start) < timeout {
-		cache, err = InitCache(config)
+		cache, err := InitCache(config)
 		if err == nil {
 			return cache, nil
 		}
-		// If error is due to exclusive lock, wait a bit and retry.
 		time.Sleep(50 * time.Millisecond)
 	}
-	return Cache{}, fmt.Errorf("retryInitCache: timed out after %v, last error: %w", timeout, err)
+	return Cache{}, fmt.Errorf("failed to init cache within %v", timeout)
 }
 
 func TestMemoryLeakScenarios(t *testing.T) {
@@ -665,4 +662,292 @@ func TestMemoryFragmentation(t *testing.T) {
 	t.Logf("After fragmentation test, HeapAlloc=%d bytes", m.HeapAlloc)
 	// We expect that HeapAlloc should eventually come down.
 	require.Less(t, m.HeapAlloc, uint64(100*1024*1024), "Memory fragmentation causing high HeapAlloc")
+}
+
+// getMemoryStats returns current heap allocation and allocation counters
+func getMemoryStats() (heapAlloc, mallocs, frees uint64) {
+	var m runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m)
+	return m.HeapAlloc, m.Mallocs, m.Frees
+}
+
+// TestWasmVMMemoryLeakStress tests memory stability under repeated contract operations
+func TestWasmVMMemoryLeakStress(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping WASM VM stress test in short mode")
+	}
+
+	dir, err := os.MkdirTemp("", "wasmvm-leak-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  dir,
+			AvailableCapabilities:    []string{"iterator", "staking"},
+			MemoryCacheSizeBytes:     types.NewSizeMebi(64),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(32),
+		},
+	}
+
+	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
+	t.Logf("Baseline: Heap=%d bytes, Mallocs=%d, Frees=%d", baseAlloc, baseMallocs, baseFrees)
+
+	const iterations = 5000
+	wasmCode, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	for i := 0; i < iterations; i++ {
+		cache, err := retryInitCache(config, 5*time.Second)
+		require.NoError(t, err, "Cache init failed at iteration %d", i)
+
+		checksum, err := StoreCode(cache, wasmCode, true)
+		require.NoError(t, err)
+
+		db := testdb.NewMemDB()
+		gasMeter := NewMockGasMeter(1000000)
+		env := MockEnvBin(t)
+		info := MockInfoBin(t, "creator")
+		msg := []byte(`{"verifier": "test", "beneficiary": "test"}`)
+
+		var igasMeter types.GasMeter = gasMeter
+		store := NewLookup(gasMeter)
+		api := NewMockAPI()
+		querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+
+		// Perform instantiate (potential leak point)
+		_, _, err = Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, 1000000, false)
+		require.NoError(t, err)
+
+		// Sometimes skip cleanup to test leak handling
+		if i%10 != 0 {
+			ReleaseCache(cache)
+		}
+		db.Close()
+
+		if i%100 == 0 {
+			alloc, mallocs, frees := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d), Mallocs=%d, Frees=%d",
+				i, alloc, alloc-baseAlloc, mallocs-baseMallocs, frees-baseFrees)
+			require.Less(t, alloc, baseAlloc*2, "Memory doubled at iteration %d", i)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Final: Heap=%d bytes (+%d), Net allocations=%d",
+		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
+	require.Less(t, finalAlloc, baseAlloc+20*1024*1024, "Significant memory leak detected")
+}
+
+// TestConcurrentWasmOperations tests memory under concurrent contract operations
+func TestConcurrentWasmOperations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrent WASM test in short mode")
+	}
+
+	dir, err := os.MkdirTemp("", "wasmvm-concurrent-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  dir,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(128),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(32),
+		},
+	}
+
+	cache, err := retryInitCache(config, 5*time.Second)
+	require.NoError(t, err)
+	defer ReleaseCache(cache)
+
+	wasmCode, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasmCode, true)
+	require.NoError(t, err)
+
+	const goroutines = 20
+	const operations = 1000
+	var wg sync.WaitGroup
+
+	baseAlloc, _, _ := getMemoryStats()
+	env := MockEnvBin(t)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(gid int) {
+			defer wg.Done()
+			db := testdb.NewMemDB()
+			defer db.Close()
+
+			for j := 0; j < operations; j++ {
+				gasMeter := NewMockGasMeter(1000000)
+				var igasMeter types.GasMeter = gasMeter
+				store := NewLookup(gasMeter)
+				info := MockInfoBin(t, fmt.Sprintf("sender%d", gid))
+
+				msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test%d"}`, j, j))
+				_, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, 1000000, false)
+				require.NoError(t, err)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Concurrent test: Initial=%d bytes, Final=%d bytes, Net allocs=%d",
+		baseAlloc, finalAlloc, finalMallocs-finalFrees)
+	require.Less(t, finalAlloc, baseAlloc+30*1024*1024, "Concurrent operations leaked memory")
+}
+
+// TestWasmIteratorMemoryLeaks tests iterator-specific memory handling
+func TestWasmIteratorMemoryLeaks(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping iterator leak test in short mode")
+	}
+
+	dir, err := os.MkdirTemp("", "wasmvm-iterator-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:               dir,
+			AvailableCapabilities: []string{"iterator"},
+		},
+	}
+
+	cache, err := retryInitCache(config, 5*time.Second)
+	require.NoError(t, err)
+	defer ReleaseCache(cache)
+
+	wasmCode, err := os.ReadFile("../../testdata/queue.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasmCode, true)
+	require.NoError(t, err)
+
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	// Populate DB with data
+	for i := 0; i < 1000; i++ {
+		db.Set([]byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("val%d", i)))
+	}
+
+	gasMeter := NewMockGasMeter(1000000)
+	var igasMeter types.GasMeter = gasMeter
+	store := NewLookup(gasMeter)
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	_, _, err = Instantiate(cache, checksum, env, info, []byte(`{}`), &igasMeter, store, api, &querier, 1000000, false)
+	require.NoError(t, err)
+
+	baseAlloc, _, _ := getMemoryStats()
+	const iterations = 1000
+
+	for i := 0; i < iterations; i++ {
+		gasMeter = NewMockGasMeter(1000000)
+		igasMeter = gasMeter
+		store.SetGasMeter(gasMeter)
+
+		// Query that creates iterators (potential leak point)
+		_, _, err := Query(cache, checksum, env, []byte(`{"open_iterators":{"count":5}}`),
+			&igasMeter, store, api, &querier, 1000000, false)
+		if i%4 == 0 {
+			require.Error(t, err, "Expected occasional iterator limit errors")
+		} else {
+			require.NoError(t, err)
+		}
+
+		if i%100 == 0 {
+			alloc, _, _ := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d)", i, alloc, alloc-baseAlloc)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Iterator test: Initial=%d bytes, Final=%d bytes, Net allocs=%d",
+		baseAlloc, finalAlloc, finalMallocs-finalFrees)
+	require.Less(t, finalAlloc, baseAlloc+10*1024*1024, "Iterator operations leaked memory")
+}
+
+// TestWasmLongRunningMemoryStability tests memory over extended operation sequences
+func TestWasmLongRunningMemoryStability(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long-running WASM test in short mode")
+	}
+
+	dir, err := os.MkdirTemp("", "wasmvm-longrun-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  dir,
+			MemoryCacheSizeBytes:     types.NewSizeMebi(128),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(64),
+		},
+	}
+
+	cache, err := retryInitCache(config, 5*time.Second)
+	require.NoError(t, err)
+	defer ReleaseCache(cache)
+
+	wasmCode, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasmCode, true)
+	require.NoError(t, err)
+
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
+	const iterations = 10000
+
+	api := NewMockAPI()
+	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+	env := MockEnvBin(t)
+	info := MockInfoBin(t, "creator")
+
+	for i := 0; i < iterations; i++ {
+		gasMeter := NewMockGasMeter(1000000)
+		var igasMeter types.GasMeter = gasMeter
+		store := NewLookup(gasMeter)
+
+		// Mix operations
+		switch i % 3 {
+		case 0:
+			_, _, err = Instantiate(cache, checksum, env, info,
+				[]byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test"}`, i)),
+				&igasMeter, store, api, &querier, 1000000, false)
+			require.NoError(t, err)
+		case 1:
+			_, _, err = Query(cache, checksum, env, []byte(`{"verifier":{}}`),
+				&igasMeter, store, api, &querier, 1000000, false)
+			require.NoError(t, err)
+		case 2:
+			db.Set([]byte(fmt.Sprintf("key%d", i)), []byte("value"))
+			_, _, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`),
+				&igasMeter, store, api, &querier, 1000000, false)
+			require.NoError(t, err)
+		}
+
+		if i%1000 == 0 {
+			alloc, mallocs, frees := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d), Net allocs=%d",
+				i, alloc, alloc-baseAlloc, (mallocs-frees)-(baseMallocs-baseFrees))
+			require.Less(t, alloc, baseAlloc*2, "Memory growth too high at iteration %d", i)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
+		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
+	require.LessOrEqual(t, finalAlloc, baseAlloc+25*1024*1024, "Long-running WASM leaked memory")
 }
