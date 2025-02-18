@@ -334,7 +334,7 @@ func Migrate(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != 0 {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
