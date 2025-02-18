@@ -372,6 +372,7 @@ func TestIBCMsgGetCounterVersion(t *testing.T) {
 // increase in Allocated memory per iteration. If the average exceeds a given
 // threshold (in bytes), the test will fail.
 func measureMemoryLeak(t *testing.T, iterations int, testName string, f func()) {
+	t.Helper()
 	// Run one round to “warm up” (optional)
 	f()
 
@@ -406,6 +407,7 @@ func measureMemoryLeak(t *testing.T, iterations int, testName string, f func()) 
 
 // runStoreAndGetCode performs a store code and retrieval transaction.
 func runStoreAndGetCode(t *testing.T, wasmPath string) {
+	t.Helper()
 	vm := withVM(t)
 	wasm, err := os.ReadFile(wasmPath)
 	require.NoError(t, err)
@@ -421,6 +423,7 @@ func runStoreAndGetCode(t *testing.T, wasmPath string) {
 // runIBCHandshake performs the full handshake (instantiate, channel open, connect, reply)
 // sequence. Note that we use hard-coded values here (e.g. IBC_VERSION) as in the original test.
 func runIBCHandshake(t *testing.T, wasmPath string, reflectID uint64, channelID string) {
+	t.Helper()
 	vm := withVM(t)
 
 	_, err := os.ReadFile(wasmPath)
@@ -490,6 +493,7 @@ func runIBCHandshake(t *testing.T, wasmPath string, reflectID uint64, channelID 
 // runIBCPacketDispatch performs the full packet dispatch transaction
 // (including instantiation, handshake, reply, query, and IBC packet receive).
 func runIBCPacketDispatch(t *testing.T, wasmPath string, reflectID uint64, channelID string, reflectAddr string) {
+	t.Helper()
 	vm := withVM(t)
 
 	_, err := os.ReadFile(wasmPath)

@@ -62,6 +62,7 @@ func TestMakeView_TableDriven(t *testing.T) {
 func TestCreateAndDestroyUnmanagedVector_TableDriven(t *testing.T) {
 	// Helper for the round-trip test
 	checkUnmanagedRoundTrip := func(t *testing.T, input []byte, expectNone bool) {
+		t.Helper()
 		unmanaged := newUnmanagedVector(input)
 		require.Equal(t, cbool(expectNone), unmanaged.is_none, "Mismatch on is_none with input: %v", input)
 
@@ -173,6 +174,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "Iterator_NoClose_WithGC",
 			run: func(t *testing.T) {
+				t.Helper()
 				db := testdb.NewMemDB()
 				defer db.Close()
 
@@ -204,6 +206,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "Iterator_ProperClose_NoLeak",
 			run: func(t *testing.T) {
+				t.Helper()
 				db := testdb.NewMemDB()
 				defer db.Close()
 
@@ -225,6 +228,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "Cache_Release_Frees_Memory",
 			run: func(t *testing.T) {
+				t.Helper()
 				// Ensure that releasing caches frees memory.
 				getAlloc := func() uint64 {
 					var m runtime.MemStats
@@ -274,6 +278,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 		{
 			name: "MemDB_Iterator_Range_Correctness",
 			run: func(t *testing.T) {
+				t.Helper()
 				db := testdb.NewMemDB()
 				defer db.Close()
 

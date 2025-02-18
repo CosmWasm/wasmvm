@@ -90,6 +90,7 @@ func TestStoreIterator_TableDriven(t *testing.T) {
 
 	// Action helper: open a new iterator, then call storeIterator
 	createIter := func(t *testing.T, store types.KVStore) types.Iterator {
+		t.Helper()
 		iter := store.Iterator(nil, nil)
 		require.NotNil(t, iter, "iter creation must not fail")
 		return iter
@@ -102,10 +103,12 @@ func TestStoreIterator_TableDriven(t *testing.T) {
 			name: "CallID1: two iterators in sequence",
 			actions: []func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error){
 				func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error) {
+					t.Helper()
 					iter := createIter(t, store)
 					return storeIterator(callID, iter, limit)
 				},
 				func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error) {
+					t.Helper()
 					iter := createIter(t, store)
 					return storeIterator(callID, iter, limit)
 				},
@@ -116,14 +119,17 @@ func TestStoreIterator_TableDriven(t *testing.T) {
 			name: "CallID2: three iterators in sequence",
 			actions: []func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error){
 				func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error) {
+					t.Helper()
 					iter := createIter(t, store)
 					return storeIterator(callID, iter, limit)
 				},
 				func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error) {
+					t.Helper()
 					iter := createIter(t, store)
 					return storeIterator(callID, iter, limit)
 				},
 				func(t *testing.T, store types.KVStore, callID uint64, limit int) (uint64, error) {
+					t.Helper()
 					iter := createIter(t, store)
 					return storeIterator(callID, iter, limit)
 				},
