@@ -77,6 +77,7 @@ type AcknowledgeDispatch struct {
 }
 
 func toBytes(t *testing.T, v interface{}) []byte {
+	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
 	return bz

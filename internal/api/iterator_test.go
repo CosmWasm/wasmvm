@@ -29,6 +29,7 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 
 // setupQueueContractWithData uploads/instantiates a queue contract, optionally enqueuing data
 func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
+	t.Helper()
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -65,6 +66,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 
 // setupQueueContract is a convenience that uses default enqueued values
 func setupQueueContract(t *testing.T, cache Cache) queueData {
+	t.Helper()
 	return setupQueueContractWithData(t, cache, 17, 22)
 }
 
@@ -358,11 +360,12 @@ func TestQueueIteratorRaces_TableDriven(t *testing.T) {
 	contract3 := setupQueueContractWithData(t, cache, 11, 6, 2)
 	env := MockEnvBin(t)
 
-	reduceQuery := func(t *testing.T, c queueData, expected string) {
-		checksum, querier, api := c.checksum, c.querier, c.api
+	reduceQuery := func(t *testing.T, setup queueData, expected string) {
+		t.Helper()
+		checksum, querier, api := setup.checksum, setup.querier, setup.api
 		gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter := types.GasMeter(gasMeter)
-		store := c.Store(gasMeter)
+		store := setup.Store(gasMeter)
 
 		query := []byte(`{"reducer":{}}`)
 		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)

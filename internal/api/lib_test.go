@@ -191,9 +191,10 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (Cache, func()) {
+	tb.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -203,7 +204,7 @@ func withCache(t testing.TB) (Cache, func()) {
 		},
 	}
 	cache, err := InitCache(config)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	cleanup := func() {
 		os.RemoveAll(tmpdir)
@@ -868,6 +869,8 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
 
+		info = MockInfoBin(b, "fred")
+
 		for i := 0; i < callCount; i++ {
 			go func() {
 				defer wg.Done()
@@ -1189,6 +1192,7 @@ func TestReplyAndQuery(t *testing.T) {
 }
 
 func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
+	tb.Helper()
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(tb, err)
@@ -1197,6 +1201,7 @@ func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
 }
 
 func requireQueryError(t *testing.T, res []byte) {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1205,6 +1210,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1213,36 +1219,43 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+func createHackatomContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+func createQueueContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+func createReflectContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+func createFloaty2(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
+func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
+	tb.Helper()
 	wasm, err := os.ReadFile(wasmFile)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return checksum
 }
 
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
