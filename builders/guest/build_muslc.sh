@@ -7,9 +7,8 @@ export TARGET_DIR="/target" # write to /target in the guest's file system to avo
 # No stripping implemented (see https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-2260007943).
 
 echo "Starting aarch64-unknown-linux-musl build"
-export CC=/opt/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc
+export CC_aarch64_unknown_linux_musl=/opt/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc
 cargo build --release --target-dir="$TARGET_DIR" --target aarch64-unknown-linux-musl --example wasmvmstatic
-unset CC
 
 echo "Starting x86_64-unknown-linux-musl build"
 cargo build --release --target-dir="$TARGET_DIR" --target x86_64-unknown-linux-musl --example wasmvmstatic

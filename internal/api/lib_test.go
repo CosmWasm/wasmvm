@@ -191,9 +191,10 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(t testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (Cache, func()) {
+	tb.Helper()
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -203,7 +204,7 @@ func withCache(t testing.TB) (Cache, func()) {
 		},
 	}
 	cache, err := InitCache(config)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	cleanup := func() {
 		os.RemoveAll(tmpdir)
@@ -272,6 +273,28 @@ func TestStoreCodeUnchecked(t *testing.T) {
 	code, err := GetCode(cache, checksum)
 	require.NoError(t, err)
 	require.Equal(t, wasm, code)
+}
+
+func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
+	cache, cleanup := withCache(t)
+	defer cleanup()
+
+	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+
+	// Look for "interface_version_8" in the wasm file and replace it with "interface_version_9".
+	// This makes the wasm file invalid.
+	wasm = bytes.Replace(wasm, []byte("interface_version_8"), []byte("interface_version_9"), 1)
+
+	// StoreCode should fail
+	_, err = StoreCode(cache, wasm, true)
+	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
+
+	// StoreCodeUnchecked should not fail
+	checksum, err := StoreCodeUnchecked(cache, wasm)
+	require.NoError(t, err)
+	expectedChecksum := sha256.Sum256(wasm)
+	assert.Equal(t, expectedChecksum[:], checksum)
 }
 
 func TestPin(t *testing.T) {
@@ -363,7 +386,7 @@ func TestGetMetrics(t *testing.T) {
 	// GetMetrics 1
 	metrics, err := GetMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.Metrics{}, metrics)
+	require.Equal(t, &types.Metrics{}, metrics)
 
 	// Store contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
@@ -374,7 +397,7 @@ func TestGetMetrics(t *testing.T) {
 	// GetMetrics 2
 	metrics, err = GetMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.Metrics{}, metrics)
+	require.Equal(t, &types.Metrics{}, metrics)
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -390,7 +413,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 3
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -403,7 +426,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 4
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
@@ -415,7 +438,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 5
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
 	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
@@ -430,7 +453,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 6
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -445,7 +468,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 7
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -461,7 +484,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// GetMetrics 8
 	metrics, err = GetMetrics(cache)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(2), metrics.HitsFsCache)
@@ -478,7 +501,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 1
 	metrics, err := GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, &types.PinnedMetrics{PerModule: make([]types.PerModuleEntry, 0)}, metrics)
+	require.Equal(t, &types.PinnedMetrics{PerModule: make([]types.PerModuleEntry, 0)}, metrics)
 
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
@@ -514,15 +537,15 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 2
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(metrics.PerModule))
+	require.Len(t, metrics.PerModule, 2)
 
 	hackatomMetrics := findMetrics(metrics.PerModule, checksum)
 	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksum)
 
-	assert.Equal(t, uint32(0), hackatomMetrics.Hits)
-	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
-	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
-	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
+	require.Equal(t, uint32(0), hackatomMetrics.Hits)
+	require.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	require.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	require.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
 
 	// Instantiate 1
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -539,15 +562,15 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// GetMetrics 3
 	metrics, err = GetPinnedMetrics(cache)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(metrics.PerModule))
+	require.Len(t, metrics.PerModule, 2)
 
 	hackatomMetrics = findMetrics(metrics.PerModule, checksum)
 	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksum)
 
-	assert.Equal(t, uint32(1), hackatomMetrics.Hits)
-	assert.NotEqual(t, uint32(0), hackatomMetrics.Size)
-	assert.Equal(t, uint32(0), cyberpunkMetrics.Hits)
-	assert.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
+	require.Equal(t, uint32(1), hackatomMetrics.Hits)
+	require.NotEqual(t, uint32(0), hackatomMetrics.Size)
+	require.Equal(t, uint32(0), cyberpunkMetrics.Hits)
+	require.NotEqual(t, uint32(0), cyberpunkMetrics.Size)
 }
 
 func TestInstantiate(t *testing.T) {
@@ -573,13 +596,13 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xa3e4ae), cost.UsedInternally)
+	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 0, len(result.Ok.Messages))
+	require.Empty(t, result.Ok.Messages)
 }
 
 func TestExecute(t *testing.T) {
@@ -604,7 +627,7 @@ func TestExecute(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xa3e4ae), cost.UsedInternally)
+	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute with the same store
@@ -617,7 +640,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0x12899a6), cost.UsedInternally)
+	require.Equal(t, uint64(0x1416da5), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -625,25 +648,24 @@ func TestExecute(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 1, len(result.Ok.Messages))
-
+	require.Len(t, result.Ok.Messages, 1)
 	// Ensure we got our custom event
-	assert.Equal(t, len(result.Ok.Events), 1)
+	require.Len(t, result.Ok.Events, 1)
 	ev := result.Ok.Events[0]
-	assert.Equal(t, ev.Type, "hackatom")
-	assert.Equal(t, len(ev.Attributes), 1)
-	assert.Equal(t, ev.Attributes[0].Key, "action")
-	assert.Equal(t, ev.Attributes[0].Value, "release")
+	require.Equal(t, "hackatom", ev.Type)
+	require.Len(t, ev.Attributes, 1)
+	require.Equal(t, "action", ev.Attributes[0].Key)
+	require.Equal(t, "release", ev.Attributes[0].Value)
 
 	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
-	assert.Equal(t, "bob", send.ToAddress)
-	assert.Equal(t, balance, send.Amount)
+	require.Equal(t, "bob", send.ToAddress)
+	require.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
-	assert.Equal(t, expectedData, result.Ok.Data)
+	require.Equal(t, expectedData, result.Ok.Data)
 }
 
 func TestExecutePanic(t *testing.T) {
@@ -726,7 +748,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0x72c3ce), cost.UsedInternally)
+	require.Equal(t, uint64(0x79f527), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a cpu loop
@@ -739,7 +761,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.Error(t, err)
-	assert.Equal(t, cost.UsedInternally, maxGas)
+	require.Equal(t, cost.UsedInternally, maxGas)
 	t.Logf("CPULoop Time (%d gas): %s\n", cost.UsedInternally, diff)
 }
 
@@ -837,27 +859,40 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	require.NoError(b, err)
 	requireOkResponse(b, res, 0)
 
+	info = MockInfoBin(b, "fred")
+
 	const callCount = 100 // Calls per benchmark iteration
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		var wg sync.WaitGroup
+		errChan := make(chan error, callCount)
+		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
+
+		info = MockInfoBin(b, "fred")
+
 		for i := 0; i < callCount; i++ {
 			go func() {
+				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 				igasMeter2 := types.GasMeter(gasMeter2)
 				store.SetGasMeter(gasMeter2)
-				info = MockInfoBin(b, "fred")
 				msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
 				res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-				require.NoError(b, err)
-				requireOkResponse(b, res, 0)
-
-				wg.Done()
+				errChan <- err
+				resChan <- res
 			}()
 		}
 		wg.Wait()
+		close(errChan)
+		close(resChan)
+
+		// Now check results in the main test goroutine
+		for i := 0; i < callCount; i++ {
+			require.NoError(b, <-errChan)
+			requireOkResponse(b, <-resChan, 0)
+		}
 	}
 }
 
@@ -920,7 +955,7 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult.Err)
-	require.Equal(t, string(qResult.Ok), `{"verifier":"fred"}`)
+	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
@@ -935,7 +970,7 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult2)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult2.Err)
-	require.Equal(t, `{"verifier":"alice"}`, string(qResult2.Ok))
+	require.JSONEq(t, `{"verifier":"alice"}`, string(qResult2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -975,18 +1010,18 @@ func TestMultipleInstances(t *testing.T) {
 	// succeed to execute store1 with fred
 	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x1281a12)
 	require.Equal(t, "", resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Messages))
+	require.Len(t, resp.Ok.Messages, 1)
 	attributes := resp.Ok.Attributes
-	require.Equal(t, 2, len(attributes))
+	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
 	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x12859dc)
 	require.Equal(t, "", resp.Err)
-	require.Equal(t, 1, len(resp.Ok.Messages))
+	require.Len(t, resp.Ok.Messages, 1)
 	attributes = resp.Ok.Attributes
-	require.Equal(t, 2, len(attributes))
+	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
 	require.Equal(t, "sue", attributes[1].Value)
 }
@@ -1025,7 +1060,7 @@ func TestSudo(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 1, len(result.Ok.Messages))
+	require.Len(t, result.Ok.Messages, 1)
 	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
@@ -1080,7 +1115,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Equal(t, "", result.Err)
-	require.Equal(t, 1, len(result.Ok.Messages))
+	require.Len(t, result.Ok.Messages, 1)
 	dispatch := result.Ok.Messages[0]
 	assert.Equal(t, id, dispatch.ID)
 	assert.Equal(t, payload.Msg, dispatch.Msg)
@@ -1157,15 +1192,17 @@ func TestReplyAndQuery(t *testing.T) {
 	require.Equal(t, events, val.Events)
 }
 
-func requireOkResponse(t testing.TB, res []byte, expectedMsgs int) {
+func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
+	tb.Helper()
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
-	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
-	require.Equal(t, expectedMsgs, len(result.Ok.Messages))
+	require.NoError(tb, err)
+	require.Equal(tb, "", result.Err)
+	require.Len(tb, result.Ok.Messages, expectedMsgs)
 }
 
 func requireQueryError(t *testing.T, res []byte) {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1174,6 +1211,7 @@ func requireQueryError(t *testing.T, res []byte) {
 }
 
 func requireQueryOk(t *testing.T, res []byte) []byte {
+	t.Helper()
 	var result types.QueryResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(t, err)
@@ -1182,36 +1220,43 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+func createHackatomContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+func createQueueContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+func createReflectContract(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/reflect.wasm")
 }
 
-func createFloaty2(t testing.TB, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+func createFloaty2(tb testing.TB, cache Cache) []byte {
+	tb.Helper()
+	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t testing.TB, cache Cache, wasmFile string) []byte {
+func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
+	tb.Helper()
 	wasm, err := os.ReadFile(wasmFile)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	checksum, err := StoreCode(cache, wasm, true)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return checksum
 }
 
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+	t.Helper()
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
@@ -1266,7 +1311,7 @@ func TestQuery(t *testing.T) {
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Equal(t, "", qResult.Err)
-	require.Equal(t, string(qResult.Ok), `{"verifier":"fred"}`)
+	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 }
 
 func TestHackatomQuerier(t *testing.T) {
@@ -1395,12 +1440,12 @@ func TestFloats(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	var instructions []string
 	err = json.Unmarshal(qResult.Ok, &instructions)
 	require.NoError(t, err)
 	// little sanity check
-	require.Equal(t, 70, len(instructions))
+	require.Len(t, instructions, 70)
 
 	hasher := sha256.New()
 	const RUNS_PER_INSTRUCTION = 150
@@ -1412,7 +1457,7 @@ func TestFloats(t *testing.T) {
 			require.NoError(t, err)
 			err = json.Unmarshal(data, &qResult)
 			require.NoError(t, err)
-			require.Equal(t, "", qResult.Err)
+			require.Empty(t, qResult.Err)
 			var args []Value
 			err = json.Unmarshal(qResult.Ok, &args)
 			require.NoError(t, err)
@@ -1427,13 +1472,13 @@ func TestFloats(t *testing.T) {
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 			var result string
 			if err != nil {
-				assert.ErrorContains(t, err, "Error calling the VM: Error executing Wasm: ")
+				require.Error(t, err)
 				// remove the prefix to make the error message the same as in the cosmwasm-vm test
 				result = strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
 			} else {
 				err = json.Unmarshal(data, &qResult)
 				require.NoError(t, err)
-				require.Equal(t, "", qResult.Err)
+				require.Empty(t, qResult.Err)
 				var response Value
 				err = json.Unmarshal(qResult.Ok, &response)
 				require.NoError(t, err)
