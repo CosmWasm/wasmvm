@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,29 +31,6 @@ const (
 	CYBERPUNK_TEST_CONTRACT = "./testdata/cyberpunk.wasm"
 	HACKATOM_TEST_CONTRACT  = "./testdata/hackatom.wasm"
 )
-
-func withVM(t *testing.T) *VM {
-	t.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		vm.Cleanup()
-		os.RemoveAll(tmpdir)
-	})
-	return vm
-}
-
-func createTestContract(t *testing.T, vm *VM, path string) Checksum {
-	t.Helper()
-	wasm, err := os.ReadFile(path)
-	require.NoError(t, err)
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-	require.NoError(t, err)
-	return checksum
-}
 
 func TestStoreCode(t *testing.T) {
 	vm := withVM(t)
@@ -445,4 +424,249 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &ibcReceiveResult)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "payload")
+}
+
+// getMemoryStats returns current heap allocation and counters
+func getMemoryStats() (heapAlloc, mallocs, frees uint64) {
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.HeapAlloc, m.Mallocs, m.Frees
+}
+
+func withVM(t *testing.T) *VM {
+	t.Helper()
+	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
+	require.NoError(t, err)
+	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		vm.Cleanup()
+		os.RemoveAll(tmpdir)
+	})
+	return vm
+}
+
+func createTestContract(t *testing.T, vm *VM, path string) Checksum {
+	t.Helper()
+	wasm, err := os.ReadFile(path)
+	require.NoError(t, err)
+	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+	return checksum
+}
+
+// Existing tests remain unchanged until we add new ones...
+
+// TestStoreCodeStress tests memory stability under repeated contract storage
+func TestStoreCodeStress(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping stress test in short mode")
+	}
+
+	vm := withVM(t)
+	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+
+	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
+	t.Logf("Baseline: Heap=%d bytes, Mallocs=%d, Frees=%d", baseAlloc, baseMallocs, baseFrees)
+
+	const iterations = 5000
+	checksums := make([]Checksum, 0, iterations)
+
+	for i := 0; i < iterations; i++ {
+		checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		require.NoError(t, err)
+		checksums = append(checksums, checksum)
+
+		if i%100 == 0 {
+			alloc, mallocs, frees := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d), Net allocs=%d",
+				i, alloc, alloc-baseAlloc, (mallocs-frees)-(baseMallocs-baseFrees))
+			require.Less(t, alloc, baseAlloc*2, "Memory doubled at iteration %d", i)
+		}
+	}
+
+	// Cleanup some contracts to test removal
+	for i, checksum := range checksums {
+		if i%2 == 0 { // Remove half to test memory reclamation
+			err := vm.RemoveCode(checksum)
+			require.NoError(t, err)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
+		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
+	require.Less(t, finalAlloc, baseAlloc+20*1024*1024, "Significant memory leak detected")
+}
+
+// TestConcurrentContractOperations tests memory under concurrent operations
+func TestConcurrentContractOperations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrent test in short mode")
+	}
+
+	vm := withVM(t)
+	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+
+	const goroutines = 20
+	const operations = 1000
+	var wg sync.WaitGroup
+
+	baseAlloc, _, _ := getMemoryStats()
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	env := api.MockEnv()
+	goapi := api.NewMockAPI()
+	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
+	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(gid int) {
+			defer wg.Done()
+			gasMeter := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+			store := api.NewLookup(gasMeter)
+			info := api.MockInfo(fmt.Sprintf("creator%d", gid), nil)
+
+			for j := 0; j < operations; j++ {
+				msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test%d"}`, gid, j))
+				_, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
+				assert.NoError(t, err)
+
+				// Occasionally execute to mix operations
+				if j%10 == 0 {
+					// Recreate gas meter instead of resetting
+					gasMeter = api.NewMockGasMeter(TESTING_GAS_LIMIT)
+					store = api.NewLookup(gasMeter) // New store with fresh gas meter
+					_, _, err = vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
+					assert.NoError(t, err)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Concurrent test: Initial=%d bytes, Final=%d bytes, Net allocs=%d",
+		baseAlloc, finalAlloc, finalMallocs-finalFrees)
+	require.Less(t, finalAlloc, baseAlloc+30*1024*1024, "Concurrent operations leaked memory")
+}
+
+// TestMemoryLeakWithPinning tests memory behavior with pinning/unpinning
+func TestMemoryLeakWithPinning(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping pinning leak test in short mode")
+	}
+
+	vm := withVM(t)
+	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+
+	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
+	const iterations = 1000
+
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	gasMeter := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	store := api.NewLookup(gasMeter)
+	goapi := api.NewMockAPI()
+	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(250, "ATOM")})
+	env := api.MockEnv()
+	info := api.MockInfo("creator", nil)
+
+	for i := 0; i < iterations; i++ {
+		// Pin and unpin repeatedly
+		err = vm.Pin(checksum)
+		require.NoError(t, err)
+
+		// Perform an operation while pinned
+		msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test"}`, i))
+		_, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
+		require.NoError(t, err)
+
+		err = vm.Unpin(checksum)
+		require.NoError(t, err)
+
+		if i%100 == 0 {
+			alloc, mallocs, frees := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d), Net allocs=%d",
+				i, alloc, alloc-baseAlloc, (mallocs-frees)-(baseMallocs-baseFrees))
+
+			metrics, err := vm.GetMetrics()
+			require.NoError(t, err)
+			t.Logf("Metrics: Pinned=%d, Memory=%d, SizePinned=%d, SizeMemory=%d",
+				metrics.ElementsPinnedMemoryCache, metrics.ElementsMemoryCache,
+				metrics.SizePinnedMemoryCache, metrics.SizeMemoryCache)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
+		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
+	require.Less(t, finalAlloc, baseAlloc+15*1024*1024, "Pinning operations leaked memory")
+}
+
+// TestLongRunningOperations tests memory stability over extended mixed operations
+func TestLongRunningOperations(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long-running test in short mode")
+	}
+
+	vm := withVM(t)
+	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	require.NoError(t, err)
+	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	require.NoError(t, err)
+
+	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
+	const iterations = 10000
+
+	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	gasMeter := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	store := api.NewLookup(gasMeter)
+	goapi := api.NewMockAPI()
+	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(250, "ATOM")})
+	env := api.MockEnv()
+	info := api.MockInfo("creator", nil)
+
+	for i := 0; i < iterations; i++ {
+		switch i % 4 {
+		case 0: // Instantiate
+			msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "test"}`, i))
+			_, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
+			require.NoError(t, err)
+		case 1: // Execute
+			// Recreate gas meter instead of resetting
+			gasMeter = api.NewMockGasMeter(TESTING_GAS_LIMIT)
+			store = api.NewLookup(gasMeter) // New store with fresh gas meter
+			_, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter, TESTING_GAS_LIMIT, deserCost)
+			require.NoError(t, err)
+		case 2: // Pin/Unpin
+			err := vm.Pin(checksum)
+			require.NoError(t, err)
+			err = vm.Unpin(checksum)
+			require.NoError(t, err)
+		case 3: // GetCode
+			_, err := vm.GetCode(checksum)
+			require.NoError(t, err)
+		}
+
+		if i%1000 == 0 {
+			alloc, mallocs, frees := getMemoryStats()
+			t.Logf("Iter %d: Heap=%d bytes (+%d), Net allocs=%d",
+				i, alloc, alloc-baseAlloc, (mallocs-frees)-(baseMallocs-baseFrees))
+			require.Less(t, alloc, baseAlloc*2, "Memory growth too high at iteration %d", i)
+		}
+	}
+
+	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
+	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
+		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
+	require.Less(t, finalAlloc, baseAlloc+25*1024*1024, "Long-running operations leaked memory")
 }
