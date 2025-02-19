@@ -556,7 +556,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 
 		for _, structure := range list {
 			if bytes.Equal(structure.Checksum, checksum) {
-				found = &structure.Metrics
+				metrics := structure.Metrics // Create local copy
+				found = &metrics
 				break
 			}
 		}
