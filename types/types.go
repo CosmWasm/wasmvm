@@ -56,8 +56,14 @@ type CanonicalAddress = []byte
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
 type Coin struct {
-	Denom  string `json:"denom"`  // type, eg. "ATOM"
-	Amount string `json:"amount"` // string encoding of decimal value, eg. "12.3456"
+	// Denom is the denomination string registered in the chain's bank module.
+	// E.g. "uatom" or "ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2".
+	Denom string `json:"denom"`
+	// Amount is a string encoded integer with the number of units of the above denom.
+	// E.g. "1" or "486451351".
+	// Before CosmWasm 3 this must fit in an unsigned 128 bit int. From CosmWasm 3 onwards
+	// it can be any unsigned 256 bit integer. See also https://github.com/CosmWasm/cosmwasm/issues/2366.
+	Amount string `json:"amount"`
 }
 
 func NewCoin(amount uint64, denom string) Coin {
