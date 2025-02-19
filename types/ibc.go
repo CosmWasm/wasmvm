@@ -194,7 +194,7 @@ type IBCDestinationCallbackMsg struct {
 // Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
 type IBCOrder = string
 
-// These are the only two valid values for IbcOrder
+// These are the only two valid values for IbcOrder.
 const (
 	Unordered = "ORDER_UNORDERED"
 	Ordered   = "ORDER_ORDERED"
@@ -203,7 +203,7 @@ const (
 // IBCTimeoutBlock Height is a monotonically increasing data type
 // that can be compared against another Height for the purposes of updating and
 // freezing clients.
-// Ordering is (revision_number, timeout_height)
+// Ordering is (revision_number, timeout_height).
 type IBCTimeoutBlock struct {
 	// the version that the client is currently on
 	// (eg. after resetting the chain this could increment 1 as height drops to 0)
@@ -246,7 +246,7 @@ type IBCChannelOpenResult struct {
 	Err string                   `json:"error,omitempty"`
 }
 
-// IBC3ChannelOpenResponse is version negotiation data for the handshake
+// IBC3ChannelOpenResponse is version negotiation data for the handshake.
 type IBC3ChannelOpenResponse struct {
 	Version string `json:"version"`
 }
@@ -257,7 +257,7 @@ type IBC3ChannelOpenResponse struct {
 //
 // Callbacks that have return values (like ibc_receive_packet)
 // or that cannot redispatch messages (like ibc_channel_open)
-// will use other Response types
+// will use other Response types.
 type IBCBasicResult struct {
 	Ok  *IBCBasicResponse `json:"ok,omitempty"`
 	Err string            `json:"error,omitempty"`
@@ -291,7 +291,7 @@ type IBCBasicResponse struct {
 //
 // Callbacks that have return values (like receive_packet)
 // or that cannot redispatch messages (like the handshake callbacks)
-// will use other Response types
+// will use other Response types.
 type IBCReceiveResult struct {
 	Ok  *IBCReceiveResponse `json:"ok,omitempty"`
 	Err string              `json:"error,omitempty"`

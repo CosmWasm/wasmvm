@@ -39,13 +39,16 @@ func withVM(t *testing.T) *VM {
 
 	t.Cleanup(func() {
 		vm.Cleanup()
-		os.RemoveAll(tmpdir)
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Fatal(err)
+		}
 	})
 	return vm
 }
 
 func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	t.Helper()
+	//#nosec G304 -- This is test code using hardcoded test files
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
 	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
