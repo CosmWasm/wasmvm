@@ -26,7 +26,7 @@ const (
 	TESTING_CACHE_SIZE   = 100                     // MiB
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "cosmwasm_2_1", "cosmwasm_2_2"}
 
 func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
@@ -694,7 +694,8 @@ func TestExecutePanic(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	_, _, err = Execute(cache, checksum, env, info, []byte(`{"panic":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "RuntimeError: Aborted: panicked at 'This page intentionally faulted'")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "RuntimeError: Aborted: panicked at src/contract.rs:127:5:\nThis page intentionally faulted")
 }
 
 func TestExecuteUnreachable(t *testing.T) {
@@ -958,7 +959,8 @@ func TestMigrate(t *testing.T) {
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
-	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	info = MockInfoBin(t, "admin")
+	_, _, err = MigrateWithInfo(cache, checksum, env, []byte(`{"verifier":"alice"}`), info, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
@@ -988,8 +990,7 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store1, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0xb0c2cd), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa2aeb8), cost.UsedInternally)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -1000,14 +1001,14 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xb1760a), cost.UsedInternally)
+	assert.Equal(t, uint64(0xa35f43), cost.UsedInternally)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0xa7c5ce)
+	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0x9a2b03)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x140e8ad)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x1281a12)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes := resp.Ok.Attributes
@@ -1016,7 +1017,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x1412b29)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x12859dc)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes = resp.Ok.Attributes

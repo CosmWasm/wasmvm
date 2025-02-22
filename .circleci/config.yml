@@ -139,7 +139,7 @@ jobs:
     docker:
       # The audit tool might use a more modern Rust version than the build jobs. See
       # "Tooling Rust compiler" in docs/COMPILER_VERSIONS.md
-      - image: cimg/rust:1.81.0
+      - image: cimg/rust:1.83.0
     steps:
       - checkout
       - run:
@@ -152,8 +152,8 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - v3-libwasmvm_audit-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
-            - v3-libwasmvm_audit-rust:1.81.0-
+            - v3-libwasmvm_audit-rust:1.83.0-{{ checksum "libwasmvm/Cargo.lock" }}
+            - v3-libwasmvm_audit-rust:1.83.0-
       - run:
           name: Install cargo-audit
           command: cargo install --debug cargo-audit --version 0.21.0 --locked
@@ -164,7 +164,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.cargo/registry
-          key: v3-libwasmvm_audit-rust:1.81.0-{{ checksum "libwasmvm/Cargo.lock" }}
+          key: v3-libwasmvm_audit-rust:1.83.0-{{ checksum "libwasmvm/Cargo.lock" }}
 
   format-go:
     docker:
@@ -267,8 +267,7 @@ jobs:
 
   build_shared_library:
     docker:
-      # libwasmvm versions built with 1.81 are broken, so we use 1.82 here
-      - image: cimg/rust:1.82.0
+      - image: cimg/rust:1.83.0
     steps:
       - checkout
       - run:
@@ -456,7 +455,7 @@ workflows:
           matrix:
             parameters:
               # Run with MSRV and some modern stable Rust
-              rust-version: ["1.81.0", "1.82.0"]
+              rust-version: ["1.82.0", "1.83.0"]
       - libwasmvm_audit
       - format-go
       - wasmvm_no_cgo
