@@ -2,11 +2,11 @@ package host
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/tetratelabs/wazero"
 )
 
 // --- Minimal Host Interfaces ---
@@ -86,557 +86,57 @@ func writeToRegion(mem MemoryManager, regionPtr uint32, data []byte) error {
 }
 
 // --- RegisterHostFunctions ---
-// RegisterHostFunctions registers all host functions. It uses the provided WasmInstance,
-// MemoryManager, Storage, API, Querier, GasMeter, and Logger.
-func RegisterHostFunctions(instance WasmInstance, mem MemoryManager, storage Storage, api API, querier Querier, gasMeter GasMeter, logger Logger) {
+// RegisterHostFunctions registers all host functions with the provided module builder
+func RegisterHostFunctions(mod wazero.HostModuleBuilder) {
 	// Abort: abort(msg_ptr: u32, file_ptr: u32, line: u32, col: u32) -> !
-	instance.RegisterFunction("env", "abort", func(msgPtr, filePtr uint32, line, col uint32) {
-		msg, _ := mem.ReadRegion(msgPtr)
-		file, _ := mem.ReadRegion(filePtr)
-		logger.Error(fmt.Sprintf("Wasm abort called: %s (%s:%d:%d)", string(msg), string(file), line, col))
-		panic(fmt.Sprintf("Wasm abort: %s", string(msg)))
-	})
+	mod.NewFunctionBuilder().WithFunc(Abort).Export("abort")
 
 	// Debug: debug(msg_ptr: u32) -> ()
-	instance.RegisterFunction("env", "debug", func(msgPtr uint32) {
-		msg, err := mem.ReadRegion(msgPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("debug: failed to read message: %v", err))
-			return
-		}
-		logger.Debug("cosmwasm debug:", string(msg))
-	})
+	mod.NewFunctionBuilder().WithFunc(Debug).Export("debug")
 
 	// db_read: db_read(key_ptr: u32) -> u32 (returns Region pointer or 0 if not found)
-	instance.RegisterFunction("env", "db_read", func(keyPtr uint32) uint32 {
-		key, err := mem.ReadRegion(keyPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_read: failed to read key region: %v", err))
-			return 0
-		}
-		value, err := storage.Get(key)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_read: storage error: %v", err))
-			return 0
-		}
-		if value == nil {
-			logger.Debug("db_read: key not found")
-			return 0
-		}
-		regionPtr, err := mem.Allocate(uint32(len(value)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_read: memory allocation failed: %v", err))
-			return 0
-		}
-		if err := mem.Write(regionPtr, value); err != nil {
-			logger.Error(fmt.Sprintf("db_read: failed to write value to region: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("db_read: key %X -> %d bytes at region %d", key, len(value), regionPtr))
-		return regionPtr
-	})
+	mod.NewFunctionBuilder().WithFunc(DbRead).Export("db_read")
 
 	// db_write: db_write(key_ptr: u32, value_ptr: u32) -> ()
-	instance.RegisterFunction("env", "db_write", func(keyPtr, valuePtr uint32) {
-		key, err := mem.ReadRegion(keyPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_write: failed to read key: %v", err))
-			return
-		}
-		value, err := mem.ReadRegion(valuePtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_write: failed to read value: %v", err))
-			return
-		}
-		if err := storage.Set(key, value); err != nil {
-			logger.Error(fmt.Sprintf("db_write: storage error: %v", err))
-		} else {
-			logger.Debug(fmt.Sprintf("db_write: stored %d bytes under key %X", len(value), key))
-		}
-	})
+	mod.NewFunctionBuilder().WithFunc(DbWrite).Export("db_write")
 
 	// db_remove: db_remove(key_ptr: u32) -> ()
-	instance.RegisterFunction("env", "db_remove", func(keyPtr uint32) {
-		key, err := mem.ReadRegion(keyPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_remove: failed to read key: %v", err))
-			return
-		}
-		if err := storage.Delete(key); err != nil {
-			logger.Error(fmt.Sprintf("db_remove: storage error: %v", err))
-		} else {
-			logger.Debug(fmt.Sprintf("db_remove: removed key %X", key))
-		}
-	})
+	mod.NewFunctionBuilder().WithFunc(DbRemove).Export("db_remove")
 
 	// db_scan: db_scan(start_ptr: u32, end_ptr: u32, order: i32) -> u32
-	instance.RegisterFunction("env", "db_scan", func(startPtr, endPtr uint32, order int32) uint32 {
-		start, err := mem.ReadRegion(startPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_scan: failed to read start key: %v", err))
-			return 0
-		}
-		end, err := mem.ReadRegion(endPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_scan: failed to read end key: %v", err))
-			return 0
-		}
-		iteratorID, err := storage.Scan(start, end, order)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_scan: storage scan error: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("db_scan: created iterator %d for range [%X, %X], order %d", iteratorID, start, end, order))
-		return iteratorID
-	})
+	mod.NewFunctionBuilder().WithFunc(DbScan).Export("db_scan")
 
 	// db_next: db_next(iterator_id: u32) -> u32
-	instance.RegisterFunction("env", "db_next", func(iteratorID uint32) uint32 {
-		key, value, err := storage.Next(iteratorID)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: iterator %d error: %v", iteratorID, err))
-			return 0
-		}
-		if key == nil {
-			logger.Debug(fmt.Sprintf("db_next: iterator %d exhausted", iteratorID))
-			return 0
-		}
-		// Allocate regions for key and value.
-		keyRegion, err := mem.Allocate(uint32(len(key)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to allocate memory for key: %v", err))
-			return 0
-		}
-		if err := writeToRegion(mem, keyRegion, key); err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to write key to region: %v", err))
-			return 0
-		}
-		valRegion, err := mem.Allocate(uint32(len(value)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to allocate memory for value: %v", err))
-			return 0
-		}
-		if err := writeToRegion(mem, valRegion, value); err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to write value to region: %v", err))
-			return 0
-		}
-		// Allocate a combined region for both key and value Region structs.
-		combinedSize := uint32(12 * 2)
-		combinedPtr, err := mem.Allocate(combinedSize)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to allocate memory for combined region: %v", err))
-			return 0
-		}
-		keyRegionStruct, err := mem.Read(keyRegion, 12)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to read key region struct: %v", err))
-			return 0
-		}
-		valRegionStruct, err := mem.Read(valRegion, 12)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to read value region struct: %v", err))
-			return 0
-		}
-		concat := append(keyRegionStruct, valRegionStruct...)
-		if err := mem.Write(combinedPtr, concat); err != nil {
-			logger.Error(fmt.Sprintf("db_next: failed to write combined region: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("db_next: iterator %d next -> key %d bytes, value %d bytes", iteratorID, len(key), len(value)))
-		return combinedPtr
-	})
+	mod.NewFunctionBuilder().WithFunc(DbNext).Export("db_next")
 
 	// db_next_key: db_next_key(iterator_id: u32) -> u32
-	instance.RegisterFunction("env", "db_next_key", func(iteratorID uint32) uint32 {
-		key, _, err := storage.Next(iteratorID)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next_key: iterator %d error: %v", iteratorID, err))
-			return 0
-		}
-		if key == nil {
-			logger.Debug(fmt.Sprintf("db_next_key: iterator %d exhausted", iteratorID))
-			return 0
-		}
-		regionPtr, err := mem.Allocate(uint32(len(key)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next_key: failed to allocate memory: %v", err))
-			return 0
-		}
-		if err := writeToRegion(mem, regionPtr, key); err != nil {
-			logger.Error(fmt.Sprintf("db_next_key: failed to write key to region: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("db_next_key: iterator %d -> key %d bytes", iteratorID, len(key)))
-		return regionPtr
-	})
+	mod.NewFunctionBuilder().WithFunc(DbNextKey).Export("db_next_key")
 
 	// db_next_value: db_next_value(iterator_id: u32) -> u32
-	instance.RegisterFunction("env", "db_next_value", func(iteratorID uint32) uint32 {
-		_, value, err := storage.Next(iteratorID)
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next_value: iterator %d error: %v", iteratorID, err))
-			return 0
-		}
-		if value == nil {
-			logger.Debug(fmt.Sprintf("db_next_value: iterator %d exhausted", iteratorID))
-			return 0
-		}
-		regionPtr, err := mem.Allocate(uint32(len(value)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("db_next_value: failed to allocate memory: %v", err))
-			return 0
-		}
-		if err := writeToRegion(mem, regionPtr, value); err != nil {
-			logger.Error(fmt.Sprintf("db_next_value: failed to write value to region: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("db_next_value: iterator %d -> value %d bytes", iteratorID, len(value)))
-		return regionPtr
-	})
+	mod.NewFunctionBuilder().WithFunc(DbNextValue).Export("db_next_value")
 
 	// addr_validate: addr_validate(addr_ptr: u32) -> u32 (0 = success, nonzero = error)
-	instance.RegisterFunction("env", "addr_validate", func(addrPtr uint32) uint32 {
-		addrBytes, err := mem.ReadRegion(addrPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("addr_validate: failed to read address: %v", err))
-			return 1
-		}
-		_, err = api.ValidateAddress(string(addrBytes))
-		if err != nil {
-			logger.Debug(fmt.Sprintf("addr_validate: address %q is INVALID: %v", addrBytes, err))
-			return 1
-		}
-		logger.Debug(fmt.Sprintf("addr_validate: address %q is valid", addrBytes))
-		return 0
-	})
+	mod.NewFunctionBuilder().WithFunc(AddrValidate).Export("addr_validate")
 
 	// addr_canonicalize: addr_canonicalize(human_ptr: u32, canon_ptr: u32) -> u32
-	instance.RegisterFunction("env", "addr_canonicalize", func(humanPtr, canonPtr uint32) uint32 {
-		humanAddr, err := mem.ReadRegion(humanPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("addr_canonicalize: failed to read human address: %v", err))
-			return 1
-		}
-		canon, _, err := api.CanonicalizeAddress(string(humanAddr))
-		if err != nil {
-			logger.Debug(fmt.Sprintf("addr_canonicalize: invalid address %q: %v", humanAddr, err))
-			return 1
-		}
-		if err := writeToRegion(mem, canonPtr, canon); err != nil {
-			logger.Error(fmt.Sprintf("addr_canonicalize: failed to write canonical address: %v", err))
-			return 1
-		}
-		logger.Debug(fmt.Sprintf("addr_canonicalize: %q -> %X", humanAddr, canon))
-		return 0
-	})
+	mod.NewFunctionBuilder().WithFunc(AddrCanonicalize).Export("canonicalize_address")
 
 	// addr_humanize: addr_humanize(canon_ptr: u32, human_ptr: u32) -> u32
-	instance.RegisterFunction("env", "addr_humanize", func(canonPtr, humanPtr uint32) uint32 {
-		canonAddr, err := mem.ReadRegion(canonPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("addr_humanize: failed to read canonical address: %v", err))
-			return 1
-		}
-		human, _, err := api.HumanizeAddress(canonAddr)
-		if err != nil {
-			logger.Debug(fmt.Sprintf("addr_humanize: invalid canonical addr %X: %v", canonAddr, err))
-			return 1
-		}
-		if err := writeToRegion(mem, humanPtr, []byte(human)); err != nil {
-			logger.Error(fmt.Sprintf("addr_humanize: failed to write human address: %v", err))
-			return 1
-		}
-		logger.Debug(fmt.Sprintf("addr_humanize: %X -> %q", canonAddr, human))
-		return 0
-	})
+	mod.NewFunctionBuilder().WithFunc(hostHumanizeAddress).Export("humanize_address")
 
-	// secp256k1_verify: secp256k1_verify(hash_ptr: u32, sig_ptr: u32, pubkey_ptr: u32) -> u32
-	instance.RegisterFunction("env", "secp256k1_verify", func(hashPtr, sigPtr, pubKeyPtr uint32) uint32 {
-		msgHash, err := mem.ReadRegion(hashPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_verify: failed to read message hash: %v", err))
-			return 2
-		}
-		sig, err := mem.ReadRegion(sigPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_verify: failed to read signature: %v", err))
-			return 2
-		}
-		pubKey, err := mem.ReadRegion(pubKeyPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_verify: failed to read public key: %v", err))
-			return 2
-		}
-		valid, _, err := api.Secp256k1Verify(msgHash, sig, pubKey)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_verify: crypto error: %v", err))
-			return 3
-		}
-		if !valid {
-			logger.Debug("secp256k1_verify: signature verification FAILED")
-			return 1
-		}
-		logger.Debug("secp256k1_verify: signature verification successful")
-		return 0
-	})
+	// Crypto operations
+	mod.NewFunctionBuilder().WithFunc(Secp256k1Verify).Export("secp256k1_verify")
+	mod.NewFunctionBuilder().WithFunc(Secp256k1RecoverPubkey).Export("secp256k1_recover_pubkey")
+	mod.NewFunctionBuilder().WithFunc(Ed25519Verify).Export("ed25519_verify")
+	mod.NewFunctionBuilder().WithFunc(Ed25519BatchVerify).Export("ed25519_batch_verify")
 
-	// secp256k1_recover_pubkey: secp256k1_recover_pubkey(hash_ptr: u32, sig_ptr: u32, recovery_param: u32) -> u64
-	instance.RegisterFunction("env", "secp256k1_recover_pubkey", func(hashPtr, sigPtr, param uint32) uint64 {
-		msgHash, err := mem.ReadRegion(hashPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: failed to read message hash: %v", err))
-			return 0
-		}
-		sig, err := mem.ReadRegion(sigPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: failed to read signature: %v", err))
-			return 0
-		}
-		pubKey, _, err := api.Secp256k1RecoverPubkey(msgHash, sig, byte(param))
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: recover failed: %v", err))
-			return 0
-		}
-		regionPtr, err := mem.Allocate(uint32(len(pubKey)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: allocation failed: %v", err))
-			return 0
-		}
-		if err := writeToRegion(mem, regionPtr, pubKey); err != nil {
-			logger.Error(fmt.Sprintf("secp256k1_recover_pubkey: failed to write pubkey: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("secp256k1_recover_pubkey: recovered %d-byte pubkey", len(pubKey)))
-		return (uint64(regionPtr) << 32) | uint64(len(pubKey))
-	})
-
-	// ed25519_verify: ed25519_verify(msg_ptr: u32, sig_ptr: u32, pubkey_ptr: u32) -> u32
-	instance.RegisterFunction("env", "ed25519_verify", func(msgPtr, sigPtr, pubKeyPtr uint32) uint32 {
-		msg, err := mem.ReadRegion(msgPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_verify: failed to read message: %v", err))
-			return 2
-		}
-		sig, err := mem.ReadRegion(sigPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_verify: failed to read signature: %v", err))
-			return 2
-		}
-		pubKey, err := mem.ReadRegion(pubKeyPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_verify: failed to read public key: %v", err))
-			return 2
-		}
-		valid, _, err := api.Ed25519Verify(msg, sig, pubKey)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_verify: crypto error: %v", err))
-			return 3
-		}
-		if !valid {
-			logger.Debug("ed25519_verify: signature verification FAILED")
-			return 1
-		}
-		logger.Debug("ed25519_verify: signature verification successful")
-		return 0
-	})
-
-	// ed25519_batch_verify: ed25519_batch_verify(msgs_ptr: u32, sigs_ptr: u32, pubkeys_ptr: u32) -> u32
-	instance.RegisterFunction("env", "ed25519_batch_verify", func(msgsPtr, sigsPtr, pubKeysPtr uint32) uint32 {
-		msgs, err := mem.ReadRegion(msgsPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to read messages: %v", err))
-			return 2
-		}
-		sigs, err := mem.ReadRegion(sigsPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to read signatures: %v", err))
-			return 2
-		}
-		pubKeys, err := mem.ReadRegion(pubKeysPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to read public keys: %v", err))
-			return 2
-		}
-		// Deserialize the inputs from the flat byte arrays into slices of byte slices
-		var msgsArray, sigsArray, pubKeysArray [][]byte
-		if err := json.Unmarshal(msgs, &msgsArray); err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize messages: %v", err))
-			return 2
-		}
-		if err := json.Unmarshal(sigs, &sigsArray); err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize signatures: %v", err))
-			return 2
-		}
-		if err := json.Unmarshal(pubKeys, &pubKeysArray); err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: failed to deserialize public keys: %v", err))
-			return 2
-		}
-		valid, _, err := api.Ed25519BatchVerify(msgsArray, sigsArray, pubKeysArray)
-		if err != nil {
-			logger.Error(fmt.Sprintf("ed25519_batch_verify: crypto error: %v", err))
-			return 3
-		}
-		if !valid {
-			logger.Debug("ed25519_batch_verify: batch verification FAILED")
-			return 1
-		}
-		logger.Debug("ed25519_batch_verify: batch verification successful")
-		return 0
-	})
-
-	// bls12_381_aggregate_g1: bls12_381_aggregate_g1(messages_ptr: u32) -> u32
-	instance.RegisterFunction("env", "bls12_381_aggregate_g1", func(messagesPtr uint32) uint32 {
-		msgs, err := mem.ReadRegion(messagesPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g1: failed to read messages: %v", err))
-			return 1
-		}
-		result, err := api.Bls12381AggregateG1(msgs)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g1: error: %v", err))
-			return 1
-		}
-		regionPtr, err := mem.Allocate(uint32(len(result)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g1: allocation failed: %v", err))
-			return 1
-		}
-		if err := writeToRegion(mem, regionPtr, result); err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g1: failed to write result: %v", err))
-			return 1
-		}
-		logger.Debug("bls12_381_aggregate_g1: aggregation successful")
-		return regionPtr
-	})
-
-	// bls12_381_aggregate_g2: bls12_381_aggregate_g2(messages_ptr: u32) -> u32
-	instance.RegisterFunction("env", "bls12_381_aggregate_g2", func(messagesPtr uint32) uint32 {
-		msgs, err := mem.ReadRegion(messagesPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g2: failed to read messages: %v", err))
-			return 1
-		}
-		result, err := api.Bls12381AggregateG2(msgs)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g2: error: %v", err))
-			return 1
-		}
-		regionPtr, err := mem.Allocate(uint32(len(result)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g2: allocation failed: %v", err))
-			return 1
-		}
-		if err := writeToRegion(mem, regionPtr, result); err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_aggregate_g2: failed to write result: %v", err))
-			return 1
-		}
-		logger.Debug("bls12_381_aggregate_g2: aggregation successful")
-		return regionPtr
-	})
-
-	// bls12_381_pairing_equality: bls12_381_pairing_equality(pairs_ptr: u32) -> u32
-	instance.RegisterFunction("env", "bls12_381_pairing_equality", func(pairsPtr uint32) uint32 {
-		pairs, err := mem.ReadRegion(pairsPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_pairing_equality: failed to read pairs: %v", err))
-			return 2
-		}
-		equal, err := api.Bls12381PairingCheck(pairs)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_pairing_equality: error: %v", err))
-			return 3
-		}
-		if !equal {
-			logger.Debug("bls12_381_pairing_equality: pairs are NOT equal")
-			return 1
-		}
-		logger.Debug("bls12_381_pairing_equality: pairs are equal")
-		return 0
-	})
-
-	// bls12_381_hash_to_g1: bls12_381_hash_to_g1(message_ptr: u32, dest_ptr: u32) -> u32
-	instance.RegisterFunction("env", "bls12_381_hash_to_g1", func(messagePtr, destPtr uint32) uint32 {
-		msg, err := mem.ReadRegion(messagePtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g1: failed to read message: %v", err))
-			return 1
-		}
-		dest, err := mem.ReadRegion(destPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g1: failed to read dest: %v", err))
-			return 1
-		}
-		result, err := api.Bls12381HashToG1(msg, dest)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g1: error: %v", err))
-			return 1
-		}
-		regionPtr, err := mem.Allocate(uint32(len(result)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g1: allocation failed: %v", err))
-			return 1
-		}
-		if err := writeToRegion(mem, regionPtr, result); err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g1: failed to write result: %v", err))
-			return 1
-		}
-		logger.Debug("bls12_381_hash_to_g1: hash successful")
-		return regionPtr
-	})
-
-	// bls12_381_hash_to_g2: bls12_381_hash_to_g2(message_ptr: u32, dest_ptr: u32) -> u32
-	instance.RegisterFunction("env", "bls12_381_hash_to_g2", func(messagePtr, destPtr uint32) uint32 {
-		msg, err := mem.ReadRegion(messagePtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g2: failed to read message: %v", err))
-			return 1
-		}
-		dest, err := mem.ReadRegion(destPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g2: failed to read dest: %v", err))
-			return 1
-		}
-		result, err := api.Bls12381HashToG2(msg, dest)
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g2: error: %v", err))
-			return 1
-		}
-		regionPtr, err := mem.Allocate(uint32(len(result)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g2: allocation failed: %v", err))
-			return 1
-		}
-		if err := writeToRegion(mem, regionPtr, result); err != nil {
-			logger.Error(fmt.Sprintf("bls12_381_hash_to_g2: failed to write result: %v", err))
-			return 1
-		}
-		logger.Debug("bls12_381_hash_to_g2: hash successful")
-		return regionPtr
-	})
+	// BLS crypto operations
+	mod.NewFunctionBuilder().WithFunc(Bls12381AggregateG1).Export("bls12_381_aggregate_g1")
+	mod.NewFunctionBuilder().WithFunc(Bls12381AggregateG2).Export("bls12_381_aggregate_g2")
+	mod.NewFunctionBuilder().WithFunc(Bls12381PairingCheck).Export("bls12_381_pairing_equality")
+	mod.NewFunctionBuilder().WithFunc(Bls12381HashToG1).Export("bls12_381_hash_to_g1")
+	mod.NewFunctionBuilder().WithFunc(Bls12381HashToG2).Export("bls12_381_hash_to_g2")
 
 	// query_chain: query_chain(request_ptr: u32) -> u32
-	instance.RegisterFunction("env", "query_chain", func(reqPtr uint32) uint32 {
-		request, err := mem.ReadRegion(reqPtr)
-		if err != nil {
-			logger.Error(fmt.Sprintf("query_chain: failed to read request: %v", err))
-			return 0
-		}
-		response := types.RustQuery(querier, request, gasMeter.GasConsumed())
-		serialized, err := json.Marshal(response)
-		if err != nil {
-			logger.Error(fmt.Sprintf("query_chain: failed to serialize response: %v", err))
-			return 0
-		}
-		regionPtr, err := mem.Allocate(uint32(len(serialized)))
-		if err != nil {
-			logger.Error(fmt.Sprintf("query_chain: allocation failed: %v", err))
-			return 0
-		}
-		if err := mem.Write(regionPtr, serialized); err != nil {
-			logger.Error(fmt.Sprintf("query_chain: failed to write response: %v", err))
-			return 0
-		}
-		logger.Debug(fmt.Sprintf("query_chain: responded with %d bytes at region %d", len(serialized), regionPtr))
-		return regionPtr
-	})
+	mod.NewFunctionBuilder().WithFunc(QueryChain).Export("query_chain")
 }

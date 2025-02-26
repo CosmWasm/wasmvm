@@ -7,6 +7,7 @@ import (
 
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/crypto"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/gas"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
 	wasmTypes "github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 )
@@ -82,6 +83,21 @@ func NewWazeroVM() (*WazeroVM, error) {
 	err := crypto.SetupCryptoHandlers()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize crypto handlers: %w", err)
+	}
+
+	// Register host modules
+	hostModule := vm.runtime.NewHostModuleBuilder("env")
+
+	// Register core host functions from host package
+	host.RegisterHostFunctions(hostModule)
+
+	// Register crypto host functions
+	crypto.RegisterHostFunctions(hostModule)
+
+	// Instantiate the host module
+	_, err = hostModule.Instantiate(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate host module: %w", err)
 	}
 
 	return vm, nil

@@ -6,7 +6,7 @@ import (
 
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/cryptoapi"
-	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/hostapi"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/types"
 	"github.com/tetratelabs/wazero"
@@ -30,7 +30,7 @@ func SetCryptoHandler(handler cryptoapi.CryptoOperations) {
 // charges gas, calls BLS12381HashToG1, allocates space for the result, writes it, and returns the pointer.
 func hostBls12381HashToG1(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
 	// Retrieve the runtime environment from context.
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 
 	// Create a MemoryManager for the contract module.
 	mm, err := memory.NewMemoryManager(mod)
@@ -76,7 +76,7 @@ func hostBls12381HashToG1(ctx context.Context, mod wazerotypes.Module, hashPtr, 
 // hostBls12381HashToG2 implements bls12_381_hash_to_g2.
 // It follows the same pattern as hostBls12381HashToG1.
 func hostBls12381HashToG2(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, dstPtr, dstLen uint32) uint32 {
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -258,7 +258,7 @@ func RegisterHostFunctions(mod wazero.HostModuleBuilder) {
 // and returns 1 if valid or 0 otherwise
 func secp256k1Verify(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
 	// Retrieve the runtime environment from context
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 
 	// Create memory manager to access WebAssembly memory
 	mm, err := memory.NewMemoryManager(mod)
@@ -306,7 +306,7 @@ func secp256k1Verify(ctx context.Context, mod wazerotypes.Module, hashPtr, hashL
 // It reads hash and signature from memory, recovers the public key,
 // allocates space for the result, and returns the pointer and length
 func secp256k1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -348,7 +348,7 @@ func secp256k1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, hashPtr
 // hostEd25519Verify implements ed25519_verify
 // It reads message, signature, and public key from memory and calls Ed25519Verify
 func hostEd25519Verify(ctx context.Context, mod wazerotypes.Module, msgPtr, msgLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
@@ -389,7 +389,7 @@ func hostEd25519Verify(ctx context.Context, mod wazerotypes.Module, msgPtr, msgL
 // hostEd25519BatchVerify implements ed25519_batch_verify
 // It reads multiple messages, signatures, and public keys from memory and calls Ed25519BatchVerify
 func hostEd25519BatchVerify(ctx context.Context, mod wazerotypes.Module, msgsPtr, sigsPtr, pubkeysPtr uint32) uint32 {
-	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	env := ctx.Value(hostapi.EnvironmentKey).(*hostapi.RuntimeEnvironment)
 	mm, err := memory.NewMemoryManager(mod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
