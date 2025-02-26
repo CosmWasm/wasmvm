@@ -2,8 +2,11 @@ package wasm
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/crypto"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/gas"
 	wasmTypes "github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 )
@@ -52,12 +55,18 @@ type InfoLogger interface {
 }
 
 // NewWazeroVM creates a new VM instance with wazero as the runtime
-func NewWazeroVM(cacheSize int, memoryLimit uint32, gasConfig wasmTypes.GasConfig, logger Logger) *WazeroVM {
+func NewWazeroVM() (*WazeroVM, error) {
 	// Create runtime with proper context
 	ctx := context.Background()
 	runtime := wazero.NewRuntime(ctx)
 
-	return &WazeroVM{
+	// Set default values
+	cacheSize := 100                        // Default cache size
+	memoryLimit := uint32(32 * 1024 * 1024) // Default memory limit (32MB)
+	gasConfig := gas.DefaultGasConfig()
+
+	// Create the VM instance
+	vm := &WazeroVM{
 		runtime:     runtime,
 		codeStore:   make(map[[32]byte][]byte),
 		memoryCache: make(map[[32]byte]*cacheItem),
@@ -66,8 +75,16 @@ func NewWazeroVM(cacheSize int, memoryLimit uint32, gasConfig wasmTypes.GasConfi
 		cacheSize:   cacheSize,
 		gasConfig:   gasConfig,
 		memoryLimit: memoryLimit,
-		logger:      logger,
+		logger:      nil, // Will use default logger
 	}
+
+	// Initialize crypto handler
+	err := crypto.SetupCryptoHandlers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize crypto handlers: %w", err)
+	}
+
+	return vm, nil
 }
 
 // Close releases all resources held by the VM

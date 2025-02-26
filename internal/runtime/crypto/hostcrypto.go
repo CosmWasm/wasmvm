@@ -220,3 +220,14 @@ func hostSecp256r1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, has
 
 	return resultPtr, uint32(len(result))
 }
+
+// SetupCryptoHandlers initializes the crypto system by creating and setting the global crypto handler
+func SetupCryptoHandlers() error {
+	// Create a new implementation of the CryptoOperations interface
+	impl := NewCryptoImplementation()
+
+	// Set it as the global handler
+	SetCryptoHandler(impl)
+
+	return nil
+}

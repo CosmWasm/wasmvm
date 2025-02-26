@@ -7,13 +7,13 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/CosmWasm/wasmvm/v2/internal/wasmvmint"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/wasm"
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
 func init() {
 	// Create a new wazero runtime instance and assign it to currentRuntime
-	r, err := wasmvmint.NewWazeroRuntime()
+	r, err := wasm.NewWazeroVM()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create wazero runtime: %v", err))
 	}
@@ -26,7 +26,7 @@ type Cache struct {
 }
 
 // currentRuntime should be initialized with an instance of WazeroRuntime or another runtime.
-var currentRuntime wasmint.WasmRuntime
+var currentRuntime wasm.WasmRuntime
 
 func InitCache(config types.VMConfig) (Cache, error) {
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
