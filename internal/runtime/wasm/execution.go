@@ -8,9 +8,19 @@ import (
 	"fmt"
 
 	// Assume types package defines Env, MessageInfo, QueryRequest, Reply, etc.
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/crypto"
+	wazmeter "github.com/CosmWasm/wasmvm/v2/internal/runtime/gas/wazero"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
+	runtimeTypes "github.com/CosmWasm/wasmvm/v2/internal/runtime/types"
 	"github.com/CosmWasm/wasmvm/v2/types"
 	"github.com/tetratelabs/wazero"
 )
+
+func init() {
+	// Set up the crypto handler
+	cryptoImpl := crypto.NewCryptoImplementation()
+	host.SetCryptoHandler(cryptoImpl)
+}
 
 // Instantiate compiles (if needed) and instantiates a contract, calling its "instantiate" method.
 func (vm *WazeroVM) Instantiate(checksum Checksum, env types.Env, info types.MessageInfo, initMsg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64, deserCost types.UFraction) (*types.ContractResult, uint64, error) {
@@ -131,12 +141,39 @@ func (vm *WazeroVM) Reply(checksum Checksum, env types.Env, reply types.Reply, s
 	return &result, gasUsed, nil
 }
 
+// gasContext holds gas metering state for a contract execution
+type gasContext struct {
+	meter        *wazmeter.WazeroGasMeter
+	operationGas uint64 // Tracks gas for current operation
+}
+
 // callContract is an internal helper to instantiate the Wasm module and call a specified entry point.
 func (vm *WazeroVM) callContract(checksum Checksum, entrypoint string, env []byte, info []byte, msg []byte, store types.KVStore, api types.GoAPI, querier types.Querier, gasMeter types.GasMeter, gasLimit uint64) ([]byte, uint64, error) {
 	ctx := context.Background()
 	// Attach the execution context (store, api, querier, gasMeter) to ctx for host functions.
 	instCtx := instanceContext{store: store, api: api, querier: querier, gasMeter: gasMeter, gasLimit: gasLimit}
 	ctx = context.WithValue(ctx, instanceContextKey{}, &instCtx)
+
+	// Create wazero gas meter with proper configuration
+	internalConfig := runtimeTypes.GasConfig{
+		PerByte:       vm.gasConfig.PerByte,
+		DatabaseRead:  vm.gasConfig.DatabaseRead,
+		DatabaseWrite: vm.gasConfig.DatabaseWrite,
+		GasMultiplier: 100, // Default multiplier
+	}
+	wazmeter := wazmeter.NewWazeroGasMeter(gasLimit, internalConfig)
+
+	// Create module config with gas metering
+	modConfig := wazero.NewModuleConfig()
+
+	// Convert memory limit from bytes to pages (64KiB per page)
+	maxPages := uint32(vm.memoryLimit / 65536)
+	if maxPages < 1 {
+		maxPages = 1 // Ensure at least 1 page
+	}
+
+	// Fix gas meter context key
+	ctx = wazmeter.WithGasMeter(ctx)
 
 	// Ensure we have a compiled module for this code (maybe from cache) [oai_citation_attribution:18‡docs.cosmwasm.com](https://docs.cosmwasm.com/core/architecture/pinning#:~:text=Contract%20pinning%20is%20a%20feature,33x%20faster).
 	codeHash := [32]byte{}
@@ -146,7 +183,7 @@ func (vm *WazeroVM) callContract(checksum Checksum, entrypoint string, env []byt
 		return nil, 0, fmt.Errorf("loading module: %w", err)
 	}
 	// Instantiate a new module instance for this execution.
-	module, err := vm.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig())
+	module, err := vm.runtime.InstantiateModule(ctx, compiled, modConfig)
 	if err != nil {
 		return nil, 0, fmt.Errorf("instantiating module: %w", err)
 	}
@@ -221,11 +258,11 @@ func (vm *WazeroVM) callContract(checksum Checksum, entrypoint string, env []byt
 		// If the execution trapped (e.g., out of gas or contract panic), determine error.
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			// Context cancellation (treat as out of gas for consistency).
-			return nil, gasUsed, OutOfGasError{}
+			return nil, gasUsed, runtimeTypes.OutOfGasError{Descriptor: "execution timeout"}
 		}
-		// Wazero traps on out-of-gas would manifest as a panic/exit error [oai_citation_attribution:22‡github.com](https://github.com/tetratelabs/wazero/blob/main/RATIONALE.md#:~:text=Currently%2C%20the%20only%20portable%20way,code%20isn%27t%20executed%20after%20it). We assume any runtime error means out of gas if gas is exhausted.
+		// Wazero traps on out-of-gas would manifest as a panic/exit error
 		if gasUsed >= gasLimit {
-			return nil, gasUsed, OutOfGasError{}
+			return nil, gasUsed, runtimeTypes.OutOfGasError{Descriptor: "execution exceeded gas limit"}
 		}
 		// Otherwise, return the error as a generic VM error.
 		return nil, gasUsed, fmt.Errorf("contract execution error: %w", err)
@@ -256,7 +293,7 @@ func (vm *WazeroVM) getCompiledModule(codeHash [32]byte) (wazero.CompiledModule,
 		item.hits++
 		compiled := item.compiled
 		vm.cacheMu.RUnlock()
-		vm.logger.Debug().Str("checksum", hex.EncodeToString(codeHash[:])).Msg("Using pinned contract module from cache")
+		vm.logger.Debug("Using pinned contract module from cache", "checksum", hex.EncodeToString(codeHash[:]))
 		return compiled, nil
 	}
 	if item, ok := vm.memoryCache[codeHash]; ok {
@@ -274,7 +311,7 @@ func (vm *WazeroVM) getCompiledModule(codeHash [32]byte) (wazero.CompiledModule,
 		vm.cacheOrder = append(vm.cacheOrder, codeHash)
 		compiled := item.compiled
 		vm.cacheMu.RUnlock()
-		vm.logger.Debug().Str("checksum", hex.EncodeToString(codeHash[:])).Msg("Using cached module from LRU cache")
+		vm.logger.Debug("Using cached module from LRU cache", "checksum", hex.EncodeToString(codeHash[:]))
 		return compiled, nil
 	}
 	vm.cacheMu.RUnlock()
@@ -304,7 +341,7 @@ func (vm *WazeroVM) getCompiledModule(codeHash [32]byte) (wazero.CompiledModule,
 	// Not in any cache yet: compile the Wasm code.
 	code, ok := vm.codeStore[codeHash]
 	if !ok {
-		vm.logger.Error().Msg("Wasm code bytes not found for checksum")
+		vm.logger.Error("Wasm code bytes not found for checksum")
 		return nil, fmt.Errorf("code %x not found", codeHash)
 	}
 	compiled, err := vm.runtime.CompileModule(context.Background(), code)
@@ -323,13 +360,12 @@ func (vm *WazeroVM) getCompiledModule(codeHash [32]byte) (wazero.CompiledModule,
 		if ci, ok := vm.memoryCache[oldest]; ok {
 			_ = ci.compiled.Close(context.Background()) // free the compiled module
 			delete(vm.memoryCache, oldest)
-			vm.logger.Debug().Str("checksum", hex.EncodeToString(oldest[:])).Msg("Evicted module from cache (LRU)")
+			vm.logger.Debug("Evicted module from cache (LRU)", "checksum", hex.EncodeToString(oldest[:]))
 		}
 	}
-	vm.logger.Info().
-		Str("checksum", hex.EncodeToString(codeHash[:])).
-		Uint64("size_bytes", size).
-		Msg("Compiled new contract module and cached")
+	vm.logger.Info("Compiled new contract module and cached",
+		"checksum", hex.EncodeToString(codeHash[:]),
+		"size_bytes", size)
 	return compiled, nil
 }
 
@@ -352,4 +388,11 @@ func getInstanceContext(ctx context.Context) *instanceContext {
 		return nil
 	}
 	return val.(*instanceContext)
+}
+
+// OutOfGasError represents an out of gas error
+type OutOfGasError struct{}
+
+func (OutOfGasError) Error() string {
+	return "out of gas"
 }

@@ -4,16 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	internalapi "github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/constants"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/cryptoapi"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
+	"github.com/CosmWasm/wasmvm/v2/internal/runtime/types"
 	wazerotypes "github.com/tetratelabs/wazero/api"
 )
 
 type contextKey string
 
 const envKey contextKey = "env"
+
+// Add global handler variable
+var cryptoHandler cryptoapi.CryptoOperations
+
+// Add function to set the handler
+func SetCryptoHandler(handler cryptoapi.CryptoOperations) {
+	cryptoHandler = handler
+}
 
 // hostBls12381HashToG1 implements bls12_381_hash_to_g1.
 // It reads the message and domain separation tag from contract memory using MemoryManager,
@@ -41,10 +50,10 @@ func hostBls12381HashToG1(ctx context.Context, mod wazerotypes.Module, hashPtr, 
 	}
 
 	// Charge gas for the operation.
-	env.Gas.(internalapi.MockGasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
+	env.Gas.(types.GasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
 
 	// Hash to curve.
-	result, err := BLS12381HashToG1(message, dst)
+	result, err := cryptoHandler.BLS12381HashToG1(message, dst)
 	if err != nil {
 		return 0
 	}
@@ -83,9 +92,9 @@ func hostBls12381HashToG2(ctx context.Context, mod wazerotypes.Module, hashPtr, 
 	}
 
 	// Charge gas for the operation.
-	env.Gas.(internalapi.MockGasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
+	env.Gas.(types.GasMeter).ConsumeGas(uint64(hashLen+dstLen)*constants.GasPerByte, "BLS12381 hash operation")
 
-	result, err := BLS12381HashToG2(message, dst)
+	result, err := cryptoHandler.BLS12381HashToG2(message, dst)
 	if err != nil {
 		return 0
 	}
@@ -127,7 +136,10 @@ func hostBls12381PairingEquality(_ context.Context, mod wazerotypes.Module, a1Pt
 		panic(fmt.Sprintf("failed to read b2: %v", err))
 	}
 
-	result, err := BLS12381PairingEquality(a1, a2, b1, b2)
+	result, err := cryptoHandler.BLS12381VerifyG1G2(
+		[][]byte{a1, b1}, // g1 points
+		[][]byte{a2, b2}, // g2 points
+	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to check pairing equality: %v", err))
 	}
@@ -162,7 +174,7 @@ func hostSecp256r1Verify(_ context.Context, mod wazerotypes.Module, hashPtr, has
 		panic(fmt.Sprintf("failed to read public key: %v", err))
 	}
 
-	result, err := Secp256r1Verify(hash, sig, pubkey)
+	result, err := cryptoHandler.Secp256r1Verify(hash, sig, pubkey)
 	if err != nil {
 		panic(fmt.Sprintf("failed to verify secp256r1 signature: %v", err))
 	}
@@ -192,19 +204,19 @@ func hostSecp256r1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, has
 		panic(fmt.Sprintf("failed to read signature: %v", err))
 	}
 
-	pubkey, err := Secp256r1RecoverPubkey(hash, signature, byte(recovery))
+	result, err := cryptoHandler.Secp256r1RecoverPubkey(hash, signature, byte(recovery))
 	if err != nil {
 		panic(fmt.Sprintf("failed to recover public key: %v", err))
 	}
 
-	resultPtr, err := mm.Allocate(uint32(len(pubkey)))
+	resultPtr, err := mm.Allocate(uint32(len(result)))
 	if err != nil {
 		panic(fmt.Sprintf("failed to allocate memory for result: %v", err))
 	}
 
-	if err := mm.Write(resultPtr, pubkey); err != nil {
+	if err := mm.Write(resultPtr, result); err != nil {
 		panic(fmt.Sprintf("failed to write result: %v", err))
 	}
 
-	return resultPtr, uint32(len(pubkey))
+	return resultPtr, uint32(len(result))
 }

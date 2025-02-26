@@ -11,7 +11,7 @@ const (
 // Gas costs for various operations
 const (
 	// Memory operations
-	GasPerByte = 1
+	GasPerByte = 3
 
 	// Database operations
 	GasCostRead  = 100
