@@ -9,6 +9,7 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/host"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/memory"
 	"github.com/CosmWasm/wasmvm/v2/internal/runtime/types"
+	"github.com/tetratelabs/wazero"
 	wazerotypes "github.com/tetratelabs/wazero/api"
 )
 
@@ -230,4 +231,259 @@ func SetupCryptoHandlers() error {
 	SetCryptoHandler(impl)
 
 	return nil
+}
+
+// RegisterHostFunctions registers all crypto host functions with the provided module
+func RegisterHostFunctions(mod wazero.HostModuleBuilder) {
+	// Register BLS functions
+	mod.NewFunctionBuilder().WithFunc(hostBls12381HashToG1).Export("bls12_381_hash_to_g1")
+	mod.NewFunctionBuilder().WithFunc(hostBls12381HashToG2).Export("bls12_381_hash_to_g2")
+	mod.NewFunctionBuilder().WithFunc(hostBls12381PairingEquality).Export("bls12_381_pairing_equality")
+
+	// Register secp256r1 functions
+	mod.NewFunctionBuilder().WithFunc(hostSecp256r1Verify).Export("secp256r1_verify")
+	mod.NewFunctionBuilder().WithFunc(hostSecp256r1RecoverPubkey).Export("secp256r1_recover_pubkey")
+
+	// Register secp256k1 functions
+	mod.NewFunctionBuilder().WithFunc(secp256k1Verify).Export("secp256k1_verify")
+	mod.NewFunctionBuilder().WithFunc(secp256k1RecoverPubkey).Export("secp256k1_recover_pubkey")
+
+	// Register ed25519 functions
+	mod.NewFunctionBuilder().WithFunc(hostEd25519Verify).Export("ed25519_verify")
+	mod.NewFunctionBuilder().WithFunc(hostEd25519BatchVerify).Export("ed25519_batch_verify")
+}
+
+// secp256k1Verify implements secp256k1_verify
+// It reads message hash, signature, and public key from memory, calls Secp256k1Verify,
+// and returns 1 if valid or 0 otherwise
+func secp256k1Verify(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+	// Retrieve the runtime environment from context
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+
+	// Create memory manager to access WebAssembly memory
+	mm, err := memory.NewMemoryManager(mod)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
+	}
+
+	// Read hash from memory
+	hash, err := mm.Read(hashPtr, hashLen)
+	if err != nil {
+		return 0
+	}
+
+	// Read signature from memory
+	signature, err := mm.Read(sigPtr, sigLen)
+	if err != nil {
+		return 0
+	}
+
+	// Read public key from memory
+	pubkey, err := mm.Read(pubkeyPtr, pubkeyLen)
+	if err != nil {
+		return 0
+	}
+
+	// Charge gas for the operation
+	env.Gas.(types.GasMeter).ConsumeGas(
+		uint64(hashLen+sigLen+pubkeyLen)*constants.GasPerByte,
+		"secp256k1 verification",
+	)
+
+	// Call the implementation function
+	result, err := cryptoHandler.Secp256k1Verify(hash, signature, pubkey)
+	if err != nil {
+		return 0
+	}
+
+	if result {
+		return 1
+	}
+	return 0
+}
+
+// secp256k1RecoverPubkey implements secp256k1_recover_pubkey
+// It reads hash and signature from memory, recovers the public key,
+// allocates space for the result, and returns the pointer and length
+func secp256k1RecoverPubkey(ctx context.Context, mod wazerotypes.Module, hashPtr, hashLen, sigPtr, sigLen, recovery uint32) (uint32, uint32) {
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	mm, err := memory.NewMemoryManager(mod)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
+	}
+
+	hash, err := mm.Read(hashPtr, hashLen)
+	if err != nil {
+		return 0, 0
+	}
+
+	signature, err := mm.Read(sigPtr, sigLen)
+	if err != nil {
+		return 0, 0
+	}
+
+	// Charge gas for operation
+	env.Gas.(types.GasMeter).ConsumeGas(
+		uint64(hashLen+sigLen)*constants.GasPerByte,
+		"secp256k1 key recovery",
+	)
+
+	result, err := cryptoHandler.Secp256k1RecoverPubkey(hash, signature, byte(recovery))
+	if err != nil {
+		return 0, 0
+	}
+
+	resultPtr, err := mm.Allocate(uint32(len(result)))
+	if err != nil {
+		return 0, 0
+	}
+
+	if err := mm.Write(resultPtr, result); err != nil {
+		return 0, 0
+	}
+
+	return resultPtr, uint32(len(result))
+}
+
+// hostEd25519Verify implements ed25519_verify
+// It reads message, signature, and public key from memory and calls Ed25519Verify
+func hostEd25519Verify(ctx context.Context, mod wazerotypes.Module, msgPtr, msgLen, sigPtr, sigLen, pubkeyPtr, pubkeyLen uint32) uint32 {
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	mm, err := memory.NewMemoryManager(mod)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
+	}
+
+	message, err := mm.Read(msgPtr, msgLen)
+	if err != nil {
+		return 0
+	}
+
+	signature, err := mm.Read(sigPtr, sigLen)
+	if err != nil {
+		return 0
+	}
+
+	pubkey, err := mm.Read(pubkeyPtr, pubkeyLen)
+	if err != nil {
+		return 0
+	}
+
+	// Charge gas
+	env.Gas.(types.GasMeter).ConsumeGas(
+		uint64(msgLen+sigLen+pubkeyLen)*constants.GasPerByte,
+		"ed25519 verification",
+	)
+
+	result, err := cryptoHandler.Ed25519Verify(message, signature, pubkey)
+	if err != nil {
+		return 0
+	}
+
+	if result {
+		return 1
+	}
+	return 0
+}
+
+// hostEd25519BatchVerify implements ed25519_batch_verify
+// It reads multiple messages, signatures, and public keys from memory and calls Ed25519BatchVerify
+func hostEd25519BatchVerify(ctx context.Context, mod wazerotypes.Module, msgsPtr, sigsPtr, pubkeysPtr uint32) uint32 {
+	env := ctx.Value(envKey).(*host.RuntimeEnvironment)
+	mm, err := memory.NewMemoryManager(mod)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create MemoryManager: %v", err))
+	}
+
+	// Read batch data from arrays of pointers
+	// This is a simplified version - actual implementation needs to read array of arrays
+
+	// Example (would need to be adapted to actual memory layout):
+	// Read number of items in batch
+	countPtr, err := mm.Read(msgsPtr, 4)
+	if err != nil {
+		return 0
+	}
+	count := uint32(countPtr[0]) | uint32(countPtr[1])<<8 | uint32(countPtr[2])<<16 | uint32(countPtr[3])<<24
+
+	messages := make([][]byte, count)
+	signatures := make([][]byte, count)
+	pubkeys := make([][]byte, count)
+
+	totalBytes := uint64(0)
+
+	// Read each message, signature, and pubkey
+	for i := uint32(0); i < count; i++ {
+		// Read message pointer and length
+		msgPtrAddr := msgsPtr + 8*i + 4
+		msgLenAddr := msgsPtr + 8*i + 8
+		msgPtr, ok := mm.ReadUint32(msgPtrAddr)
+		if !ok {
+			return 0
+		}
+		msgLen, ok := mm.ReadUint32(msgLenAddr)
+		if !ok {
+			return 0
+		}
+
+		// Read signature pointer and length
+		sigPtrAddr := sigsPtr + 8*i + 4
+		sigLenAddr := sigsPtr + 8*i + 8
+		sigPtr, ok := mm.ReadUint32(sigPtrAddr)
+		if !ok {
+			return 0
+		}
+		sigLen, ok := mm.ReadUint32(sigLenAddr)
+		if !ok {
+			return 0
+		}
+
+		// Read pubkey pointer and length
+		pubkeyPtrAddr := pubkeysPtr + 8*i + 4
+		pubkeyLenAddr := pubkeysPtr + 8*i + 8
+		pubkeyPtr, ok := mm.ReadUint32(pubkeyPtrAddr)
+		if !ok {
+			return 0
+		}
+		pubkeyLen, ok := mm.ReadUint32(pubkeyLenAddr)
+		if !ok {
+			return 0
+		}
+
+		// Read actual data
+		msg, err := mm.Read(msgPtr, msgLen)
+		if err != nil {
+			return 0
+		}
+		sig, err := mm.Read(sigPtr, sigLen)
+		if err != nil {
+			return 0
+		}
+		pk, err := mm.Read(pubkeyPtr, pubkeyLen)
+		if err != nil {
+			return 0
+		}
+
+		messages[i] = msg
+		signatures[i] = sig
+		pubkeys[i] = pk
+
+		totalBytes += uint64(msgLen + sigLen + pubkeyLen)
+	}
+
+	// Charge gas
+	env.Gas.(types.GasMeter).ConsumeGas(
+		totalBytes*constants.GasPerByte,
+		"ed25519 batch verification",
+	)
+
+	result, err := cryptoHandler.Ed25519BatchVerify(messages, signatures, pubkeys)
+	if err != nil {
+		return 0
+	}
+
+	if result {
+		return 1
+	}
+	return 0
 }

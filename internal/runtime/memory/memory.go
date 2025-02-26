@@ -171,3 +171,14 @@ func putUint32LE(b []byte, v uint32) {
 	b[2] = byte((v >> 16) & 0xFF)
 	b[3] = byte((v >> 24) & 0xFF)
 }
+
+// Add this method to the MemoryManager struct
+func (mm *MemoryManager) ReadUint32(offset uint32) (uint32, bool) {
+	data, err := mm.Read(offset, 4)
+	if err != nil {
+		return 0, false
+	}
+
+	// Convert 4 bytes to uint32 (little-endian)
+	return uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24, true
+}

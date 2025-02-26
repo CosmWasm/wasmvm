@@ -381,15 +381,6 @@ type instanceContext struct {
 // instanceContextKey is used as context key for instanceContext.
 type instanceContextKey struct{}
 
-// Helper to retrieve instanceContext from a context.
-func getInstanceContext(ctx context.Context) *instanceContext {
-	val := ctx.Value(instanceContextKey{})
-	if val == nil {
-		return nil
-	}
-	return val.(*instanceContext)
-}
-
 // OutOfGasError represents an out of gas error
 type OutOfGasError struct{}
 
