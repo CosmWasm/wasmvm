@@ -28,7 +28,7 @@ library that can be used via FFI. It is compiled like this:
 # Run unit tests
 (cd libwasmvm && cargo test)
 
-# Create release build for your current system. Uses whatever default Rust
+# Create a release build for your current system. Uses whatever default Rust
 # version you have installed.
 make build-libwasmvm
 
@@ -107,11 +107,11 @@ go build -tags "nolink_libwasmvm"
 See [COMPILER_VERSIONS.md](docs/COMPILER_VERSIONS.md) for information on Go and
 Rust compiler support.
 
-The Rust implementation of the VM is compiled to a library called libwasmvm.
+The Rust implementation of the VM is compiled into a library called libwasmvm.
 This is then linked to the Go code when the final binary is built. For that
 reason not all systems supported by Go are supported by this project.
 
-Linux (tested on Ubuntu, Debian, Alpine) and macOS is supported. We are working
+Linux (tested on Ubuntu, Debian, Alpine) and macOS are supported. We are working
 on Windows support with very low priority (#288).
 
 [#288]: https://github.com/CosmWasm/wasmvm/pull/288

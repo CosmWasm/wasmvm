@@ -4,7 +4,7 @@
 FROM --platform=linux/amd64 debian:11-slim
 
 RUN apt update -y \
-  && apt install -y gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget
+  && apt install -y gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu wget clang
 
 # GET FROM https://github.com/rust-lang/docker-rust-nightly
 ENV RUSTUP_HOME=/usr/local/rustup \
