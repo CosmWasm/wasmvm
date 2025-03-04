@@ -14,3 +14,8 @@ type EurekaPayload struct {
 	// Encoded payload data
 	Value []byte `json:"value"`
 }
+
+type EurekaPacketReceiveMsg struct {
+	Packet  EurekaPayload `json:"packet"`
+	Relayer string        `json:"relayer"`
+}
