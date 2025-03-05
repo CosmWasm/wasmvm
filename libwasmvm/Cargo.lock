@@ -437,13 +437,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -465,8 +465,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -475,8 +475,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 dependencies = [
  "base64",
  "bech32",
@@ -498,8 +498,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 dependencies = [
  "bech32",
  "blake2",
@@ -527,8 +527,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "2.2.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.1#ccd7f0bb245d5e32702d63047903defbf415f6ec"
+version = "2.2.2"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.2.2#dd90b6f9cc9012fe78d436b841f2f2d93b65ccd3"
 dependencies = [
  "blake2",
  "proc-macro2",
