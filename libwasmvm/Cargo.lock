@@ -432,13 +432,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.1.6"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.6#bba58b669a5015f07af2fdd3c39314b2212b070b"
+version = "2.1.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.7#abd06d862719ee4028b1c0daf96b8f8e4ba3ca4b"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.1.6"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.6#bba58b669a5015f07af2fdd3c39314b2212b070b"
+version = "2.1.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.7#abd06d862719ee4028b1c0daf96b8f8e4ba3ca4b"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -459,8 +459,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.1.6"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.6#bba58b669a5015f07af2fdd3c39314b2212b070b"
+version = "2.1.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.7#abd06d862719ee4028b1c0daf96b8f8e4ba3ca4b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -469,8 +469,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.1.6"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.6#bba58b669a5015f07af2fdd3c39314b2212b070b"
+version = "2.1.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.7#abd06d862719ee4028b1c0daf96b8f8e4ba3ca4b"
 dependencies = [
  "base64",
  "bech32",
@@ -491,8 +491,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.1.6"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.6#bba58b669a5015f07af2fdd3c39314b2212b070b"
+version = "2.1.7"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v2.1.7#abd06d862719ee4028b1c0daf96b8f8e4ba3ca4b"
 dependencies = [
  "bech32",
  "bytes",
