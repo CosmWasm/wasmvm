@@ -678,6 +678,40 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
+// IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
+// packet is received on a channel belonging to this contract
+func (vm *VM) IBCv2PacketReceive(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBCv2PacketReceiveMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCReceiveResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBCv2PacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCReceiveResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 func compileCost(code WasmCode) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:

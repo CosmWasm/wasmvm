@@ -402,8 +402,8 @@ type ContractInfoResponse struct {
 	Pinned bool   `json:"pinned"`
 	// Set if the contract is IBC enabled
 	IBCPort string `json:"ibc_port,omitempty"`
-	// Set if the contract is Eureka enabled
-	EurekaPort string `json:"eureka_port,omitempty"`
+	// Set if the contract is IBCv2 enabled
+	IBCv2Port string `json:"ibcv2_port,omitempty"`
 }
 
 type CodeInfoQuery struct {
