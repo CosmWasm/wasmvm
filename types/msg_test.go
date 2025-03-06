@@ -162,15 +162,15 @@ func TestMsgFundCommunityPoolSerialization(t *testing.T) {
 	require.Equal(t, Array[Coin]{{"adenom", "300"}, {"bdenom", "400"}}, msg.FundCommunityPool.Amount)
 }
 
-func TestMsgEurekaSendPacketSerialization(t *testing.T) {
+func TestMsgIBCv2SendPacketSerialization(t *testing.T) {
 	document := []byte(`{"send_packet":{"channel_id":"channel-432", "payloads": [{"destination_port": "wasm.123", "version": "random_version", "encoding": "json", "value": ""}], "timeout": "0"}}`)
 
-	var msg EurekaMsg
+	var msg IBCv2Msg
 	err := json.Unmarshal(document, &msg)
 	require.NoError(t, err)
 
 	require.Equal(t, "channel-432", msg.SendPacket.ChannelID)
-	require.Equal(t, []EurekaPayload{{
+	require.Equal(t, []IBCv2Payload{{
 		DestinationPort: "wasm.123",
 		Version:         "random_version",
 		Encoding:        "json",
