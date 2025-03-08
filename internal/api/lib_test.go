@@ -29,9 +29,7 @@ const (
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -49,9 +47,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 // wasmd expects us to create the base directory
 // https://github.com/CosmWasm/wasmd/blob/v0.30.0/x/wasm/keeper/keeper.go#L128
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
 	config := types.VMConfig{
@@ -85,9 +81,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -128,15 +122,9 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 }
 
 func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
-	tmpdir1, err := os.MkdirTemp("", "wasmvm-testing1")
-	require.NoError(t, err)
-	tmpdir2, err := os.MkdirTemp("", "wasmvm-testing2")
-	require.NoError(t, err)
-	tmpdir3, err := os.MkdirTemp("", "wasmvm-testing3")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir1)
-	defer os.RemoveAll(tmpdir2)
-	defer os.RemoveAll(tmpdir3)
+	tmpdir1 := t.TempDir()
+	tmpdir2 := t.TempDir()
+	tmpdir3 := t.TempDir()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -175,9 +163,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 }
 
 func TestInitCacheEmptyCapabilities(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -193,8 +179,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 
 func withCache(tb testing.TB) (Cache, func()) {
 	tb.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(tb, err)
+	tmpdir := tb.TempDir()
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -207,7 +192,6 @@ func withCache(tb testing.TB) (Cache, func()) {
 	require.NoError(tb, err)
 
 	cleanup := func() {
-		os.RemoveAll(tmpdir)
 		ReleaseCache(cache)
 	}
 	return cache, cleanup
