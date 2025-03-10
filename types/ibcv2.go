@@ -5,7 +5,9 @@ package types
 // Payload value should be encoded using the method specified in the Encoding field,
 // and the module on the other side should know how to parse this.
 type IBCv2Payload struct {
-	// The port id on the chain where the packet is sent to (external chain).
+	// The port id on the chain where the packet is sent from.
+	SourcePort string `json:"source_port"`
+	// The port id on the chain where the packet is sent to.
 	DestinationPort string `json:"destination_port"`
 	// Version of the receiving contract.
 	Version string `json:"version"`
@@ -16,6 +18,7 @@ type IBCv2Payload struct {
 }
 
 type IBCv2PacketReceiveMsg struct {
-	Payload IBCv2Payload `json:"payload"`
-	Relayer string       `json:"relayer"`
+	Payload      IBCv2Payload `json:"payload"`
+	Relayer      string       `json:"relayer"`
+	SourceClient string       `json:"source_client"`
 }

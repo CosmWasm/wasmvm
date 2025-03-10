@@ -353,7 +353,7 @@ type WasmMsg struct {
 	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
-// These are messages in the IBC lifecycle using the new IBCv2 approach. Only usable by IBC-enabled contracts
+// These are messages in the IBC lifecycle using the new IBCv2 approach. Only usable by IBCv2-enabled contracts
 type IBCv2Msg struct {
 	SendPacket *IBCv2SendPacketMsg `json:"send_packet,omitempty"`
 }
