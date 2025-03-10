@@ -164,11 +164,11 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
 	entrypoints_array := strings.Split(entrypoints, ",")
-	hasIBCv2EntryPoints := slices.Contains(entrypoints_array, "ibcv2_packet_receive")
+	hasIBC2EntryPoints := slices.Contains(entrypoints_array, "ibc2_packet_receive")
 
 	res := types.AnalysisReport{
 		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
-		HasIBCv2EntryPoints:    hasIBCv2EntryPoints,
+		HasIBC2EntryPoints:     hasIBC2EntryPoints,
 		RequiredCapabilities:   requiredCapabilities,
 		Entrypoints:            entrypoints_array,
 		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
@@ -681,7 +681,7 @@ func IBCPacketReceive(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
-func IBCv2PacketReceive(
+func IBC2PacketReceive(
 	cache Cache,
 	checksum []byte,
 	env []byte,
@@ -715,7 +715,7 @@ func IBCv2PacketReceive(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibcv2_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, err := C.ibc2_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)

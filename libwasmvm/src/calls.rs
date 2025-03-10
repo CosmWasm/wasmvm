@@ -7,10 +7,10 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 use cosmwasm_std::Checksum;
 use cosmwasm_vm::{
-    call_execute_raw, call_ibc_channel_close_raw, call_ibc_channel_connect_raw,
-    call_ibc_channel_open_raw, call_ibc_destination_callback_raw, call_ibc_packet_ack_raw,
-    call_ibc_packet_receive_raw, call_ibc_packet_timeout_raw, call_ibc_source_callback_raw,
-    call_ibcv2_packet_receive_raw, call_instantiate_raw, call_migrate_raw,
+    call_execute_raw, call_ibc2_packet_receive_raw, call_ibc_channel_close_raw,
+    call_ibc_channel_connect_raw, call_ibc_channel_open_raw, call_ibc_destination_callback_raw,
+    call_ibc_packet_ack_raw, call_ibc_packet_receive_raw, call_ibc_packet_timeout_raw,
+    call_ibc_source_callback_raw, call_instantiate_raw, call_migrate_raw,
     call_migrate_with_info_raw, call_query_raw, call_reply_raw, call_sudo_raw, Backend, Cache,
     Instance, InstanceOptions, VmResult,
 };
@@ -491,7 +491,7 @@ pub extern "C" fn ibc_destination_callback(
 }
 
 #[no_mangle]
-pub extern "C" fn ibcv2_packet_receive(
+pub extern "C" fn ibc2_packet_receive(
     cache: *mut cache_t,
     checksum: ByteSliceView,
     env: ByteSliceView,
@@ -505,7 +505,7 @@ pub extern "C" fn ibcv2_packet_receive(
     error_msg: Option<&mut UnmanagedVector>,
 ) -> UnmanagedVector {
     call_2_args(
-        call_ibcv2_packet_receive_raw,
+        call_ibc2_packet_receive_raw,
         cache,
         checksum,
         env,

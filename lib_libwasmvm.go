@@ -680,10 +680,10 @@ func (vm *VM) IBCDestinationCallback(
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
 // packet is received on a channel belonging to this contract
-func (vm *VM) IBCv2PacketReceive(
+func (vm *VM) IBC2PacketReceive(
 	checksum Checksum,
 	env types.Env,
-	msg types.IBCv2PacketReceiveMsg,
+	msg types.IBC2PacketReceiveMsg,
 	store KVStore,
 	goapi GoAPI,
 	querier Querier,
@@ -699,7 +699,7 @@ func (vm *VM) IBCv2PacketReceive(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.IBCv2PacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.IBC2PacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}

@@ -556,12 +556,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -584,7 +584,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -594,7 +594,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 dependencies = [
  "base64",
  "bech32",
@@ -618,7 +618,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 dependencies = [
  "bech32",
  "blake2",
@@ -646,7 +646,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#8158bacda7f192a3742a4205c182b03dfcad472f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#5a99b5120cb430526a04d06ed5b729836be97739"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -2081,15 +2081,14 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.17.8"
+version = "0.17.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
+checksum = "70ac5d832aa16abd7d1def883a8545280c20a60f523a370aa3a9617c2b8550ee"
 dependencies = [
  "cc",
  "cfg-if",
  "getrandom 0.2.15",
  "libc",
- "spin",
  "untrusted",
  "windows-sys 0.52.0",
 ]
@@ -2427,12 +2426,6 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
-
-[[package]]
-name = "spin"
-version = "0.9.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "stable_deref_trait"
@@ -3037,7 +3030,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "2.2.1"
+version = "2.2.2"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",

@@ -60,7 +60,7 @@ type CosmosMsg struct {
 	Staking      *StakingMsg      `json:"staking,omitempty"`
 	Any          *AnyMsg          `json:"any,omitempty"`
 	Wasm         *WasmMsg         `json:"wasm,omitempty"`
-	IBCv2        *IBCv2Msg        `json:"ibcv2,omitempty"`
+	IBC2         *IBC2Msg         `json:"ibc2,omitempty"`
 }
 
 func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
@@ -75,7 +75,7 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		Any          *AnyMsg          `json:"any,omitempty"`
 		Wasm         *WasmMsg         `json:"wasm,omitempty"`
 		Stargate     *AnyMsg          `json:"stargate,omitempty"`
-		IBCv2        *IBCv2Msg        `json:"ibcv2,omitempty"`
+		IBC2         *IBC2Msg         `json:"ibc2,omitempty"`
 	}
 	var tmp InternalCosmosMsg
 	err := json.Unmarshal(data, &tmp)
@@ -99,7 +99,7 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 		Staking:      tmp.Staking,
 		Any:          tmp.Any,
 		Wasm:         tmp.Wasm,
-		IBCv2:        tmp.IBCv2,
+		IBC2:         tmp.IBC2,
 	}
 	return nil
 }
@@ -353,16 +353,16 @@ type WasmMsg struct {
 	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
-// These are messages in the IBC lifecycle using the new IBCv2 approach. Only usable by IBCv2-enabled contracts
-type IBCv2Msg struct {
-	SendPacket *IBCv2SendPacketMsg `json:"send_packet,omitempty"`
+// These are messages in the IBC lifecycle using the new IBC2 approach. Only usable by IBC2-enabled contracts
+type IBC2Msg struct {
+	SendPacket *IBC2SendPacketMsg `json:"send_packet,omitempty"`
 }
 
 // Sends an IBC packet with given payloads over the existing channel.
-type IBCv2SendPacketMsg struct {
-	ChannelID string         `json:"channel_id"`
-	Payloads  []IBCv2Payload `json:"payloads"`
-	Timeout   uint64         `json:"timeout,string,omitempty"`
+type IBC2SendPacketMsg struct {
+	ChannelID string        `json:"channel_id"`
+	Payloads  []IBC2Payload `json:"payloads"`
+	Timeout   uint64        `json:"timeout,string,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
