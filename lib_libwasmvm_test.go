@@ -32,14 +32,12 @@ const (
 
 func withVM(t *testing.T) *VM {
 	t.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir()
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		vm.Cleanup()
-		os.RemoveAll(tmpdir)
 	})
 	return vm
 }
