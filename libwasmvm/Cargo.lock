@@ -556,12 +556,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -584,7 +584,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -594,7 +594,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 dependencies = [
  "base64",
  "bech32",
@@ -618,7 +618,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 dependencies = [
  "bech32",
  "blake2",
@@ -646,7 +646,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=tkulik%2Ffeat%2Fibcv2_recv_endpoint#298e174695118d6dd55dad5db5b1b751de9f16db"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e50d39d6b37838a1bc8febdaf5d714dd44319b67"
 dependencies = [
  "blake2",
  "proc-macro2",
