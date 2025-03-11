@@ -40,13 +40,13 @@ backtraces = []
 # This allows us to build WasmVM with the latest CosmWasm changes to develop IBC2 support more easily.
 # You can also use a different branch or a local path in your branches and change it back to `main`
 # when the CosmWasm PR gets merged.
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "tkulik/feat/ibcv2_recv_endpoint", features = [
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "tkulik/feat/ibcv2_recv_endpoint", features = [
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
   "staking",
   "stargate",
   "iterator",
