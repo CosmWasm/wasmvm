@@ -9,7 +9,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum ErrnoValue {
+enum ErrnoValue
+{
   ErrnoValue_Success = 0,
   ErrnoValue_Other = 1,
   ErrnoValue_OutOfGas = 2,
@@ -23,7 +24,8 @@ typedef int32_t ErrnoValue;
  * 0 means no error, all the other cases are some sort of error.
  *
  */
-enum GoError {
+enum GoError
+{
   GoError_None = 0,
   /**
    * Go panicked for an unexpected reason.
@@ -53,7 +55,8 @@ enum GoError {
 };
 typedef int32_t GoError;
 
-typedef struct cache_t {
+typedef struct cache_t
+{
 
 } cache_t;
 
@@ -64,7 +67,8 @@ typedef struct cache_t {
  *
  * Go's nil value is fully supported, such that we can differentiate between nil and an empty slice.
  */
-typedef struct ByteSliceView {
+typedef struct ByteSliceView
+{
   /**
    * True if and only if the byte slice is nil in Go. If this is true, the other fields must be ignored.
    */
@@ -184,7 +188,8 @@ typedef struct ByteSliceView {
  * // `output` is ready to be passed around
  * ```
  */
-typedef struct UnmanagedVector {
+typedef struct UnmanagedVector
+{
   /**
    * True if and only if this is None. If this is true, the other fields must be ignored.
    */
@@ -197,7 +202,8 @@ typedef struct UnmanagedVector {
 /**
  * A version of `Option<u64>` that can be used safely in FFI.
  */
-typedef struct OptionalU64 {
+typedef struct OptionalU64
+{
   bool is_some;
   uint64_t value;
 } OptionalU64;
@@ -209,7 +215,8 @@ typedef struct OptionalU64 {
  * has to be destroyed exactly once. When calling `analyze_code`
  * from Go this is done via `C.destroy_unmanaged_vector`.
  */
-typedef struct AnalysisReport {
+typedef struct AnalysisReport
+{
   /**
    * `true` if and only if all required ibc exports exist as exported functions.
    * This does not guarantee they are functional or even have the correct signatures.
@@ -234,7 +241,8 @@ typedef struct AnalysisReport {
   struct OptionalU64 contract_migrate_version;
 } AnalysisReport;
 
-typedef struct Metrics {
+typedef struct Metrics
+{
   uint32_t hits_pinned_memory_cache;
   uint32_t hits_memory_cache;
   uint32_t hits_fs_cache;
@@ -248,11 +256,13 @@ typedef struct Metrics {
 /**
  * An opaque type. `*gas_meter_t` represents a pointer to Go memory holding the gas meter.
  */
-typedef struct gas_meter_t {
+typedef struct gas_meter_t
+{
   uint8_t _private[0];
 } gas_meter_t;
 
-typedef struct db_t {
+typedef struct db_t
+{
   uint8_t _private[0];
 } db_t;
 
@@ -261,7 +271,8 @@ typedef struct db_t {
  *
  * This can be copied into a []byte in Go.
  */
-typedef struct U8SliceView {
+typedef struct U8SliceView
+{
   /**
    * True if and only if this is None. If this is true, the other fields must be ignored.
    */
@@ -274,7 +285,8 @@ typedef struct U8SliceView {
  * A reference to some tables on the Go side which allow accessing
  * the actual iterator instance.
  */
-typedef struct IteratorReference {
+typedef struct IteratorReference
+{
   /**
    * An ID assigned to this contract call
    */
@@ -285,7 +297,8 @@ typedef struct IteratorReference {
   uint64_t iterator_id;
 } IteratorReference;
 
-typedef struct IteratorVtable {
+typedef struct IteratorVtable
+{
   int32_t (*next)(struct IteratorReference iterator,
                   struct gas_meter_t *gas_meter,
                   uint64_t *gas_used,
@@ -304,7 +317,8 @@ typedef struct IteratorVtable {
                         struct UnmanagedVector *err_msg_out);
 } IteratorVtable;
 
-typedef struct GoIter {
+typedef struct GoIter
+{
   struct gas_meter_t *gas_meter;
   /**
    * A reference which identifies the iterator and allows finding and accessing the
@@ -314,7 +328,8 @@ typedef struct GoIter {
   struct IteratorVtable vtable;
 } GoIter;
 
-typedef struct DbVtable {
+typedef struct DbVtable
+{
   int32_t (*read_db)(struct db_t *db,
                      struct gas_meter_t *gas_meter,
                      uint64_t *gas_used,
@@ -342,17 +357,20 @@ typedef struct DbVtable {
                      struct UnmanagedVector *err_msg_out);
 } DbVtable;
 
-typedef struct Db {
+typedef struct Db
+{
   struct gas_meter_t *gas_meter;
   struct db_t *state;
   struct DbVtable vtable;
 } Db;
 
-typedef struct api_t {
+typedef struct api_t
+{
   uint8_t _private[0];
 } api_t;
 
-typedef struct GoApiVtable {
+typedef struct GoApiVtable
+{
   int32_t (*humanize_address)(const struct api_t *api,
                               struct U8SliceView input,
                               struct UnmanagedVector *humanized_address_out,
@@ -369,16 +387,19 @@ typedef struct GoApiVtable {
                               uint64_t *gas_used);
 } GoApiVtable;
 
-typedef struct GoApi {
+typedef struct GoApi
+{
   const struct api_t *state;
   struct GoApiVtable vtable;
 } GoApi;
 
-typedef struct querier_t {
+typedef struct querier_t
+{
   uint8_t _private[0];
 } querier_t;
 
-typedef struct QuerierVtable {
+typedef struct QuerierVtable
+{
   int32_t (*query_external)(const struct querier_t *querier,
                             uint64_t gas_limit,
                             uint64_t *gas_used,
@@ -387,12 +408,14 @@ typedef struct QuerierVtable {
                             struct UnmanagedVector *err_msg_out);
 } QuerierVtable;
 
-typedef struct GoQuerier {
+typedef struct GoQuerier
+{
   const struct querier_t *state;
   struct QuerierVtable vtable;
 } GoQuerier;
 
-typedef struct GasReport {
+typedef struct GasReport
+{
   /**
    * The original limit the instance was created with
    */

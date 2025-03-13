@@ -8,11 +8,11 @@ import (
 
 var (
 
-	// errKeyEmpty is returned when attempting to use an empty or nil key.
-	errKeyEmpty = errors.New("key cannot be empty")
+	// ErrKeyEmpty is returned when attempting to use an empty or nil key.
+	ErrKeyEmpty = errors.New("key cannot be empty")
 
-	// errValueNil is returned when attempting to set a nil value.
-	errValueNil = errors.New("value cannot be nil")
+	// ErrValueNil is returned when attempting to set a nil value.
+	ErrValueNil = errors.New("value cannot be nil")
 )
 
 type Iterator = types.Iterator
