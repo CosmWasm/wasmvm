@@ -115,8 +115,8 @@ func buildDBState(kv types.KVStore, callID uint64) DBState {
 	}
 }
 
-// contract: original pointer/struct referenced must live longer than C.Db struct
-// since this is only used internally, we can verify the code that this is the case
+// contract: original pointer/struct referenced must live longer than C.Db struct.
+// since this is only used internally, we can verify the code that this is the case.
 func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 	return C.Db{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
@@ -136,7 +136,7 @@ var iterator_vtable = C.IteratorVtable{
 // In any reasonable contract, gas limits should hit sooner than that though.
 const frameLenLimit = 32768
 
-// contract: original pointer/struct referenced must live longer than C.Db struct
+// contract: original pointer/struct referenced must live longer than C.Db struct.
 // since this is only used internally, we can verify the code that this is the case
 func buildIterator(callID uint64, it types.Iterator) (C.IteratorReference, error) {
 	iteratorID, err := storeIterator(callID, it, frameLenLimit)

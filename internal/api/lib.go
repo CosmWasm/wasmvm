@@ -19,7 +19,7 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-// Value types
+// Value types.
 type (
 	cint   = C.int
 	cbool  = C.bool
@@ -32,7 +32,7 @@ type (
 	ci64   = C.int64_t
 )
 
-// Pointers
+// Pointers.
 type (
 	cu8_ptr = *C.uint8_t
 )

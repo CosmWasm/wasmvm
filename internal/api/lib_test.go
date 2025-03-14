@@ -29,8 +29,7 @@ const (
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir() // Uses testing's managed temporary directory feature
 	defer func() {
 		if err := os.RemoveAll(tmpdir); err != nil {
 			t.Errorf("failed to remove temp dir: %v", err)
@@ -53,8 +52,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 // wasmd expects us to create the base directory
 // https://github.com/CosmWasm/wasmd/blob/v0.30.0/x/wasm/keeper/keeper.go#L128
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir() // Uses testing's managed temporary directory feature
 	defer func() {
 		if err := os.RemoveAll(tmpdir); err != nil {
 			t.Errorf("failed to remove temp dir: %v", err)
@@ -93,8 +91,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir() // Uses testing's managed temporary directory feature
 	defer func() {
 		if err := os.RemoveAll(tmpdir); err != nil {
 			t.Errorf("failed to remove temp dir: %v", err)
@@ -140,12 +137,9 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 }
 
 func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
-	tmpdir1, err := os.MkdirTemp("", "wasmvm-testing1")
-	require.NoError(t, err)
-	tmpdir2, err := os.MkdirTemp("", "wasmvm-testing2")
-	require.NoError(t, err)
-	tmpdir3, err := os.MkdirTemp("", "wasmvm-testing3")
-	require.NoError(t, err)
+	tmpdir1 := t.TempDir() // Uses testing's managed temporary directory feature
+	tmpdir2 := t.TempDir() // Uses testing's managed temporary directory feature
+	tmpdir3 := t.TempDir() // Uses testing's managed temporary directory feature
 	defer func() {
 		if err := os.RemoveAll(tmpdir1); err != nil {
 			t.Errorf("failed to remove temp dir: %v", err)
@@ -199,8 +193,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 }
 
 func TestInitCacheEmptyCapabilities(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir() // Uses testing's managed temporary directory feature
 	defer func() {
 		if err := os.RemoveAll(tmpdir); err != nil {
 			t.Errorf("failed to remove temp dir: %v", err)
@@ -221,8 +214,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 
 func withCache(tb testing.TB) (Cache, func()) {
 	tb.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(tb, err)
+	tmpdir := tb.TempDir() // Uses testing's managed temporary directory feature
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
