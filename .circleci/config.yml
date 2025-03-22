@@ -168,7 +168,7 @@ jobs:
 
   format-go:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     steps:
       - run:
           name: Install gofumpt
@@ -186,7 +186,7 @@ jobs:
   # Build types and cosmwam package without cgo
   wasmvm_no_cgo:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     steps:
       - checkout
       - run:
@@ -205,7 +205,7 @@ jobs:
   # Build types and cosmwasm with libwasmvm linking disabled
   nolink_libwasmvm:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     steps:
       - checkout
       - run:
@@ -223,7 +223,7 @@ jobs:
 
   tidy-go:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     steps:
       - checkout
       - run:
