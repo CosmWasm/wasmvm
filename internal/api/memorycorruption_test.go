@@ -5,9 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
 	"github.com/CosmWasm/wasmvm/v2/types"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMemoryCorruptionProtection(t *testing.T) {
@@ -37,6 +38,7 @@ func TestMemoryCorruptionProtection(t *testing.T) {
 
 	// Create mock objects for each test run
 	setupTest := func(t *testing.T) (*types.GasMeter, types.KVStore, *types.GoAPI, *api.Querier) {
+		t.Helper()
 		gasMeter := api.NewMockGasMeter(gasLimit)
 		// Need to convert MockGasMeter to *types.GasMeter for the API
 		var typedGasMeter types.GasMeter = gasMeter
