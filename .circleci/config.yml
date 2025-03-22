@@ -241,7 +241,7 @@ jobs:
 
   format-scripts:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     steps:
       - run:
           name: Install shfmt
@@ -253,7 +253,7 @@ jobs:
 
   lint-scripts:
     docker:
-      - image: ubuntu:20.04
+      - image: ubuntu:latest
     steps:
       - run:
           name: Install packages
@@ -299,7 +299,7 @@ jobs:
   # Test the Go project and run benchmarks
   wasmvm_test:
     docker:
-      - image: cimg/go:1.21.4
+      - image: cimg/go:latest
     environment:
       GORACE: "halt_on_error=1"
       BUILD_VERSION: $(echo ${CIRCLE_SHA1} | cut -c 1-10)
