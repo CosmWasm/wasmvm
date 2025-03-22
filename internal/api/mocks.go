@@ -282,9 +282,15 @@ func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 // Get wraps the underlying DB's Get method panicking on error.
 func (l Lookup) Get(key []byte) []byte {
 	l.meter.ConsumeGas(GetPrice, "get")
+
+	// Check for empty key before calling db.Get to prevent panic
+	if len(key) == 0 {
+		return nil
+	}
+
 	v := l.db.Get(key)
 	if v == nil {
-		panic(testdb.ErrKeyEmpty)
+		return nil
 	}
 
 	return v
@@ -293,6 +299,12 @@ func (l Lookup) Get(key []byte) []byte {
 // Set wraps the underlying DB's Set method panicking on error.
 func (l Lookup) Set(key, value []byte) {
 	l.meter.ConsumeGas(SetPrice, "set")
+
+	// Check for empty key before calling db.Set
+	if len(key) == 0 {
+		return
+	}
+
 	l.db.Set(key, value) // No `if err := ...` capture, because Set doesn't return an error
 }
 
@@ -300,12 +312,26 @@ func (l Lookup) Set(key, value []byte) {
 // note: Delete doesn't return an error, according to the kvstore implementation in types/store.go
 func (l Lookup) Delete(key []byte) {
 	l.meter.ConsumeGas(RemovePrice, "remove")
+
+	// Check for empty key before calling db.Delete
+	if len(key) == 0 {
+		return
+	}
+
 	l.db.Delete(key)
 }
 
 // Iterator wraps the underlying DB's Iterator method panicking on error.
 func (l Lookup) Iterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
+
+	// Check for empty start key before calling Iterator
+	// Note: Empty end key is valid for prefix scans
+	if len(start) == 0 {
+		// Return an empty iterator
+		return NewEmptyIterator()
+	}
+
 	iter := l.db.Iterator(start, end) // returns only one value
 	// no err to handle
 	// no need to close
@@ -315,10 +341,61 @@ func (l Lookup) Iterator(start, end []byte) types.Iterator {
 // ReverseIterator wraps the underlying DB's ReverseIterator method panicking on error.
 func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 	l.meter.ConsumeGas(RangePrice, "range")
-	iter := l.db.ReverseIterator(start, end) // returns only one value
-	// no err to handle
-	// no need to close
+
+	// Check for empty start key before calling ReverseIterator
+	// Note: Empty end key is valid for prefix scans
+	if len(start) == 0 {
+		// Return an empty iterator
+		return NewEmptyIterator()
+	}
+
+	iter := l.db.ReverseIterator(start, end)
 	return iter
+}
+
+// EmptyIterator is an iterator that always returns false for Valid()
+type EmptyIterator struct{}
+
+// NewEmptyIterator creates a new iterator that contains no elements
+func NewEmptyIterator() *EmptyIterator {
+	return &EmptyIterator{}
+}
+
+// Domain implements types.Iterator
+func (i *EmptyIterator) Domain() ([]byte, []byte) {
+	return nil, nil
+}
+
+// Valid implements types.Iterator
+func (i *EmptyIterator) Valid() bool {
+	return false
+}
+
+// Next implements types.Iterator
+func (i *EmptyIterator) Next() {
+	// No-op since Valid() always returns false
+}
+
+// Key implements types.Iterator
+func (i *EmptyIterator) Key() []byte {
+	panic("called Key() on an invalid iterator")
+}
+
+// Value implements types.Iterator
+func (i *EmptyIterator) Value() []byte {
+	panic("called Value() on an invalid iterator")
+}
+
+// Close implements types.Iterator
+func (i *EmptyIterator) Close() error {
+	// No-op, nothing to close
+	return nil
+}
+
+// Error implements types.Iterator
+func (i *EmptyIterator) Error() error {
+	// Always returns nil since this iterator has no errors
+	return nil
 }
 
 var _ types.KVStore = (*Lookup)(nil)
