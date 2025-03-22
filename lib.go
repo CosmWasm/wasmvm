@@ -14,19 +14,19 @@ import (
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
 type Checksum = types.Checksum
 
-// WasmCode is an alias for raw bytes of the wasm compiled code
+// WasmCode is an alias for raw bytes of the wasm compiled code.
 type WasmCode []byte
 
-// KVStore is a reference to some sub-kvstore that is valid for one instance of a code
+// KVStore is a reference to some sub-kvstore that is valid for one instance of a code.
 type KVStore = types.KVStore
 
-// GoAPI is a reference to some "precompiles", go callbacks
+// GoAPI is a reference to some "precompiles", go callbacks.
 type GoAPI = types.GoAPI
 
-// Querier lets us make read-only queries on other modules
+// Querier lets us make read-only queries on other modules.
 type Querier = types.Querier
 
-// GasMeter is a read-only version of the sdk gas meter
+// GasMeter is a read-only version of the sdk gas meter.
 type GasMeter = types.GasMeter
 
 // LibwasmvmVersion returns the version of the loaded library

@@ -8,7 +8,7 @@ import (
 	"github.com/shamaton/msgpack/v2"
 )
 
-// Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string
+// Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string.
 type Uint64 uint64
 
 func (u Uint64) MarshalJSON() ([]byte, error) {
@@ -28,7 +28,7 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string
+// Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string.
 type Int64 int64
 
 func (i Int64) MarshalJSON() ([]byte, error) {
@@ -51,10 +51,10 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
 type HumanAddress = string
 
-// CanonicalAddress uses standard base64 encoding, just use it as a label for developers
+// CanonicalAddress uses standard base64 encoding, just use it as a label for developers.
 type CanonicalAddress = []byte
 
-// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
+// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int).
 type Coin struct {
 	// Denom is the denomination string registered in the chain's bank module.
 	// E.g. "uatom" or "ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2".
@@ -73,7 +73,7 @@ func NewCoin(amount uint64, denom string) Coin {
 	}
 }
 
-// Replicating the cosmos-sdk bank module Metadata type
+// Replicating the cosmos-sdk bank module Metadata type.
 type DenomMetadata struct {
 	Description string `json:"description"`
 	// DenomUnits represents the list of DenomUnits for a given coin
@@ -103,7 +103,7 @@ type DenomMetadata struct {
 	URIHash string `json:"uri_hash"`
 }
 
-// Replicating the cosmos-sdk bank module DenomUnit type
+// Replicating the cosmos-sdk bank module DenomUnit type.
 type DenomUnit struct {
 	// Denom represents the string name of the given denom unit (e.g uatom).
 	Denom string `json:"denom"`
@@ -134,7 +134,7 @@ type DecCoin struct {
 	Denom  string `json:"denom"`
 }
 
-// Simplified version of the cosmos-sdk PageRequest type
+// Simplified version of the cosmos-sdk PageRequest type.
 type PageRequest struct {
 	// Key is a value returned in PageResponse.next_key to begin
 	// querying the next page most efficiently. Only one of offset or key
@@ -240,7 +240,7 @@ type MigrateInfo struct {
 	OldMigrateVersion *uint64 `json:"old_migrate_version"`
 }
 
-// MarshalJSON ensures that we get "[]" for nil arrays
+// MarshalJSON ensures that we get "[]" for nil arrays.
 func (a Array[C]) MarshalJSON() ([]byte, error) {
 	if len(a) == 0 {
 		return []byte("[]"), nil
@@ -249,7 +249,7 @@ func (a Array[C]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-// UnmarshalJSON ensures that we get an empty slice for "[]" and "null"
+// UnmarshalJSON ensures that we get an empty slice for "[]" and "null".
 func (a *Array[C]) UnmarshalJSON(data []byte) error {
 	var raw []C
 	if err := json.Unmarshal(data, &raw); err != nil {
