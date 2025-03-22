@@ -56,24 +56,24 @@ func NewMemDB() *MemDB {
 }
 
 // Get implements DB.
-func (db *MemDB) Get(key []byte) ([]byte, error) {
+func (db *MemDB) Get(key []byte) []byte {
 	if len(key) == 0 {
-		return nil, errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
 	db.mtx.RLock()
 	defer db.mtx.RUnlock()
 
 	i := db.btree.Get(newKey(key))
 	if i != nil {
-		return i.(*item).value, nil
+		return i.(*item).value
 	}
-	return nil, nil
+	return nil
 }
 
 // Has implements DB.
 func (db *MemDB) Has(key []byte) (bool, error) {
 	if len(key) == 0 {
-		return false, errKeyEmpty
+		return false, ErrKeyEmpty
 	}
 	db.mtx.RLock()
 	defer db.mtx.RUnlock()
@@ -82,18 +82,17 @@ func (db *MemDB) Has(key []byte) (bool, error) {
 }
 
 // Set implements DB.
-func (db *MemDB) Set(key []byte, value []byte) error {
+func (db *MemDB) Set(key []byte, value []byte) {
 	if len(key) == 0 {
-		return errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
 	if value == nil {
-		return errValueNil
+		panic(ErrValueNil)
 	}
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
 	db.set(key, value)
-	return nil
 }
 
 // set sets a value without locking the mutex.
@@ -102,20 +101,19 @@ func (db *MemDB) set(key []byte, value []byte) {
 }
 
 // SetSync implements DB.
-func (db *MemDB) SetSync(key []byte, value []byte) error {
-	return db.Set(key, value)
+func (db *MemDB) SetSync(key []byte, value []byte) {
+	db.Set(key, value)
 }
 
 // Delete implements DB.
-func (db *MemDB) Delete(key []byte) error {
+func (db *MemDB) Delete(key []byte) {
 	if len(key) == 0 {
-		return errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
 	db.delete(key)
-	return nil
 }
 
 // delete deletes a key without locking the mutex.
@@ -124,8 +122,8 @@ func (db *MemDB) delete(key []byte) {
 }
 
 // DeleteSync implements DB.
-func (db *MemDB) DeleteSync(key []byte) error {
-	return db.Delete(key)
+func (db *MemDB) DeleteSync(key []byte) {
+	db.Delete(key)
 }
 
 // Close implements DB.
@@ -162,34 +160,34 @@ func (db *MemDB) Stats() map[string]string {
 
 // Iterator implements DB.
 // Takes out a read-lock on the database until the iterator is closed.
-func (db *MemDB) Iterator(start, end []byte) (Iterator, error) {
+func (db *MemDB) Iterator(start, end []byte) Iterator {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
-		return nil, errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
-	return newMemDBIterator(db, start, end, false), nil
+	return newMemDBIterator(db, start, end, false)
 }
 
 // ReverseIterator implements DB.
 // Takes out a read-lock on the database until the iterator is closed.
-func (db *MemDB) ReverseIterator(start, end []byte) (Iterator, error) {
+func (db *MemDB) ReverseIterator(start, end []byte) Iterator {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
-		return nil, errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
-	return newMemDBIterator(db, start, end, true), nil
+	return newMemDBIterator(db, start, end, true)
 }
 
 // IteratorNoMtx makes an iterator with no mutex.
-func (db *MemDB) IteratorNoMtx(start, end []byte) (Iterator, error) {
+func (db *MemDB) IteratorNoMtx(start, end []byte) Iterator {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
-		return nil, errKeyEmpty
+		panic(ErrKeyEmpty)
 	}
-	return newMemDBIteratorMtxChoice(db, start, end, false, false), nil
+	return newMemDBIteratorMtxChoice(db, start, end, false, false)
 }
 
 // ReverseIteratorNoMtx makes an iterator with no mutex.
 func (db *MemDB) ReverseIteratorNoMtx(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
-		return nil, errKeyEmpty
+		return nil, ErrKeyEmpty
 	}
 	return newMemDBIteratorMtxChoice(db, start, end, true, false), nil
 }
