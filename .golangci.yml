@@ -26,7 +26,7 @@ linters:
     - gocognit # Check cognitive complexity
     - whitespace # Check trailing whitespace
     - thelper # Detect test helpers not using t.Helper()
-    - usetesting
+    - usetesting # Detect incorrect usage of testing package
     - tparallel # Detect incorrect usage of t.Parallel()
 
 linters-settings:
