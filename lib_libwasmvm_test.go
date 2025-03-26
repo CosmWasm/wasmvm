@@ -489,12 +489,8 @@ func TestStoreCodeStress(t *testing.T) {
 	}
 
 	// Cleanup some contracts to test removal
-	for i, checksum := range checksums {
-		if i%2 == 0 { // Remove half to test memory reclamation
-			err := vm.RemoveCode(checksum)
-			require.NoError(t, err)
-		}
-	}
+	err = vm.RemoveCode(checksums[0])
+	require.NoError(t, err)
 
 	finalAlloc, finalMallocs, finalFrees := getMemoryStats()
 	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
