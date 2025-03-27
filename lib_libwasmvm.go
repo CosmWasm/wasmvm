@@ -90,7 +90,7 @@ func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint6
 	return checksum, gasCost, err
 }
 
-// StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
+// StoreCodeUnchecked is the same as StoreCode but skips static validation checks and charges no gas.
 // Use this for adding code that was checked before, particularly in the case of state sync.
 func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return api.StoreCodeUnchecked(vm.cache, code)
