@@ -181,7 +181,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 				writeDone := make(chan error, 1)
 				go func() {
 					err := db.Set([]byte("key2"), []byte("value2"))
-					require.NoError(t, err)
+					assert.NoError(t, err)
 					writeDone <- nil
 				}()
 
@@ -371,7 +371,8 @@ func TestBulkDeletionMemoryRecovery(t *testing.T) {
 	runtime.ReadMemStats(&mBefore)
 
 	for _, key := range keys {
-		db.Delete(key)
+		err := db.Delete(key)
+		require.NoError(t, err)
 	}
 	runtime.GC()
 	var mAfter runtime.MemStats
@@ -474,7 +475,7 @@ func TestConcurrentAccess(t *testing.T) {
 			for j := 0; j < opsPerGoroutine; j++ {
 				key := []byte(fmt.Sprintf("concurrent_key_%d_%d", id, j))
 				err := db.Set(key, []byte("concurrent_value"))
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		}(i)
 	}
@@ -486,7 +487,7 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < opsPerGoroutine; j++ {
 				iter, err := db.Iterator(nil, nil)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				for iter.Valid() {
 					_ = iter.Key()
 					iter.Next()
@@ -524,7 +525,7 @@ func TestLockingAndRelease(t *testing.T) {
 	release := make(chan struct{})
 	go func() {
 		iter, err := db.Iterator([]byte("conflict_key"), []byte("zzzz"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.NoError(t, iter.Error(), "Iterator creation error")
 		close(ready) // signal iterator is active
 		<-release    // hold the iterator a bit
@@ -535,7 +536,7 @@ func TestLockingAndRelease(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		err := db.Set([]byte("conflict_key"), []byte("updated"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		close(done)
 	}()
 
@@ -572,7 +573,8 @@ func TestLongRunningWorkload(t *testing.T) {
 		err := db.Set(key, []byte("workload_value"))
 		require.NoError(t, err)
 		if i%2 == 0 {
-			db.Delete(key)
+			err = db.Delete(key)
+			require.NoError(t, err)
 		}
 		if i%reportInterval == 0 {
 			runtime.GC()
@@ -642,11 +644,12 @@ func TestRandomMemoryAccessPatterns(t *testing.T) {
 				if j%2 == 0 {
 					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j))
 					err := db.Set(key, []byte("rand_value"))
-					require.NoError(t, err)
+					assert.NoError(t, err)
 				} else {
 					// Randomly delete some keys.
 					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j-1))
-					db.Delete(key)
+					err := db.Delete(key)
+					assert.NoError(t, err)
 				}
 			}
 		}(i)
