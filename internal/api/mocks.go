@@ -59,7 +59,7 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
 	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
-	require.NoError(tb, err)
+	assert.NoError(tb, err)
 	return bin
 }
 
