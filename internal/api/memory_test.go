@@ -224,10 +224,10 @@ func TestMemoryLeakScenarios(t *testing.T) {
 			run: func(t *testing.T) {
 				t.Helper()
 				// Ensure that releasing caches frees memory.
-				getAlloc := func() uint64 {
+				getAlloc := func() int64 {
 					var m runtime.MemStats
 					runtime.ReadMemStats(&m)
-					return m.HeapAlloc
+					return int64(m.HeapAlloc)
 				}
 
 				runtime.GC()
@@ -260,7 +260,7 @@ func TestMemoryLeakScenarios(t *testing.T) {
 				}
 				runtime.GC()
 				// Wait to allow GC to complete.
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 
 				allocAfterRelease := getAlloc()
 
@@ -609,15 +609,15 @@ func TestMemoryMetrics(t *testing.T) {
 	runtime.GC()
 
 	// Wait a moment to allow GC to complete.
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	runtime.ReadMemStats(&mAfter)
 	t.Logf("Mallocs: before=%d, after=%d, diff=%d", mBefore.Mallocs, mAfter.Mallocs, mAfter.Mallocs-mBefore.Mallocs)
 	t.Logf("Frees: before=%d, after=%d, diff=%d", mBefore.Frees, mAfter.Frees, mAfter.Frees-mBefore.Frees)
 
 	// Use original acceptable threshold.
-	diff := mAfter.Mallocs - mAfter.Frees
-	require.LessOrEqual(t, diff, uint64(allocCount/10), "Unexpected allocation leak detected")
+	diff := int64(mAfter.Mallocs-mBefore.Mallocs) - int64(mAfter.Frees-mBefore.Frees)
+	require.LessOrEqual(t, diff, int64(allocCount/10), "Unexpected allocation leak detected")
 }
 
 // -----------------------------------------------------------------------------
