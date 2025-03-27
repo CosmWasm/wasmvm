@@ -167,7 +167,8 @@ func TestMemoryLeakScenarios(t *testing.T) {
 
 				key := []byte("key1")
 				val := []byte("value1")
-				db.Set(key, val)
+				err := db.Set(key, val)
+				require.NoError(t, err)
 
 				iter, err := db.Iterator([]byte("key1"), []byte("zzzz"))
 				require.NoError(t, err)
@@ -179,7 +180,8 @@ func TestMemoryLeakScenarios(t *testing.T) {
 
 				writeDone := make(chan error, 1)
 				go func() {
-					db.Set([]byte("key2"), []byte("value2"))
+					err := db.Set([]byte("key2"), []byte("value2"))
+					require.NoError(t, err)
 					writeDone <- nil
 				}()
 
@@ -198,8 +200,10 @@ func TestMemoryLeakScenarios(t *testing.T) {
 				db := testdb.NewMemDB()
 				defer db.Close()
 
-				db.Set([]byte("a"), []byte("value-a"))
-				db.Set([]byte("b"), []byte("value-b"))
+				err := db.Set([]byte("a"), []byte("value-a"))
+				require.NoError(t, err)
+				err = db.Set([]byte("b"), []byte("value-b"))
+				require.NoError(t, err)
 
 				iter, err := db.Iterator([]byte("a"), []byte("z"))
 				require.NoError(t, err)
@@ -211,7 +215,8 @@ func TestMemoryLeakScenarios(t *testing.T) {
 				}
 				require.NoError(t, iter.Close(), "closing iterator should succeed")
 
-				db.Set([]byte("c"), []byte("value-c"))
+				err = db.Set([]byte("c"), []byte("value-c"))
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -254,6 +259,9 @@ func TestMemoryLeakScenarios(t *testing.T) {
 					ReleaseCache(c)
 				}
 				runtime.GC()
+				// Wait to allow GC to complete.
+				time.Sleep(5 * time.Second)
+
 				allocAfterRelease := getAlloc()
 
 				require.Less(t, allocAfterRelease, baseAlloc*2,
@@ -271,7 +279,8 @@ func TestMemoryLeakScenarios(t *testing.T) {
 
 				keys := [][]byte{[]byte("a"), []byte("b"), []byte("c")}
 				for _, k := range keys {
-					db.Set(k, []byte("val:"+string(k)))
+					err := db.Set(k, []byte("val:"+string(k)))
+					require.NoError(t, err)
 				}
 
 				subCases := []struct {
@@ -331,7 +340,8 @@ func TestStressHighVolumeInsert(t *testing.T) {
 
 	for i := 0; i < totalInserts; i++ {
 		key := []byte(fmt.Sprintf("key_%d", i))
-		db.Set(key, []byte("value"))
+		err := db.Set(key, []byte("value"))
+		require.NoError(t, err)
 	}
 	runtime.GC()
 	runtime.ReadMemStats(&mEnd)
@@ -353,7 +363,8 @@ func TestBulkDeletionMemoryRecovery(t *testing.T) {
 	for i := 0; i < totalInserts; i++ {
 		key := []byte(fmt.Sprintf("bulk_key_%d", i))
 		keys[i] = key
-		db.Set(key, []byte("bulk_value"))
+		err := db.Set(key, []byte("bulk_value"))
+		require.NoError(t, err)
 	}
 	runtime.GC()
 	var mBefore runtime.MemStats
@@ -383,7 +394,8 @@ func TestPeakMemoryTracking(t *testing.T) {
 	var m runtime.MemStats
 	for i := 0; i < totalOps; i++ {
 		key := []byte(fmt.Sprintf("peak_key_%d", i))
-		db.Set(key, []byte("peak_value"))
+		err := db.Set(key, []byte("peak_value"))
+		require.NoError(t, err)
 		if i%1000 == 0 {
 			runtime.GC()
 			runtime.ReadMemStats(&m)
@@ -411,7 +423,8 @@ func TestRepeatedCreateDestroyCycles(t *testing.T) {
 	runtime.ReadMemStats(&mStart)
 	for i := 0; i < cycles; i++ {
 		db := testdb.NewMemDB()
-		db.Set([]byte("cycle_key"), []byte("cycle_value"))
+		err := db.Set([]byte("cycle_key"), []byte("cycle_value"))
+		require.NoError(t, err)
 		db.Close()
 	}
 	runtime.GC()
@@ -460,7 +473,8 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < opsPerGoroutine; j++ {
 				key := []byte(fmt.Sprintf("concurrent_key_%d_%d", id, j))
-				db.Set(key, []byte("concurrent_value"))
+				err := db.Set(key, []byte("concurrent_value"))
+				require.NoError(t, err)
 			}
 		}(i)
 	}
@@ -503,7 +517,8 @@ func TestLockingAndRelease(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	db.Set([]byte("conflict_key"), []byte("initial"))
+	err := db.Set([]byte("conflict_key"), []byte("initial"))
+	require.NoError(t, err)
 
 	ready := make(chan struct{})
 	release := make(chan struct{})
@@ -519,7 +534,8 @@ func TestLockingAndRelease(t *testing.T) {
 	<-ready
 	done := make(chan struct{})
 	go func() {
-		db.Set([]byte("conflict_key"), []byte("updated"))
+		err := db.Set([]byte("conflict_key"), []byte("updated"))
+		require.NoError(t, err)
 		close(done)
 	}()
 
@@ -553,7 +569,8 @@ func TestLongRunningWorkload(t *testing.T) {
 
 	for i := 0; i < iterations; i++ {
 		key := []byte(fmt.Sprintf("workload_key_%d", i))
-		db.Set(key, []byte("workload_value"))
+		err := db.Set(key, []byte("workload_value"))
+		require.NoError(t, err)
 		if i%2 == 0 {
 			db.Delete(key)
 		}
@@ -590,6 +607,10 @@ func TestMemoryMetrics(t *testing.T) {
 		_ = make([]byte, 128)
 	}
 	runtime.GC()
+
+	// Wait a moment to allow GC to complete.
+	time.Sleep(5 * time.Second)
+
 	runtime.ReadMemStats(&mAfter)
 	t.Logf("Mallocs: before=%d, after=%d, diff=%d", mBefore.Mallocs, mAfter.Mallocs, mAfter.Mallocs-mBefore.Mallocs)
 	t.Logf("Frees: before=%d, after=%d, diff=%d", mBefore.Frees, mAfter.Frees, mAfter.Frees-mBefore.Frees)
@@ -620,7 +641,8 @@ func TestRandomMemoryAccessPatterns(t *testing.T) {
 			for j := 0; j < ops; j++ {
 				if j%2 == 0 {
 					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j))
-					db.Set(key, []byte("rand_value"))
+					err := db.Set(key, []byte("rand_value"))
+					require.NoError(t, err)
 				} else {
 					// Randomly delete some keys.
 					key := []byte(fmt.Sprintf("rand_key_%d_%d", seed, j-1))
@@ -824,7 +846,8 @@ func TestWasmIteratorMemoryLeaks(t *testing.T) {
 
 	// Populate DB with data
 	for i := 0; i < 1000; i++ {
-		db.Set([]byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("val%d", i)))
+		err := db.Set([]byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("val%d", i)))
+		require.NoError(t, err)
 	}
 
 	gasMeter := NewMockGasMeter(100000000)
@@ -917,7 +940,8 @@ func TestWasmLongRunningMemoryStability(t *testing.T) {
 				&igasMeter, store, api, &querier, 100000000, false)
 			require.NoError(t, err)
 		case 2:
-			db.Set([]byte(fmt.Sprintf("key%d", i)), []byte("value"))
+			err := db.Set([]byte(fmt.Sprintf("key%d", i)), []byte("value"))
+			require.NoError(t, err)
 			_, _, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`),
 				&igasMeter, store, api, &querier, 100000000, false)
 			require.NoError(t, err)
