@@ -18,7 +18,8 @@ type IBC2Payload struct {
 }
 
 type IBC2PacketReceiveMsg struct {
-	Payload      IBC2Payload `json:"payload"`
-	Relayer      string      `json:"relayer"`
-	SourceClient string      `json:"source_client"`
+	Payload        IBC2Payload `json:"payload"`
+	Relayer        string      `json:"relayer"`
+	SourceClient   string      `json:"source_client"`
+	PacketSequence uint64      `json:"packet_sequence"`
 }
