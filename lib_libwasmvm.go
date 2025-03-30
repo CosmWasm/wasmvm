@@ -90,7 +90,7 @@ func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint6
 	return checksum, gasCost, err
 }
 
-// StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
+// StoreCodeUnchecked is the same as StoreCode but skips static validation checks and charges no gas.
 // Use this for adding code that was checked before, particularly in the case of state sync.
 func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return api.StoreCodeUnchecked(vm.cache, code)
@@ -671,6 +671,40 @@ func (vm *VM) IBCDestinationCallback(
 	}
 
 	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
+// IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
+// packet is received on a channel belonging to this contract
+func (vm *VM) IBC2PacketReceive(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2PacketReceiveMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCReceiveResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCReceiveResult
 	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err

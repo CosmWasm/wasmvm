@@ -29,9 +29,7 @@ const (
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -49,9 +47,7 @@ func TestInitAndReleaseCache(t *testing.T) {
 // wasmd expects us to create the base directory
 // https://github.com/CosmWasm/wasmd/blob/v0.30.0/x/wasm/keeper/keeper.go#L128
 func TestInitCacheWorksForNonExistentDir(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	createMe := filepath.Join(tmpdir, "does-not-yet-exist")
 	config := types.VMConfig{
@@ -85,9 +81,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -128,15 +122,9 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 }
 
 func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
-	tmpdir1, err := os.MkdirTemp("", "wasmvm-testing1")
-	require.NoError(t, err)
-	tmpdir2, err := os.MkdirTemp("", "wasmvm-testing2")
-	require.NoError(t, err)
-	tmpdir3, err := os.MkdirTemp("", "wasmvm-testing3")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir1)
-	defer os.RemoveAll(tmpdir2)
-	defer os.RemoveAll(tmpdir3)
+	tmpdir1 := t.TempDir()
+	tmpdir2 := t.TempDir()
+	tmpdir3 := t.TempDir()
 
 	config1 := types.VMConfig{
 		Cache: types.CacheOptions{
@@ -175,9 +163,7 @@ func TestInitLockingAllowsMultipleInstancesInDifferentDirs(t *testing.T) {
 }
 
 func TestInitCacheEmptyCapabilities(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -193,8 +179,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 
 func withCache(tb testing.TB) (Cache, func()) {
 	tb.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(tb, err)
+	tmpdir := tb.TempDir()
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
 			BaseDir:                  tmpdir,
@@ -207,7 +192,6 @@ func withCache(tb testing.TB) (Cache, func()) {
 	require.NoError(tb, err)
 
 	cleanup := func() {
-		os.RemoveAll(tmpdir)
 		ReleaseCache(cache)
 	}
 	return cache, cleanup
@@ -596,7 +580,7 @@ func TestInstantiate(t *testing.T) {
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
+	require.Equal(t, uint64(0xd35950), cost.UsedInternally)
 
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
@@ -627,7 +611,7 @@ func TestExecute(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0xb1fe27), cost.UsedInternally)
+	require.Equal(t, uint64(0xd35950), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute with the same store
@@ -640,7 +624,7 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0x1416da5), cost.UsedInternally)
+	require.Equal(t, uint64(0x16057d3), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -747,7 +731,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0x79f527), cost.UsedInternally)
+	require.Equal(t, uint64(0x895c33), cost.UsedInternally)
 	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a cpu loop
@@ -989,7 +973,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 	// we now count wasm gas charges and db writes
-	assert.Equal(t, uint64(0xb0c2cd), cost.UsedInternally)
+	assert.Equal(t, uint64(0xd2189c), cost.UsedInternally)
 
 	// instance2 controlled by mary
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -1000,14 +984,14 @@ func TestMultipleInstances(t *testing.T) {
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	assert.Equal(t, uint64(0xb1760a), cost.UsedInternally)
+	assert.Equal(t, uint64(0xd2ce86), cost.UsedInternally)
 
 	// fail to execute store1 with mary
-	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0xa7c5ce)
+	resp := exec(t, cache, checksum, "mary", store1, api, querier, 0xbe8534)
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// succeed to execute store1 with fred
-	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x140e8ad)
+	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x15fce67)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes := resp.Ok.Attributes
@@ -1016,7 +1000,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x1412b29)
+	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x160131d)
 	require.Equal(t, "", resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes = resp.Ok.Attributes
