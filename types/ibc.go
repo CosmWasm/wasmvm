@@ -325,3 +325,14 @@ type IBCReceiveResponse struct {
 	// above)
 	Events []Event `json:"events"`
 }
+
+var (
+	_ ExpectedJSONSize = IBCChannelOpenMsg{}
+	_ ExpectedJSONSize = IBCChannelConnectMsg{}
+	_ ExpectedJSONSize = IBCChannelCloseMsg{}
+	_ ExpectedJSONSize = IBCPacketReceiveMsg{}
+	_ ExpectedJSONSize = IBCPacketAckMsg{}
+	_ ExpectedJSONSize = IBCPacketTimeoutMsg{}
+	_ ExpectedJSONSize = IBCSourceCallbackMsg{}
+	_ ExpectedJSONSize = IBCDestinationCallbackMsg{}
+)
