@@ -52,7 +52,7 @@ impl GoError {
     /// If it is GoError::User the error message will be returned to the contract.
     /// Otherwise, the returned error will trigger a trap in the VM and abort contract execution immediately.
     ///
-    /// This reads data from an externally provided `UnmanagedVector` and assumes UFT-8 encoding. To protect
+    /// This reads data from an externally provided `UnmanagedVector` and assumes UTF-8 encoding. To protect
     /// against invalid UTF-8 data, a lossy conversion to string is used. The data is limited to 8KB in order
     /// to protect against long externally generated error messages.
     ///
