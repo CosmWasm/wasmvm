@@ -10,6 +10,9 @@ func ExpectedJSONSizeString(s string) int {
 	for _, r := range s {
 		if r == '"' || r == '\\' {
 			out += 1
+		} else if r == '\b' || r == '\f' || r == '\n' || r == '\r' || r == '\t' {
+			// https://cs.opensource.google/go/go/+/master:src/encoding/json/encode.go;l=992-1001;drc=0909bcd9e4acb01089d588d608d669d69710e50a
+			out += 1
 		} else if r <= 0x1F {
 			// control codes \u0000 - \u001f
 			out += 5

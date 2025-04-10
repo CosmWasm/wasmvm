@@ -44,6 +44,21 @@ func TestExpectedJSONSizeString(t *testing.T) {
 		"control character DEL": {
 			input: "\x7F",
 		},
+		"control character LF": {
+			input: "\n",
+		},
+		"control character CR": {
+			input: "\r",
+		},
+		"control character BS": {
+			input: "\b",
+		},
+		"control character HT": {
+			input: "\t",
+		},
+		"control character FF": {
+			input: "\f",
+		},
 		"emoji": {
 			input: "😮😗🧝🏾‍♀️",
 		},
