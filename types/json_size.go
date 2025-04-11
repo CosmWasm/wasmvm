@@ -1,9 +1,19 @@
 package types
 
 type ExpectedJSONSize interface {
+	// ExpectedJSONSize returns the expected JSON size in bytes when using
+	// json.Marshal with the given value.
+	// Since JSON marshalling does not have a guaranteed output format,
+	// this should be understood as a best guess and correct in most cases.
+	// Do not use it when a precise value is required.
 	ExpectedJSONSize() int
 }
 
+// ExpectedJSONSizeString returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func ExpectedJSONSizeString(s string) int {
 	// 2x quote + length of string + escaping overhead
 	var out int = quotes + len(s)
@@ -25,6 +35,11 @@ func ExpectedJSONSizeString(s string) int {
 	return out
 }
 
+// ExpectedJSONSizeBinary returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func ExpectedJSONSizeBinary(b []byte) int {
 	if b == nil {
 		return null
@@ -34,6 +49,11 @@ func ExpectedJSONSizeBinary(b []byte) int {
 	return b64Len + quotes
 }
 
+// ExpectedJSONSizeInt returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func ExpectedJSONSizeInt(i int) int {
 	out := 0
 	// minus sign or zero
@@ -48,6 +68,11 @@ func ExpectedJSONSizeInt(i int) int {
 	return out
 }
 
+// ExpectedJSONSizeUint64 returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func ExpectedJSONSizeUint64(i uint64) int {
 	if i == 0 {
 		return 1
@@ -61,6 +86,11 @@ func ExpectedJSONSizeUint64(i uint64) int {
 	return out
 }
 
+// ExpectedJSONSizeBool returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func ExpectedJSONSizeBool(b bool) int {
 	if b {
 		return 4 // true
@@ -78,6 +108,11 @@ const (
 	null     int = 4 // null
 )
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCEndpoint) ExpectedJSONSize() int {
 	// PortID    string `json:"port_id"`
 	// ChannelID string `json:"channel_id"`
@@ -86,6 +121,11 @@ func (t IBCEndpoint) ExpectedJSONSize() int {
 		12 + colon + ExpectedJSONSizeString(t.ChannelID)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCChannel) ExpectedJSONSize() int {
 	// Endpoint             IBCEndpoint `json:"endpoint"`
 	// CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
@@ -100,11 +140,21 @@ func (t IBCChannel) ExpectedJSONSize() int {
 		15 + colon + ExpectedJSONSizeString(t.ConnectionID)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCOpenInit) ExpectedJSONSize() int {
 	// Channel IBCChannel `json:"channel"`
 	return brackets + 9 + colon + t.Channel.ExpectedJSONSize()
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCOpenTry) ExpectedJSONSize() int {
 	// Channel             IBCChannel `json:"channel"`
 	// CounterpartyVersion string     `json:"counterparty_version"`
@@ -113,6 +163,11 @@ func (t IBCOpenTry) ExpectedJSONSize() int {
 		22 + colon + ExpectedJSONSizeString(t.CounterpartyVersion)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCChannelOpenMsg) ExpectedJSONSize() int {
 	// OpenInit *IBCOpenInit `json:"open_init,omitempty"`
 	// OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
@@ -130,6 +185,11 @@ func (t IBCChannelOpenMsg) ExpectedJSONSize() int {
 	return out
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCOpenAck) ExpectedJSONSize() int {
 	// Channel             IBCChannel `json:"channel"`
 	// CounterpartyVersion string     `json:"counterparty_version"`
@@ -138,11 +198,21 @@ func (t IBCOpenAck) ExpectedJSONSize() int {
 		22 + colon + ExpectedJSONSizeString(t.CounterpartyVersion)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCOpenConfirm) ExpectedJSONSize() int {
 	// Channel IBCChannel `json:"channel"`
 	return brackets + 9 + colon + t.Channel.ExpectedJSONSize()
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCChannelConnectMsg) ExpectedJSONSize() int {
 	// OpenAck     *IBCOpenAck     `json:"open_ack,omitempty"`
 	// OpenConfirm *IBCOpenConfirm `json:"open_confirm,omitempty"`
@@ -160,16 +230,31 @@ func (t IBCChannelConnectMsg) ExpectedJSONSize() int {
 	return out
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCCloseInit) ExpectedJSONSize() int {
 	// Channel IBCChannel `json:"channel"`
 	return brackets + 9 + colon + t.Channel.ExpectedJSONSize()
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCCloseConfirm) ExpectedJSONSize() int {
 	// Channel IBCChannel `json:"channel"`
 	return brackets + 9 + colon + t.Channel.ExpectedJSONSize()
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCChannelCloseMsg) ExpectedJSONSize() int {
 	// CloseInit    *IBCCloseInit    `json:"close_init,omitempty"`
 	// CloseConfirm *IBCCloseConfirm `json:"close_confirm,omitempty"`
@@ -187,6 +272,11 @@ func (t IBCChannelCloseMsg) ExpectedJSONSize() int {
 	return out
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCTimeoutBlock) ExpectedJSONSize() int {
 	// Revision uint64 `json:"revision"`
 	// Height uint64 `json:"height"`
@@ -195,6 +285,11 @@ func (t IBCTimeoutBlock) ExpectedJSONSize() int {
 		8 + colon + ExpectedJSONSizeUint64(t.Height)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCTimeout) ExpectedJSONSize() int {
 	// Block *IBCTimeoutBlock `json:"block"`
 	// Timestamp uint64 `json:"timestamp,string,omitempty"`
@@ -213,6 +308,11 @@ func (t IBCTimeout) ExpectedJSONSize() int {
 	return out
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCPacket) ExpectedJSONSize() int {
 	// Data     []byte      `json:"data"`
 	// Src      IBCEndpoint `json:"src"`
@@ -227,12 +327,22 @@ func (t IBCPacket) ExpectedJSONSize() int {
 		9 + colon + t.Timeout.ExpectedJSONSize()
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCAcknowledgement) ExpectedJSONSize() int {
 	// Data []byte `json:"data"`
 	return brackets +
 		6 + colon + ExpectedJSONSizeBinary(t.Data)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCPacketReceiveMsg) ExpectedJSONSize() int {
 	// Packet  IBCPacket `json:"packet"`
 	// Relayer string    `json:"relayer"`
@@ -241,6 +351,11 @@ func (t IBCPacketReceiveMsg) ExpectedJSONSize() int {
 		9 + colon + ExpectedJSONSizeString(t.Relayer)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCPacketAckMsg) ExpectedJSONSize() int {
 	// Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	// OriginalPacket  IBCPacket          `json:"original_packet"`
@@ -251,6 +366,11 @@ func (t IBCPacketAckMsg) ExpectedJSONSize() int {
 		9 + colon + ExpectedJSONSizeString(t.Relayer)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCPacketTimeoutMsg) ExpectedJSONSize() int {
 	// Packet  IBCPacket `json:"packet"`
 	// Relayer string    `json:"relayer"`
@@ -259,6 +379,11 @@ func (t IBCPacketTimeoutMsg) ExpectedJSONSize() int {
 		9 + colon + ExpectedJSONSizeString(t.Relayer)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCAckCallbackMsg) ExpectedJSONSize() int {
 	// Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	// OriginalPacket  IBCPacket          `json:"original_packet"`
@@ -269,6 +394,11 @@ func (t IBCAckCallbackMsg) ExpectedJSONSize() int {
 		9 + colon + ExpectedJSONSizeString(t.Relayer)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCTimeoutCallbackMsg) ExpectedJSONSize() int {
 	// Packet  IBCPacket `json:"packet"`
 	// Relayer string    `json:"relayer"`
@@ -277,6 +407,11 @@ func (t IBCTimeoutCallbackMsg) ExpectedJSONSize() int {
 		9 + colon + ExpectedJSONSizeString(t.Relayer)
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCSourceCallbackMsg) ExpectedJSONSize() int {
 	// Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
 	// Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
@@ -297,6 +432,11 @@ func (t IBCSourceCallbackMsg) ExpectedJSONSize() int {
 	return out
 }
 
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCDestinationCallbackMsg) ExpectedJSONSize() int {
 	// Ack    IBCAcknowledgement `json:"ack"`
 	// Packet IBCPacket          `json:"packet"`
