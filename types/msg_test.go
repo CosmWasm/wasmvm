@@ -23,7 +23,7 @@ func TestWasmMsgInstantiateSerialization(t *testing.T) {
 	require.Nil(t, msg.ClearAdmin)
 	require.NotNil(t, msg.Instantiate)
 
-	require.Equal(t, "", msg.Instantiate.Admin)
+	require.Empty(t, msg.Instantiate.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate.CodeID)
 	require.JSONEq(t, `{"claim":{}}`, string(msg.Instantiate.Msg))
 	require.Equal(t, Array[Coin]{
@@ -65,7 +65,7 @@ func TestWasmMsgInstantiate2Serialization(t *testing.T) {
 	require.Nil(t, msg.ClearAdmin)
 	require.NotNil(t, msg.Instantiate2)
 
-	require.Equal(t, "", msg.Instantiate2.Admin)
+	require.Empty(t, msg.Instantiate2.Admin)
 	require.Equal(t, uint64(7897), msg.Instantiate2.CodeID)
 	require.JSONEq(t, `{"claim":{}}`, string(msg.Instantiate2.Msg))
 	require.Equal(t, Array[Coin]{
