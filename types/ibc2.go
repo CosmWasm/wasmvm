@@ -22,3 +22,11 @@ type IBC2PacketReceiveMsg struct {
 	Relayer      string      `json:"relayer"`
 	SourceClient string      `json:"source_client"`
 }
+
+type IBC2AcknowledgeMsg struct {
+	SourceChannel      string      `json:"source_channel"`
+	DestinationChannel string      `json:"destination_channel"`
+	Data               IBC2Payload `json:"data"`
+	Acknowledgement    []byte      `json:"acknowledgement"`
+	Relayer            string      `json:"relayer"`
+}
