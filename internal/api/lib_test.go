@@ -77,7 +77,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 		},
 	}
 	_, err := InitCache(config)
-	require.ErrorContains(t, err, "Could not create base directory")
+	require.ErrorContains(t, err, "could not create base directory")
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
@@ -103,7 +103,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "could not lock exclusive.lock")
 
 	ReleaseCache(cache1)
 
