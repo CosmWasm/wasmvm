@@ -148,8 +148,7 @@ test-alpine: release-build-alpine create-tester-image
 
 .PHONY: format
 format:
-	find . -name '*.go' -type f | xargs gofumpt -w -s
-	find . -name '*.go' -type f | xargs misspell -w
+	find . -name '*.go' -type f | xargs gofumpt -w
 
 .PHONY: lint
 lint:

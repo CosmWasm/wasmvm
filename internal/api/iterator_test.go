@@ -117,7 +117,7 @@ func TestStoreIteratorHitsLimit(t *testing.T) {
 
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID, iter, limit)
-	require.ErrorContains(t, err, "Reached iterator limit (2)")
+	require.ErrorContains(t, err, "reached iterator limit (2)")
 
 	endCall(callID)
 }
@@ -192,7 +192,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.Equal(t, `{"sum":39}`, string(qResult.Ok))
 
 	// query reduce (multiple iterators at once)
@@ -202,7 +202,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 	var reduced types.QueryResult
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
-	require.Equal(t, "", reduced.Err)
+	require.Empty(t, reduced.Err)
 	require.JSONEq(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
@@ -231,7 +231,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 		var reduced types.QueryResult
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
-		require.Equal(t, "", reduced.Err)
+		require.Empty(t, reduced.Err)
 		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
@@ -283,7 +283,7 @@ func TestQueueIteratorLimit(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.Equal(t, `{}`, string(qResult.Ok))
 
 	// Open 35000 iterators
@@ -294,5 +294,5 @@ func TestQueueIteratorLimit(t *testing.T) {
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
 	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "Reached iterator limit (32768)")
+	require.ErrorContains(t, err, "reached iterator limit (32768)")
 }
