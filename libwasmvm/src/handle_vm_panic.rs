@@ -3,7 +3,7 @@ use std::any::Any;
 /// A function to process cases in which the VM panics.
 ///
 /// We want to provide as much debug information as possible
-/// as those cases are not expated to happen during healthy operations.
+/// as those cases are not expected to happen during healthy operations.
 pub fn handle_vm_panic(what: &str, err: Box<dyn Any + Send + 'static>) {
     eprintln!("Panic in {what}:");
     eprintln!("{err:?}"); // Does not show useful information, see https://users.rust-lang.org/t/return-value-from-catch-unwind-is-a-useless-any/89134/6
