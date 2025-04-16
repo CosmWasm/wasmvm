@@ -6,7 +6,7 @@ use std::any::Any;
 /// as those cases are not expated to happen during healthy operations.
 pub fn handle_vm_panic(what: &str, err: Box<dyn Any + Send + 'static>) {
     let err: &str = match (err.downcast_ref::<&str>(), err.downcast_ref::<String>()) {
-        (Some(str), ..) => *str,
+        (Some(str), ..) => str,
         (.., Some(str)) => str,
         (None, None) => "[unusable panic payload]",
     };
