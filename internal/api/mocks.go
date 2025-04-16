@@ -1,3 +1,4 @@
+// Package api provides mock implementations for testing the wasmvm API.
 package api
 
 import (
@@ -21,8 +22,10 @@ const (
 
 /** helper constructors **/
 
-const MOCK_CONTRACT_ADDR = "contract"
+// MockContractAddr is the default contract address used in mock tests.
+const MockContractAddr = "contract"
 
+// MockEnv creates a mock environment for testing.
 func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
@@ -34,11 +37,12 @@ func MockEnv() types.Env {
 			Index: 4,
 		},
 		Contract: types.ContractInfo{
-			Address: MOCK_CONTRACT_ADDR,
+			Address: MockContractAddr,
 		},
 	}
 }
 
+// MockEnvBin creates a mock environment and returns it as JSON bytes.
 func MockEnvBin(tb testing.TB) []byte {
 	tb.Helper()
 	bin, err := json.Marshal(MockEnv())
@@ -46,6 +50,7 @@ func MockEnvBin(tb testing.TB) []byte {
 	return bin
 }
 
+// MockInfo creates a mock message info with the given sender and funds.
 func MockInfo(sender types.HumanAddress, funds []types.Coin) types.MessageInfo {
 	return types.MessageInfo{
 		Sender: sender,
@@ -53,6 +58,7 @@ func MockInfo(sender types.HumanAddress, funds []types.Coin) types.MessageInfo {
 	}
 }
 
+// MockInfoWithFunds creates a mock message info with the given sender and default funds.
 func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	return MockInfo(sender, []types.Coin{{
 		Denom:  "ATOM",
@@ -60,6 +66,7 @@ func MockInfoWithFunds(sender types.HumanAddress) types.MessageInfo {
 	}})
 }
 
+// MockInfoBin creates a mock message info and returns it as JSON bytes.
 func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
 	tb.Helper()
 	bin, err := json.Marshal(MockInfoWithFunds(sender))
@@ -67,6 +74,7 @@ func MockInfoBin(tb testing.TB, sender types.HumanAddress) []byte {
 	return bin
 }
 
+// MockIBCChannel creates a mock IBC channel with the given parameters.
 func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannel {
 	return types.IBCChannel{
 		Endpoint: types.IBCEndpoint{
@@ -83,6 +91,7 @@ func MockIBCChannel(channelID string, ordering types.IBCOrder, ibcVersion string
 	}
 }
 
+// MockIBCChannelOpenInit creates a mock IBC channel open init message.
 func MockIBCChannelOpenInit(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelOpenMsg {
 	return types.IBCChannelOpenMsg{
 		OpenInit: &types.IBCOpenInit{
@@ -92,6 +101,7 @@ func MockIBCChannelOpenInit(channelID string, ordering types.IBCOrder, ibcVersio
 	}
 }
 
+// MockIBCChannelOpenTry creates a mock IBC channel open try message.
 func MockIBCChannelOpenTry(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelOpenMsg {
 	return types.IBCChannelOpenMsg{
 		OpenInit: nil,
@@ -336,13 +346,16 @@ var _ types.KVStore = (*Lookup)(nil)
 
 /***** Mock types.GoAPI ****/
 
+// CanonicalLength is the length of canonical addresses.
 const CanonicalLength = 32
 
-const (
-	CostCanonical uint64 = 440
-	CostHuman     uint64 = 550
-)
+// CostCanonical is the gas cost for canonicalizing an address.
+const CostCanonical uint64 = 440
 
+// CostHuman is the gas cost for humanizing an address.
+const CostHuman uint64 = 550
+
+// MockCanonicalizeAddress converts a human-readable address to its canonical form.
 func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 	if len(human) > CanonicalLength {
 		return nil, 0, fmt.Errorf("human encoding too long")
@@ -352,6 +365,7 @@ func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 	return res, CostCanonical, nil
 }
 
+// MockHumanizeAddress converts a canonical address to its human-readable form.
 func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 	if len(canon) != CanonicalLength {
 		return "", 0, fmt.Errorf("wrong canonical length")
@@ -393,30 +407,32 @@ func NewMockAPI() *types.GoAPI {
 	}
 }
 
-func TestMockApi(t *testing.T) {
+// TestMockAPI tests the mock API implementation.
+func TestMockAPI(t *testing.T) {
 	canon, cost, err := MockCanonicalizeAddress(testAddress)
 	require.NoError(t, err)
 	require.Len(t, canon, CanonicalLength)
 	require.Equal(t, CostCanonical, cost)
 
-	recover, cost, err := MockHumanizeAddress(canon)
+	human, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
-	require.Equal(t, recover, testAddress)
+	require.Equal(t, human, testAddress)
 	require.Equal(t, CostHuman, cost)
 }
 
 /**** MockQuerier ****/
 
-const DEFAULT_QUERIER_GAS_LIMIT = 1_000_000
+// DefaultQuerierGasLimit is the default gas limit for querier operations.
+const DefaultQuerierGasLimit = 1_000_000
 
+// MockQuerier is a mock implementation of the Querier interface for testing.
 type MockQuerier struct {
 	Bank    BankQuerier
 	Custom  CustomQuerier
 	usedGas uint64
 }
 
-var _ types.Querier = &MockQuerier{}
-
+// DefaultQuerier creates a new MockQuerier with the given contract address and coins.
 func DefaultQuerier(contractAddr string, coins types.Array[types.Coin]) types.Querier {
 	balances := map[string]types.Array[types.Coin]{
 		contractAddr: coins,
@@ -428,7 +444,8 @@ func DefaultQuerier(contractAddr string, coins types.Array[types.Coin]) types.Qu
 	}
 }
 
-func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byte, error) {
+// Query implements the Querier interface.
+func (q *MockQuerier) Query(request types.QueryRequest, _ uint64) ([]byte, error) {
 	marshaled, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -449,14 +466,17 @@ func (q *MockQuerier) Query(request types.QueryRequest, _gasLimit uint64) ([]byt
 	return nil, types.Unknown{}
 }
 
+// GasConsumed returns the amount of gas consumed by the querier.
 func (q MockQuerier) GasConsumed() uint64 {
 	return q.usedGas
 }
 
+// BankQuerier is a mock implementation of bank queries.
 type BankQuerier struct {
 	Balances map[string]types.Array[types.Coin]
 }
 
+// NewBankQuerier creates a new BankQuerier with the given balances.
 func NewBankQuerier(balances map[string]types.Array[types.Coin]) BankQuerier {
 	bal := make(map[string]types.Array[types.Coin], len(balances))
 	for k, v := range balances {
@@ -469,6 +489,7 @@ func NewBankQuerier(balances map[string]types.Array[types.Coin]) BankQuerier {
 	}
 }
 
+// Query implements the bank query functionality.
 func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 	if request.Balance != nil {
 		denom := request.Balance.Denom
@@ -493,37 +514,39 @@ func (q BankQuerier) Query(request *types.BankQuery) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "Empty BankQuery"}
 }
 
+// CustomQuerier is an interface for custom query implementations.
 type CustomQuerier interface {
 	Query(request json.RawMessage) ([]byte, error)
 }
 
+// NoCustom is a CustomQuerier that returns an unsupported request error.
 type NoCustom struct{}
 
-var _ CustomQuerier = NoCustom{}
-
-func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
+// Query implements the CustomQuerier interface.
+func (q NoCustom) Query(_ json.RawMessage) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
-// ReflectCustom fulfills the requirements for testing `reflect` contract.
+// ReflectCustom is a CustomQuerier implementation for testing reflect contracts.
 type ReflectCustom struct{}
 
-var _ CustomQuerier = ReflectCustom{}
-
+// CustomQuery represents a query that can be handled by ReflectCustom.
 type CustomQuery struct {
 	Ping        *struct{}         `json:"ping,omitempty"`
 	Capitalized *CapitalizedQuery `json:"capitalized,omitempty"`
 }
 
+// CapitalizedQuery represents a query to capitalize text.
 type CapitalizedQuery struct {
 	Text string `json:"text"`
 }
 
-// CustomResponse is the response for all `CustomQuery`s.
+// CustomResponse is the response format for CustomQuery.
 type CustomResponse struct {
 	Msg string `json:"msg"`
 }
 
+// Query implements the CustomQuerier interface for ReflectCustom.
 func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	var query CustomQuery
 	err := json.Unmarshal(request, &query)
@@ -542,8 +565,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	return json.Marshal(resp)
 }
 
-// ************ test code for mocks *************************//
-
+// TestBankQuerierAllBalances tests the BankQuerier's AllBalances functionality.
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"
 	balance := types.Array[types.Coin]{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
@@ -557,7 +579,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp)
@@ -572,7 +594,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.AllBalancesResponse
 	err = json.Unmarshal(res, &resp2)
@@ -580,6 +602,7 @@ func TestBankQuerierAllBalances(t *testing.T) {
 	assert.Nil(t, resp2.Amount)
 }
 
+// TestBankQuerierBalance tests the BankQuerier's Balance functionality.
 func TestBankQuerierBalance(t *testing.T) {
 	addr := "foobar"
 	balance := types.Array[types.Coin]{types.NewCoin(12345678, "ATOM"), types.NewCoin(54321, "ETH")}
@@ -594,7 +617,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err := q.Query(req, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err := q.Query(req, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp types.BalanceResponse
 	err = json.Unmarshal(res, &resp)
@@ -610,7 +633,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req2, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req2, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp2 types.BalanceResponse
 	err = json.Unmarshal(res, &resp2)
@@ -626,7 +649,7 @@ func TestBankQuerierBalance(t *testing.T) {
 			},
 		},
 	}
-	res, err = q.Query(req3, DEFAULT_QUERIER_GAS_LIMIT)
+	res, err = q.Query(req3, DefaultQuerierGasLimit)
 	require.NoError(t, err)
 	var resp3 types.BalanceResponse
 	err = json.Unmarshal(res, &resp3)
@@ -634,6 +657,7 @@ func TestBankQuerierBalance(t *testing.T) {
 	assert.Equal(t, resp3.Amount, types.NewCoin(0, "ATOM"))
 }
 
+// TestReflectCustomQuerier tests the ReflectCustom querier implementation.
 func TestReflectCustomQuerier(t *testing.T) {
 	q := ReflectCustom{}
 

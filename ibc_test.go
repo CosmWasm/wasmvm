@@ -98,7 +98,7 @@ func TestIBCHandshake(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
@@ -171,7 +171,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{}
-	querier := api.DefaultQuerier(api.MOCK_CONTRACT_ADDR, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, balance)
 
 	// instantiate
 	env := api.MockEnv()
