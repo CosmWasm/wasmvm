@@ -5,15 +5,17 @@ import (
 	"fmt"
 )
 
+// Package types provides core types used throughout the wasmvm package.
+
 //------- Results / Msgs -------------
 
-// ContractResult is the raw response from the instantiate/execute/migrate calls.
-// This is mirrors Rust's ContractResult<Response>.
+// ContractResult represents the result of a contract execution.
 type ContractResult struct {
 	Ok  *Response `json:"ok,omitempty"`
 	Err string    `json:"error,omitempty"`
 }
 
+// SubMessages returns the sub-messages of the result.
 func (r *ContractResult) SubMessages() []SubMsg {
 	if r.Ok != nil {
 		return r.Ok.Messages
@@ -38,19 +40,19 @@ type Response struct {
 	Events []Event `json:"events"`
 }
 
+// Event represents an event emitted during contract execution.
 type Event struct {
 	Type       string                `json:"type"`
 	Attributes Array[EventAttribute] `json:"attributes"`
 }
 
-// EventAttribute.
+// EventAttribute represents an attribute of an event.
 type EventAttribute struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-// CosmosMsg is an rust enum and only (exactly) one of the fields should be set
-// Should we do a cleaner approach in Go? (type/data?)
+// CosmosMsg represents a message that can be sent to the Cosmos SDK.
 type CosmosMsg struct {
 	Bank         *BankMsg         `json:"bank,omitempty"`
 	Custom       json.RawMessage  `json:"custom,omitempty"`
@@ -63,6 +65,7 @@ type CosmosMsg struct {
 	IBC2         *IBC2Msg         `json:"ibc2,omitempty"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler for CosmosMsg.
 func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
 	type InternalCosmosMsg struct {
@@ -104,13 +107,13 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// BankMsg represents a message to the bank module.
 type BankMsg struct {
 	Send *SendMsg `json:"send,omitempty"`
 	Burn *BurnMsg `json:"burn,omitempty"`
 }
 
-// SendMsg contains instructions for a Cosmos-SDK/SendMsg
-// It has a fixed interface here and should be converted into the proper SDK format before dispatching.
+// SendMsg represents a message to send tokens.
 type SendMsg struct {
 	ToAddress string      `json:"to_address"`
 	Amount    Array[Coin] `json:"amount"`
@@ -123,6 +126,7 @@ type BurnMsg struct {
 	Amount Array[Coin] `json:"amount"`
 }
 
+// IBCMsg represents a message to the IBC module.
 type IBCMsg struct {
 	Transfer             *TransferMsg             `json:"transfer,omitempty"`
 	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
@@ -132,6 +136,7 @@ type IBCMsg struct {
 	PayPacketFeeAsync    *PayPacketFeeAsyncMsg    `json:"pay_packet_fee_async,omitempty"`
 }
 
+// GovMsg represents a message to the governance module.
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
 	Vote *VoteMsg `json:"vote,omitempty"`
@@ -141,6 +146,7 @@ type GovMsg struct {
 
 type voteOption int
 
+// VoteMsg represents a message to vote on a proposal.
 type VoteMsg struct {
 	ProposalId uint64 `json:"proposal_id"`
 	// Option is the vote option.
@@ -150,6 +156,7 @@ type VoteMsg struct {
 	Option voteOption `json:"option"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler for VoteMsg.
 func (m *VoteMsg) UnmarshalJSON(data []byte) error {
 	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
 	type InternalVoteMsg struct {
@@ -233,98 +240,46 @@ func (s *voteOption) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type TransferMsg struct {
-	ChannelID string     `json:"channel_id"`
-	ToAddress string     `json:"to_address"`
-	Amount    Coin       `json:"amount"`
-	Timeout   IBCTimeout `json:"timeout"`
-	Memo      string     `json:"memo,omitempty"`
-}
-
-type SendPacketMsg struct {
-	ChannelID string     `json:"channel_id"`
-	Data      []byte     `json:"data"`
-	Timeout   IBCTimeout `json:"timeout"`
-}
-
-type WriteAcknowledgementMsg struct {
-	// The acknowledgement to send back
-	Ack IBCAcknowledgement `json:"ack"`
-	// Existing channel where the packet was received
-	ChannelID string `json:"channel_id"`
-	// Sequence number of the packet that was received
-	PacketSequence uint64 `json:"packet_sequence"`
-}
-
-type CloseChannelMsg struct {
-	ChannelID string `json:"channel_id"`
-}
-
-type PayPacketFeeMsg struct {
-	// The channel id on the chain where the packet is sent from (this chain).
-	ChannelID string `json:"channel_id"`
-	Fee       IBCFee `json:"fee"`
-	// The port id on the chain where the packet is sent from (this chain).
-	PortID string `json:"port_id"`
-	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
-	Relayers Array[string] `json:"relayers"`
-}
-
-type PayPacketFeeAsyncMsg struct {
-	// The channel id on the chain where the packet is sent from (this chain).
-	ChannelID string `json:"channel_id"`
-	Fee       IBCFee `json:"fee"`
-	// The port id on the chain where the packet is sent from (this chain).
-	PortID string `json:"port_id"`
-	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
-	Relayers Array[string] `json:"relayers"`
-	// The sequence number of the packet that should be incentivized.
-	Sequence uint64 `json:"sequence"`
-}
-
-type IBCFee struct {
-	AckFee     Array[Coin] `json:"ack_fee"`
-	ReceiveFee Array[Coin] `json:"receive_fee"`
-	TimeoutFee Array[Coin] `json:"timeout_fee"`
-}
-
+// StakingMsg represents a message to the staking module.
 type StakingMsg struct {
 	Delegate   *DelegateMsg   `json:"delegate,omitempty"`
 	Undelegate *UndelegateMsg `json:"undelegate,omitempty"`
 	Redelegate *RedelegateMsg `json:"redelegate,omitempty"`
 }
 
+// DelegateMsg represents a message to delegate tokens.
 type DelegateMsg struct {
 	Validator string `json:"validator"`
 	Amount    Coin   `json:"amount"`
 }
 
+// UndelegateMsg represents a message to undelegate tokens.
 type UndelegateMsg struct {
 	Validator string `json:"validator"`
 	Amount    Coin   `json:"amount"`
 }
 
+// RedelegateMsg represents a message to redelegate tokens.
 type RedelegateMsg struct {
 	SrcValidator string `json:"src_validator"`
 	DstValidator string `json:"dst_validator"`
 	Amount       Coin   `json:"amount"`
 }
 
+// DistributionMsg represents a message to the distribution module.
 type DistributionMsg struct {
 	SetWithdrawAddress      *SetWithdrawAddressMsg      `json:"set_withdraw_address,omitempty"`
 	WithdrawDelegatorReward *WithdrawDelegatorRewardMsg `json:"withdraw_delegator_reward,omitempty"`
 	FundCommunityPool       *FundCommunityPoolMsg       `json:"fund_community_pool,omitempty"`
 }
 
-// SetWithdrawAddressMsg is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
-// `delegator_address` is automatically filled with the current contract's address.
+// SetWithdrawAddressMsg represents a message to set the withdraw address.
 type SetWithdrawAddressMsg struct {
 	// Address contains the `delegator_address` of a MsgSetWithdrawAddress
 	Address string `json:"address"`
 }
 
-// WithdrawDelegatorRewardMsg is translated to a [MsgWithdrawDelegatorReward](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L42-L50).
-// `delegator_address` is automatically filled with the current contract's address.
+// WithdrawDelegatorRewardMsg represents a message to withdraw delegator rewards.
 type WithdrawDelegatorRewardMsg struct {
 	// Validator contains `validator_address` of a MsgWithdrawDelegatorReward
 	Validator string `json:"validator"`
@@ -344,6 +299,7 @@ type AnyMsg struct {
 	Value   []byte `json:"value"`
 }
 
+// WasmMsg represents a message to the wasm module.
 type WasmMsg struct {
 	Execute      *ExecuteMsg      `json:"execute,omitempty"`
 	Instantiate  *InstantiateMsg  `json:"instantiate,omitempty"`
@@ -375,13 +331,7 @@ type IBC2WriteAcknowledgementMsg struct {
 	PacketSequence uint64 `json:"packet_sequence"`
 }
 
-// ExecuteMsg is used to call another defined contract on this chain.
-// The calling contract requires the callee to be defined beforehand,
-// and the address should have been defined in initialization.
-// And we assume the developer tested the ABIs and coded them together.
-//
-// Since a contract is immutable once it is deployed, we don't need to transform this.
-// If it was properly coded and worked once, it will continue to work throughout upgrades.
+// ExecuteMsg represents a message to execute a wasm contract.
 type ExecuteMsg struct {
 	// ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
 	// the contract ID and instance ID. The sdk module should maintain a reverse lookup table.
@@ -393,8 +343,7 @@ type ExecuteMsg struct {
 	Funds Array[Coin] `json:"funds"`
 }
 
-// InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
-// This allows one contract to spawn "sub-contracts".
+// InstantiateMsg represents a message to instantiate a wasm contract.
 type InstantiateMsg struct {
 	// CodeID is the reference to the wasm byte code as used by the Cosmos-SDK
 	CodeID uint64 `json:"code_id"`
@@ -453,4 +402,66 @@ type UpdateAdminMsg struct {
 type ClearAdminMsg struct {
 	// ContractAddr is the sdk.AccAddress of the target contract.
 	ContractAddr string `json:"contract_addr"`
+}
+
+// TransferMsg represents a message to transfer tokens through IBC.
+type TransferMsg struct {
+	ChannelID string     `json:"channel_id"`
+	ToAddress string     `json:"to_address"`
+	Amount    Coin       `json:"amount"`
+	Timeout   IBCTimeout `json:"timeout"`
+	Memo      string     `json:"memo,omitempty"`
+}
+
+// SendPacketMsg represents a message to send an IBC packet.
+type SendPacketMsg struct {
+	ChannelID string     `json:"channel_id"`
+	Data      []byte     `json:"data"`
+	Timeout   IBCTimeout `json:"timeout"`
+}
+
+// WriteAcknowledgementMsg represents a message to write an IBC packet acknowledgement.
+type WriteAcknowledgementMsg struct {
+	// The acknowledgement to send back
+	Ack IBCAcknowledgement `json:"ack"`
+	// Existing channel where the packet was received
+	ChannelID string `json:"channel_id"`
+	// Sequence number of the packet that was received
+	PacketSequence uint64 `json:"packet_sequence"`
+}
+
+// CloseChannelMsg represents a message to close an IBC channel.
+type CloseChannelMsg struct {
+	ChannelID string `json:"channel_id"`
+}
+
+// PayPacketFeeMsg represents a message to pay fees for an IBC packet.
+type PayPacketFeeMsg struct {
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+}
+
+// PayPacketFeeAsyncMsg represents a message to pay fees for an IBC packet asynchronously.
+type PayPacketFeeAsyncMsg struct {
+	// The channel id on the chain where the packet is sent from (this chain).
+	ChannelID string `json:"channel_id"`
+	Fee       IBCFee `json:"fee"`
+	// The port id on the chain where the packet is sent from (this chain).
+	PortID string `json:"port_id"`
+	// Allowlist of relayer addresses that can receive the fee. This is currently not implemented and *must* be empty.
+	Relayers Array[string] `json:"relayers"`
+	// The sequence number of the packet that should be incentivized.
+	Sequence uint64 `json:"sequence"`
+}
+
+// IBCFee represents the fees for an IBC packet.
+type IBCFee struct {
+	AckFee     Array[Coin] `json:"ack_fee"`
+	ReceiveFee Array[Coin] `json:"receive_fee"`
+	TimeoutFee Array[Coin] `json:"timeout_fee"`
 }

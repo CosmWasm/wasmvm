@@ -1,10 +1,14 @@
 package types
 
+// Package types provides core types used throughout the wasmvm package.
+
+// IBCEndpoint represents an endpoint in an IBC channel.
 type IBCEndpoint struct {
 	PortID    string `json:"port_id"`
 	ChannelID string `json:"channel_id"`
 }
 
+// IBCChannel represents an IBC channel with its endpoints and ordering.
 type IBCChannel struct {
 	Endpoint             IBCEndpoint `json:"endpoint"`
 	CounterpartyEndpoint IBCEndpoint `json:"counterparty_endpoint"`
@@ -13,6 +17,7 @@ type IBCChannel struct {
 	ConnectionID         string      `json:"connection_id"`
 }
 
+// IBCChannelOpenMsg represents a message to open an IBC channel.
 type IBCChannelOpenMsg struct {
 	OpenInit *IBCOpenInit `json:"open_init,omitempty"`
 	OpenTry  *IBCOpenTry  `json:"open_try,omitempty"`
@@ -35,27 +40,32 @@ func (msg IBCChannelOpenMsg) GetCounterVersion() (ver string, ok bool) {
 	return "", false
 }
 
+// IBCOpenInit represents an IBC channel open initialization message.
 type IBCOpenInit struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+// ToMsg converts an IBCOpenInit to an IBCChannelOpenMsg.
 func (m *IBCOpenInit) ToMsg() IBCChannelOpenMsg {
 	return IBCChannelOpenMsg{
 		OpenInit: m,
 	}
 }
 
+// IBCOpenTry represents an IBC channel open try message.
 type IBCOpenTry struct {
 	Channel             IBCChannel `json:"channel"`
 	CounterpartyVersion string     `json:"counterparty_version"`
 }
 
+// ToMsg converts an IBCOpenTry to an IBCChannelOpenMsg.
 func (m *IBCOpenTry) ToMsg() IBCChannelOpenMsg {
 	return IBCChannelOpenMsg{
 		OpenTry: m,
 	}
 }
 
+// IBCChannelConnectMsg represents a message to connect an IBC channel.
 type IBCChannelConnectMsg struct {
 	OpenAck     *IBCOpenAck     `json:"open_ack,omitempty"`
 	OpenConfirm *IBCOpenConfirm `json:"open_confirm,omitempty"`
@@ -78,27 +88,32 @@ func (msg IBCChannelConnectMsg) GetCounterVersion() (ver string, ok bool) {
 	return "", false
 }
 
+// IBCOpenAck represents an IBC channel open acknowledgment message.
 type IBCOpenAck struct {
 	Channel             IBCChannel `json:"channel"`
 	CounterpartyVersion string     `json:"counterparty_version"`
 }
 
+// ToMsg converts an IBCOpenAck to an IBCChannelConnectMsg.
 func (m *IBCOpenAck) ToMsg() IBCChannelConnectMsg {
 	return IBCChannelConnectMsg{
 		OpenAck: m,
 	}
 }
 
+// IBCOpenConfirm represents an IBC channel open confirmation message.
 type IBCOpenConfirm struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+// ToMsg converts an IBCOpenConfirm to an IBCChannelConnectMsg.
 func (m *IBCOpenConfirm) ToMsg() IBCChannelConnectMsg {
 	return IBCChannelConnectMsg{
 		OpenConfirm: m,
 	}
 }
 
+// IBCChannelCloseMsg represents a message to close an IBC channel.
 type IBCChannelCloseMsg struct {
 	CloseInit    *IBCCloseInit    `json:"close_init,omitempty"`
 	CloseConfirm *IBCCloseConfirm `json:"close_confirm,omitempty"`
@@ -112,37 +127,44 @@ func (msg IBCChannelCloseMsg) GetChannel() IBCChannel {
 	return msg.CloseConfirm.Channel
 }
 
+// IBCCloseInit represents an IBC channel close initialization message.
 type IBCCloseInit struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+// ToMsg converts an IBCCloseInit to an IBCChannelCloseMsg.
 func (m *IBCCloseInit) ToMsg() IBCChannelCloseMsg {
 	return IBCChannelCloseMsg{
 		CloseInit: m,
 	}
 }
 
+// IBCCloseConfirm represents an IBC channel close confirmation message.
 type IBCCloseConfirm struct {
 	Channel IBCChannel `json:"channel"`
 }
 
+// ToMsg converts an IBCCloseConfirm to an IBCChannelCloseMsg.
 func (m *IBCCloseConfirm) ToMsg() IBCChannelCloseMsg {
 	return IBCChannelCloseMsg{
 		CloseConfirm: m,
 	}
 }
 
+// IBCPacketReceiveMsg represents a message to receive an IBC packet.
 type IBCPacketReceiveMsg struct {
 	Packet  IBCPacket `json:"packet"`
 	Relayer string    `json:"relayer"`
 }
 
+// IBCPacketAckMsg represents a message to acknowledge an IBC packet.
 type IBCPacketAckMsg struct {
 	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	OriginalPacket  IBCPacket          `json:"original_packet"`
 	Relayer         string             `json:"relayer"`
 }
 
+// IBCPacketTimeoutMsg represents a message to handle an IBC packet timeout.
 type IBCPacketTimeoutMsg struct {
 	Packet  IBCPacket `json:"packet"`
 	Relayer string    `json:"relayer"`
@@ -153,17 +175,20 @@ type IBCPacketTimeoutMsg struct {
 // IBC source callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
 //
 // Note that there are some prerequisites that need to be fulfilled to receive source callbacks: - The contract must implement the `ibc_source_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
+// IBCSourceCallbackMsg represents a message for an IBC source callback.
 type IBCSourceCallbackMsg struct {
 	Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
 	Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
 }
 
+// IBCAckCallbackMsg represents a message for an IBC acknowledgment callback.
 type IBCAckCallbackMsg struct {
 	Acknowledgement IBCAcknowledgement `json:"acknowledgement"`
 	OriginalPacket  IBCPacket          `json:"original_packet"`
 	Relayer         string             `json:"relayer"`
 }
 
+// IBCTimeoutCallbackMsg represents a message for an IBC timeout callback.
 type IBCTimeoutCallbackMsg struct {
 	Packet  IBCPacket `json:"packet"`
 	Relayer string    `json:"relayer"`
@@ -184,6 +209,8 @@ type IBCTimeoutCallbackMsg struct {
 //     (i.e. the destination chain needs to support callbacks for the message you are being sent).
 //   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
 //     For `IbcMsg::Transfer`, this is the `memo` field.
+//
+// IBCDestinationCallbackMsg represents a message for an IBC destination callback.
 type IBCDestinationCallbackMsg struct {
 	Ack    IBCAcknowledgement `json:"ack"`
 	Packet IBCPacket          `json:"packet"`
@@ -192,6 +219,7 @@ type IBCDestinationCallbackMsg struct {
 // TODO: test what the sdk Order.String() represents and how to parse back
 // Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
 // Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
+// IBCOrder represents the ordering of an IBC channel.
 type IBCOrder = string
 
 // These are the only two valid values for IbcOrder.
@@ -204,6 +232,7 @@ const (
 // that can be compared against another Height for the purposes of updating and
 // freezing clients.
 // Ordering is (revision_number, timeout_height).
+// IBCTimeoutBlock represents a timeout block for an IBC packet.
 type IBCTimeoutBlock struct {
 	// the version that the client is currently on
 	// (eg. after resetting the chain this could increment 1 as height drops to 0)
@@ -213,6 +242,7 @@ type IBCTimeoutBlock struct {
 	Height uint64 `json:"height"`
 }
 
+// IsZero returns true if the timeout block is zero.
 func (t IBCTimeoutBlock) IsZero() bool {
 	return t.Revision == 0 && t.Height == 0
 }
@@ -224,10 +254,12 @@ type IBCTimeout struct {
 	Timestamp uint64 `json:"timestamp,string,omitempty"`
 }
 
+// IBCAcknowledgement represents an IBC packet acknowledgment.
 type IBCAcknowledgement struct {
 	Data []byte `json:"data"`
 }
 
+// IBCPacket represents an IBC packet.
 type IBCPacket struct {
 	Data     []byte      `json:"data"`
 	Src      IBCEndpoint `json:"src"`
@@ -256,13 +288,15 @@ type IBC3ChannelOpenResponse struct {
 // but have no meaningful return value to the calling code.
 //
 // Callbacks that have return values (like ibc_receive_packet)
-// or that cannot redispatch messages (like ibc_channel_open)
+// or that cannot redispatch messages (like the handshake callbacks)
 // will use other Response types.
+// IBCBasicResult represents the basic result of an IBC operation.
 type IBCBasicResult struct {
 	Ok  *IBCBasicResponse `json:"ok,omitempty"`
 	Err string            `json:"error,omitempty"`
 }
 
+// SubMessages returns the sub-messages of the result.
 func (r *IBCBasicResult) SubMessages() []SubMsg {
 	if r.Ok != nil {
 		return r.Ok.Messages
@@ -292,11 +326,13 @@ type IBCBasicResponse struct {
 // Callbacks that have return values (like receive_packet)
 // or that cannot redispatch messages (like the handshake callbacks)
 // will use other Response types.
+// IBCReceiveResult represents the result of receiving an IBC packet.
 type IBCReceiveResult struct {
 	Ok  *IBCReceiveResponse `json:"ok,omitempty"`
 	Err string              `json:"error,omitempty"`
 }
 
+// SubMessages returns the sub-messages of the result.
 func (r *IBCReceiveResult) SubMessages() []SubMsg {
 	if r.Ok != nil {
 		return r.Ok.Messages

@@ -19,6 +19,8 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
+// Package api provides the core functionality for interacting with the wasmvm.
+
 // Value types.
 type (
 	cint   = C.int
@@ -37,12 +39,17 @@ type (
 	cu8_ptr = *C.uint8_t
 )
 
+// Cache represents a cache for storing and retrieving wasm code.
 type Cache struct {
 	ptr      *C.cache_t
 	lockfile os.File
 }
 
+// Querier represents a type that can query the state of the blockchain.
 type Querier = types.Querier
+
+// cu8Ptr represents a pointer to an unsigned 8-bit integer.
+type cu8Ptr = *C.uint8_t
 
 func InitCache(config types.VMConfig) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile.
@@ -81,6 +88,7 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	return Cache{ptr: ptr, lockfile: *lockfile}, nil
 }
 
+// ReleaseCache releases the resources associated with the cache.
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)
 
@@ -90,6 +98,7 @@ func ReleaseCache(cache Cache) {
 	} // Also releases the file lock.
 }
 
+// StoreCode stores the given wasm code in the cache.
 func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
@@ -101,6 +110,7 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
+// StoreCodeUnchecked stores the given wasm code in the cache without validation.
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
@@ -112,6 +122,7 @@ func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(checksum), nil
 }
 
+// RemoveCode removes the wasm code with the given checksum from the cache.
 func RemoveCode(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)

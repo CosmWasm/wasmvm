@@ -119,10 +119,10 @@ func TestIBCHandshake(t *testing.T) {
 	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
-	init_msg := IBCInstantiateMsg{
+	initMsg := IBCInstantiateMsg{
 		ReflectCodeID: reflectID,
 	}
-	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
@@ -152,14 +152,14 @@ func TestIBCHandshake(t *testing.T) {
 	require.Len(t, connResponse.Messages, 1)
 
 	// check for the expected custom event
-	expected_events := []types.Event{{
+	expectedEvents := []types.Event{{
 		Type: "ibc",
 		Attributes: []types.EventAttribute{{
 			Key:   "channel",
 			Value: "connect",
 		}},
 	}}
-	require.Equal(t, expected_events, connResponse.Events)
+	require.Equal(t, expectedEvents, connResponse.Events)
 
 	// make sure it read the balance properly and we got 250 atoms
 	dispatch := connResponse.Messages[0].Msg
@@ -298,14 +298,14 @@ func TestIBCPacketDispatch(t *testing.T) {
 	require.Equal(t, "invalid packet: cosmwasm_std::addresses::Addr not found", ack2.Err)
 
 	// check for the expected custom event
-	expected_events := []types.Event{{
+	expectedEvents := []types.Event{{
 		Type: "ibc",
 		Attributes: []types.EventAttribute{{
 			Key:   "packet",
 			Value: "receive",
 		}},
 	}}
-	require.Equal(t, expected_events, prResponse2.Events)
+	require.Equal(t, expectedEvents, prResponse2.Events)
 }
 
 func TestAnalyzeCode(t *testing.T) {

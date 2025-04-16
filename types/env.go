@@ -29,6 +29,7 @@ type ContractInfo struct {
 	Address HumanAddress `json:"address"`
 }
 
+// TransactionInfo represents information about the current transaction being executed.
 type TransactionInfo struct {
 	// Position of this transaction in the block.
 	// The first transaction has index 0
