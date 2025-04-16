@@ -5,14 +5,14 @@ use std::any::Any;
 /// We want to provide as much debug information as possible
 /// as those cases are not expected to happen during healthy operations.
 pub fn handle_vm_panic(what: &str, err: Box<dyn Any + Send + 'static>) {
-    let err = match (err.downcast_ref::<&str>(), err.downcast_ref::<String>()) {
-        (Some(str), ..) => *str,
+    let err: &str = match (err.downcast_ref::<&str>(), err.downcast_ref::<String>()) {
+        (Some(str), ..) => str,
         (.., Some(str)) => str,
         (None, None) => "[unusable panic payload]",
     };
 
     eprintln!("Panic in {what}:");
-    eprintln!("{err:?}");
+    eprintln!("{err}");
     eprintln!(
         "This indicates a panic in during the operations of libwasmvm/cosmwasm-vm.
 Such panics must not happen and are considered bugs. If you see this in any real-world or
