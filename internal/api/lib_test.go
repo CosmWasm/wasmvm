@@ -1475,7 +1475,8 @@ func TestFloats(t *testing.T) {
 				result = debugStr(response)
 			}
 			// add the result to the hash
-			fmt.Fprintf(hasher, "%s%d%s", instr, seed, result)
+			_, err = fmt.Fprintf(hasher, "%s%d%s", instr, seed, result)
+			require.NoError(t, err)
 		}
 	}
 

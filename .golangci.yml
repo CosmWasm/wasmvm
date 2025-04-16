@@ -10,11 +10,9 @@ linters:
   enable:
     - copyloopvar # Detect copy loops
     - errcheck # Detect unchecked errors
-    - gosimple # Simplify code
     - govet # Reports suspicious constructs
     - ineffassign # Detect unused assignments
     - staticcheck # Go static analysis
-    - typecheck # Go type checker
     - unused # Detect unused constants, variables, functions and types
 
     # Additional recommended linters
