@@ -6,18 +6,22 @@ import (
 	"fmt"
 )
 
-// Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
-// The length of a checksum must always be ChecksumLen.
-type Checksum []byte
+// Checksum represents a unique identifier for a Wasm contract.
+// It is typically a SHA-256 hash of the contract's bytecode.
+type Checksum [ChecksumLen]byte
 
 func (cs Checksum) String() string {
-	return hex.EncodeToString(cs)
+	return hex.EncodeToString(cs[:])
 }
 
+// MarshalJSON implements the json.Marshaler interface for Checksum.
+// It converts the checksum to a hex-encoded string.
 func (cs Checksum) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeToString(cs))
+	return json.Marshal(hex.EncodeToString(cs[:]))
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for Checksum.
+// It parses a hex-encoded string into a checksum.
 func (cs *Checksum) UnmarshalJSON(input []byte) error {
 	var hexString string
 	err := json.Unmarshal(input, &hexString)
@@ -32,10 +36,11 @@ func (cs *Checksum) UnmarshalJSON(input []byte) error {
 	if len(data) != ChecksumLen {
 		return fmt.Errorf("got wrong number of bytes for checksum")
 	}
-	*cs = Checksum(data)
+	copy(cs[:], data)
 	return nil
 }
 
+// ChecksumLen is the length of a checksum in bytes.
 const ChecksumLen = 32
 
 // ForceNewChecksum creates a Checksum instance from a hex string.
@@ -48,5 +53,23 @@ func ForceNewChecksum(input string) Checksum {
 	if len(data) != ChecksumLen {
 		panic("got wrong number of bytes")
 	}
-	return Checksum(data)
+	var cs Checksum
+	copy(cs[:], data)
+	return cs
+}
+
+// Bytes returns the checksum as a byte slice.
+func (cs Checksum) Bytes() []byte {
+	return cs[:]
+}
+
+// NewChecksum creates a new Checksum from a byte slice.
+// Returns an error if the slice length is not ChecksumLen.
+func NewChecksum(b []byte) (Checksum, error) {
+	if len(b) != ChecksumLen {
+		return Checksum{}, fmt.Errorf("invalid checksum length: got %d, want %d", len(b), ChecksumLen)
+	}
+	var cs Checksum
+	copy(cs[:], b)
+	return cs, nil
 }

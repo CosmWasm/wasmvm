@@ -2,9 +2,8 @@ package types
 
 //---------- Env ---------
 
-// Env defines the state of the blockchain environment this contract is
-// running in. This must contain only trusted data - nothing from the Tx itself
-// that has not been verified (like Signer).
+// Env represents the execution environment for a CosmWasm contract.
+// It includes information about the current block, transaction, contract, and message.
 //
 // Env are json encoded to a byte slice before passing to the wasm contract.
 type Env struct {
@@ -13,6 +12,8 @@ type Env struct {
 	Contract    ContractInfo     `json:"contract"`
 }
 
+// BlockInfo represents information about the current block being processed.
+// It includes the block height, time, and chain ID.
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
@@ -21,6 +22,8 @@ type BlockInfo struct {
 	ChainID string `json:"chain_id"`
 }
 
+// ContractInfo represents information about the current contract being executed.
+// It includes the contract's address and code ID.
 type ContractInfo struct {
 	// Bech32 encoded sdk.AccAddress of the contract, to be used when sending messages
 	Address HumanAddress `json:"address"`
@@ -35,6 +38,8 @@ type TransactionInfo struct {
 	Index uint32 `json:"index"`
 }
 
+// MessageInfo represents information about the message being executed.
+// It includes the sender's address and the funds being sent with the message.
 type MessageInfo struct {
 	// Bech32 encoded sdk.AccAddress executing the contract
 	Sender HumanAddress `json:"sender"`

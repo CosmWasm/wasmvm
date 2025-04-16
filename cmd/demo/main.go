@@ -1,3 +1,4 @@
+// Package main provides a demo application showcasing the usage of the wasmvm library.
 package main
 
 import (

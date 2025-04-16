@@ -509,7 +509,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 		found := (*types.PerModuleMetrics)(nil)
 
 		for _, structure := range list {
-			if bytes.Equal(structure.Checksum, checksum) {
+			if bytes.Equal(structure.Checksum.Bytes(), checksum.Bytes()) {
 				metrics := structure.Metrics // Create local copy
 				found = &metrics
 				break
@@ -524,8 +524,13 @@ func TestGetPinnedMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics.PerModule, 2)
 
-	hackatomMetrics := findMetrics(metrics.PerModule, checksum)
-	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksum)
+	var hackatomChecksum types.Checksum
+	copy(hackatomChecksum[:], checksum)
+	var cyberpunkChecksumVar types.Checksum
+	copy(cyberpunkChecksumVar[:], cyberpunkChecksum)
+
+	hackatomMetrics := findMetrics(metrics.PerModule, hackatomChecksum)
+	cyberpunkMetrics := findMetrics(metrics.PerModule, cyberpunkChecksumVar)
 
 	require.Equal(t, uint32(0), hackatomMetrics.Hits)
 	require.NotEqual(t, uint32(0), hackatomMetrics.Size)
@@ -549,8 +554,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics.PerModule, 2)
 
-	hackatomMetrics = findMetrics(metrics.PerModule, checksum)
-	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksum)
+	hackatomMetrics = findMetrics(metrics.PerModule, hackatomChecksum)
+	cyberpunkMetrics = findMetrics(metrics.PerModule, cyberpunkChecksumVar)
 
 	require.Equal(t, uint32(1), hackatomMetrics.Hits)
 	require.NotEqual(t, uint32(0), hackatomMetrics.Size)
