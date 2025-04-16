@@ -537,7 +537,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	case query.Capitalized != nil:
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
 	default:
-		return nil, errors.New("Unsupported query")
+		return nil, errors.New("unsupported query")
 	}
 	return json.Marshal(resp)
 }

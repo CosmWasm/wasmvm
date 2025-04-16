@@ -90,7 +90,7 @@ func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint6
 	return checksum, gasCost, err
 }
 
-// StoreCodeUnchecked is the same as StoreCode but skips static validation checks.
+// StoreCodeUnchecked is the same as StoreCode but skips static validation checks and charges no gas.
 // Use this for adding code that was checked before, particularly in the case of state sync.
 func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return api.StoreCodeUnchecked(vm.cache, code)
@@ -678,7 +678,8 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// packet is received on a channel belonging to this contract.
+// IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
+// packet is received on a channel belonging to this contract
 func (vm *VM) IBC2PacketReceive(
 	checksum Checksum,
 	env types.Env,
@@ -736,7 +737,7 @@ var (
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
-		return fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return fmt.Errorf("insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasReport.UsedInternally += gasForDeserialization
 	gasReport.Remaining -= gasForDeserialization

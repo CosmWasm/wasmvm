@@ -302,7 +302,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
-	require.Equal(t, "", report.RequiredCapabilities)
+	require.Empty(t, report.RequiredCapabilities)
 	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
 
 	// Store IBC contract

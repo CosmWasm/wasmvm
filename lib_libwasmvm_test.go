@@ -32,14 +32,12 @@ const (
 
 func withVM(t *testing.T) *VM {
 	t.Helper()
-
-	tmpdir := t.TempDir() // Uses testing's managed temporary directory feature
+	tmpdir := t.TempDir()
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		vm.Cleanup()
-		// No need to manually remove the directory - t.TempDir() handles cleanup automatically
 	})
 	return vm
 }

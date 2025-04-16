@@ -355,7 +355,8 @@ type WasmMsg struct {
 
 // These are messages in the IBC lifecycle using the new IBC2 approach. Only usable by IBC2-enabled contracts.
 type IBC2Msg struct {
-	SendPacket *IBC2SendPacketMsg `json:"send_packet,omitempty"`
+	SendPacket           *IBC2SendPacketMsg           `json:"send_packet,omitempty"`
+	WriteAcknowledgement *IBC2WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 }
 
 // Sends an IBC packet with given payloads over the existing channel.
@@ -363,6 +364,15 @@ type IBC2SendPacketMsg struct {
 	ChannelID string        `json:"channel_id"`
 	Payloads  []IBC2Payload `json:"payloads"`
 	Timeout   uint64        `json:"timeout,string,omitempty"`
+}
+
+type IBC2WriteAcknowledgementMsg struct {
+	// The acknowledgement to send back
+	Ack IBCAcknowledgement `json:"ack"`
+	// Existing channel where the packet was received
+	ChannelID string `json:"channel_id"`
+	// Sequence number of the packet that was received
+	PacketSequence uint64 `json:"packet_sequence"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
