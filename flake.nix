@@ -6,7 +6,6 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     rust-overlay = {
       inputs = {
-        flake-utils.follows = "flake-utils";
         nixpkgs.follows = "nixpkgs";
       };
       url = "github:oxalica/rust-overlay";
@@ -27,6 +26,10 @@
         pkgs = import nixpkgs {
           inherit overlays system;
         };
+
+        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+          extensions = [ "rust-src" ];
+        };
       in
       {
         formatter = pkgs.nixfmt-rfc-style;
@@ -36,7 +39,7 @@
             go
             gofumpt
             golangci-lint
-            rust-bin.stable.latest.default
+            rustToolchain
           ];
         };
       }
