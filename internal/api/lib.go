@@ -49,6 +49,32 @@ type Cache struct {
 
 type Querier = types.Querier
 
+// Remove Global vtables and callback pointers
+/*
+var (
+	vtablesOnce sync.Once // sync.Once to ensure one-time initialization
+
+	dbReadCB   uintptr
+	dbWriteCB  uintptr
+	dbRemoveCB uintptr
+	dbScanCB   uintptr
+
+	iterNextCB      uintptr
+	iterNextKeyCB   uintptr
+	iterNextValueCB uintptr
+
+	apiHumanizeCB     uintptr
+	apiCanonicalizeCB uintptr
+	apiValidateAddrCB uintptr
+	querierExternalCB uintptr
+
+	dbVtable      ffi.DbVtable
+	iterVtable    ffi.IteratorVtable
+	apiVtable     ffi.GoApiVtable
+	querierVtable ffi.QuerierVtable
+)
+*/
+
 // Helper functions
 
 func makeByteSliceView(data []byte) ffi.ByteSliceView {
@@ -1285,17 +1311,17 @@ func buildDBState(store types.KVStore, callID uint64) DBState {
 	return DBState{Store: store, CallID: callID}
 }
 
+// Revert buildDB to placeholder
 func buildDB(state *DBState, gm *types.GasMeter) ffi.Db {
-	// Needs actual implementation using ffi vtables and types
 	return ffi.Db{}
 }
 
+// Revert buildAPI to placeholder
 func buildAPI(api *types.GoAPI) ffi.GoApi {
-	// Needs actual implementation using ffi vtables and types
 	return ffi.GoApi{}
 }
 
+// Revert buildQuerier to placeholder
 func buildQuerier(querier *Querier) ffi.GoQuerier {
-	// Needs actual implementation using ffi vtables and types
 	return ffi.GoQuerier{}
 }
