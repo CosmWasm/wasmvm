@@ -106,7 +106,19 @@ func TestIBCHandshake(t *testing.T) {
 	init_msg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	i, _, err := vm.Instantiate(checksum, env, info, toBytes(t, init_msg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	config := VMConfig{
+		Checksum:  checksum,
+		Env:       env,
+		Info:      info,
+		Msg:       toBytes(t, init_msg),
+		Store:     store,
+		GoAPI:     *goapi,
+		Querier:   querier,
+		GasMeter:  gasMeter1,
+		GasLimit:  TESTING_GAS_LIMIT,
+		DeserCost: deserCost,
+	}
+	i, _, err := vm.Instantiate(config)
 	require.NoError(t, err)
 	assert.NotNil(t, i.Ok)
 	iResponse := i.Ok
@@ -176,11 +188,26 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
-	initMsg := IBCInstantiateMsg{
+	init_msg := IBCInstantiateMsg{
 		ReflectCodeID: REFLECT_ID,
 	}
-	_, _, err := vm.Instantiate(checksum, env, info, toBytes(t, initMsg), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	config := VMConfig{
+		Checksum:  checksum,
+		Env:       env,
+		Info:      info,
+		Msg:       toBytes(t, init_msg),
+		Store:     store,
+		GoAPI:     *goapi,
+		Querier:   querier,
+		GasMeter:  gasMeter1,
+		GasLimit:  TESTING_GAS_LIMIT,
+		DeserCost: deserCost,
+	}
+	i, _, err := vm.Instantiate(config)
 	require.NoError(t, err)
+	assert.NotNil(t, i.Ok)
+	iResponse := i.Ok
+	require.Empty(t, iResponse.Messages)
 
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)

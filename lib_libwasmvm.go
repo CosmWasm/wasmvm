@@ -7,6 +7,7 @@ package cosmwasm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/CosmWasm/wasmvm/v2/internal/api"
@@ -19,6 +20,20 @@ import (
 type VM struct {
 	cache      api.Cache
 	printDebug bool
+}
+
+// VMConfig contains the configuration for VM operations
+type VMConfig struct {
+	Checksum  types.Checksum
+	Env       types.Env
+	Info      types.MessageInfo
+	Msg       []byte
+	Store     KVStore
+	GoAPI     GoAPI
+	Querier   Querier
+	GasMeter  GasMeter
+	GasLimit  uint64
+	DeserCost types.UFraction
 }
 
 // NewVM creates a new VM.
@@ -169,33 +184,34 @@ func (vm *VM) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
-func (vm *VM) Instantiate(
-	checksum types.Checksum,
-	env types.Env,
-	info types.MessageInfo,
-	initMsg []byte,
-	store KVStore,
-	goapi GoAPI,
-	querier Querier,
-	gasMeter GasMeter,
-	gasLimit uint64,
-	deserCost types.UFraction,
-) (*types.ContractResult, uint64, error) {
-	envBin, err := json.Marshal(env)
+func (vm *VM) Instantiate(config VMConfig) (*types.ContractResult, uint64, error) {
+	envBin, err := json.Marshal(config.Env)
 	if err != nil {
 		return nil, 0, err
 	}
-	infoBin, err := json.Marshal(info)
+	infoBin, err := json.Marshal(config.Info)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.Instantiate(vm.cache, checksum.Bytes(), envBin, infoBin, initMsg, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.Instantiate(
+		vm.cache,
+		config.Checksum.Bytes(),
+		envBin,
+		infoBin,
+		config.Msg,
+		&config.GasMeter,
+		config.Store,
+		&config.GoAPI,
+		&config.Querier,
+		config.GasLimit,
+		vm.printDebug,
+	)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
 
 	var result types.ContractResult
-	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	err = DeserializeResponse(config.GasLimit, config.DeserCost, &gasReport, data, &result)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
@@ -751,27 +767,22 @@ var (
 
 // DeserializeResponse deserializes a response
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
+	if len(data) == 0 {
+		return errors.New("empty response data")
+	}
+
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
-	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
-		return fmt.Errorf("insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
-	}
-	gasReport.UsedInternally += gasForDeserialization
-	gasReport.Remaining -= gasForDeserialization
-
-	err := json.Unmarshal(data, response)
-	if err != nil {
-		return err
+	if gasForDeserialization > gasLimit {
+		return errors.New("gas limit exceeded for deserialization")
 	}
 
-	// All responses that have sub-messages need their payload size to be checked
-	const replyPayloadMaxBytes = 1024 * 1024 // 1 MiB
-	if response, ok := response.(hasSubMessages); ok {
-		for i, m := range response.SubMessages() {
-			// each payload needs to be below maximum size
-			if len(m.Payload) > replyPayloadMaxBytes {
-				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, replyPayloadMaxBytes, len(m.Payload))
-			}
-		}
+	if err := json.Unmarshal(data, response); err != nil {
+		return fmt.Errorf("failed to deserialize response: %w", err)
+	}
+
+	if gasReport != nil {
+		gasReport.UsedInternally += gasForDeserialization
+		gasReport.Remaining -= gasForDeserialization
 	}
 
 	return nil
