@@ -414,7 +414,8 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	validPayload := make([]byte, 128*1024)
 	validPayloadJSON, err := json.Marshal(validPayload)
 	require.NoError(t, err)
-	resultJson := []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON))
+	var resultJson []byte
+	resultJson = fmt.Appendf(resultJson, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON)
 
 	// Test that a valid payload can be deserialized
 	var result types.ContractResult
@@ -426,7 +427,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	invalidPayload := make([]byte, 128*1024+1)
 	invalidPayloadJSON, err := json.Marshal(invalidPayload)
 	require.NoError(t, err)
-	resultJson = []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON))
+	resultJson = fmt.Appendf(resultJson[:0], `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON)
 
 	// Test that an invalid payload cannot be deserialized
 	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &result)

@@ -859,9 +859,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
 
-		info = MockInfoBin(b, "fred")
-
-		for i := 0; i < callCount; i++ {
+		for range make([]struct{}, callCount) {
 			go func() {
 				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -878,7 +876,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		close(resChan)
 
 		// Now check results in the main test goroutine
-		for i := 0; i < callCount; i++ {
+		for range make([]struct{}, callCount) {
 			require.NoError(b, <-errChan)
 			requireOkResponse(b, <-resChan, 0)
 		}
@@ -1090,7 +1088,8 @@ func TestDispatchSubmessage(t *testing.T) {
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
-	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
+	var payloadMsg []byte
+	payloadMsg = fmt.Appendf(payloadMsg, `{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := types.GasMeter(gasMeter2)

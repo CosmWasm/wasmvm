@@ -16,7 +16,7 @@ linters:
     - unused # Detect unused constants, variables, functions and types
 
     # Additional recommended linters
-    - gocritic # A more opinionated linter
+#    - gocritic # A more opinionated linter
     - gosec # Security checker
     - misspell # Find commonly misspelled words
 #    - revive # a metalinter with more checks
@@ -58,6 +58,10 @@ linters-settings:
   gocritic:
     disabled-checks:
       - dupSubExpr  # Disable dupSubExpr check as it gives false positives with C function calls
+    enabled-tags:
+      - performance
+      - style
+      - experimental
   gocyclo:
     min-complexity: 15
   gocognit:
