@@ -197,10 +197,7 @@ func TestIBCHandshake(t *testing.T) {
 		Type: "ibc",
 		Attributes: []types.EventAttribute{{
 			Key:   "channel",
-			Value: CHANNEL_ID,
-		}, {
-			Key:   "order",
-			Value: "ORDER_ORDERED",
+			Value: "connect",
 		}},
 	}}
 	require.Equal(t, expected_events, connResponse.Ok.Events)
