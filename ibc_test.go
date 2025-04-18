@@ -46,9 +46,7 @@ type IBCPacketMsg struct {
 
 // DispatchMsg represents a message to be dispatched to another contract.
 type DispatchMsg struct {
-	Msgs     []types.CosmosMsg `json:"msgs"`
-	Account  AccountMsg        `json:"account"`
-	Callback *struct{}         `json:"callback,omitempty"`
+	Msgs []types.CosmosMsg `json:"msgs"`
 }
 
 // AccountMsg represents account information in an IBC packet.
