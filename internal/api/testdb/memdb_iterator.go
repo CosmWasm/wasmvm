@@ -49,7 +49,10 @@ func newVisitorState(ctx context.Context, ch chan<- *item) *visitorState {
 
 // visitor is the function that processes each item in the btree
 func (vs *visitorState) visitor(i btree.Item) bool {
-	item := i.(*item)
+	item, ok := i.(*item)
+	if !ok {
+		panic("btree item is not of type *item") // Should ideally not happen
+	}
 	if vs.skipEqual != nil && bytes.Equal(item.key, vs.skipEqual) {
 		vs.skipEqual = nil
 		return true
@@ -158,7 +161,7 @@ func (i *memDBIterator) Next() {
 }
 
 // Error implements Iterator.
-func (i *memDBIterator) Error() error {
+func (_ *memDBIterator) Error() error {
 	return nil // famous last words
 }
 

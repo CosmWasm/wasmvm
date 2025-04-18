@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -67,7 +68,7 @@ func (cs Checksum) Bytes() []byte {
 // Returns an error if the slice length is not ChecksumLen.
 func NewChecksum(b []byte) (Checksum, error) {
 	if len(b) != ChecksumLen {
-		return Checksum{}, fmt.Errorf("invalid checksum length: got %d, want %d", len(b), ChecksumLen)
+		return Checksum{}, errors.New("got wrong number of bytes for checksum")
 	}
 	var cs Checksum
 	copy(cs[:], b)

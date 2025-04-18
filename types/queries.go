@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-//-------- Queries --------
+// -------- Queries --------
 
 // QueryResult is the Go counterpart of `ContractResult<Binary>`.
 // The JSON annotations are used for deserializing directly. There is a custom serializer below.
@@ -31,7 +31,7 @@ func (q QueryResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(queryResultImpl(q))
 }
 
-//-------- Querier -----------
+// -------- Querier --------
 
 // Querier is a thing that allows the contract to query information
 // from the environment it is executed in. This is typically used to query
@@ -260,7 +260,7 @@ type AllValidatorsResponse struct {
 
 // ValidatorQuery represents a query for a specific validator by address.
 type ValidatorQuery struct {
-	/// Address is the validator's address (e.g. cosmosvaloper1...)
+	// Address is the validator's address (e.g. cosmosvaloper1...)
 	Address string `json:"address"`
 }
 

@@ -129,7 +129,7 @@ func (db *MemDB) DeleteSync(key []byte) error {
 }
 
 // Close implements DB.
-func (db *MemDB) Close() error {
+func (_ *MemDB) Close() error {
 	// Close is a noop since for an in-memory database, we don't have a destination to flush
 	// contents to nor do we want any data loss on invoking Close().
 	// See the discussion in https://github.com/tendermint/tendermint/libs/pull/56
@@ -142,7 +142,10 @@ func (db *MemDB) Print() error {
 	defer db.mtx.RUnlock()
 
 	db.btree.Ascend(func(i btree.Item) bool {
-		item := i.(*item)
+		item, ok := i.(*item)
+		if !ok {
+			panic("btree item is not of type *item") // Should ideally not happen
+		}
 		fmt.Printf("[%X]:\t[%X]\n", item.key, item.value)
 		return true
 	})

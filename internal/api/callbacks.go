@@ -47,6 +47,7 @@ import (
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
 
+//nolint:revive // False positive: recover is called inside this function, which is always deferred
 func recoverPanic(ret *C.GoError) {
 	if rec := recover(); rec != nil {
 		// This is used to handle ErrorOutOfGas panics.
@@ -225,11 +226,12 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceV
 }
 
 //export cScan
+//nolint:revive // Function complexity slightly high due to multiple checks and CGo interface requirements
 func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
+	// Check for nil pointers early
 	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil || errOut == nil {
-		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
 	if !errOut.is_none {
@@ -243,6 +245,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	e := copyU8Slice(end)
 
 	var iter types.Iterator
+	var iterErr error
 	gasBefore := gm.GasConsumed()
 	switch order {
 	case 1: // Ascending
@@ -250,10 +253,15 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	case 2: // Descending
 		iter = kv.ReverseIterator(s, e)
 	default:
-		return C.GoError_BadArgument
+		iterErr = fmt.Errorf("invalid iterator order: %d", order)
 	}
 	gasAfter := gm.GasConsumed()
 	*usedGas = cu64(gasAfter - gasBefore)
+
+	if iterErr != nil {
+		*errOut = newUnmanagedVector([]byte(iterErr.Error()))
+		return C.GoError_User // Or a more specific error if available
+	}
 
 	iteratorRef, err := buildIterator(state.CallID, iter)
 	if err != nil {
@@ -272,10 +280,12 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 }
 
 //export cNext
+//nolint:revive // Function complexity slightly high due to multiple checks and CGo interface requirements
 func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
+
+	// Check for nil pointers early
 	if ref.call_id == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
-		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
@@ -290,6 +300,7 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
+		// No need to set output vectors, they stay nil/is_none=true
 		return C.GoError_None
 	}
 
@@ -451,8 +462,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	return C.GoError_None
 }
 
-/****** Go Querier ********/
-
+// QuerierVtable is the vtable for the Querier struct
 var querier_vtable = C.QuerierVtable{
 	query_external: C.any_function_t(C.cQueryExternal_cgo),
 }

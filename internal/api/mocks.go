@@ -4,7 +4,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"strings"
 	"testing"
@@ -370,7 +369,7 @@ const CostHuman uint64 = 550
 // MockCanonicalizeAddress converts a human-readable address to its canonical form.
 func MockCanonicalizeAddress(human string) (canonical []byte, gasCost uint64, err error) {
 	if len(human) > CanonicalLength {
-		return nil, 0, fmt.Errorf("human encoding too long")
+		return nil, 0, errors.New("human encoding too long")
 	}
 	res := make([]byte, CanonicalLength)
 	copy(res, human)
@@ -380,7 +379,7 @@ func MockCanonicalizeAddress(human string) (canonical []byte, gasCost uint64, er
 // MockHumanizeAddress converts a canonical address to its human-readable form.
 func MockHumanizeAddress(canon []byte) (human string, gasCost uint64, err error) {
 	if len(canon) != CanonicalLength {
-		return "", 0, fmt.Errorf("wrong canonical length")
+		return "", 0, errors.New("wrong canonical length")
 	}
 	cut := CanonicalLength
 	for i, v := range canon {
@@ -406,7 +405,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 		return gasCost, err
 	}
 	if !strings.EqualFold(humanized, input) {
-		return gasCost, fmt.Errorf("address validation failed")
+		return gasCost, errors.New("address validation failed")
 	}
 
 	return gasCost, nil
@@ -537,7 +536,7 @@ type CustomQuerier interface {
 type NoCustom struct{}
 
 // Query implements the CustomQuerier interface.
-func (q NoCustom) Query(_ json.RawMessage) ([]byte, error) {
+func (_ NoCustom) Query(_ json.RawMessage) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
@@ -561,7 +560,7 @@ type CustomResponse struct {
 }
 
 // Query implements the CustomQuerier interface for ReflectCustom.
-func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
+func (_ ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	var query CustomQuery
 	err := json.Unmarshal(request, &query)
 	if err != nil {

@@ -115,7 +115,9 @@ func InitCache(config types.VMConfig) (Cache, error) {
 // These errors are not critical as cleanup will happen when the process exits anyway.
 func logCleanupError(op string, err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: %s: %v\n", op, err)
+		if _, printErr := fmt.Fprintf(os.Stderr, "warning: %s: %v\n", op, err); printErr != nil {
+			// Error printing the error... not much we can do.
+		}
 	}
 }
 
@@ -720,41 +722,30 @@ func IBCSourceCallback(params ContractCallParams) ([]byte, types.GasReport, erro
 }
 
 // IBCDestinationCallback handles IBC destination chain callbacks
-func IBCDestinationCallback(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	e := makeView(env)
-	defer runtime.KeepAlive(env)
-	m := makeView(msg)
-	defer runtime.KeepAlive(msg)
+func IBCDestinationCallback(params ContractCallParams) ([]byte, types.GasReport, error) {
+	cs := makeView(params.Checksum)
+	defer runtime.KeepAlive(params.Checksum)
+	e := makeView(params.Env)
+	defer runtime.KeepAlive(params.Env)
+	m := makeView(params.Msg)
+	defer runtime.KeepAlive(params.Msg)
 	var pinner runtime.Pinner
-	pinner.Pin(gasMeter)
-	checkAndPinAPI(api, pinner)
-	checkAndPinQuerier(querier, pinner)
+	pinner.Pin(params.GasMeter)
+	checkAndPinAPI(params.API, pinner)
+	checkAndPinQuerier(params.Querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
 
-	dbState := buildDBState(store, callID)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
+	dbState := buildDBState(params.Store, callID)
+	db := buildDB(&dbState, params.GasMeter)
+	a := buildAPI(params.API)
+	q := buildQuerier(params.Querier)
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, destCallbackErr := C.ibc_destination_callback(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, destCallbackErr := C.ibc_destination_callback(params.Cache.ptr, cs, e, m, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
 	if destCallbackErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(destCallbackErr, errmsg)
 	}

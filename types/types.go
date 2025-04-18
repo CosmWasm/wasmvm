@@ -157,7 +157,7 @@ type OutOfGasError struct{}
 
 var _ error = OutOfGasError{}
 
-func (o OutOfGasError) Error() string {
+func (OutOfGasError) Error() string {
 	return "Out of gas"
 }
 

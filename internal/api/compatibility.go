@@ -4,124 +4,33 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-// WrapInstantiate is a helper function to convert from old param style to new ContractCallParams style
-func WrapInstantiate(cache Cache, checksum []byte, env []byte, info []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Info:       info,
-		Msg:        msg,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapInstantiate is a helper function to call Instantiate with ContractCallParams
+func WrapInstantiate(params ContractCallParams) ([]byte, types.GasReport, error) {
+	// Note: Removed the internal creation of params, now it's passed directly
 	return Instantiate(params)
 }
 
-// WrapExecute is a helper function to convert from old param style to new ContractCallParams style
-func WrapExecute(cache Cache, checksum []byte, env []byte, info []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Info:       info,
-		Msg:        msg,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapExecute is a helper function to call Execute with ContractCallParams
+func WrapExecute(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Execute(params)
 }
 
-// WrapMigrate is a helper function to convert from old param style to new ContractCallParams style
-func WrapMigrate(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Msg:        msg,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapMigrate is a helper function to call Migrate with ContractCallParams
+func WrapMigrate(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Migrate(params)
 }
 
-// WrapSudo is a helper function to convert from old param style to new ContractCallParams style
-func WrapSudo(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Msg:        msg,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapSudo is a helper function to call Sudo with ContractCallParams
+func WrapSudo(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Sudo(params)
 }
 
-// WrapReply is a helper function to convert from old param style to new ContractCallParams style
-func WrapReply(cache Cache, checksum []byte, env []byte, reply []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Msg:        reply,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapReply is a helper function to call Reply with ContractCallParams
+func WrapReply(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Reply(params)
 }
 
-// WrapQuery is a helper function to convert from old param style to new ContractCallParams style
-func WrapQuery(cache Cache, checksum []byte, env []byte, query []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
-) ([]byte, types.GasReport, error) {
-	params := ContractCallParams{
-		Cache:      cache,
-		Checksum:   checksum,
-		Env:        env,
-		Msg:        query,
-		GasMeter:   gasMeter,
-		Store:      store,
-		API:        api,
-		Querier:    querier,
-		GasLimit:   gasLimit,
-		PrintDebug: printDebug,
-	}
-
+// WrapQuery is a helper function to call Query with ContractCallParams
+func WrapQuery(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Query(params)
 }

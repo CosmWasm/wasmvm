@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -52,9 +53,10 @@ func endCall(callID uint64) {
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
 		if err := iter.Close(); err != nil {
-			// In this cleanup code, we can't do much with the error
-			// Log it to stderr since that's better than silently ignoring it
-			fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err)
+			// maybe close iterators?
+			if _, printErr := fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err); printErr != nil {
+				// If printing fails, there is nothing more we can do here.
+			}
 		}
 	}
 }
@@ -65,6 +67,9 @@ func endCall(callID uint64) {
 // We assign iterator IDs starting with 1 for historic reasons. This could be changed to 0
 // I guess.
 func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64, error) {
+	if it == nil {
+		return 0, errors.New("cannot store nil iterator")
+	}
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
 

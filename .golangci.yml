@@ -54,7 +54,7 @@ linters:
       min-len: 3
       min-occurrences: 3
     revive:
-      enable-all-rules: false
+      enable-all-rules: true
 
       rules:
         # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
@@ -71,6 +71,20 @@ linters:
           disabled: true
           exclude: [""]
           arguments: [80]
+        - name: add-constant
+          disabled: true
+        - name: exported
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: nested-structs
+          disabled: true
+        
+
+        
+
+        
+        
 
 issues:
   max-issues-per-linter: 0

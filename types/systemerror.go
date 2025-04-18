@@ -111,6 +111,8 @@ func convertErrorToSystemError(err error) *SystemError {
 }
 
 // convertSpecificError converts a specific error type to a SystemError
+//
+//nolint:revive // Function complexity high due to exhaustive type switch needed for error mapping
 func convertSpecificError(err error) *SystemError {
 	switch t := err.(type) {
 	case InvalidRequest:

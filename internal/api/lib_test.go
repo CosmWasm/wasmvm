@@ -1698,7 +1698,8 @@ func TestCustomReflectQuerier(t *testing.T) {
 	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM")}
 	querier := DefaultQuerier(MockContractAddr, initBalance)
 	// we need this to handle the custom requests from the reflect contract
-	innerQuerier := querier.(*MockQuerier)
+	innerQuerier, ok := querier.(*MockQuerier)
+	require.True(t, ok, "Querier must be a MockQuerier for this test")
 	innerQuerier.Custom = ReflectCustom{}
 	querier = Querier(innerQuerier)
 
@@ -1740,14 +1741,27 @@ type CapitalizedResponse struct {
 }
 
 // TestFloats is a port of the float_instrs_are_deterministic test in cosmwasm-vm.
-func TestFloats(t *testing.T) {
-	type Value struct {
-		U32 *uint32 `json:"u32,omitempty"`
-		U64 *uint64 `json:"u64,omitempty"`
-		F32 *uint32 `json:"f32,omitempty"`
-		F64 *uint64 `json:"f64,omitempty"`
-	}
 
+// Value is used by TestFloats and its helper.
+type Value struct {
+	U32 *uint32 `json:"u32,omitempty"`
+	U64 *uint64 `json:"u64,omitempty"`
+	F32 *uint32 `json:"f32,omitempty"`
+	F64 *uint64 `json:"f64,omitempty"`
+}
+
+// floatTestRunnerParams groups common parameters for runFloatInstructionTest
+type floatTestRunnerParams struct {
+	cache    Cache
+	checksum []byte
+	env      []byte
+	gasMeter *types.GasMeter
+	store    types.KVStore
+	api      *types.GoAPI
+	querier  *types.Querier
+}
+
+func TestFloats(t *testing.T) {
 	// helper to print the value in the same format as Rust's Debug trait
 	debugStr := func(value Value) string {
 		switch {
@@ -1771,11 +1785,21 @@ func TestFloats(t *testing.T) {
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
-	// instantiate it with this store
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	querier := DefaultQuerier(MockContractAddr, nil)
 	env := MockEnvBin(t)
+
+	// Create the params struct once
+	ftp := floatTestRunnerParams{
+		cache:    cache,
+		checksum: checksum,
+		env:      env,
+		gasMeter: &igasMeter,
+		store:    store,
+		api:      api,
+		querier:  &querier,
+	}
 
 	// query instructions
 	query := []byte(`{"instructions":{}}`)
@@ -1799,76 +1823,84 @@ func TestFloats(t *testing.T) {
 	var instructions []string
 	err = json.Unmarshal(qResult.Ok, &instructions)
 	require.NoError(t, err)
-	// little sanity check
-	require.Len(t, instructions, 70)
+	require.Len(t, instructions, 70) // Sanity check length
 
 	hasher := sha256.New()
 	const runsPerInstruction = 150
 	for _, instr := range instructions {
 		for seed := range make([]struct{}, runsPerInstruction) {
-			// query some input values for the instruction
-			msg := fmt.Sprintf(`{"random_args_for":{"instruction":%q,"seed":%d}}`, instr, seed)
-			data, _, err = Query(ContractCallParams{
-				Cache:      cache,
-				Checksum:   checksum,
-				Env:        env,
-				Msg:        []byte(msg),
-				GasMeter:   &igasMeter,
-				Store:      store,
-				API:        api,
-				Querier:    &querier,
-				GasLimit:   TESTING_GAS_LIMIT,
-				PrintDebug: TESTING_PRINT_DEBUG,
-			})
-			require.NoError(t, err)
-			err = json.Unmarshal(data, &qResult)
-			require.NoError(t, err)
-			require.Empty(t, qResult.Err)
-			var args []Value
-			err = json.Unmarshal(qResult.Ok, &args)
-			require.NoError(t, err)
-
-			// build the run message
-			argStr, err := json.Marshal(args)
-			require.NoError(t, err)
-			msg = fmt.Sprintf(`{"run":{"instruction":%q,"args":%s}}`, instr, argStr)
-
-			// run the instruction
-			// this might throw a runtime error (e.g. if the instruction traps)
-			data, _, err = Query(ContractCallParams{
-				Cache:      cache,
-				Checksum:   checksum,
-				Env:        env,
-				Msg:        []byte(msg),
-				GasMeter:   &igasMeter,
-				Store:      store,
-				API:        api,
-				Querier:    &querier,
-				GasLimit:   TESTING_GAS_LIMIT,
-				PrintDebug: TESTING_PRINT_DEBUG,
-			})
-			var result string
-			if err != nil {
-				require.Error(t, err)
-				// remove the prefix to make the error message the same as in the cosmwasm-vm test
-				result = strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
-			} else {
-				err = json.Unmarshal(data, &qResult)
-				require.NoError(t, err)
-				require.Empty(t, qResult.Err)
-				var response Value
-				err = json.Unmarshal(qResult.Ok, &response)
-				require.NoError(t, err)
-				result = debugStr(response)
-			}
+			// Pass the params struct to the helper
+			resultStr := runFloatInstructionTest(t, ftp, instr, seed, debugStr)
 			// add the result to the hash
-			_, err = fmt.Fprintf(hasher, "%s%d%s", instr, seed, result)
+			_, err = fmt.Fprintf(hasher, "%s%d%s", instr, seed, resultStr)
 			require.NoError(t, err)
 		}
 	}
 
 	hash := hasher.Sum(nil)
 	require.Equal(t, "95f70fa6451176ab04a9594417a047a1e4d8e2ff809609b8f81099496bee2393", hex.EncodeToString(hash))
+}
+
+// runFloatInstructionTest is a helper for TestFloats to reduce cognitive complexity.
+// It queries args, runs the instruction, and returns the result string.
+func runFloatInstructionTest(t *testing.T, ftp floatTestRunnerParams, instr string, seed int, debugStr func(Value) string) string {
+	t.Helper()
+
+	// Query random args for the instruction
+	queryMsg := fmt.Sprintf(`{"random_args_for":{"instruction":%q,"seed":%d}}`, instr, seed)
+	data, _, err := Query(ContractCallParams{
+		Cache:      ftp.cache,
+		Checksum:   ftp.checksum,
+		Env:        ftp.env,
+		Msg:        []byte(queryMsg),
+		GasMeter:   ftp.gasMeter,
+		Store:      ftp.store,
+		API:        ftp.api,
+		Querier:    ftp.querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: TESTING_PRINT_DEBUG,
+	})
+	require.NoError(t, err)
+	var qResult types.QueryResult
+	err = json.Unmarshal(data, &qResult)
+	require.NoError(t, err)
+	require.Empty(t, qResult.Err)
+	var args []Value
+	err = json.Unmarshal(qResult.Ok, &args)
+	require.NoError(t, err)
+
+	// Build the run message
+	argStr, err := json.Marshal(args)
+	require.NoError(t, err)
+	runMsg := fmt.Sprintf(`{"run":{"instruction":%q,"args":%s}}`, instr, argStr)
+
+	// Run the instruction
+	data, _, err = Query(ContractCallParams{
+		Cache:      ftp.cache,
+		Checksum:   ftp.checksum,
+		Env:        ftp.env,
+		Msg:        []byte(runMsg),
+		GasMeter:   ftp.gasMeter,
+		Store:      ftp.store,
+		API:        ftp.api,
+		Querier:    ftp.querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: TESTING_PRINT_DEBUG,
+	})
+
+	// Process result (error or value)
+	if err != nil {
+		require.Error(t, err)
+		return strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
+	} else {
+		err = json.Unmarshal(data, &qResult)
+		require.NoError(t, err)
+		require.Empty(t, qResult.Err)
+		var response Value
+		err = json.Unmarshal(qResult.Ok, &response)
+		require.NoError(t, err)
+		return debugStr(response)
+	}
 }
 
 func TestGasLimit(t *testing.T) {
