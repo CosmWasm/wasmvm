@@ -26,9 +26,58 @@ type memDBIterator struct {
 
 var _ Iterator = (*memDBIterator)(nil)
 
-// newMemDBIterator creates a new memDBIterator.
-func newMemDBIterator(db *MemDB, start []byte, end []byte, reverse bool) *memDBIterator {
-	return newMemDBIteratorMtxChoice(db, start, end, reverse, true)
+// newMemDBIteratorAscending creates a new memDBIterator that iterates in ascending order.
+func newMemDBIteratorAscending(db *MemDB, start, end []byte) *memDBIterator {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *item, chBufferSize)
+	iter := &memDBIterator{
+		ch:     ch,
+		cancel: cancel,
+		start:  start,
+		end:    end,
+		useMtx: true,
+	}
+
+	db.mtx.RLock()
+	go func() {
+		defer db.mtx.RUnlock()
+		vs := newVisitorState(ctx, ch)
+		db.traverseAscending(start, end, vs)
+		close(ch)
+	}()
+
+	// prime the iterator with the first value, if any
+	if item, ok := <-ch; ok {
+		iter.item = item
+	}
+	return iter
+}
+
+// newMemDBIteratorDescending creates a new memDBIterator that iterates in descending order.
+func newMemDBIteratorDescending(db *MemDB, start, end []byte) *memDBIterator {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *item, chBufferSize)
+	iter := &memDBIterator{
+		ch:     ch,
+		cancel: cancel,
+		start:  start,
+		end:    end,
+		useMtx: true,
+	}
+
+	db.mtx.RLock()
+	go func() {
+		defer db.mtx.RUnlock()
+		vs := newVisitorState(ctx, ch)
+		db.traverseDescending(start, end, vs)
+		close(ch)
+	}()
+
+	// prime the iterator with the first value, if any
+	if item, ok := <-ch; ok {
+		iter.item = item
+	}
+	return iter
 }
 
 // visitorState holds the state needed for the visitor function
@@ -95,7 +144,8 @@ func (db *MemDB) traverseDescending(start, end []byte, vs *visitorState) {
 	}
 }
 
-func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool, useMtx bool) *memDBIterator {
+// newMemDBIteratorNoMtxAscending creates a new memDBIterator that iterates in ascending order without locking.
+func newMemDBIteratorNoMtxAscending(db *MemDB, start, end []byte) *memDBIterator {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *item, chBufferSize)
 	iter := &memDBIterator{
@@ -103,22 +153,37 @@ func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool
 		cancel: cancel,
 		start:  start,
 		end:    end,
-		useMtx: useMtx,
+		useMtx: false,
 	}
 
-	if useMtx {
-		db.mtx.RLock()
-	}
 	go func() {
-		if useMtx {
-			defer db.mtx.RUnlock()
-		}
 		vs := newVisitorState(ctx, ch)
-		if reverse {
-			db.traverseDescending(start, end, vs)
-		} else {
-			db.traverseAscending(start, end, vs)
-		}
+		db.traverseAscending(start, end, vs)
+		close(ch)
+	}()
+
+	// prime the iterator with the first value, if any
+	if item, ok := <-ch; ok {
+		iter.item = item
+	}
+	return iter
+}
+
+// newMemDBIteratorNoMtxDescending creates a new memDBIterator that iterates in descending order without locking.
+func newMemDBIteratorNoMtxDescending(db *MemDB, start, end []byte) *memDBIterator {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *item, chBufferSize)
+	iter := &memDBIterator{
+		ch:     ch,
+		cancel: cancel,
+		start:  start,
+		end:    end,
+		useMtx: false,
+	}
+
+	go func() {
+		vs := newVisitorState(ctx, ch)
+		db.traverseDescending(start, end, vs)
 		close(ch)
 	}()
 
@@ -132,10 +197,17 @@ func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool
 // Close implements Iterator.
 func (i *memDBIterator) Close() error {
 	i.cancel()
-	for range i.ch { // drain channel
-	}
+	// drain the channel in a separate goroutine to avoid blocking
+	go drainItemChannel(i.ch)
 	i.item = nil
 	return nil
+}
+
+// drainItemChannel consumes all items from a channel until it's closed
+func drainItemChannel(ch <-chan *item) {
+	for item := range ch {
+		_ = item // explicitly discard the item
+	}
 }
 
 // Domain implements Iterator.

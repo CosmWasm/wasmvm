@@ -19,7 +19,7 @@ const (
 	testAddress = "foobar"
 )
 
-/** helper constructors **/
+/* * helper constructors **/
 
 // MockContractAddr is the default contract address used in mock tests.
 const MockContractAddr = "contract"
@@ -200,7 +200,7 @@ func MockIBCPacketTimeout(myChannel string, data []byte) types.IBCPacketTimeoutM
 	}
 }
 
-/*** Mock GasMeter ****/
+/* ** Mock GasMeter ****/
 // This code is borrowed from Cosmos-SDK store/types/gas.go
 
 // ErrorOutOfGas defines an error thrown when an action results in out of gas.
@@ -263,7 +263,7 @@ func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 	}
 }
 
-/*** Mock types.KVStore ****/
+/* ** Mock types.KVStore ****/
 // Much of this code is borrowed from Cosmos-SDK store/transient.go
 
 // Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
@@ -355,7 +355,7 @@ func (l Lookup) ReverseIterator(start, end []byte) types.Iterator {
 
 var _ types.KVStore = (*Lookup)(nil)
 
-/***** Mock types.GoAPI ****/
+/* **** Mock types.GoAPI *****/
 
 // CanonicalLength is the length of canonical addresses.
 const CanonicalLength = 32
@@ -433,7 +433,7 @@ func TestMockAPI(t *testing.T) {
 	require.Equal(t, CostHuman, cost)
 }
 
-/***** MockQuerier *****/
+/* **** MockQuerier *****/
 
 // DefaultQuerierGasLimit is the default gas limit for querier operations.
 const DefaultQuerierGasLimit = 1_000_000

@@ -760,7 +760,7 @@ func convertGasReport(report C.GasReport) types.GasReport {
 	}
 }
 
-/***** To error module *****/
+/* **** To error module *****/
 
 func errorWithMessage(err error, b C.UnmanagedVector) error {
 	// we always destroy the unmanaged vector to avoid a memory leak

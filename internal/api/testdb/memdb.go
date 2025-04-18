@@ -1,3 +1,4 @@
+// Package testdb provides an in-memory database implementation for testing purposes.
 package testdb
 
 import (
@@ -171,7 +172,7 @@ func (db *MemDB) Iterator(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIterator(db, start, end, false), nil
+	return newMemDBIteratorAscending(db, start, end), nil
 }
 
 // ReverseIterator implements DB.
@@ -180,7 +181,7 @@ func (db *MemDB) ReverseIterator(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIterator(db, start, end, true), nil
+	return newMemDBIteratorDescending(db, start, end), nil
 }
 
 // IteratorNoMtx makes an iterator with no mutex.
@@ -188,7 +189,7 @@ func (db *MemDB) IteratorNoMtx(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIteratorMtxChoice(db, start, end, false, false), nil
+	return newMemDBIteratorNoMtxAscending(db, start, end), nil
 }
 
 // ReverseIteratorNoMtx makes an iterator with no mutex.
@@ -196,5 +197,5 @@ func (db *MemDB) ReverseIteratorNoMtx(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIteratorMtxChoice(db, start, end, true, false), nil
+	return newMemDBIteratorNoMtxDescending(db, start, end), nil
 }

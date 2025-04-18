@@ -8,7 +8,7 @@ import (
 
 // Package types provides core types used throughout the wasmvm package.
 
-//------- Results / Msgs -------------
+// ------- Results / Msgs -------------
 
 // ContractResult represents the result of a contract execution.
 type ContractResult struct {
@@ -141,7 +141,7 @@ type IBCMsg struct {
 type GovMsg struct {
 	// This maps directly to [MsgVote](https://github.com/cosmos/cosmos-sdk/blob/v0.42.5/proto/cosmos/gov/v1beta1/tx.proto#L46-L56) in the Cosmos SDK with voter set to the contract address.
 	Vote *VoteMsg `json:"vote,omitempty"`
-	/// This maps directly to [MsgVoteWeighted](https://github.com/cosmos/cosmos-sdk/blob/v0.45.8/proto/cosmos/gov/v1beta1/tx.proto#L66-L78) in the Cosmos SDK with voter set to the contract address.
+	// / This maps directly to [MsgVoteWeighted](https://github.com/cosmos/cosmos-sdk/blob/v0.45.8/proto/cosmos/gov/v1beta1/tx.proto#L66-L78) in the Cosmos SDK with voter set to the contract address.
 	VoteWeighted *VoteWeightedMsg `json:"vote_weighted,omitempty"`
 }
 
@@ -177,7 +177,7 @@ func (v voteOption) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (s *voteOption) UnmarshalJSON(b []byte) error {
+func (v *voteOption) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *voteOption) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid vote option '%v'", j)
 	}
-	*s = voteOption
+	*v = voteOption
 	return nil
 }
 

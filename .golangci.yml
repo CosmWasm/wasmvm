@@ -79,6 +79,8 @@ linters:
           disabled: true
         - name: nested-structs
           disabled: true
+        - name: flag-parameter
+          disabled: true
         
 
         

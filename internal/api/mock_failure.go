@@ -6,7 +6,7 @@ import (
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-/***** Mock types.GoAPI *****/
+/* **** Mock types.GoAPI *****/
 
 // MockFailureCanonicalizeAddress returns a generic error
 func MockFailureCanonicalizeAddress(_ string) (canonical []byte, gasCost uint64, err error) {

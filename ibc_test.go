@@ -1,5 +1,6 @@
 //go:build cgo && !nolink_libwasmvm
 
+// Package wasmvm contains integration tests for the wasmvm package.
 package wasmvm
 
 import (

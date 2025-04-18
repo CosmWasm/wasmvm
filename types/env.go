@@ -1,6 +1,6 @@
 package types
 
-//---------- Env ---------
+// ---------- Env ----------
 
 // Env represents the execution environment for a CosmWasm contract.
 // It includes information about the current block, transaction, contract, and message.

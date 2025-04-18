@@ -89,7 +89,8 @@ func recoverPanic(ret *C.GoError) {
 	}
 }
 
-/***** DB *****/
+/* **** DB *****/
+/* * DB * */
 
 var db_vtable = C.DbVtable{
 	read_db:   C.any_function_t(C.cGet_cgo),

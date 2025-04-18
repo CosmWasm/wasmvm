@@ -1887,20 +1887,19 @@ func runFloatInstructionTest(t *testing.T, ftp floatTestRunnerParams, instr stri
 		GasLimit:   TESTING_GAS_LIMIT,
 		PrintDebug: TESTING_PRINT_DEBUG,
 	})
-
 	// Process result (error or value)
 	if err != nil {
 		require.Error(t, err)
 		return strings.Replace(err.Error(), "Error calling the VM: Error executing Wasm: ", "", 1)
-	} else {
-		err = json.Unmarshal(data, &qResult)
-		require.NoError(t, err)
-		require.Empty(t, qResult.Err)
-		var response Value
-		err = json.Unmarshal(qResult.Ok, &response)
-		require.NoError(t, err)
-		return debugStr(response)
 	}
+
+	err = json.Unmarshal(data, &qResult)
+	require.NoError(t, err)
+	require.Empty(t, qResult.Err)
+	var response Value
+	err = json.Unmarshal(qResult.Ok, &response)
+	require.NoError(t, err)
+	return debugStr(response)
 }
 
 func TestGasLimit(t *testing.T) {

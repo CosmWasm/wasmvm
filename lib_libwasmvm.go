@@ -36,6 +36,27 @@ type VMConfig struct {
 	DeserCost types.UFraction
 }
 
+// InstantiateResult combines raw bytes, parsed result and gas information from an instantiation
+type InstantiateResult struct {
+	Data      []byte
+	Result    types.ContractResult
+	GasReport types.GasReport
+}
+
+// ExecuteResult combines raw bytes, parsed result and gas information from an execution
+type ExecuteResult struct {
+	Data      []byte
+	Result    types.ContractResult
+	GasReport types.GasReport
+}
+
+// QueryResult combines raw bytes, parsed result and gas information from a query
+type QueryResult struct {
+	Data      []byte
+	Result    types.QueryResult
+	GasReport types.GasReport
+}
+
 // NewVM creates a new VM.
 //
 // `dataDir` is a base directory for Wasm blobs and various caches.
@@ -184,21 +205,25 @@ func (vm *VM) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 //
 // Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 // for performance.
-func (vm *VM) Instantiate(params api.ContractCallParams) ([]byte, types.ContractResult, types.GasReport, error) {
+func (*VM) Instantiate(params api.ContractCallParams) (InstantiateResult, error) {
 	// Pass params to api.Instantiate
 	resBytes, gasReport, err := api.Instantiate(params)
 	if err != nil {
-		return nil, types.ContractResult{}, gasReport, err
+		return InstantiateResult{GasReport: gasReport}, err
 	}
 
 	// Unmarshal the result
 	var result types.ContractResult
 	err = json.Unmarshal(resBytes, &result)
 	if err != nil {
-		return resBytes, types.ContractResult{}, gasReport, err
+		return InstantiateResult{Data: resBytes, GasReport: gasReport}, err
 	}
 
-	return resBytes, result, gasReport, nil
+	return InstantiateResult{
+		Data:      resBytes,
+		Result:    result,
+		GasReport: gasReport,
+	}, nil
 }
 
 // Execute calls a given contract. Since the only difference between contracts with the same Checksum is the
@@ -207,41 +232,49 @@ func (vm *VM) Instantiate(params api.ContractCallParams) ([]byte, types.Contract
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 // and setting the env with relevant info on this instance (address, balance, etc).
-func (vm *VM) Execute(params api.ContractCallParams) ([]byte, types.ContractResult, types.GasReport, error) {
+func (*VM) Execute(params api.ContractCallParams) (ExecuteResult, error) {
 	// Call the API with the params
 	resBytes, gasReport, err := api.Execute(params)
 	if err != nil {
-		return nil, types.ContractResult{}, gasReport, err
+		return ExecuteResult{GasReport: gasReport}, err
 	}
 
 	// Unmarshal the result
 	var result types.ContractResult
 	err = json.Unmarshal(resBytes, &result)
 	if err != nil {
-		return resBytes, types.ContractResult{}, gasReport, err
+		return ExecuteResult{Data: resBytes, GasReport: gasReport}, err
 	}
 
-	return resBytes, result, gasReport, nil
+	return ExecuteResult{
+		Data:      resBytes,
+		Result:    result,
+		GasReport: gasReport,
+	}, nil
 }
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
 // The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path.
-func (vm *VM) Query(params api.ContractCallParams) ([]byte, types.QueryResult, types.GasReport, error) {
+func (*VM) Query(params api.ContractCallParams) (QueryResult, error) {
 	// Call the API with the params
 	resBytes, gasReport, err := api.Query(params)
 	if err != nil {
-		return nil, types.QueryResult{}, gasReport, err
+		return QueryResult{GasReport: gasReport}, err
 	}
 
 	// Unmarshal the query result
 	var result types.QueryResult
 	err = json.Unmarshal(resBytes, &result)
 	if err != nil {
-		return resBytes, types.QueryResult{}, gasReport, err
+		return QueryResult{Data: resBytes, GasReport: gasReport}, err
 	}
 
-	return resBytes, result, gasReport, nil
+	return QueryResult{
+		Data:      resBytes,
+		Result:    result,
+		GasReport: gasReport,
+	}, nil
 }
 
 // Migrate migrates the contract with the given parameters.

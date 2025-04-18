@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 // Checksum represents a unique identifier for a Wasm contract.
@@ -35,7 +34,7 @@ func (cs *Checksum) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	if len(data) != ChecksumLen {
-		return fmt.Errorf("got wrong number of bytes for checksum")
+		return errors.New("got wrong number of bytes for checksum")
 	}
 	copy(cs[:], data)
 	return nil

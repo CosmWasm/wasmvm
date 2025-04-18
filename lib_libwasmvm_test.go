@@ -206,19 +206,19 @@ func TestHappyPath(t *testing.T) {
 	}
 
 	// Update this line to capture all 4 return values (the ContractResult is new)
-	resBytes, contractResult, gasReport, err := vm.Instantiate(params)
+	result, err := vm.Instantiate(params)
 	require.NoError(t, err)
-	require.Greater(t, gasReport.UsedInternally, uint64(0), "Expected some gas to be used during instantiation")
+	require.Greater(t, result.GasReport.UsedInternally, uint64(0), "Expected some gas to be used during instantiation")
 
 	// We've already got the unmarshaled result, so we can skip this step
 	// (But if you want to keep it for clarity, that's fine too)
 	var initResult types.ContractResult
-	if resBytes != nil {
-		err = json.Unmarshal(resBytes, &initResult)
+	if result.Data != nil {
+		err = json.Unmarshal(result.Data, &initResult)
 		require.NoError(t, err)
-		require.Equal(t, contractResult, initResult)
+		require.Equal(t, result.Result, initResult)
 	} else {
-		initResult = contractResult
+		initResult = result.Result
 	}
 
 	require.Empty(t, initResult.Err, "Contract error should be empty")
@@ -255,21 +255,21 @@ func TestHappyPath(t *testing.T) {
 	}
 
 	// Update to get all 4 return values
-	execResBytes, execResult, gasReport, err := vm.Execute(executeParams)
+	executeResult, err := vm.Execute(executeParams)
 	require.NoError(t, err)
-	require.Greater(t, gasReport.UsedInternally, uint64(0), "Expected some gas to be used during execution")
+	require.Greater(t, executeResult.GasReport.UsedInternally, uint64(0), "Expected some gas to be used during execution")
 
 	// Verify that raw response bytes correctly unmarshal to match execResult
 	var parsedResult types.ContractResult
-	err = json.Unmarshal(execResBytes, &parsedResult)
+	err = json.Unmarshal(executeResult.Data, &parsedResult)
 	require.NoError(t, err)
-	require.Equal(t, execResult, parsedResult, "VM-parsed result should match manually parsed result")
+	require.Equal(t, executeResult.Result, parsedResult, "VM-parsed result should match manually parsed result")
 
 	// Rest of the function remains the same
 	// No need to unmarshal unless you want to validate
-	require.Empty(t, execResult.Err, "Contract error should be empty")
-	require.NotNil(t, execResult.Ok)
-	hres := execResult.Ok
+	require.Empty(t, executeResult.Result.Err, "Contract error should be empty")
+	require.NotNil(t, executeResult.Result.Ok)
+	hres := executeResult.Result.Ok
 	require.Len(t, hres.Messages, 1)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -322,11 +322,11 @@ func TestEnv(t *testing.T) {
 	}
 
 	// Call instantiate with all 4 return values
-	_, result, _, err := vm.Instantiate(params)
+	result, err := vm.Instantiate(params)
 	require.NoError(t, err)
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok)
-	ires := result.Ok
+	require.Empty(t, result.Result.Err, "Contract error should be empty")
+	require.NotNil(t, result.Result.Ok)
+	ires := result.Result.Ok
 	require.Empty(t, ires.Messages)
 
 	// Execute mirror env without Transaction
@@ -368,11 +368,11 @@ func TestEnv(t *testing.T) {
 	}
 
 	// Execute with 4 return values
-	_, result, _, err = vm.Execute(executeParams)
+	executeResult, err := vm.Execute(executeParams)
 	require.NoError(t, err)
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok)
-	ires = result.Ok
+	require.Empty(t, executeResult.Result.Err, "Contract error should be empty")
+	require.NotNil(t, executeResult.Result.Ok)
+	ires = executeResult.Result.Ok
 
 	// Verify result matches expected env
 	expected, err := json.Marshal(env)
@@ -400,11 +400,11 @@ func TestEnv(t *testing.T) {
 	executeParams.Env = envBytes
 
 	// Execute again
-	_, result, _, err = vm.Execute(executeParams)
+	executeResult, err = vm.Execute(executeParams)
 	require.NoError(t, err)
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok)
-	ires = result.Ok
+	require.Empty(t, executeResult.Result.Err, "Contract error should be empty")
+	require.NotNil(t, executeResult.Result.Ok)
+	ires = executeResult.Result.Ok
 
 	// Verify again
 	expected, err = json.Marshal(env)
@@ -460,13 +460,13 @@ func TestGetMetrics(t *testing.T) {
 	}
 
 	// First instantiation - expected to cause file cache hit
-	resBytes, result, gasReport, err := vm.Instantiate(params)
+	result, err := vm.Instantiate(params)
 	require.NoError(t, err, "Instantiation should succeed")
-	require.NotNil(t, resBytes, "Response bytes should not be nil")
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok, "Contract result should not be nil")
-	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
-	ires := result.Ok
+	require.NotNil(t, result.Data, "Response bytes should not be nil")
+	require.Empty(t, result.Result.Err, "Contract error should be empty")
+	require.NotNil(t, result.Result.Ok, "Contract result should not be nil")
+	require.Greater(t, result.GasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires := result.Result.Ok
 	require.Empty(t, ires.Messages, "No messages should be returned")
 
 	// Verify file cache hit for first instantiation
@@ -480,13 +480,13 @@ func TestGetMetrics(t *testing.T) {
 	// Second instantiation - expected to cause memory cache hit
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
 	params.Msg = msg2
-	resBytes, result, gasReport, err = vm.Instantiate(params)
+	result, err = vm.Instantiate(params)
 	require.NoError(t, err, "Second instantiation should succeed")
-	require.NotNil(t, resBytes, "Response bytes should not be nil")
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok, "Contract result should not be nil")
-	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
-	ires = result.Ok
+	require.NotNil(t, result.Data, "Response bytes should not be nil")
+	require.Empty(t, result.Result.Err, "Contract error should be empty")
+	require.NotNil(t, result.Result.Ok, "Contract result should not be nil")
+	require.Greater(t, result.GasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires = result.Result.Ok
 	require.Empty(t, ires.Messages, "No messages should be returned")
 
 	// Verify memory cache hit
@@ -514,13 +514,13 @@ func TestGetMetrics(t *testing.T) {
 	// Third instantiation - expected to use pinned cache
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
 	params.Msg = msg3
-	resBytes, result, gasReport, err = vm.Instantiate(params)
+	result, err = vm.Instantiate(params)
 	require.NoError(t, err, "Third instantiation should succeed")
-	require.NotNil(t, resBytes, "Response bytes should not be nil")
-	require.Empty(t, result.Err, "Contract error should be empty")
-	require.NotNil(t, result.Ok, "Contract result should not be nil")
-	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
-	ires = result.Ok
+	require.NotNil(t, result.Data, "Response bytes should not be nil")
+	require.Empty(t, result.Result.Err, "Contract error should be empty")
+	require.NotNil(t, result.Result.Ok, "Contract result should not be nil")
+	require.Greater(t, result.GasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires = result.Result.Ok
 	require.Empty(t, ires.Messages, "No messages should be returned")
 
 	// Verify pinned cache hit
