@@ -242,7 +242,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	var wg sync.WaitGroup
 	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
 	wg.Add(numBatches * 3)
-	for i := 0; i < numBatches; i++ {
+	for range make([]struct{}, numBatches) {
 		go func() {
 			reduceQuery(t, contract1, "[[17,22],[22,0]]")
 			wg.Done()

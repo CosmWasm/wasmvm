@@ -1440,7 +1440,7 @@ func TestFloats(t *testing.T) {
 	hasher := sha256.New()
 	const RUNS_PER_INSTRUCTION = 150
 	for _, instr := range instructions {
-		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
+		for seed := range make([]struct{}, RUNS_PER_INSTRUCTION) {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
