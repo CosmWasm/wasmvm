@@ -9,11 +9,14 @@ import (
 )
 
 // frame stores all Iterators for one contract call
-type frame []types.Iterator
+type frame struct {
+	iterators []types.Iterator
+	mutex     sync.Mutex
+}
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
 var (
-	iteratorFrames      = make(map[uint64]frame)
+	iteratorFrames      = make(map[uint64]*frame)
 	iteratorFramesMutex sync.Mutex
 )
 
@@ -29,55 +32,67 @@ func startCall() uint64 {
 	latestCallIDMutex.Lock()
 	defer latestCallIDMutex.Unlock()
 	latestCallID += 1
-	return latestCallID
+	callID := latestCallID
+
+	iteratorFramesMutex.Lock()
+	defer iteratorFramesMutex.Unlock()
+	iteratorFrames[callID] = &frame{iterators: make([]types.Iterator, 0)}
+	return callID
 }
 
-// removeFrame removes the frame with for the given call ID.
-// The result can be nil when the frame is not initialized,
-// i.e. when startCall() is called but no iterator is stored.
-func removeFrame(callID uint64) frame {
+// removeFrame removes the frame for the given call ID.
+// The result can be nil when the frame is not initialized.
+func removeFrame(callID uint64) *frame {
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
 
-	remove := iteratorFrames[callID]
+	f := iteratorFrames[callID]
 	delete(iteratorFrames, callID)
-	return remove
+	return f
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item from iteratorFrames
 func endCall(callID uint64) {
-	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
-	remove := removeFrame(callID)
+	// we pull removeFrame in another function so we don't hold the mutex while cleaning up
+	f := removeFrame(callID)
+	if f == nil {
+		return
+	}
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
 	// free all iterators in the frame when we release it
-	for _, iter := range remove {
+	for _, iter := range f.iterators {
 		iter.Close()
 	}
 }
 
 // storeIterator will add this to the end of the frame for the given call ID and return
 // an iterator ID to reference it.
-//
-// We assign iterator IDs starting with 1 for historic reasons. This could be changed to 0
-// I guess.
 func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64, error) {
 	iteratorFramesMutex.Lock()
-	defer iteratorFramesMutex.Unlock()
+	f, exists := iteratorFrames[callID]
+	if !exists {
+		iteratorFramesMutex.Unlock()
+		return 0, fmt.Errorf("no frame for call ID %d", callID)
+	}
+	iteratorFramesMutex.Unlock()
 
-	new_index := len(iteratorFrames[callID])
-	if new_index >= frameLenLimit {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	newIndex := len(f.iterators)
+	if newIndex >= frameLenLimit {
 		return 0, fmt.Errorf("reached iterator limit (%d)", frameLenLimit)
 	}
 
-	// store at array position `new_index`
-	iteratorFrames[callID] = append(iteratorFrames[callID], it)
+	// store at array position `newIndex`
+	f.iterators = append(f.iterators, it)
 
-	iterator_id, ok := indexToIteratorID(new_index)
+	iteratorID, ok := indexToIteratorID(newIndex)
 	if !ok {
-		// This error case is not expected to happen since the above code ensures the
-		// index is in the range [0, frameLenLimit-1]
 		return 0, fmt.Errorf("could not convert index to iterator ID")
 	}
-	return iterator_id, nil
+	return iteratorID, nil
 }
 
 // retrieveIterator will recover an iterator based on its ID.
@@ -88,27 +103,26 @@ func retrieveIterator(callID uint64, iteratorID uint64) types.Iterator {
 	}
 
 	iteratorFramesMutex.Lock()
-	defer iteratorFramesMutex.Unlock()
-	myFrame := iteratorFrames[callID]
-	if myFrame == nil {
+	f, exists := iteratorFrames[callID]
+	iteratorFramesMutex.Unlock()
+	if !exists {
 		return nil
 	}
-	if indexInFrame >= len(myFrame) {
-		// index out of range
+
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	if indexInFrame >= len(f.iterators) {
 		return nil
 	}
-	return myFrame[indexInFrame]
+	return f.iterators[indexInFrame]
 }
 
 // iteratorIdToIndex converts an iterator ID to an index in the frame.
 // The second value marks if the conversion succeeded.
 func iteratorIdToIndex(id uint64) (int, bool) {
 	if id < 1 || id > math.MaxInt32 {
-		// If success is false, the int value is undefined. We use an arbitrary constant for potential debugging purposes.
 		return 777777777, false
 	}
-
-	// Int conversion safe because value is in signed 32bit integer range
 	return int(id) - 1, true
 }
 
@@ -116,9 +130,7 @@ func iteratorIdToIndex(id uint64) (int, bool) {
 // The second value marks if the conversion succeeded.
 func indexToIteratorID(index int) (uint64, bool) {
 	if index < 0 || index > math.MaxInt32 {
-		// If success is false, the return value is undefined. We use an arbitrary constant for potential debugging purposes.
 		return 888888888, false
 	}
-
 	return uint64(index) + 1, true
 }

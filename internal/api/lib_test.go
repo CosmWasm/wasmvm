@@ -204,7 +204,7 @@ func TestStoreCodeAndGetCode(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 	expectedChecksum := sha256.Sum256(wasm)
 	require.Equal(t, expectedChecksum[:], checksum)
@@ -221,7 +221,7 @@ func TestRemoveCode(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	// First removal works
@@ -238,7 +238,7 @@ func TestStoreCodeFailsWithBadData(t *testing.T) {
 	defer cleanup()
 
 	wasm := []byte("some invalid data")
-	_, err := StoreCode(cache, wasm, true)
+	_, err := StoreCode(cache, wasm, true, true)
 	require.Error(t, err)
 }
 
@@ -271,7 +271,7 @@ func TestStoreCodeUncheckedWorksWithInvalidWasm(t *testing.T) {
 	wasm = bytes.Replace(wasm, []byte("interface_version_8"), []byte("interface_version_9"), 1)
 
 	// StoreCode should fail
-	_, err = StoreCode(cache, wasm, true)
+	_, err = StoreCode(cache, wasm, true, true)
 	require.ErrorContains(t, err, "Wasm contract has unknown interface_version_* marker export")
 
 	// StoreCodeUnchecked should not fail
@@ -288,7 +288,7 @@ func TestPin(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -331,7 +331,7 @@ func TestUnpin(t *testing.T) {
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -375,7 +375,7 @@ func TestGetMetrics(t *testing.T) {
 	// Store contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	// GetMetrics 2
@@ -490,7 +490,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// Store contract 1
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, checksum)
@@ -499,7 +499,7 @@ func TestGetPinnedMetrics(t *testing.T) {
 	// Store contract 2
 	cyberpunkWasm, err := os.ReadFile("../../testdata/cyberpunk.wasm")
 	require.NoError(t, err)
-	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm, true)
+	cyberpunkChecksum, err := StoreCode(cache, cyberpunkWasm, true, true)
 	require.NoError(t, err)
 
 	err = Pin(cache, cyberpunkChecksum)
@@ -564,7 +564,7 @@ func TestInstantiate(t *testing.T) {
 	// create contract
 	wasm, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(t, err)
 
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -1232,7 +1232,7 @@ func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
 	tb.Helper()
 	wasm, err := os.ReadFile(wasmFile)
 	require.NoError(tb, err)
-	checksum, err := StoreCode(cache, wasm, true)
+	checksum, err := StoreCode(cache, wasm, true, true)
 	require.NoError(tb, err)
 	return checksum
 }

@@ -3,6 +3,7 @@ module github.com/CosmWasm/wasmvm/v2
 go 1.22
 
 require (
+	github.com/ebitengine/purego v0.8.2
 	github.com/google/btree v1.0.0
 	github.com/shamaton/msgpack/v2 v2.2.0
 	github.com/stretchr/testify v1.8.1
