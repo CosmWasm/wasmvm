@@ -18,15 +18,15 @@ func TestCopyDestroyUnmanagedVectorNoCgo(t *testing.T) {
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(true, cu8_ptr(invalid_ptr), 0xBB, 0xAA)
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Nil(t, copy)
+		copied := copyAndDestroyUnmanagedVector(uv)
+		require.Nil(t, copied)
 	}
 	{
 		// Capacity is 0, so no allocation happened. Do not access the pointer.
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(false, cu8_ptr(invalid_ptr), 0, 0)
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Equal(t, []byte{}, copy)
+		copied := copyAndDestroyUnmanagedVector(uv)
+		require.Equal(t, []byte{}, copied)
 	}
 }

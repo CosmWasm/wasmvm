@@ -30,8 +30,8 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		require.Equal(t, cbool(false), unmanaged.is_none)
 		require.Equal(t, uint64(3), uint64(unmanaged.len))
 		require.GreaterOrEqual(t, uint64(3), uint64(unmanaged.cap)) // Rust implementation decides this
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Equal(t, original, copy)
+		copied := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Equal(t, original, copied)
 	}
 
 	// empty
@@ -41,8 +41,8 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		require.Equal(t, cbool(false), unmanaged.is_none)
 		require.Equal(t, uint64(0), uint64(unmanaged.len))
 		require.GreaterOrEqual(t, uint64(0), uint64(unmanaged.cap)) // Rust implementation decides this
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Equal(t, original, copy)
+		copied := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Equal(t, original, copied)
 	}
 
 	// none
@@ -51,8 +51,8 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		unmanaged := newUnmanagedVector(original)
 		require.Equal(t, cbool(true), unmanaged.is_none)
 		// We must not make assumptions on the other fields in this case
-		copy := copyAndDestroyUnmanagedVector(unmanaged)
-		require.Nil(t, copy)
+		copied := copyAndDestroyUnmanagedVector(unmanaged)
+		require.Nil(t, copied)
 	}
 }
 
@@ -66,15 +66,15 @@ func TestCopyDestroyUnmanagedVector(t *testing.T) {
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalid_ptr), cusize(0xBB), cusize(0xAA))
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Nil(t, copy)
+		copied := copyAndDestroyUnmanagedVector(uv)
+		require.Nil(t, copied)
 	}
 	{
 		// Capacity is 0, so no allocation happened. Do not access the pointer.
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalid_ptr), cusize(0), cusize(0))
-		copy := copyAndDestroyUnmanagedVector(uv)
-		require.Equal(t, []byte{}, copy)
+		copied := copyAndDestroyUnmanagedVector(uv)
+		require.Equal(t, []byte{}, copied)
 	}
 }
