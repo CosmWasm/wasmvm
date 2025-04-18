@@ -103,23 +103,25 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.store_code(cache.ptr, w, cbool(true), cbool(persist), &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+
+	checksum, storeErr := C.store_code(cache.ptr, w, cbool(true), cbool(persist), &errmsg)
+	if storeErr != nil {
+		return nil, errorWithMessage(storeErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(checksum), nil
+	return receiveVector(checksum), nil
 }
 
-// StoreCodeUnchecked stores the given wasm code in the cache without validation.
+// StoreCodeUnchecked stores the given wasm code in the cache without checking it.
 func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	w := makeView(wasm)
 	defer runtime.KeepAlive(wasm)
 	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.store_code(cache.ptr, w, cbool(false), cbool(true), &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+
+	checksum, storeErr := C.store_code(cache.ptr, w, cbool(false), cbool(true), &errmsg)
+	if storeErr != nil {
+		return nil, errorWithMessage(storeErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(checksum), nil
+	return receiveVector(checksum), nil
 }
 
 // RemoveCode removes the wasm code with the given checksum from the cache.
@@ -127,101 +129,90 @@ func RemoveCode(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.remove_wasm(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
+
+	_, removeErr := C.remove_wasm(cache.ptr, cs, &errmsg)
+	if removeErr != nil {
+		return errorWithMessage(removeErr, errmsg)
 	}
 	return nil
 }
 
+// GetCode returns the wasm code with the given checksum from the cache.
 func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	wasm, err := C.load_wasm(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
+
+	wasm, loadErr := C.load_wasm(cache.ptr, cs, &errmsg)
+	if loadErr != nil {
+		return nil, errorWithMessage(loadErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(wasm), nil
+	return receiveVector(wasm), nil
 }
 
+// Pin pins the wasm code with the given checksum in the cache.
 func Pin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.pin(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
+
+	_, pinErr := C.pin(cache.ptr, cs, &errmsg)
+	if pinErr != nil {
+		return errorWithMessage(pinErr, errmsg)
 	}
 	return nil
 }
 
+// Unpin unpins the wasm code with the given checksum from the cache.
 func Unpin(cache Cache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	_, err := C.unpin(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
+
+	_, unpinErr := C.unpin(cache.ptr, cs, &errmsg)
+	if unpinErr != nil {
+		return errorWithMessage(unpinErr, errmsg)
 	}
 	return nil
 }
 
+// AnalyzeCode analyzes the wasm code with the given checksum.
 func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
-	report, err := C.analyze_code(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
-	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
-	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
-	entrypoints_array := strings.Split(entrypoints, ",")
-	hasIBC2EntryPoints := slices.Contains(entrypoints_array, "ibc2_packet_receive")
 
-	res := types.AnalysisReport{
-		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
-		HasIBC2EntryPoints:     hasIBC2EntryPoints,
-		RequiredCapabilities:   requiredCapabilities,
-		Entrypoints:            entrypoints_array,
-		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
+	report, analyzeErr := C.analyze_code(cache.ptr, cs, &errmsg)
+	if analyzeErr != nil {
+		return nil, errorWithMessage(analyzeErr, errmsg)
 	}
-	return &res, nil
+	return receiveAnalysisReport(report), nil
 }
 
+// GetMetrics returns the metrics for the cache.
 func GetMetrics(cache Cache) (*types.Metrics, error) {
 	errmsg := uninitializedUnmanagedVector()
-	metrics, err := C.get_metrics(cache.ptr, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
 
-	return &types.Metrics{
-		HitsPinnedMemoryCache:     uint32(metrics.hits_pinned_memory_cache),
-		HitsMemoryCache:           uint32(metrics.hits_memory_cache),
-		HitsFsCache:               uint32(metrics.hits_fs_cache),
-		Misses:                    uint32(metrics.misses),
-		ElementsPinnedMemoryCache: uint64(metrics.elements_pinned_memory_cache),
-		ElementsMemoryCache:       uint64(metrics.elements_memory_cache),
-		SizePinnedMemoryCache:     uint64(metrics.size_pinned_memory_cache),
-		SizeMemoryCache:           uint64(metrics.size_memory_cache),
-	}, nil
+	metrics, metricsErr := C.get_metrics(cache.ptr, &errmsg)
+	if metricsErr != nil {
+		return nil, errorWithMessage(metricsErr, errmsg)
+	}
+	return receiveMetrics(metrics), nil
 }
 
+// GetPinnedMetrics returns the metrics for pinned wasm code in the cache.
 func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
 	errmsg := uninitializedUnmanagedVector()
-	metrics, err := C.get_pinned_metrics(cache.ptr, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
 
-	var pinnedMetrics types.PinnedMetrics
-	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
+	metrics, metricsErr := C.get_pinned_metrics(cache.ptr, &errmsg)
+	if metricsErr != nil {
+		return nil, errorWithMessage(metricsErr, errmsg)
+	}
+	pinnedMetrics, err := receivePinnedMetrics(metrics)
+	if err != nil {
 		return nil, err
 	}
-
-	return &pinnedMetrics, nil
+	return pinnedMetrics, nil
 }
 
 func Instantiate(
@@ -261,10 +252,9 @@ func Instantiate(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, instantiateErr := C.instantiate(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if instantiateErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(instantiateErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -306,10 +296,9 @@ func Execute(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, executeErr := C.execute(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if executeErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(executeErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -348,10 +337,9 @@ func Migrate(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, migrateErr := C.migrate(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if migrateErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(migrateErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -376,7 +364,7 @@ func MigrateWithInfo(
 	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 	i := makeView(migrateInfo)
-	defer runtime.KeepAlive(i)
+	defer runtime.KeepAlive(migrateInfo)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
 	checkAndPinAPI(api, pinner)
@@ -393,10 +381,9 @@ func MigrateWithInfo(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.migrate_with_info(cache.ptr, cs, e, m, i, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != 0 {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, migrateInfoErr := C.migrate_with_info(cache.ptr, cs, e, m, i, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if migrateInfoErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(migrateInfoErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -435,10 +422,9 @@ func Sudo(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, sudoErr := C.sudo(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if sudoErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(sudoErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -477,10 +463,9 @@ func Reply(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, replyErr := C.reply(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if replyErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(replyErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -519,10 +504,9 @@ func Query(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, queryErr := C.query(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if queryErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(queryErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -561,10 +545,9 @@ func IBCChannelOpen(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, channelOpenErr := C.ibc_channel_open(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if channelOpenErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(channelOpenErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -603,10 +586,9 @@ func IBCChannelConnect(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, channelConnectErr := C.ibc_channel_connect(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if channelConnectErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(channelConnectErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -645,10 +627,9 @@ func IBCChannelClose(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, channelCloseErr := C.ibc_channel_close(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if channelCloseErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(channelCloseErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -687,10 +668,9 @@ func IBCPacketReceive(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, packetReceiveErr := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if packetReceiveErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(packetReceiveErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -729,10 +709,9 @@ func IBC2PacketReceive(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc2_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, packet2ReceiveErr := C.ibc2_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if packet2ReceiveErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(packet2ReceiveErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -771,10 +750,9 @@ func IBCPacketAck(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, packetAckErr := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if packetAckErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(packetAckErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -813,10 +791,9 @@ func IBCPacketTimeout(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, packetTimeoutErr := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if packetTimeoutErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(packetTimeoutErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -837,7 +814,7 @@ func IBCSourceCallback(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	msgBytes := makeView(msg)
+	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
@@ -855,10 +832,9 @@ func IBCSourceCallback(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_source_callback(cache.ptr, cs, e, msgBytes, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, sourceCallbackErr := C.ibc_source_callback(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if sourceCallbackErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(sourceCallbackErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -879,7 +855,7 @@ func IBCDestinationCallback(
 	defer runtime.KeepAlive(checksum)
 	e := makeView(env)
 	defer runtime.KeepAlive(env)
-	msgBytes := makeView(msg)
+	m := makeView(msg)
 	defer runtime.KeepAlive(msg)
 	var pinner runtime.Pinner
 	pinner.Pin(gasMeter)
@@ -897,10 +873,9 @@ func IBCDestinationCallback(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc_destination_callback(cache.ptr, cs, e, msgBytes, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
-		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
-		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	res, destCallbackErr := C.ibc_destination_callback(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if destCallbackErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(destCallbackErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -965,4 +940,45 @@ func checkAndPinQuerier(querier *Querier, pinner runtime.Pinner) {
 	}
 
 	pinner.Pin(querier) // this pointer is used in Rust (`state` in `C.GoQuerier`) and must not change
+}
+
+func receiveVector(v C.UnmanagedVector) []byte {
+	return copyAndDestroyUnmanagedVector(v)
+}
+
+func receiveAnalysisReport(report C.AnalysisReport) *types.AnalysisReport {
+	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
+	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+	entrypoints_array := strings.Split(entrypoints, ",")
+	hasIBC2EntryPoints := slices.Contains(entrypoints_array, "ibc2_packet_receive")
+
+	res := types.AnalysisReport{
+		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		HasIBC2EntryPoints:     hasIBC2EntryPoints,
+		RequiredCapabilities:   requiredCapabilities,
+		Entrypoints:            entrypoints_array,
+		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
+	}
+	return &res
+}
+
+func receiveMetrics(metrics C.Metrics) *types.Metrics {
+	return &types.Metrics{
+		HitsPinnedMemoryCache:     uint32(metrics.hits_pinned_memory_cache),
+		HitsMemoryCache:           uint32(metrics.hits_memory_cache),
+		HitsFsCache:               uint32(metrics.hits_fs_cache),
+		Misses:                    uint32(metrics.misses),
+		ElementsPinnedMemoryCache: uint64(metrics.elements_pinned_memory_cache),
+		ElementsMemoryCache:       uint64(metrics.elements_memory_cache),
+		SizePinnedMemoryCache:     uint64(metrics.size_pinned_memory_cache),
+		SizeMemoryCache:           uint64(metrics.size_memory_cache),
+	}
+}
+
+func receivePinnedMetrics(metrics C.UnmanagedVector) (*types.PinnedMetrics, error) {
+	var pinnedMetrics types.PinnedMetrics
+	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
+		return nil, err
+	}
+	return &pinnedMetrics, nil
 }
