@@ -9,12 +9,12 @@ import (
 /***** Mock types.GoAPI ****/
 
 // MockFailureCanonicalizeAddress mocks address canonicalization with failure
-func MockFailureCanonicalizeAddress(addr string) ([]byte, uint64, error) {
+func MockFailureCanonicalizeAddress(addr string) (canonical []byte, gasCost uint64, err error) {
 	return nil, 0, fmt.Errorf("mock failure - canonical_address")
 }
 
 // MockFailureHumanizeAddress mocks address humanization with failure
-func MockFailureHumanizeAddress(addr []byte) (string, uint64, error) {
+func MockFailureHumanizeAddress(addr []byte) (human string, gasCost uint64, err error) {
 	return "", 0, fmt.Errorf("mock failure - human_address")
 }
 

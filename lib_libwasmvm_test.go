@@ -1,6 +1,6 @@
 //go:build cgo && !nolink_libwasmvm
 
-package cosmwasm
+package wasmvm
 
 import (
 	"encoding/json"

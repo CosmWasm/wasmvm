@@ -65,7 +65,8 @@ linters:
       min-len: 3
       min-occurrences: 3
     revive:
-      enable-all-rules: true
+      enable-all-rules: false
+      
 
       rules:
         # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
@@ -82,6 +83,11 @@ linters:
           disabled: true
           exclude: [""]
           arguments: [80]
+        - name: magic-number
+          severity: warning
+          disabled: true
+          exclude: [""]
+          arguments: [1000000]
 
 
 

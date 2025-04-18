@@ -353,7 +353,6 @@ func TestQueueIteratorLimit(t *testing.T) {
 	// Open 35000 iterators
 	gasLimit = TESTING_GAS_LIMIT * 4
 	query = []byte(`{"open_iterators":{"count":35000}}`)
-	env = MockEnvBin(t)
 	params.Msg = query
 	params.GasLimit = gasLimit
 	_, _, err = Query(params)

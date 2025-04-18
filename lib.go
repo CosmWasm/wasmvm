@@ -1,7 +1,7 @@
 // This file contains the part of the API that is exposed no matter if libwasmvm
 // is available or not. Symbols from lib_libwasmvm.go are added conditionally.
 
-package cosmwasm
+package wasmvm
 
 import (
 	"bytes"

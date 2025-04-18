@@ -3,7 +3,7 @@
 // This file contains the part of the API that is exposed when libwasmvm
 // is available (i.e. cgo is enabled and nolink_libwasmvm is not set).
 
-package cosmwasm
+package wasmvm
 
 import (
 	"encoding/json"
