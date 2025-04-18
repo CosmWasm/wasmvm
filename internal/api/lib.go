@@ -98,12 +98,14 @@ func logCleanupError(op string, err error) {
 
 // ReleaseCache releases the resources associated with the cache.
 func ReleaseCache(cache Cache) {
+	// First close the lockfile to release the lock
+	err := cache.lockfile.Close()
+	if err != nil {
+		logCleanupError("failed to close lockfile", err)
+		return
+	}
+	// Only release the cache if the lockfile was closed successfully
 	C.release_cache(cache.ptr)
-
-	if err := cache.lockfile.Close(); err != nil {
-		// Just log the error since this is cleanup code
-		fmt.Printf("failed to close lockfile: %v\n", err)
-	} // Also releases the file lock.
 }
 
 // StoreCode stores the given wasm code in the cache.

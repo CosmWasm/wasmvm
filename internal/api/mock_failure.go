@@ -8,11 +8,11 @@ import (
 
 /***** Mock types.GoAPI ****/
 
-func MockFailureCanonicalizeAddress(human string) ([]byte, uint64, error) {
+func MockFailureCanonicalizeAddress(human string) (canonical []byte, gasCost uint64, err error) {
 	return nil, 0, fmt.Errorf("mock failure - canonical_address")
 }
 
-func MockFailureHumanizeAddress(canon []byte) (string, uint64, error) {
+func MockFailureHumanizeAddress(canon []byte) (human string, gasCost uint64, err error) {
 	return "", 0, fmt.Errorf("mock failure - human_address")
 }
 

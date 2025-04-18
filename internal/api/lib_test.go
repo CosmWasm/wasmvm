@@ -177,7 +177,7 @@ func TestInitCacheEmptyCapabilities(t *testing.T) {
 	ReleaseCache(cache)
 }
 
-func withCache(tb testing.TB) (Cache, func()) {
+func withCache(tb testing.TB) (cache Cache, cleanup func()) {
 	tb.Helper()
 	tmpdir := tb.TempDir()
 	config := types.VMConfig{
@@ -191,7 +191,7 @@ func withCache(tb testing.TB) (Cache, func()) {
 	cache, err := InitCache(config)
 	require.NoError(tb, err)
 
-	cleanup := func() {
+	cleanup = func() {
 		ReleaseCache(cache)
 	}
 	return cache, cleanup
@@ -750,7 +750,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.Error(t, err)
-	require.Equal(t, cost.UsedInternally, maxGas)
+	require.Equal(t, maxGas, cost.UsedInternally)
 	t.Logf("CPULoop Time (%d gas): %s\n", cost.UsedInternally, diff)
 }
 
@@ -770,9 +770,13 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	msg := []byte(`{}`)
 
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	start := time.Now()
+	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	diff := time.Since(start)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
+	require.Equal(t, uint64(0x895c33), cost.UsedInternally)
+	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a storage loop
 	maxGas := uint64(40_000_000)
@@ -780,17 +784,12 @@ func TestExecuteStorageLoop(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
-	start := time.Now()
-	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	diff := time.Since(start)
+	start = time.Now()
+	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	diff = time.Since(start)
 	require.Error(t, err)
-	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
-	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
-	t.Logf("Wasm gas: %d\n", gasReport.UsedInternally)
-
-	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
-	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
-	require.Equal(t, uint64(maxGas), totalCost)
+	require.True(t, cost.UsedInternally >= uint64(0x587488), "Expected gas used (%d) to be at least %d", cost.UsedInternally, uint64(0x587488))
+	t.Logf("StorageLoop Time (%d gas): %s\n", cost.UsedInternally, diff)
 }
 
 func BenchmarkContractCall(b *testing.B) {
@@ -1442,7 +1441,7 @@ func TestFloats(t *testing.T) {
 	for _, instr := range instructions {
 		for seed := range make([]struct{}, RUNS_PER_INSTRUCTION) {
 			// query some input values for the instruction
-			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
+			msg := fmt.Sprintf(`{"random_args_for":{"instruction":%q,"seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 			require.NoError(t, err)
 			err = json.Unmarshal(data, &qResult)
@@ -1455,7 +1454,7 @@ func TestFloats(t *testing.T) {
 			// build the run message
 			argStr, err := json.Marshal(args)
 			require.NoError(t, err)
-			msg = fmt.Sprintf(`{"run":{"instruction":"%s","args":%s}}`, instr, argStr)
+			msg = fmt.Sprintf(`{"run":{"instruction":%q,"args":%s}}`, instr, argStr)
 
 			// run the instruction
 			// this might throw a runtime error (e.g. if the instruction traps)

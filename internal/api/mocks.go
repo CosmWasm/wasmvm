@@ -356,7 +356,7 @@ const CostCanonical uint64 = 440
 const CostHuman uint64 = 550
 
 // MockCanonicalizeAddress converts a human-readable address to its canonical form.
-func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
+func MockCanonicalizeAddress(human string) (canonical []byte, gasCost uint64, err error) {
 	if len(human) > CanonicalLength {
 		return nil, 0, fmt.Errorf("human encoding too long")
 	}
@@ -366,7 +366,7 @@ func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 }
 
 // MockHumanizeAddress converts a canonical address to its human-readable form.
-func MockHumanizeAddress(canon []byte) (string, uint64, error) {
+func MockHumanizeAddress(canon []byte) (human string, gasCost uint64, err error) {
 	if len(canon) != CanonicalLength {
 		return "", 0, fmt.Errorf("wrong canonical length")
 	}
@@ -377,7 +377,7 @@ func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 			break
 		}
 	}
-	human := string(canon[:cut])
+	human = string(canon[:cut])
 	return human, CostHuman, nil
 }
 

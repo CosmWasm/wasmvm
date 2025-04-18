@@ -112,7 +112,7 @@ func (i *memDBIterator) Close() error {
 }
 
 // Domain implements Iterator.
-func (i *memDBIterator) Domain() ([]byte, []byte) {
+func (i *memDBIterator) Domain() (start []byte, end []byte) {
 	return i.start, i.end
 }
 
