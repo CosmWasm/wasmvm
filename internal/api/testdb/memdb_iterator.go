@@ -67,11 +67,13 @@ func (vs *visitorState) visitor(i btree.Item) bool {
 
 // traverseAscending handles ascending traversal cases
 func (db *MemDB) traverseAscending(start, end []byte, vs *visitorState) {
-	if start == nil && end == nil {
+	//nolint:gocritic // The switch {} is clearer than other switch forms here
+	switch {
+	case start == nil && end == nil:
 		db.btree.Ascend(vs.visitor)
-	} else if end == nil {
+	case end == nil:
 		db.btree.AscendGreaterOrEqual(newKey(start), vs.visitor)
-	} else {
+	default:
 		db.btree.AscendRange(newKey(start), newKey(end), vs.visitor)
 	}
 }
