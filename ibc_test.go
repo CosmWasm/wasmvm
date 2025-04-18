@@ -358,3 +358,10 @@ func TestIBCMsgGetCounterVersion(t *testing.T) {
 	_, ok = msg4.GetCounterVersion()
 	require.False(t, ok)
 }
+
+const (
+	reflectID   = "reflect"
+	reflectAddr = "cosmos1qyqszqgpqyqszqgpqyqszqgpqyqszqgpjnp7du"
+	channelID   = "channel-0"
+	version     = "ics20-1"
+)

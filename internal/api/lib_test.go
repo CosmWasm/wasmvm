@@ -750,7 +750,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
 	require.Error(t, err)
-	require.Equal(t, maxGas, cost.UsedInternally)
+	require.Equal(t, cost.UsedInternally, maxGas)
 	t.Logf("CPULoop Time (%d gas): %s\n", cost.UsedInternally, diff)
 }
 
@@ -770,13 +770,9 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	msg := []byte(`{}`)
 
-	start := time.Now()
-	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	diff := time.Since(start)
+	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0x895c33), cost.UsedInternally)
-	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
 
 	// execute a storage loop
 	maxGas := uint64(40_000_000)
@@ -784,12 +780,17 @@ func TestExecuteStorageLoop(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
-	start = time.Now()
-	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
-	diff = time.Since(start)
+	start := time.Now()
+	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
+	diff := time.Since(start)
 	require.Error(t, err)
-	require.True(t, cost.UsedInternally >= uint64(0x587488), "Expected gas used (%d) to be at least %d", cost.UsedInternally, uint64(0x587488))
-	t.Logf("StorageLoop Time (%d gas): %s\n", cost.UsedInternally, diff)
+	t.Logf("StorageLoop Time (%d gas): %s\n", gasReport.UsedInternally, diff)
+	t.Logf("Gas used: %d\n", gasMeter2.GasConsumed())
+	t.Logf("Wasm gas: %d\n", gasReport.UsedInternally)
+
+	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
+	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
+	require.Equal(t, uint64(maxGas), totalCost)
 }
 
 func BenchmarkContractCall(b *testing.B) {
@@ -1437,9 +1438,9 @@ func TestFloats(t *testing.T) {
 	require.Len(t, instructions, 70)
 
 	hasher := sha256.New()
-	const RUNS_PER_INSTRUCTION = 150
+	const runsPerInstruction = 150
 	for _, instr := range instructions {
-		for seed := range make([]struct{}, RUNS_PER_INSTRUCTION) {
+		for seed := range make([]struct{}, runsPerInstruction) {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":%q,"seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)

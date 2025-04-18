@@ -97,6 +97,7 @@ var db_vtable = C.DbVtable{
 	scan_db:   C.any_function_t(C.cScan_cgo),
 }
 
+// DBState represents the state of the database during contract execution
 type DBState struct {
 	Store types.KVStore
 	// CallID is used to lookup the proper frame for iterators associated with this contract call (iterator.go)

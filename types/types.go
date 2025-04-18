@@ -11,10 +11,12 @@ import (
 // Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string.
 type Uint64 uint64
 
+// MarshalJSON implements json.Marshaler
 func (u Uint64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatUint(uint64(u), 10))
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (u *Uint64) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -31,10 +33,12 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 // Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string.
 type Int64 int64
 
+// MarshalJSON implements json.Marshaler
 func (i Int64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatInt(int64(i), 10))
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (i *Int64) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -66,6 +70,7 @@ type Coin struct {
 	Amount string `json:"amount"`
 }
 
+// NewCoin creates a new coin
 func NewCoin(amount uint64, denom string) Coin {
 	return Coin{
 		Denom:  denom,
@@ -103,7 +108,7 @@ type DenomMetadata struct {
 	URIHash string `json:"uri_hash"`
 }
 
-// Replicating the cosmos-sdk bank module DenomUnit type.
+// DenomUnit represents a unit of a denomination
 type DenomUnit struct {
 	// Denom represents the string name of the given denom unit (e.g uatom).
 	Denom string `json:"denom"`
@@ -147,6 +152,7 @@ type PageRequest struct {
 	Reverse bool `json:"reverse"`
 }
 
+// OutOfGasError represents an out of gas error
 type OutOfGasError struct{}
 
 var _ error = OutOfGasError{}
@@ -155,6 +161,7 @@ func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
+// GasReport represents a report of gas usage
 type GasReport struct {
 	Limit          uint64
 	Remaining      uint64
@@ -162,6 +169,7 @@ type GasReport struct {
 	UsedInternally uint64
 }
 
+// EmptyGasReport creates an empty gas report
 func EmptyGasReport(limit uint64) GasReport {
 	return GasReport{
 		Limit:          limit,
@@ -185,6 +193,7 @@ type AnalysisReport struct {
 	ContractMigrateVersion *uint64
 }
 
+// Metrics represents contract metrics
 type Metrics struct {
 	HitsPinnedMemoryCache     uint32
 	HitsMemoryCache           uint32
@@ -198,20 +207,24 @@ type Metrics struct {
 	SizeMemoryCache uint64
 }
 
+// PerModuleMetrics represents metrics per module
 type PerModuleMetrics struct {
 	Hits uint32 `msgpack:"hits"`
 	Size uint64 `msgpack:"size"`
 }
 
+// PerModuleEntry represents an entry in per-module metrics
 type PerModuleEntry struct {
 	Checksum Checksum
 	Metrics  PerModuleMetrics
 }
 
+// PinnedMetrics represents pinned contract metrics
 type PinnedMetrics struct {
 	PerModule []PerModuleEntry `msgpack:"per_module"`
 }
 
+// UnmarshalMessagePack implements msgpack.Unmarshaler
 func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
 	return msgpack.UnmarshalAsArray(data, pm)
 }

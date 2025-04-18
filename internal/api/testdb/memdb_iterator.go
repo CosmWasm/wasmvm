@@ -31,6 +31,65 @@ func newMemDBIterator(db *MemDB, start []byte, end []byte, reverse bool) *memDBI
 	return newMemDBIteratorMtxChoice(db, start, end, reverse, true)
 }
 
+// visitorState holds the state needed for the visitor function
+type visitorState struct {
+	ctx           context.Context
+	ch            chan<- *item
+	skipEqual     []byte
+	abortLessThan []byte
+}
+
+// newVisitorState creates a new visitorState
+func newVisitorState(ctx context.Context, ch chan<- *item) *visitorState {
+	return &visitorState{
+		ctx: ctx,
+		ch:  ch,
+	}
+}
+
+// visitor is the function that processes each item in the btree
+func (vs *visitorState) visitor(i btree.Item) bool {
+	item := i.(*item)
+	if vs.skipEqual != nil && bytes.Equal(item.key, vs.skipEqual) {
+		vs.skipEqual = nil
+		return true
+	}
+	if vs.abortLessThan != nil && bytes.Compare(item.key, vs.abortLessThan) == -1 {
+		return false
+	}
+	select {
+	case <-vs.ctx.Done():
+		return false
+	case vs.ch <- item:
+		return true
+	}
+}
+
+// traverseAscending handles ascending traversal cases
+func (db *MemDB) traverseAscending(start, end []byte, vs *visitorState) {
+	if start == nil && end == nil {
+		db.btree.Ascend(vs.visitor)
+	} else if end == nil {
+		db.btree.AscendGreaterOrEqual(newKey(start), vs.visitor)
+	} else {
+		db.btree.AscendRange(newKey(start), newKey(end), vs.visitor)
+	}
+}
+
+// traverseDescending handles descending traversal cases
+func (db *MemDB) traverseDescending(start, end []byte, vs *visitorState) {
+	if end == nil {
+		// abort after start, since we use [start, end) while btree uses (start, end]
+		vs.abortLessThan = start
+		db.btree.Descend(vs.visitor)
+	} else {
+		// skip end and abort after start, since we use [start, end) while btree uses (start, end]
+		vs.skipEqual = end
+		vs.abortLessThan = start
+		db.btree.DescendLessOrEqual(newKey(end), vs.visitor)
+	}
+}
+
 func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool, useMtx bool) *memDBIterator {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *item, chBufferSize)
@@ -49,47 +108,11 @@ func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool
 		if useMtx {
 			defer db.mtx.RUnlock()
 		}
-		// Because we use [start, end) for reverse ranges, while btree uses (start, end], we need
-		// the following variables to handle some reverse iteration conditions ourselves.
-		var (
-			skipEqual     []byte
-			abortLessThan []byte
-		)
-		visitor := func(i btree.Item) bool {
-			item := i.(*item)
-			if skipEqual != nil && bytes.Equal(item.key, skipEqual) {
-				skipEqual = nil
-				return true
-			}
-			if abortLessThan != nil && bytes.Compare(item.key, abortLessThan) == -1 {
-				return false
-			}
-			select {
-			case <-ctx.Done():
-				return false
-			case ch <- item:
-				return true
-			}
-		}
-		switch {
-		case start == nil && end == nil && !reverse:
-			db.btree.Ascend(visitor)
-		case start == nil && end == nil && reverse:
-			db.btree.Descend(visitor)
-		case end == nil && !reverse:
-			// must handle this specially, since nil is considered less than anything else
-			db.btree.AscendGreaterOrEqual(newKey(start), visitor)
-		case !reverse:
-			db.btree.AscendRange(newKey(start), newKey(end), visitor)
-		case end == nil:
-			// abort after start, since we use [start, end) while btree uses (start, end]
-			abortLessThan = start
-			db.btree.Descend(visitor)
-		default:
-			// skip end and abort after start, since we use [start, end) while btree uses (start, end]
-			skipEqual = end
-			abortLessThan = start
-			db.btree.DescendLessOrEqual(newKey(end), visitor)
+		vs := newVisitorState(ctx, ch)
+		if reverse {
+			db.traverseDescending(start, end, vs)
+		} else {
+			db.traverseAscending(start, end, vs)
 		}
 		close(ch)
 	}()
@@ -98,7 +121,6 @@ func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool
 	if item, ok := <-ch; ok {
 		iter.item = item
 	}
-
 	return iter
 }
 

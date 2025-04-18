@@ -112,6 +112,7 @@ func MockIBCChannelOpenTry(channelID string, ordering types.IBCOrder, ibcVersion
 	}
 }
 
+// MockIBCChannelConnectAck mocks IBC channel connect acknowledgement
 func MockIBCChannelConnectAck(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelConnectMsg {
 	return types.IBCChannelConnectMsg{
 		OpenAck: &types.IBCOpenAck{
@@ -122,6 +123,7 @@ func MockIBCChannelConnectAck(channelID string, ordering types.IBCOrder, ibcVers
 	}
 }
 
+// MockIBCChannelConnectConfirm mocks IBC channel connect confirmation
 func MockIBCChannelConnectConfirm(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelConnectMsg {
 	return types.IBCChannelConnectMsg{
 		OpenAck: nil,
@@ -131,6 +133,7 @@ func MockIBCChannelConnectConfirm(channelID string, ordering types.IBCOrder, ibc
 	}
 }
 
+// MockIBCChannelCloseInit mocks IBC channel close initialization
 func MockIBCChannelCloseInit(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelCloseMsg {
 	return types.IBCChannelCloseMsg{
 		CloseInit: &types.IBCCloseInit{
@@ -140,6 +143,7 @@ func MockIBCChannelCloseInit(channelID string, ordering types.IBCOrder, ibcVersi
 	}
 }
 
+// MockIBCChannelCloseConfirm mocks IBC channel close confirmation
 func MockIBCChannelCloseConfirm(channelID string, ordering types.IBCOrder, ibcVersion string) types.IBCChannelCloseMsg {
 	return types.IBCChannelCloseMsg{
 		CloseInit: nil,
@@ -149,6 +153,7 @@ func MockIBCChannelCloseConfirm(channelID string, ordering types.IBCOrder, ibcVe
 	}
 }
 
+// MockIBCPacket mocks an IBC packet
 func MockIBCPacket(myChannel string, data []byte) types.IBCPacket {
 	return types.IBCPacket{
 		Data: data,
@@ -170,12 +175,14 @@ func MockIBCPacket(myChannel string, data []byte) types.IBCPacket {
 	}
 }
 
+// MockIBCPacketReceive mocks receiving an IBC packet
 func MockIBCPacketReceive(myChannel string, data []byte) types.IBCPacketReceiveMsg {
 	return types.IBCPacketReceiveMsg{
 		Packet: MockIBCPacket(myChannel, data),
 	}
 }
 
+// MockIBCPacketAck mocks acknowledging an IBC packet
 func MockIBCPacketAck(myChannel string, data []byte, ack types.IBCAcknowledgement) types.IBCPacketAckMsg {
 	packet := MockIBCPacket(myChannel, data)
 
@@ -185,6 +192,7 @@ func MockIBCPacketAck(myChannel string, data []byte, ack types.IBCAcknowledgemen
 	}
 }
 
+// MockIBCPacketTimeout mocks timing out an IBC packet
 func MockIBCPacketTimeout(myChannel string, data []byte) types.IBCPacketTimeoutMsg {
 	packet := MockIBCPacket(myChannel, data)
 
@@ -270,11 +278,13 @@ const (
 	RangePrice  uint64 = 261000
 )
 
+// Lookup represents a lookup table
 type Lookup struct {
 	db    *testdb.MemDB
 	meter MockGasMeter
 }
 
+// NewLookup creates a new lookup table
 func NewLookup(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    testdb.NewMemDB(),
@@ -282,10 +292,12 @@ func NewLookup(meter MockGasMeter) *Lookup {
 	}
 }
 
+// SetGasMeter sets the gas meter for the lookup
 func (l *Lookup) SetGasMeter(meter MockGasMeter) {
 	l.meter = meter
 }
 
+// WithGasMeter sets the gas meter for the lookup and returns the lookup
 func (l *Lookup) WithGasMeter(meter MockGasMeter) *Lookup {
 	return &Lookup{
 		db:    l.db,
@@ -381,6 +393,7 @@ func MockHumanizeAddress(canon []byte) (human string, gasCost uint64, err error)
 	return human, CostHuman, nil
 }
 
+// MockValidateAddress mocks address validation
 func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(input)
 	gasCost += gasCostCanonicalize
@@ -399,6 +412,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	return gasCost, nil
 }
 
+// NewMockAPI creates a new mock API
 func NewMockAPI() *types.GoAPI {
 	return &types.GoAPI{
 		HumanizeAddress:     MockHumanizeAddress,

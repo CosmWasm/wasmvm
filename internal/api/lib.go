@@ -51,6 +51,7 @@ type Querier = types.Querier
 // cu8Ptr represents a pointer to an unsigned 8-bit integer.
 type cu8Ptr = *C.uint8_t
 
+// InitCache initializes the cache for contract execution
 func InitCache(config types.VMConfig) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile.
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
@@ -225,6 +226,7 @@ func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
 	return pinnedMetrics, nil
 }
 
+// Instantiate creates a new contract instance
 func Instantiate(
 	cache Cache,
 	checksum []byte,
@@ -269,6 +271,7 @@ func Instantiate(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// Execute runs a contract's execute function
 func Execute(
 	cache Cache,
 	checksum []byte,
@@ -313,6 +316,7 @@ func Execute(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// Migrate updates a contract's code
 func Migrate(
 	cache Cache,
 	checksum []byte,
@@ -354,6 +358,7 @@ func Migrate(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// MigrateWithInfo updates a contract's code with additional info
 func MigrateWithInfo(
 	cache Cache,
 	checksum []byte,
@@ -398,6 +403,7 @@ func MigrateWithInfo(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// Sudo runs a contract's sudo function
 func Sudo(
 	cache Cache,
 	checksum []byte,
@@ -439,6 +445,7 @@ func Sudo(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// Reply handles a contract's reply to a submessage
 func Reply(
 	cache Cache,
 	checksum []byte,
@@ -480,6 +487,7 @@ func Reply(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// Query executes a contract's query function
 func Query(
 	cache Cache,
 	checksum []byte,
@@ -521,6 +529,7 @@ func Query(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCChannelOpen handles IBC channel open handshake
 func IBCChannelOpen(
 	cache Cache,
 	checksum []byte,
@@ -562,6 +571,7 @@ func IBCChannelOpen(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCChannelConnect handles IBC channel connect handshake
 func IBCChannelConnect(
 	cache Cache,
 	checksum []byte,
@@ -603,6 +613,7 @@ func IBCChannelConnect(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCChannelClose handles IBC channel close handshake
 func IBCChannelClose(
 	cache Cache,
 	checksum []byte,
@@ -644,6 +655,7 @@ func IBCChannelClose(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCPacketReceive handles receiving an IBC packet
 func IBCPacketReceive(
 	cache Cache,
 	checksum []byte,
@@ -685,6 +697,7 @@ func IBCPacketReceive(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBC2PacketReceive handles receiving an IBC packet with additional context
 func IBC2PacketReceive(
 	cache Cache,
 	checksum []byte,
@@ -726,6 +739,7 @@ func IBC2PacketReceive(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCPacketAck handles acknowledging an IBC packet
 func IBCPacketAck(
 	cache Cache,
 	checksum []byte,
@@ -767,6 +781,7 @@ func IBCPacketAck(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCPacketTimeout handles timing out an IBC packet
 func IBCPacketTimeout(
 	cache Cache,
 	checksum []byte,
@@ -808,6 +823,7 @@ func IBCPacketTimeout(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCSourceCallback handles IBC source chain callbacks
 func IBCSourceCallback(
 	cache Cache,
 	checksum []byte,
@@ -849,6 +865,7 @@ func IBCSourceCallback(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
+// IBCDestinationCallback handles IBC destination chain callbacks
 func IBCDestinationCallback(
 	cache Cache,
 	checksum []byte,

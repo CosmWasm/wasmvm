@@ -5,6 +5,7 @@ package api
 */
 import "C"
 
+// LibwasmvmVersion returns the version of libwasmvm
 func LibwasmvmVersion() (string, error) {
 	version_ptr, err := C.version_str()
 	if err != nil {

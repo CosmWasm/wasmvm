@@ -19,7 +19,7 @@ linters:
     - gocritic # A more opinionated linter
     - gosec # Security checker
     - misspell # Find commonly misspelled words
-#    - revive # a metalinter with more checks
+    - revive # a metalinter with more checks
     - maintidx
     - bodyclose # Check HTTP response bodies are closed
     - goconst # Find repeated strings that could be constants
@@ -55,21 +55,34 @@ linters:
         - rangeValCopy
         - ptrToRefParam
 
-  gocyclo:
-    min-complexity: 15
-  gocognit:
-    min-complexity: 20
-  dupl:
-    threshold: 100
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  revive:
-    rules:
-      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#var-naming
-      - name: var-naming
-        severity: warning
-        disabled: true
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    dupl:
+      threshold: 100
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    revive:
+      enable-all-rules: true
+
+      rules:
+        # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
+        - name: var-naming
+          severity: warning
+          disabled: true
+          exclude: [""]
+          arguments:
+            - ["ID"] # AllowList
+            - ["VM"] # DenyList
+            - - upperCaseConst: true # Extra parameter (upperCaseConst|skipPackageNameChecks)
+        - name: line-length-limit
+          severity: warning
+          disabled: true
+          exclude: [""]
+          arguments: [80]
+
 
 
 

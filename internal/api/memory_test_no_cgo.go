@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCopyDestroyUnmanagedVectorNoCgo tests copying and destroying unmanaged vectors without CGO
 func TestCopyDestroyUnmanagedVectorNoCgo(t *testing.T) {
 	{
 		// ptr, cap and len broken. Do not access those values when is_none is true

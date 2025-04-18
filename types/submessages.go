@@ -112,6 +112,7 @@ type SubMsgResponse struct {
 	MsgResponses Array[MsgResponse] `json:"msg_responses"`
 }
 
+// MsgResponse represents a response to a message
 type MsgResponse struct {
 	TypeURL string `json:"type_url"`
 	Value   []byte `json:"value"`

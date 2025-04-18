@@ -170,12 +170,7 @@ type IBCPacketTimeoutMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
-// The type of IBC source callback that is being called.
-//
-// IBC source callbacks are needed for cases where your contract triggers the sending of an IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and needs to know whether or not the packet was successfully received on the other chain. A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know whether the transfer was successful or not.
-//
-// Note that there are some prerequisites that need to be fulfilled to receive source callbacks: - The contract must implement the `ibc_source_callback` entrypoint. - The IBC application in the source chain must have support for the callbacks middleware. - You have to add serialized [`IbcCallbackRequest`] to a specific field of the message. For `IbcMsg::Transfer`, this is the `memo` field and it needs to be json-encoded. - The receiver of the callback must also be the sender of the message.
-// IBCSourceCallbackMsg represents a message for an IBC source callback.
+// IBCSourceCallbackMsg represents a message for IBC source chain callbacks
 type IBCSourceCallbackMsg struct {
 	Acknowledgement *IBCAckCallbackMsg     `json:"acknowledgement,omitempty"`
 	Timeout         *IBCTimeoutCallbackMsg `json:"timeout,omitempty"`
@@ -194,32 +189,13 @@ type IBCTimeoutCallbackMsg struct {
 	Relayer string    `json:"relayer"`
 }
 
-// The message type of the IBC destination callback.
-//
-// The IBC destination callback is needed for cases where someone triggers the sending of an
-// IBC packet through some other message (i.e. not through [`IbcMsg::SendPacket`]) and
-// your contract needs to know that it received this.
-// The callback is called after the packet was successfully acknowledged on the destination chain.
-// A prominent example is the [`IbcMsg::Transfer`] message. Without callbacks, you cannot know
-// that someone sent you IBC coins.
-//
-// Note that there are some prerequisites that need to be fulfilled to receive source callbacks:
-//   - The contract must implement the `ibc_destination_callback` entrypoint.
-//   - The module that receives the packet must be wrapped by an `IBCMiddleware`
-//     (i.e. the destination chain needs to support callbacks for the message you are being sent).
-//   - You have to add json-encoded [`IbcCallbackData`] to a specific field of the message.
-//     For `IbcMsg::Transfer`, this is the `memo` field.
-//
-// IBCDestinationCallbackMsg represents a message for an IBC destination callback.
+// IBCDestinationCallbackMsg represents a message for IBC destination chain callbacks
 type IBCDestinationCallbackMsg struct {
 	Ack    IBCAcknowledgement `json:"ack"`
 	Packet IBCPacket          `json:"packet"`
 }
 
-// TODO: test what the sdk Order.String() represents and how to parse back
-// Proto files: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80
-// Auto-gen code: https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/x/ibc/core/04-channel/types/channel.pb.go#L70-L101
-// IBCOrder represents the ordering of an IBC channel.
+// IBCOrder represents the order of an IBC channel
 type IBCOrder = string
 
 // These are the only two valid values for IbcOrder.
@@ -283,14 +259,7 @@ type IBC3ChannelOpenResponse struct {
 	Version string `json:"version"`
 }
 
-// This is the return value for the majority of the ibc handlers.
-// That are able to dispatch messages / events on their own,
-// but have no meaningful return value to the calling code.
-//
-// Callbacks that have return values (like ibc_receive_packet)
-// or that cannot redispatch messages (like the handshake callbacks)
-// will use other Response types.
-// IBCBasicResult represents the basic result of an IBC operation.
+// IBCBasicResult represents the basic result of an IBC operation
 type IBCBasicResult struct {
 	Ok  *IBCBasicResponse `json:"ok,omitempty"`
 	Err string            `json:"error,omitempty"`
@@ -319,14 +288,7 @@ type IBCBasicResponse struct {
 	Events []Event `json:"events"`
 }
 
-// This is the return value for the majority of the ibc handlers.
-// That are able to dispatch messages / events on their own,
-// but have no meaningful return value to the calling code.
-//
-// Callbacks that have return values (like receive_packet)
-// or that cannot redispatch messages (like the handshake callbacks)
-// will use other Response types.
-// IBCReceiveResult represents the result of receiving an IBC packet.
+// IBCReceiveResult represents the result of receiving an IBC packet
 type IBCReceiveResult struct {
 	Ok  *IBCReceiveResponse `json:"ok,omitempty"`
 	Err string              `json:"error,omitempty"`

@@ -114,6 +114,7 @@ func (vm *VM) StoreCodeUnchecked(code WasmCode) (types.Checksum, error) {
 	return types.NewChecksum(checksumBytes)
 }
 
+// RemoveCode removes a code from the VM
 func (vm *VM) RemoveCode(checksum types.Checksum) error {
 	return api.RemoveCode(vm.cache, checksum.Bytes())
 }
@@ -144,9 +145,7 @@ func (vm *VM) Unpin(checksum types.Checksum) error {
 	return api.Unpin(vm.cache, checksum.Bytes())
 }
 
-// Returns a report of static analysis of the wasm contract (uncompiled).
-// This contract must have been stored in the cache previously (via Create).
-// Only info currently returned is if it exposes all ibc entry points, but this may grow later.
+// AnalyzeCode analyzes a code in the VM
 func (vm *VM) AnalyzeCode(checksum types.Checksum) (*types.AnalysisReport, error) {
 	return api.AnalyzeCode(vm.cache, checksum.Bytes())
 }
@@ -732,9 +731,9 @@ func compileCost(code WasmCode) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
 	// https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
-	const CostPerByte uint64 = 3 * 140_000
+	const costPerByte = 3 * 140_000
 
-	return CostPerByte * uint64(len(code))
+	return costPerByte * uint64(len(code))
 }
 
 // hasSubMessages is an interface for contract results that can contain sub-messages.
@@ -750,6 +749,7 @@ var (
 	_ hasSubMessages = (*types.ContractResult)(nil)
 )
 
+// DeserializeResponse deserializes a response
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
@@ -764,12 +764,12 @@ func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *
 	}
 
 	// All responses that have sub-messages need their payload size to be checked
-	const ReplyPayloadMaxBytes = 128 * 1024 // 128 KiB
+	const replyPayloadMaxBytes = 1024 * 1024 // 1 MiB
 	if response, ok := response.(hasSubMessages); ok {
 		for i, m := range response.SubMessages() {
 			// each payload needs to be below maximum size
-			if len(m.Payload) > ReplyPayloadMaxBytes {
-				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, ReplyPayloadMaxBytes, len(m.Payload))
+			if len(m.Payload) > replyPayloadMaxBytes {
+				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, replyPayloadMaxBytes, len(m.Payload))
 			}
 		}
 	}

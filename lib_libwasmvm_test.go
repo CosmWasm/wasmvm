@@ -411,7 +411,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	gasReport := types.GasReport{}
 
 	// Create a valid payload
-	validPayload := make([]byte, 128*1024)
+	validPayload := make([]byte, 1024*1024) // 1 MiB
 	validPayloadJSON, err := json.Marshal(validPayload)
 	require.NoError(t, err)
 	var resultJson []byte
@@ -424,7 +424,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	require.Equal(t, validPayload, result.Ok.Messages[0].Payload)
 
 	// Create an invalid payload (too large)
-	invalidPayload := make([]byte, 128*1024+1)
+	invalidPayload := make([]byte, 1024*1024+1) // 1 MiB + 1 byte
 	invalidPayloadJSON, err := json.Marshal(invalidPayload)
 	require.NoError(t, err)
 	resultJson = fmt.Appendf(resultJson[:0], `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON)

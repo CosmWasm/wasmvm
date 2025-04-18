@@ -146,55 +146,6 @@ type GovMsg struct {
 
 type voteOption int
 
-// VoteMsg represents a message to vote on a proposal.
-type VoteMsg struct {
-	ProposalId uint64 `json:"proposal_id"`
-	// Option is the vote option.
-	//
-	// This used to be called "vote", but was changed for consistency with Cosmos SDK.
-	// The old name is still supported for backwards compatibility.
-	Option voteOption `json:"option"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler for VoteMsg.
-func (m *VoteMsg) UnmarshalJSON(data []byte) error {
-	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
-	type InternalVoteMsg struct {
-		ProposalId uint64      `json:"proposal_id"`
-		Option     *voteOption `json:"option"`
-		Vote       *voteOption `json:"vote"` // old version
-	}
-	var tmp InternalVoteMsg
-	err := json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-
-	if tmp.Option != nil && tmp.Vote != nil {
-		return fmt.Errorf("invalid VoteMsg: both 'option' and 'vote' fields are set")
-	} else if tmp.Option == nil && tmp.Vote != nil {
-		// Use "Option" for both variants
-		tmp.Option = tmp.Vote
-	}
-
-	*m = VoteMsg{
-		ProposalId: tmp.ProposalId,
-		Option:     *tmp.Option,
-	}
-	return nil
-}
-
-type VoteWeightedMsg struct {
-	ProposalId uint64               `json:"proposal_id"`
-	Options    []WeightedVoteOption `json:"options"`
-}
-
-type WeightedVoteOption struct {
-	Option voteOption `json:"option"`
-	// Weight is a Decimal string, e.g. "0.25" for 25%
-	Weight string `json:"weight"`
-}
-
 const (
 	UnsetVoteOption voteOption = iota // The default value. We never return this in any valid instance (see toVoteOption).
 	Yes
@@ -238,6 +189,57 @@ func (s *voteOption) UnmarshalJSON(b []byte) error {
 	}
 	*s = voteOption
 	return nil
+}
+
+// VoteMsg represents a message to vote on a proposal.
+type VoteMsg struct {
+	ProposalId uint64 `json:"proposal_id"`
+	// Option is the vote option.
+	//
+	// This used to be called "vote", but was changed for consistency with Cosmos SDK.
+	// The old name is still supported for backwards compatibility.
+	Option voteOption `json:"option"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler for VoteMsg.
+func (m *VoteMsg) UnmarshalJSON(data []byte) error {
+	// We need a custom unmarshaler to parse both the "stargate" and "any" variants
+	type InternalVoteMsg struct {
+		ProposalId uint64      `json:"proposal_id"`
+		Option     *voteOption `json:"option"`
+		Vote       *voteOption `json:"vote"` // old version
+	}
+	var tmp InternalVoteMsg
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	if tmp.Option != nil && tmp.Vote != nil {
+		return fmt.Errorf("invalid VoteMsg: both 'option' and 'vote' fields are set")
+	} else if tmp.Option == nil && tmp.Vote != nil {
+		// Use "Option" for both variants
+		tmp.Option = tmp.Vote
+	}
+
+	*m = VoteMsg{
+		ProposalId: tmp.ProposalId,
+		Option:     *tmp.Option,
+	}
+	return nil
+}
+
+// VoteWeightedMsg represents a weighted vote message
+type VoteWeightedMsg struct {
+	ProposalId uint64               `json:"proposal_id"`
+	Options    []WeightedVoteOption `json:"options"`
+}
+
+// WeightedVoteOption represents a vote option with weight
+type WeightedVoteOption struct {
+	Option voteOption `json:"option"`
+	// Weight is a Decimal string, e.g. "0.25" for 25%
+	Weight string `json:"weight"`
 }
 
 // StakingMsg represents a message to the staking module.
@@ -310,18 +312,21 @@ type WasmMsg struct {
 }
 
 // These are messages in the IBC lifecycle using the new IBC2 approach. Only usable by IBC2-enabled contracts.
+// IBC2Msg represents an IBC message with additional context
 type IBC2Msg struct {
 	SendPacket           *IBC2SendPacketMsg           `json:"send_packet,omitempty"`
 	WriteAcknowledgement *IBC2WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 }
 
 // Sends an IBC packet with given payloads over the existing channel.
+// IBC2SendPacketMsg represents a message to send an IBC packet with additional context
 type IBC2SendPacketMsg struct {
 	ChannelID string        `json:"channel_id"`
 	Payloads  []IBC2Payload `json:"payloads"`
 	Timeout   uint64        `json:"timeout,string,omitempty"`
 }
 
+// IBC2WriteAcknowledgementMsg represents a message to write an IBC acknowledgement with additional context
 type IBC2WriteAcknowledgementMsg struct {
 	// The acknowledgement to send back
 	Ack IBCAcknowledgement `json:"ack"`
