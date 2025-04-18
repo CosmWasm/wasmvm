@@ -31,17 +31,6 @@ linters:
     - tparallel # Detect incorrect usage of t.Parallel()
 
   settings:
-    # Skip generated files.
-    # Default: true
-    skip-generated: false
-    # Enable custom order of sections.
-    # If `true`, make the section order the same as the order of `sections`.
-    # Default: false
-    custom-order: true
-    # Drops lexical ordering for custom sections.
-    # Default: false
-    no-lex-order: true
-
     gocritic:
       enabled-tags:
         - diagnostic
@@ -67,7 +56,6 @@ linters:
     revive:
       enable-all-rules: false
 
-
       rules:
         # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
         - name: var-naming
@@ -84,12 +72,7 @@ linters:
           exclude: [""]
           arguments: [80]
 
-
-
-
-
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
 
@@ -113,12 +96,7 @@ formatters:
         - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
         - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
         - localmodule # Local module section: contains all local packages. This section is not present unless explicitly enabled.
-      # Enable custom order of sections.
-      # If `true`, make the section order the same as the order of `sections`.
-      # Default: false
       custom-order: true
-      # Drops lexical ordering for custom sections.
-      # Default: false
       no-lex-order: true
   exclusions:
     # Skip generated files.
