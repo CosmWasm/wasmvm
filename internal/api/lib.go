@@ -88,6 +88,14 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	return Cache{ptr: ptr, lockfile: *lockfile}, nil
 }
 
+// logCleanupError logs errors that occur during cleanup operations.
+// These errors are not critical as cleanup will happen when the process exits anyway.
+func logCleanupError(op string, err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %s: %v\n", op, err)
+	}
+}
+
 // ReleaseCache releases the resources associated with the cache.
 func ReleaseCache(cache Cache) {
 	C.release_cache(cache.ptr)

@@ -361,7 +361,7 @@ func MockCanonicalizeAddress(human string) ([]byte, uint64, error) {
 		return nil, 0, fmt.Errorf("human encoding too long")
 	}
 	res := make([]byte, CanonicalLength)
-	copy(res, []byte(human))
+	copy(res, human)
 	return res, CostCanonical, nil
 }
 
@@ -392,7 +392,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	if err != nil {
 		return gasCost, err
 	}
-	if humanized != strings.ToLower(input) {
+	if !strings.EqualFold(humanized, input) {
 		return gasCost, fmt.Errorf("address validation failed")
 	}
 

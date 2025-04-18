@@ -53,7 +53,7 @@ func recoverPanic(ret *C.GoError) {
 		//
 		// What we do here is something that should not be done in the first place.
 		// "A panic typically means something went unexpectedly wrong. Mostly we use it to fail fast
-		// on errors that shouldn’t occur during normal operation, or that we aren’t prepared to
+		// on errors that shouldn't occur during normal operation, or that we aren't prepared to
 		// handle gracefully." says https://gobyexample.com/panic.
 		// And 'Ask yourself "when this happens, should the application immediately crash?" If yes,
 		// use a panic; otherwise, use an error.' says this popular answer on SO: https://stackoverflow.com/a/44505268.
@@ -169,7 +169,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -196,7 +196,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
@@ -218,7 +218,7 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceV
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
@@ -252,7 +252,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 		return C.GoError_BadArgument
 	}
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	iteratorRef, err := buildIterator(state.CallID, iter)
 	if err != nil {
@@ -299,7 +299,7 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	*key = newUnmanagedVector(k)
 	*val = newUnmanagedVector(v)
@@ -350,7 +350,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	*output = newUnmanagedVector(out)
 	return C.GoError_None
@@ -392,7 +392,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User
 	}
-	if len(h) == 0 {
+	if h == "" {
 		panic(fmt.Sprintf("`api.HumanizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector([]byte(h))
@@ -484,7 +484,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint64(gasLimit))
 	gasAfter := querier.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	// serialize the response
 	bz, err := json.Marshal(res)

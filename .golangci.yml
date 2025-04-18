@@ -16,35 +16,21 @@ linters:
     - unused # Detect unused constants, variables, functions and types
 
     # Additional recommended linters
-#    - gocritic # A more opinionated linter
+    - gocritic # A more opinionated linter
     - gosec # Security checker
     - misspell # Find commonly misspelled words
 #    - revive # a metalinter with more checks
+    - maintidx
     - bodyclose # Check HTTP response bodies are closed
     - goconst # Find repeated strings that could be constants
-    #    - gocyclo # Check function complexity
+    - gocyclo # Check function complexity
     - gocognit # Check cognitive complexity
     - whitespace # Check trailing whitespace
     - thelper # Detect test helpers not using t.Helper()
     - usetesting # Detect incorrect usage of testing package
     - tparallel # Detect incorrect usage of t.Parallel()
 
-linters-settings:
-  gci:
-    # Section configuration to compare against.
-    # Section names are case-insensitive and may contain parameters in ().
-    # The default order of sections is `standard > default > custom > blank > dot > alias > localmodule`,
-    # If `custom-order` is `true`, it follows the order of `sections` option.
-    # Default: ["standard", "default"]
-    sections:
-      - standard # Standard section: captures all standard packages.
-      - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/cosmos/cosmos-sdk) # Custom section: groups all imports with the specified Prefix.
-      - prefix(github.com/cosmos/ibc-go)
-      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
-      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
-      - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
-      - localmodule # Local module section: contains all local packages. This section is not present unless explicitly enabled.
+  settings:
     # Skip generated files.
     # Default: true
     skip-generated: false
@@ -55,13 +41,20 @@ linters-settings:
     # Drops lexical ordering for custom sections.
     # Default: false
     no-lex-order: true
-  gocritic:
-    disabled-checks:
-      - dupSubExpr  # Disable dupSubExpr check as it gives false positives with C function calls
-    enabled-tags:
-      - performance
-      - style
-      - experimental
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - dupSubExpr
+        - paramTypeCombine
+        - dupImport
+        - hugeParam
+        - rangeValCopy
+        - ptrToRefParam
+
   gocyclo:
     min-complexity: 15
   gocognit:
@@ -77,6 +70,8 @@ linters-settings:
       - name: var-naming
         severity: warning
         disabled: true
+
+
 
 issues:
   exclude-use-default: false
