@@ -33,11 +33,11 @@ func (r replyOn) String() string {
 	return fromReplyOn[r]
 }
 
-func (s replyOn) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
+func (r replyOn) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.String())
 }
 
-func (s *replyOn) UnmarshalJSON(b []byte) error {
+func (r *replyOn) UnmarshalJSON(b []byte) error {
 	var j string
 	err := json.Unmarshal(b, &j)
 	if err != nil {
@@ -48,12 +48,12 @@ func (s *replyOn) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid reply_on value '%v'", j)
 	}
-	*s = voteOption
+	*r = voteOption
 	return nil
 }
 
 // SubMsg wraps a CosmosMsg with some metadata for handling replies (ID) and optionally
-// limiting the gas usage (GasLimit)
+// limiting the gas usage (GasLimit).
 type SubMsg struct {
 	// An arbitrary ID chosen by the contract.
 	// This is typically used to match `Reply`s in the `reply` entry point to the submessage.
@@ -112,6 +112,7 @@ type SubMsgResponse struct {
 	MsgResponses Array[MsgResponse] `json:"msg_responses"`
 }
 
+// MsgResponse represents a response to a message
 type MsgResponse struct {
 	TypeURL string `json:"type_url"`
 	Value   []byte `json:"value"`

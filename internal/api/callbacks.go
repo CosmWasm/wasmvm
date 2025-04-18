@@ -47,13 +47,14 @@ import (
 // Note: we have to include all exports in the same file (at least since they both import bindings.h),
 // or get odd cgo build errors about duplicate definitions
 
+//nolint:revive // False positive: recover is called inside this function, which is always deferred
 func recoverPanic(ret *C.GoError) {
 	if rec := recover(); rec != nil {
 		// This is used to handle ErrorOutOfGas panics.
 		//
 		// What we do here is something that should not be done in the first place.
 		// "A panic typically means something went unexpectedly wrong. Mostly we use it to fail fast
-		// on errors that shouldn’t occur during normal operation, or that we aren’t prepared to
+		// on errors that shouldn't occur during normal operation, or that we aren't prepared to
 		// handle gracefully." says https://gobyexample.com/panic.
 		// And 'Ask yourself "when this happens, should the application immediately crash?" If yes,
 		// use a panic; otherwise, use an error.' says this popular answer on SO: https://stackoverflow.com/a/44505268.
@@ -88,7 +89,8 @@ func recoverPanic(ret *C.GoError) {
 	}
 }
 
-/****** DB ********/
+/* **** DB *****/
+/* * DB * */
 
 var db_vtable = C.DbVtable{
 	read_db:   C.any_function_t(C.cGet_cgo),
@@ -97,6 +99,7 @@ var db_vtable = C.DbVtable{
 	scan_db:   C.any_function_t(C.cScan_cgo),
 }
 
+// DBState represents the state of the database during contract execution
 type DBState struct {
 	Store types.KVStore
 	// CallID is used to lookup the proper frame for iterators associated with this contract call (iterator.go)
@@ -115,8 +118,8 @@ func buildDBState(kv types.KVStore, callID uint64) DBState {
 	}
 }
 
-// contract: original pointer/struct referenced must live longer than C.Db struct
-// since this is only used internally, we can verify the code that this is the case
+// contract: original pointer/struct referenced must live longer than C.Db struct.
+// since this is only used internally, we can verify the code that this is the case.
 func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 	return C.Db{
 		gas_meter: (*C.gas_meter_t)(unsafe.Pointer(gm)),
@@ -136,7 +139,7 @@ var iterator_vtable = C.IteratorVtable{
 // In any reasonable contract, gas limits should hit sooner than that though.
 const frameLenLimit = 32768
 
-// contract: original pointer/struct referenced must live longer than C.Db struct
+// contract: original pointer/struct referenced must live longer than C.Db struct.
 // since this is only used internally, we can verify the code that this is the case
 func buildIterator(callID uint64, it types.Iterator) (C.IteratorReference, error) {
 	iteratorID, err := storeIterator(callID, it, frameLenLimit)
@@ -158,7 +161,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*val).is_none {
+	if !val.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -169,7 +172,7 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	gasBefore := gm.GasConsumed()
 	v := kv.Get(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	// v will equal nil when the key is missing
 	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
@@ -196,7 +199,7 @@ func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	gasBefore := gm.GasConsumed()
 	kv.Set(k, v)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
@@ -218,20 +221,21 @@ func cDelete(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceV
 	gasBefore := gm.GasConsumed()
 	kv.Delete(k)
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	return C.GoError_None
 }
 
 //export cScan
+//nolint:revive // Function complexity slightly high due to multiple checks and CGo interface requirements
 func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceView, end C.U8SliceView, order ci32, out *C.GoIter, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)
 
+	// Check for nil pointers early
 	if ptr == nil || gasMeter == nil || usedGas == nil || out == nil || errOut == nil {
-		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -242,6 +246,7 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	e := copyU8Slice(end)
 
 	var iter types.Iterator
+	var iterErr error
 	gasBefore := gm.GasConsumed()
 	switch order {
 	case 1: // Ascending
@@ -249,10 +254,15 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 	case 2: // Descending
 		iter = kv.ReverseIterator(s, e)
 	default:
-		return C.GoError_BadArgument
+		iterErr = fmt.Errorf("invalid iterator order: %d", order)
 	}
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
+
+	if iterErr != nil {
+		*errOut = newUnmanagedVector([]byte(iterErr.Error()))
+		return C.GoError_User // Or a more specific error if available
+	}
 
 	iteratorRef, err := buildIterator(state.CallID, iter)
 	if err != nil {
@@ -271,20 +281,16 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 }
 
 //export cNext
+//nolint:revive // Function complexity slightly high due to multiple checks and CGo interface requirements
 func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
-	// typical usage of iterator
-	// 	for ; itr.Valid(); itr.Next() {
-	// 		k, v := itr.Key(); itr.Value()
-	// 		...
-	// 	}
-
 	defer recoverPanic(&ret)
+
+	// Check for nil pointers early
 	if ref.call_id == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
-		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*key).is_none || !(*val).is_none {
+	if !key.is_none || !val.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -295,6 +301,7 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	}
 	if !iter.Valid() {
 		// end of iterator, return as no-op, nil key is considered end
+		// No need to set output vectors, they stay nil/is_none=true
 		return C.GoError_None
 	}
 
@@ -305,7 +312,7 @@ func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key 
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	*key = newUnmanagedVector(k)
 	*val = newUnmanagedVector(v)
@@ -336,7 +343,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 		return C.GoError_BadArgument
 	}
 	// errOut is unused and we don't check `is_none` because of https://github.com/CosmWasm/wasmvm/issues/536
-	if !(*output).is_none {
+	if !output.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -356,7 +363,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	*output = newUnmanagedVector(out)
 	return C.GoError_None
@@ -384,7 +391,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -398,7 +405,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User
 	}
-	if len(h) == 0 {
+	if h == "" {
 		panic(fmt.Sprintf("`api.HumanizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector([]byte(h))
@@ -412,7 +419,7 @@ func cCanonicalizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVect
 	if dest == nil || errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*dest).is_none || !(*errOut).is_none {
+	if !dest.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -439,7 +446,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	if errOut == nil {
 		return C.GoError_BadArgument
 	}
-	if !(*errOut).is_none {
+	if !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -456,8 +463,7 @@ func cValidateAddress(ptr *C.api_t, src C.U8SliceView, errOut *C.UnmanagedVector
 	return C.GoError_None
 }
 
-/****** Go Querier ********/
-
+// QuerierVtable is the vtable for the Querier struct
 var querier_vtable = C.QuerierVtable{
 	query_external: C.any_function_t(C.cQueryExternal_cgo),
 }
@@ -479,7 +485,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 		// we received an invalid pointer
 		return C.GoError_BadArgument
 	}
-	if !(*result).is_none || !(*errOut).is_none {
+	if !result.is_none || !errOut.is_none {
 		panic("Got a non-none UnmanagedVector we're about to override. This is a bug because someone has to drop the old one.")
 	}
 
@@ -490,7 +496,7 @@ func cQueryExternal(ptr *C.querier_t, gasLimit cu64, usedGas *cu64, request C.U8
 	gasBefore := querier.GasConsumed()
 	res := types.RustQuery(querier, req, uint64(gasLimit))
 	gasAfter := querier.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = cu64(gasAfter - gasBefore)
 
 	// serialize the response
 	bz, err := json.Marshal(res)

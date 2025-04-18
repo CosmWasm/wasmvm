@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-//-------- Queries --------
+// -------- Queries --------
 
 // QueryResult is the Go counterpart of `ContractResult<Binary>`.
 // The JSON annotations are used for deserializing directly. There is a custom serializer below.
@@ -16,17 +16,22 @@ type queryResultImpl struct {
 }
 
 // A custom serializer that allows us to map QueryResult instances to the Rust
-// enum `ContractResult<Binary>`
+// enum `ContractResult<Binary>`.
+// MarshalJSON implements json.Marshaler
 func (q QueryResult) MarshalJSON() ([]byte, error) {
 	// In case both Ok and Err are empty, this is interpreted and serialized
 	// as an Ok case with no data because errors must not be empty.
-	if len(q.Ok) == 0 && len(q.Err) == 0 {
+	if q.Ok == nil && q.Err == "" {
+		return []byte(`{"ok":""}`), nil
+	}
+	// If Ok is an empty slice, we want to serialize it as {"ok":""}
+	if q.Ok != nil && len(q.Ok) == 0 {
 		return []byte(`{"ok":""}`), nil
 	}
 	return json.Marshal(queryResultImpl(q))
 }
 
-//-------- Querier -----------
+// -------- Querier --------
 
 // Querier is a thing that allows the contract to query information
 // from the environment it is executed in. This is typically used to query
@@ -52,7 +57,8 @@ type Querier interface {
 	GasConsumed() uint64
 }
 
-// this is a thin wrapper around the desired Go API to give us types closer to Rust FFI
+// this is a thin wrapper around the desired Go API to give us types closer to Rust FFI.
+// RustQuery represents a query to be executed in Rust
 func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResult {
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
@@ -70,12 +76,14 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 	return ToQuerierResult(bz, err)
 }
 
-// This is a 2-level result
+// This is a 2-level result.
+// QuerierResult represents the result of a querier operation
 type QuerierResult struct {
 	Ok  *QueryResult `json:"ok,omitempty"`
 	Err *SystemError `json:"error,omitempty"`
 }
 
+// ToQuerierResult converts a query result to a QuerierResult
 func ToQuerierResult(response []byte, err error) QuerierResult {
 	if err == nil {
 		return QuerierResult{
@@ -97,8 +105,8 @@ func ToQuerierResult(response []byte, err error) QuerierResult {
 	}
 }
 
-// QueryRequest is an rust enum and only (exactly) one of the fields should be set
-// Should we do a cleaner approach in Go? (type/data?)
+// QueryRequest represents a request for querying various Cosmos SDK modules.
+// It can contain queries for bank, custom, IBC, staking, distribution, stargate, grpc, or wasm modules.
 type QueryRequest struct {
 	Bank         *BankQuery         `json:"bank,omitempty"`
 	Custom       json.RawMessage    `json:"custom,omitempty"`
@@ -110,6 +118,8 @@ type QueryRequest struct {
 	Wasm         *WasmQuery         `json:"wasm,omitempty"`
 }
 
+// BankQuery represents a query to the bank module.
+// It can contain queries for supply, balance, all balances, denom metadata, or all denom metadata.
 type BankQuery struct {
 	Supply           *SupplyQuery           `json:"supply,omitempty"`
 	Balance          *BalanceQuery          `json:"balance,omitempty"`
@@ -118,48 +128,55 @@ type BankQuery struct {
 	AllDenomMetadata *AllDenomMetadataQuery `json:"all_denom_metadata,omitempty"`
 }
 
+// SupplyQuery represents a query for the total supply of a specific denomination.
 type SupplyQuery struct {
 	Denom string `json:"denom"`
 }
 
-// SupplyResponse is the expected response to SupplyQuery
+// SupplyResponse is the expected response to SupplyQuery.
 type SupplyResponse struct {
 	Amount Coin `json:"amount"`
 }
 
+// BalanceQuery represents a query for the balance of a specific denomination for a given address.
 type BalanceQuery struct {
 	Address string `json:"address"`
 	Denom   string `json:"denom"`
 }
 
-// BalanceResponse is the expected response to BalanceQuery
+// BalanceResponse is the expected response to BalanceQuery.
 type BalanceResponse struct {
 	Amount Coin `json:"amount"`
 }
 
+// AllBalancesQuery represents a query for all balances of a given address.
 type AllBalancesQuery struct {
 	Address string `json:"address"`
 }
 
-// AllBalancesResponse is the expected response to AllBalancesQuery
+// AllBalancesResponse is the expected response to AllBalancesQuery.
 type AllBalancesResponse struct {
 	Amount Array[Coin] `json:"amount"`
 }
 
+// DenomMetadataQuery represents a query for metadata of a specific denomination.
 type DenomMetadataQuery struct {
 	Denom string `json:"denom"`
 }
 
+// DenomMetadataResponse represents the response containing metadata for a denomination.
 type DenomMetadataResponse struct {
 	Metadata DenomMetadata `json:"metadata"`
 }
 
+// AllDenomMetadataQuery represents a query for metadata of all denominations.
 type AllDenomMetadataQuery struct {
 	// Pagination is an optional argument.
 	// Default pagination will be used if this is omitted
 	Pagination *PageRequest `json:"pagination,omitempty"`
 }
 
+// AllDenomMetadataResponse represents the response for all denomination metadata
 type AllDenomMetadataResponse struct {
 	Metadata []DenomMetadata `json:"metadata"`
 	// NextKey is the key to be passed to PageRequest.key to
@@ -177,17 +194,21 @@ type IBCQuery struct {
 	FeeEnabledChannel *FeeEnabledChannelQuery `json:"fee_enabled_channel,omitempty"`
 }
 
+// FeeEnabledChannelQuery represents a query for fee-enabled channels
 type FeeEnabledChannelQuery struct {
 	ChannelID string `json:"channel_id"`
 	PortID    string `json:"port_id,omitempty"`
 }
 
+// FeeEnabledChannelResponse represents the response for fee-enabled channels
 type FeeEnabledChannelResponse struct {
 	FeeEnabled bool `json:"fee_enabled"`
 }
 
+// PortIDQuery represents a query for a port ID
 type PortIDQuery struct{}
 
+// PortIDResponse represents the response for a port ID
 type PortIDResponse struct {
 	PortID string `json:"port_id"`
 }
@@ -201,21 +222,26 @@ type ListChannelsQuery struct {
 	PortID string `json:"port_id,omitempty"`
 }
 
+// ListChannelsResponse represents the response for listing channels
 type ListChannelsResponse struct {
 	Channels Array[IBCChannel] `json:"channels"`
 }
 
+// ChannelQuery represents a query for a channel
 type ChannelQuery struct {
 	// optional argument
 	PortID    string `json:"port_id,omitempty"`
 	ChannelID string `json:"channel_id"`
 }
 
+// ChannelResponse represents the response for a channel
 type ChannelResponse struct {
 	// may be empty if there is no matching channel
 	Channel *IBCChannel `json:"channel,omitempty"`
 }
 
+// StakingQuery represents a query to the staking module.
+// It can contain queries for all validators, a specific validator, all delegations, a specific delegation, or the bonded denom.
 type StakingQuery struct {
 	AllValidators  *AllValidatorsQuery  `json:"all_validators,omitempty"`
 	Validator      *ValidatorQuery      `json:"validator,omitempty"`
@@ -224,23 +250,26 @@ type StakingQuery struct {
 	BondedDenom    *struct{}            `json:"bonded_denom,omitempty"`
 }
 
+// AllValidatorsQuery represents a query for all validators in the network.
 type AllValidatorsQuery struct{}
 
-// AllValidatorsResponse is the expected response to AllValidatorsQuery
+// AllValidatorsResponse is the expected response to AllValidatorsQuery.
 type AllValidatorsResponse struct {
 	Validators Array[Validator] `json:"validators"`
 }
 
+// ValidatorQuery represents a query for a specific validator by address.
 type ValidatorQuery struct {
-	/// Address is the validator's address (e.g. cosmosvaloper1...)
+	// Address is the validator's address (e.g. cosmosvaloper1...)
 	Address string `json:"address"`
 }
 
-// ValidatorResponse is the expected response to ValidatorQuery
+// ValidatorResponse is the expected response to ValidatorQuery.
 type ValidatorResponse struct {
 	Validator *Validator `json:"validator"` // serializes to `null` when unset which matches Rust's Option::None serialization
 }
 
+// Validator represents a validator in the network.
 type Validator struct {
 	Address string `json:"address"`
 	// decimal string, eg "0.02"
@@ -251,26 +280,30 @@ type Validator struct {
 	MaxChangeRate string `json:"max_change_rate"`
 }
 
+// AllDelegationsQuery represents a query for all delegations of a specific delegator.
 type AllDelegationsQuery struct {
 	Delegator string `json:"delegator"`
 }
 
+// DelegationQuery represents a query for a specific delegation between a delegator and validator.
 type DelegationQuery struct {
 	Delegator string `json:"delegator"`
 	Validator string `json:"validator"`
 }
 
-// AllDelegationsResponse is the expected response to AllDelegationsQuery
+// AllDelegationsResponse is the expected response to AllDelegationsQuery.
 type AllDelegationsResponse struct {
 	Delegations Array[Delegation] `json:"delegations"`
 }
 
+// Delegation represents a delegation between a delegator and validator.
 type Delegation struct {
 	Delegator string `json:"delegator"`
 	Validator string `json:"validator"`
 	Amount    Coin   `json:"amount"`
 }
 
+// DistributionQuery represents a query for distribution
 type DistributionQuery struct {
 	// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L222-L230>
 	DelegatorWithdrawAddress *DelegatorWithdrawAddressQuery `json:"delegator_withdraw_address,omitempty"`
@@ -282,53 +315,60 @@ type DistributionQuery struct {
 	DelegatorValidators *DelegatorValidatorsQuery `json:"delegator_validators,omitempty"`
 }
 
+// DelegatorWithdrawAddressQuery represents a query for a delegator's withdraw address
 type DelegatorWithdrawAddressQuery struct {
 	DelegatorAddress string `json:"delegator_address"`
 }
 
+// DelegatorWithdrawAddressResponse represents the response for a delegator's withdraw address
 type DelegatorWithdrawAddressResponse struct {
 	WithdrawAddress string `json:"withdraw_address"`
 }
 
+// DelegationRewardsQuery represents a query for delegation rewards
 type DelegationRewardsQuery struct {
 	DelegatorAddress string `json:"delegator_address"`
 	ValidatorAddress string `json:"validator_address"`
 }
 
-// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L169-L178>
+// DelegationRewardsResponse represents the response for delegation rewards
 type DelegationRewardsResponse struct {
 	Rewards []DecCoin `json:"rewards"`
 }
 
+// DelegationTotalRewardsQuery represents a query for total delegation rewards
 type DelegationTotalRewardsQuery struct {
 	DelegatorAddress string `json:"delegator_address"`
 }
 
-// See <https://github.com/cosmos/cosmos-sdk/blob/c74e2887b0b73e81d48c2f33e6b1020090089ee0/proto/cosmos/distribution/v1beta1/query.proto#L189-L200>
+// DelegationTotalRewardsResponse represents the response for total delegation rewards
 type DelegationTotalRewardsResponse struct {
 	Rewards []DelegatorReward `json:"rewards"`
 	Total   []DecCoin         `json:"total"`
 }
 
+// DelegatorReward represents rewards for a delegator from a specific validator.
 type DelegatorReward struct {
 	Reward           []DecCoin `json:"reward"`
 	ValidatorAddress string    `json:"validator_address"`
 }
 
+// DelegatorValidatorsQuery represents a query for all validators a delegator has delegated to.
 type DelegatorValidatorsQuery struct {
 	DelegatorAddress string `json:"delegator_address"`
 }
 
-// See <https://github.com/cosmos/cosmos-sdk/blob/b0acf60e6c39f7ab023841841fc0b751a12c13ff/proto/cosmos/distribution/v1beta1/query.proto#L212-L220>
+// DelegatorValidatorsResponse represents the response containing all validators a delegator has delegated to.
 type DelegatorValidatorsResponse struct {
 	Validators []string `json:"validators"`
 }
 
-// DelegationResponse is the expected response to Array[Delegation]Query
+// DelegationResponse is the expected response to Array[Delegation]Query.
 type DelegationResponse struct {
 	Delegation *FullDelegation `json:"delegation,omitempty"`
 }
 
+// FullDelegation represents a complete delegation including accumulated rewards and redelegation information.
 type FullDelegation struct {
 	Delegator          string      `json:"delegator"`
 	Validator          string      `json:"validator"`
@@ -337,14 +377,14 @@ type FullDelegation struct {
 	CanRedelegate      Coin        `json:"can_redelegate"`
 }
 
+// BondedDenomResponse represents the response containing the bonded denomination.
 type BondedDenomResponse struct {
 	Denom string `json:"denom"`
 }
 
-// StargateQuery is encoded the same way as abci_query, with path and protobuf encoded request data.
+// StargateQuery represents a query using the Stargate protocol.
+// It is encoded the same way as abci_query, with path and protobuf encoded request data.
 // The format is defined in [ADR-21](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-021-protobuf-query-encoding.md).
-// The response is supposed to always be protobuf encoded data, but is JSON encoded on some chains.
-// The caller is responsible for compiling the proper type definitions for both requests and responses.
 type StargateQuery struct {
 	// The expected protobuf message type (not [Any](https://protobuf.dev/programming-guides/proto3/#any)), binary encoded
 	Data []byte `json:"data"`
@@ -354,11 +394,9 @@ type StargateQuery struct {
 	Path string `json:"path"`
 }
 
-// GrpcQuery queries the chain using a grpc query.
-// This allows to query information that is not exposed in our API.
+// GrpcQuery represents a query using gRPC protocol.
+// This allows querying information that is not exposed in the standard API.
 // The chain needs to allowlist the supported queries.
-//
-// The returned data is protobuf encoded. The protobuf type depends on the query.
 type GrpcQuery struct {
 	// The expected protobuf message type (not [Any](https://protobuf.dev/programming-guides/proto3/#any)), binary encoded
 	Data []byte `json:"data"`
@@ -368,6 +406,8 @@ type GrpcQuery struct {
 	Path string `json:"path"`
 }
 
+// WasmQuery represents a query to the WASM module.
+// It can contain smart queries, raw queries, contract info queries, or code info queries.
 type WasmQuery struct {
 	Smart        *SmartQuery        `json:"smart,omitempty"`
 	Raw          *RawQuery          `json:"raw,omitempty"`
@@ -375,25 +415,29 @@ type WasmQuery struct {
 	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
 }
 
-// SmartQuery response is raw bytes ([]byte)
+// SmartQuery represents a smart contract query.
+// The response is raw bytes ([]byte).
 type SmartQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Msg          []byte `json:"msg"`
 }
 
-// RawQuery response is raw bytes ([]byte)
+// RawQuery represents a raw contract query.
+// The response is raw bytes ([]byte).
 type RawQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
 }
 
+// ContractInfoQuery represents a query for contract information.
 type ContractInfoQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 }
 
+// ContractInfoResponse represents the response containing contract information.
 type ContractInfoResponse struct {
 	CodeID  uint64 `json:"code_id"`
 	Creator string `json:"creator"`
@@ -406,10 +450,12 @@ type ContractInfoResponse struct {
 	IBC2Port string `json:"ibc2_port,omitempty"`
 }
 
+// CodeInfoQuery represents a query for code information.
 type CodeInfoQuery struct {
 	CodeID uint64 `json:"code_id"`
 }
 
+// CodeInfoResponse represents the response containing code information.
 type CodeInfoResponse struct {
 	CodeID  uint64 `json:"code_id"`
 	Creator string `json:"creator"`

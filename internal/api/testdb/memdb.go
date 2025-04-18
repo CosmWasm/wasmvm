@@ -1,3 +1,4 @@
+// Package testdb provides an in-memory database implementation for testing purposes.
 package testdb
 
 import (
@@ -13,7 +14,7 @@ const (
 	bTreeDegree = 32
 )
 
-// item is a btree.Item with byte slices as keys and values
+// item is a btree.Item with byte slices as keys and values.
 type item struct {
 	key   []byte
 	value []byte
@@ -92,12 +93,13 @@ func (db *MemDB) Set(key []byte, value []byte) error {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.set(key, value)
+	db.dbSet(key, value)
 	return nil
 }
 
-// set sets a value without locking the mutex.
-func (db *MemDB) set(key []byte, value []byte) {
+// dbSet sets the value for the given key, taking the write lock.
+// It's not exposed publicly as it assumes the caller handles the lock.
+func (db *MemDB) dbSet(key []byte, value []byte) {
 	db.btree.ReplaceOrInsert(newPair(key, value))
 }
 
@@ -114,12 +116,13 @@ func (db *MemDB) Delete(key []byte) error {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.delete(key)
+	db.dbDelete(key)
 	return nil
 }
 
-// delete deletes a key without locking the mutex.
-func (db *MemDB) delete(key []byte) {
+// dbDelete deletes the key/value pair, taking the write lock.
+// It's not exposed publicly as it assumes the caller handles the lock.
+func (db *MemDB) dbDelete(key []byte) {
 	db.btree.Delete(newKey(key))
 }
 
@@ -128,8 +131,8 @@ func (db *MemDB) DeleteSync(key []byte) error {
 	return db.Delete(key)
 }
 
-// Close implements DB.
-func (db *MemDB) Close() error {
+// Close is a noop.
+func (*MemDB) Close() error {
 	// Close is a noop since for an in-memory database, we don't have a destination to flush
 	// contents to nor do we want any data loss on invoking Close().
 	// See the discussion in https://github.com/tendermint/tendermint/libs/pull/56
@@ -142,7 +145,10 @@ func (db *MemDB) Print() error {
 	defer db.mtx.RUnlock()
 
 	db.btree.Ascend(func(i btree.Item) bool {
-		item := i.(*item)
+		item, ok := i.(*item)
+		if !ok {
+			panic("btree item is not of type *item") // Should ideally not happen
+		}
 		fmt.Printf("[%X]:\t[%X]\n", item.key, item.value)
 		return true
 	})
@@ -166,7 +172,7 @@ func (db *MemDB) Iterator(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIterator(db, start, end, false), nil
+	return newMemDBIteratorAscending(db, start, end), nil
 }
 
 // ReverseIterator implements DB.
@@ -175,7 +181,7 @@ func (db *MemDB) ReverseIterator(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIterator(db, start, end, true), nil
+	return newMemDBIteratorDescending(db, start, end), nil
 }
 
 // IteratorNoMtx makes an iterator with no mutex.
@@ -183,7 +189,7 @@ func (db *MemDB) IteratorNoMtx(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIteratorMtxChoice(db, start, end, false, false), nil
+	return newMemDBIteratorNoMtxAscending(db, start, end), nil
 }
 
 // ReverseIteratorNoMtx makes an iterator with no mutex.
@@ -191,5 +197,5 @@ func (db *MemDB) ReverseIteratorNoMtx(start, end []byte) (Iterator, error) {
 	if (start != nil && len(start) == 0) || (end != nil && len(end) == 0) {
 		return nil, errKeyEmpty
 	}
-	return newMemDBIteratorMtxChoice(db, start, end, true, false), nil
+	return newMemDBIteratorNoMtxDescending(db, start, end), nil
 }

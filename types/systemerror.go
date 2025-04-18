@@ -44,6 +44,7 @@ func (a SystemError) Error() string {
 	}
 }
 
+// InvalidRequest represents an invalid request error
 type InvalidRequest struct {
 	Err     string `json:"error"`
 	Request []byte `json:"request"`
@@ -53,6 +54,7 @@ func (e InvalidRequest) Error() string {
 	return fmt.Sprintf("invalid request: %s - original request: %s", e.Err, string(e.Request))
 }
 
+// InvalidResponse represents an invalid response error
 type InvalidResponse struct {
 	Err      string `json:"error"`
 	Response []byte `json:"response"`
@@ -62,6 +64,7 @@ func (e InvalidResponse) Error() string {
 	return fmt.Sprintf("invalid response: %s - original response: %s", e.Err, string(e.Response))
 }
 
+// NoSuchContract represents a missing contract error
 type NoSuchContract struct {
 	Addr string `json:"addr,omitempty"`
 }
@@ -70,6 +73,7 @@ func (e NoSuchContract) Error() string {
 	return fmt.Sprintf("no such contract: %s", e.Addr)
 }
 
+// NoSuchCode represents a missing code error
 type NoSuchCode struct {
 	CodeID uint64 `json:"code_id,omitempty"`
 }
@@ -78,12 +82,14 @@ func (e NoSuchCode) Error() string {
 	return fmt.Sprintf("no such code: %d", e.CodeID)
 }
 
+// Unknown represents an unknown error
 type Unknown struct{}
 
-func (e Unknown) Error() string {
+func (Unknown) Error() string {
 	return "unknown system error"
 }
 
+// UnsupportedRequest represents an unsupported request error
 type UnsupportedRequest struct {
 	Kind string `json:"kind,omitempty"`
 }
@@ -92,24 +98,23 @@ func (e UnsupportedRequest) Error() string {
 	return fmt.Sprintf("unsupported request: %s", e.Kind)
 }
 
-// ToSystemError will try to convert the given error to an SystemError.
-// This is important to returning any Go error back to Rust.
-//
-// If it is already StdError, return self.
-// If it is an error, which could be a sub-field of StdError, embed it.
-// If it is anything else, **return nil**
-//
-// This may return nil on an unknown error, whereas ToStdError will always create
-// a valid error type.
-func ToSystemError(err error) *SystemError {
-	if isNil(err) {
-		return nil
-	}
+// convertErrorToSystemError converts a specific error type to a SystemError
+func convertErrorToSystemError(err error) *SystemError {
 	switch t := err.(type) {
 	case SystemError:
 		return &t
 	case *SystemError:
 		return t
+	default:
+		return nil
+	}
+}
+
+// convertSpecificError converts a specific error type to a SystemError
+//
+//nolint:revive // Function complexity high due to exhaustive type switch needed for error mapping
+func convertSpecificError(err error) *SystemError {
+	switch t := err.(type) {
 	case InvalidRequest:
 		return &SystemError{InvalidRequest: &t}
 	case *InvalidRequest:
@@ -139,8 +144,29 @@ func ToSystemError(err error) *SystemError {
 	}
 }
 
-// check if an interface is nil (even if it has type info)
-func isNil(i interface{}) bool {
+// ToSystemError will try to convert the given error to an SystemError.
+// This is important to returning any Go error back to Rust.
+//
+// If it is already StdError, return self.
+// If it is an error, which could be a sub-field of StdError, embed it.
+// If it is anything else, **return nil**
+//
+// This may return nil on an unknown error, whereas ToStdError will always create
+// a valid error type.
+func ToSystemError(err error) *SystemError {
+	if isNil(err) {
+		return nil
+	}
+
+	if result := convertErrorToSystemError(err); result != nil {
+		return result
+	}
+
+	return convertSpecificError(err)
+}
+
+// check if an interface is nil (even if it has type info).
+func isNil(i any) bool {
 	if i == nil {
 		return true
 	}
