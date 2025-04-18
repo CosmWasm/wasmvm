@@ -9,32 +9,47 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+enum ErrnoValue {
+  ErrnoValue_Success = 0,
+  ErrnoValue_Other = 1,
+  ErrnoValue_OutOfGas = 2,
+};
+typedef int32_t ErrnoValue;
+
+/**
+ * This enum gives names to the status codes returned from Go callbacks to Rust.
+ * The Go code will return one of these variants when returning.
+ *
+ * 0 means no error, all the other cases are some sort of error.
+ *
+ */
 enum GoError {
+  GoError_None = 0,
   /**
-   * Success
+   * Go panicked for an unexpected reason.
    */
-  None = 0,
-  Panic = 1,
+  GoError_Panic = 1,
   /**
    * Go received a bad argument from Rust
    */
-  BadArgument = 2,
+  GoError_BadArgument = 2,
   /**
-   * Ran out of gas while using the SDK (e.g. storage)
+   * Ran out of gas while using the SDK (e.g. storage). This can come from the Cosmos SDK gas meter
+   * (https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/store/types/gas.go#L29-L32).
    */
-  OutOfGas = 3,
+  GoError_OutOfGas = 3,
   /**
-   * Error while trying to serialize data in Go
+   * Error while trying to serialize data in Go code (typically json.Marshal)
    */
-  CannotSerialize = 4,
+  GoError_CannotSerialize = 4,
   /**
    * An error happened during normal operation of a Go callback, which should be fed back to the contract
    */
-  User = 5,
+  GoError_User = 5,
   /**
    * An error type that should never be created by us. It only serves as a fallback for the i32 to GoError conversion.
    */
-  Other = -1,
+  GoError_Other = -1,
 };
 typedef int32_t GoError;
 

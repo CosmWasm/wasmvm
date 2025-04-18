@@ -139,7 +139,7 @@ func StoreCode(cache Cache, wasm []byte, checked bool, persist bool) ([]byte, er
 	var errmsg ffi.UnmanagedVector
 	errmsg.IsNone = true
 
-	checksumVecPtr := ffi.StoreCode(uintptr(unsafe.Pointer(cache.ptr)), w, checked, persist, uintptr(unsafe.Pointer(&errmsg)))
+	checksumVecPtr := ffi.StoreCode(uintptr(unsafe.Pointer(cache.ptr)), uintptr(unsafe.Pointer(&w)), checked, persist, uintptr(unsafe.Pointer(&errmsg)))
 	if !errmsg.IsNone {
 		msg := copyAndDestroyUnmanagedVector(errmsg)
 		return nil, fmt.Errorf("%s", string(msg))
@@ -155,7 +155,7 @@ func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	var errmsg ffi.UnmanagedVector
 	errmsg.IsNone = true
 
-	checksumVecPtr := ffi.StoreCode(uintptr(unsafe.Pointer(cache.ptr)), w, false, true, uintptr(unsafe.Pointer(&errmsg)))
+	checksumVecPtr := ffi.StoreCode(uintptr(unsafe.Pointer(cache.ptr)), uintptr(unsafe.Pointer(&w)), false, true, uintptr(unsafe.Pointer(&errmsg)))
 	if !errmsg.IsNone {
 		msg := copyAndDestroyUnmanagedVector(errmsg)
 		return nil, fmt.Errorf("%s", string(msg))

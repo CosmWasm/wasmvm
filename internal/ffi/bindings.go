@@ -12,7 +12,7 @@ var (
 
 	// Cache management
 	init_cache         func(config uintptr, errOut uintptr) uintptr
-	store_code         func(cache uintptr, wasm ByteSliceView, checked bool, persist bool, errOut uintptr) uintptr
+	store_code         func(cache uintptr, wasm uintptr, checked bool, persist bool, errOut uintptr) uintptr
 	remove_wasm        func(cache uintptr, checksum uintptr, errOut uintptr)
 	load_wasm          func(cache uintptr, checksum uintptr, errOut uintptr) uintptr
 	pin                func(cache uintptr, checksum uintptr, errOut uintptr)
@@ -92,7 +92,7 @@ func ensureBindingsLoaded() {
 func EnsureBindingsLoaded() { ensureBindingsLoaded() }
 
 func InitCache(config uintptr, errOut uintptr) uintptr { return init_cache(config, errOut) }
-func StoreCode(cache uintptr, wasm ByteSliceView, checked bool, persist bool, errOut uintptr) uintptr {
+func StoreCode(cache uintptr, wasm uintptr, checked bool, persist bool, errOut uintptr) uintptr {
 	return store_code(cache, wasm, checked, persist, errOut)
 }
 func RemoveWasm(cache uintptr, checksum uintptr, errOut uintptr) {
