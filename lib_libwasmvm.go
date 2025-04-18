@@ -73,7 +73,7 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	checksum, err := api.StoreCode(vm.cache, code, true)
+	checksum, err := api.StoreCode(vm.cache, code, true, true)
 	return checksum, gasCost, err
 }
 
@@ -86,7 +86,7 @@ func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint6
 		return nil, gasCost, types.OutOfGasError{}
 	}
 
-	checksum, err := api.StoreCode(vm.cache, code, false)
+	checksum, err := api.StoreCode(vm.cache, code, true, false)
 	return checksum, gasCost, err
 }
 

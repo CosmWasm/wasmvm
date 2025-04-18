@@ -61,7 +61,7 @@ build-go:
 .PHONY: test
 test:
 	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
-	RUST_BACKTRACE=1 go test -v -count=1 ./...
+	CGO_ENABLED=0 RUST_BACKTRACE=1 go test -v -count=1 ./...
 
 .PHONY: test-safety
 test-safety:

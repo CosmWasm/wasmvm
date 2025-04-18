@@ -1,101 +1,79 @@
-//go:build cgo
-// +build cgo
-
 package api
 
-/*
-#include "bindings.h"
-*/
-import "C"
+import (
+	"unsafe"
 
-import "unsafe"
+	"github.com/CosmWasm/wasmvm/v2/internal/ffi"
+)
 
-// makeView creates a view into the given byte slice what allows Rust code to read it.
-// The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
-// to ensure the byte slice lives long enough.
-func makeView(s []byte) C.ByteSliceView {
+// U8SliceView represents a slice view of uint8 values
+type U8SliceView struct {
+	IsNone uint8
+	Ptr    *uint8
+	Len    uintptr
+}
+
+// makeView creates a view into the given byte slice for Rust to read.
+// The byte slice is managed by Go and will be garbage collected.
+func makeView(s []byte) ByteSliceView {
 	if s == nil {
-		return C.ByteSliceView{is_nil: true, ptr: cu8_ptr(nil), len: cusize(0)}
+		return ByteSliceView{IsNil: 1}
 	}
-
-	// In Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
-	// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
-	// below with `&data[0]`. https://play.golang.org/p/xvDY3g9OqUk
 	if len(s) == 0 {
-		return C.ByteSliceView{is_nil: false, ptr: cu8_ptr(nil), len: cusize(0)}
+		return ByteSliceView{IsNil: 0, Ptr: nil, Len: 0}
 	}
-
-	return C.ByteSliceView{
-		is_nil: false,
-		ptr:    cu8_ptr(unsafe.Pointer(&s[0])),
-		len:    cusize(len(s)),
-	}
-}
-
-// Creates a C.UnmanagedVector, which cannot be done in test files directly
-func constructUnmanagedVector(is_none cbool, ptr cu8_ptr, len cusize, cap cusize) C.UnmanagedVector {
-	return C.UnmanagedVector{
-		is_none: is_none,
-		ptr:     ptr,
-		len:     len,
-		cap:     cap,
+	return ByteSliceView{
+		IsNil: 0,
+		Ptr:   (*uint8)(unsafe.Pointer(&s[0])),
+		Len:   uintptr(len(s)),
 	}
 }
 
-// uninitializedUnmanagedVector returns an invalid C.UnmanagedVector
-// instance. Only use then after someone wrote an instance to it.
-func uninitializedUnmanagedVector() C.UnmanagedVector {
-	return C.UnmanagedVector{}
-}
+// newUnmanagedVector creates a new UnmanagedVector from a byte slice
+func newUnmanagedVector(data []byte) ffi.UnmanagedVector {
+	var nilFlag bool = false
+	var ptr *uint8
+	var length uintptr
 
-func newUnmanagedVector(data []byte) C.UnmanagedVector {
 	if data == nil {
-		return C.new_unmanaged_vector(cbool(true), cu8_ptr(nil), cusize(0))
+		nilFlag = true
 	} else if len(data) == 0 {
-		// in Go, accessing the 0-th element of an empty array triggers a panic. That is why in the case
-		// of an empty `[]byte` we can't get the internal heap pointer to the underlying array as we do
-		// below with `&data[0]`.
-		// https://play.golang.org/p/xvDY3g9OqUk
-		return C.new_unmanaged_vector(cbool(false), cu8_ptr(nil), cusize(0))
+		ptr = nil
+		length = 0
 	} else {
-		// This will allocate a proper vector with content and return a description of it
-		return C.new_unmanaged_vector(cbool(false), cu8_ptr(unsafe.Pointer(&data[0])), cusize(len(data)))
+		ptr = (*uint8)(unsafe.Pointer(&data[0]))
+		length = uintptr(len(data))
 	}
+
+	// Call the Rust function via purego
+	vec := ffi.NewUnmanagedVector(nilFlag, uintptr(unsafe.Pointer(ptr)), length)
+	return vec
 }
 
-func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
-	var out []byte
-	if v.is_none {
-		out = nil
-	} else if v.cap == cusize(0) {
-		// There is no allocation we can copy
-		out = []byte{}
-	} else {
-		// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
-		out = C.GoBytes(unsafe.Pointer(v.ptr), cint(v.len))
+// copyU8Slice copies the contents of a U8SliceView
+func copyU8Slice(view ffi.ByteSliceView) []byte {
+	if view.IsNil {
+		return nil
 	}
-	C.destroy_unmanaged_vector(v)
+	if view.Len == 0 {
+		return []byte{}
+	}
+	// Copy the data
+	out := make([]byte, view.Len)
+	copy(out, unsafe.Slice(view.Ptr, view.Len))
 	return out
 }
 
-func optionalU64ToPtr(val C.OptionalU64) *uint64 {
-	if val.is_some {
-		return (*uint64)(&val.value)
-	}
-	return nil
+// OptionalU64 represents an optional 64-bit unsigned integer
+type OptionalU64 struct {
+	IsSome uint8
+	Value  uint64
 }
 
-// copyU8Slice copies the contents of an Option<&[u8]> that was allocated on the Rust side.
-// Returns nil if and only if the source is None.
-func copyU8Slice(view C.U8SliceView) []byte {
-	if view.is_none {
-		return nil
+// optionalU64ToPtr converts OptionalU64 to *uint64
+func optionalU64ToPtr(val OptionalU64) *uint64 {
+	if val.IsSome != 0 {
+		return &val.Value
 	}
-	if view.len == 0 {
-		// In this case, we don't want to look into the ptr
-		return []byte{}
-	}
-	// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
-	res := C.GoBytes(unsafe.Pointer(view.ptr), cint(view.len))
-	return res
+	return nil
 }
