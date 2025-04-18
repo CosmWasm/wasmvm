@@ -30,7 +30,7 @@ var (
 func startCall() uint64 {
 	latestCallIDMutex.Lock()
 	defer latestCallIDMutex.Unlock()
-	latestCallID += 1
+	latestCallID++
 	return latestCallID
 }
 
@@ -53,10 +53,10 @@ func endCall(callID uint64) {
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
 		if err := iter.Close(); err != nil {
-			// maybe close iterators?
-			if _, printErr := fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err); printErr != nil {
-				// If printing fails, there is nothing more we can do here.
-			}
+			// ignore the error from close, it is deadlock-prone.
+			// See: https://github.com/golang/go/issues/25466
+			//nolint:gocritic
+			_, _ = fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err)
 		}
 	}
 }

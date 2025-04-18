@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -87,7 +88,7 @@ func (m *CosmosMsg) UnmarshalJSON(data []byte) error {
 	}
 
 	if tmp.Any != nil && tmp.Stargate != nil {
-		return fmt.Errorf("invalid CosmosMsg: both 'any' and 'stargate' fields are set")
+		return errors.New("invalid CosmosMsg: both 'any' and 'stargate' fields are set")
 	} else if tmp.Any == nil && tmp.Stargate != nil {
 		// Use "Any" for both variants
 		tmp.Any = tmp.Stargate
@@ -216,7 +217,7 @@ func (m *VoteMsg) UnmarshalJSON(data []byte) error {
 	}
 
 	if tmp.Option != nil && tmp.Vote != nil {
-		return fmt.Errorf("invalid VoteMsg: both 'option' and 'vote' fields are set")
+		return errors.New("invalid VoteMsg: both 'option' and 'vote' fields are set")
 	} else if tmp.Option == nil && tmp.Vote != nil {
 		// Use "Option" for both variants
 		tmp.Option = tmp.Vote

@@ -85,9 +85,9 @@ const IBC_VERSION = "ibc-reflect-v1"
 
 func TestIBCHandshake(t *testing.T) {
 	// code id of the reflect contract
-	const REFLECT_ID uint64 = 101
+	const reflectID uint64 = 101
 	// channel id for handshake
-	const CHANNEL_ID = "channel-432"
+	const channelID = "channel-432"
 
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, IBC_TEST_CONTRACT)
@@ -103,7 +103,7 @@ func TestIBCHandshake(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	init_msg := IBCInstantiateMsg{
-		ReflectCodeID: REFLECT_ID,
+		ReflectCodeID: reflectID,
 	}
 	envBytes, err := json.Marshal(env)
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestIBCHandshake(t *testing.T) {
 	env = api.MockEnv()
 	envBytes, err = json.Marshal(env)
 	require.NoError(t, err)
-	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
+	openMsg := api.MockIBCChannelOpenInit(channelID, types.Ordered, IBC_VERSION)
 	openMsgBytes, err := json.Marshal(openMsg)
 	require.NoError(t, err)
 	params = api.ContractCallParams{
@@ -169,7 +169,7 @@ func TestIBCHandshake(t *testing.T) {
 	envBytes, err = json.Marshal(env)
 	require.NoError(t, err)
 	// completes and dispatches message to create reflect contract
-	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
+	connectMsg := api.MockIBCChannelConnectAck(channelID, types.Ordered, IBC_VERSION)
 	connectMsgBytes, err := json.Marshal(connectMsg)
 	require.NoError(t, err)
 	params = api.ContractCallParams{
@@ -206,5 +206,5 @@ func TestIBCHandshake(t *testing.T) {
 	dispatch := connResponse.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Wasm, "%#v", dispatch)
 	require.NotNil(t, dispatch.Wasm.Instantiate, "%#v", dispatch)
-	require.Equal(t, REFLECT_ID, dispatch.Wasm.Instantiate.CodeID)
+	require.Equal(t, reflectID, dispatch.Wasm.Instantiate.CodeID)
 }

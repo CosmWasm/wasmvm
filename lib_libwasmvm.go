@@ -244,70 +244,56 @@ func (vm *VM) Query(params api.ContractCallParams) ([]byte, types.QueryResult, t
 	return resBytes, result, gasReport, nil
 }
 
-// Migrate will migrate an existing contract to a new code binary.
-func (_ *VM) Migrate(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// Migrate migrates the contract with the given parameters.
+func (*VM) Migrate(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.Migrate(params)
 }
 
-// MigrateWithInfo will migrate an existing contract to a new code binary.
-func (_ *VM) MigrateWithInfo(params api.MigrateWithInfoParams) ([]byte, types.GasReport, error) {
+// MigrateWithInfo migrates the contract with the given parameters and migration info.
+func (*VM) MigrateWithInfo(params api.MigrateWithInfoParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.MigrateWithInfo(params)
 }
 
-// Sudo allows native Go modules to make privileged (sudo) calls on the contract.
-// The contract can expose entry points that cannot be triggered by any transaction, but only via
-// native Go modules, and delegate the access control to the system.
-//
-// These work much like Migrate (same scenario) but allows custom apps to extend the privileged entry points
-// without forking cosmwasm-vm.
-func (_ *VM) Sudo(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// Sudo executes the contract's sudo entry point with the given parameters.
+func (*VM) Sudo(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.Sudo(params)
 }
 
-// Reply allows the native Go wasm modules to make a privileged call to return the result
-// of executing a SubMsg.
-//
-// These work much like Sudo (same scenario) but focuses on one specific case (and one message type).
-func (_ *VM) Reply(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// Reply executes the contract's reply entry point with the given parameters.
+func (*VM) Reply(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.Reply(params)
 }
 
-// IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse.
-func (_ *VM) IBCChannelOpen(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBCChannelOpen executes the contract's IBC channel open entry point.
+func (*VM) IBCChannelOpen(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBCChannelOpen(params)
 }
 
-// IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse.
-func (_ *VM) IBCChannelConnect(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBCChannelConnect executes the contract's IBC channel connect entry point.
+func (*VM) IBCChannelConnect(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBCChannelConnect(params)
 }
 
-// IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
-// at the end of the channel lifetime.
-func (_ *VM) IBCChannelClose(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBCChannelClose executes the contract's IBC channel close entry point.
+func (*VM) IBCChannelClose(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBCChannelClose(params)
 }
 
-// IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
-// packet is received on a channel belonging to this contract.
-func (_ *VM) IBCPacketReceive(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBCPacketReceive executes the contract's IBC packet receive entry point.
+func (*VM) IBCPacketReceive(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBCPacketReceive(params)
 }
 
-// IBCPacketAck is available on IBC-enabled contracts and is called when an
-// the response for an outgoing packet (previously sent by this contract)
-// is received.
-func (_ *VM) IBCPacketAck(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBCPacketAck executes the contract's IBC packet acknowledgement entry point.
+func (*VM) IBCPacketAck(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBCPacketAck(params)
 }
@@ -369,9 +355,9 @@ func (*VM) IBCDestinationCallback(
 	return &ibcResult, gasReport.UsedInternally, nil
 }
 
-// IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
-// packet is received on a channel belonging to this contract
-func (_ *VM) IBC2PacketReceive(params api.ContractCallParams) ([]byte, types.GasReport, error) {
+// IBC2PacketReceive executes the contract's IBC2 packet receive entry point.
+// This supports the IBC v7+ interfaces.
+func (*VM) IBC2PacketReceive(params api.ContractCallParams) ([]byte, types.GasReport, error) {
 	// Directly call the internal API function
 	return api.IBC2PacketReceive(params)
 }

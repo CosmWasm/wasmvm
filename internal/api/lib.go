@@ -114,11 +114,10 @@ func InitCache(config types.VMConfig) (Cache, error) {
 // logCleanupError logs errors that occur during cleanup operations.
 // These errors are not critical as cleanup will happen when the process exits anyway.
 func logCleanupError(op string, err error) {
-	if err != nil {
-		if _, printErr := fmt.Fprintf(os.Stderr, "warning: %s: %v\n", op, err); printErr != nil {
-			// Error printing the error... not much we can do.
-		}
-	}
+	// If printing the error fails, we don't care.
+	// We can't log it anywhere, as that might cause infinite loops.
+	//nolint:gocritic
+	_, _ = fmt.Fprintf(os.Stderr, "warning: %s: %v\n", op, err)
 }
 
 // ReleaseCache releases the resources associated with the cache.
@@ -761,7 +760,7 @@ func convertGasReport(report C.GasReport) types.GasReport {
 	}
 }
 
-/**** To error module ***/
+/***** To error module *****/
 
 func errorWithMessage(err error, b C.UnmanagedVector) error {
 	// we always destroy the unmanaged vector to avoid a memory leak

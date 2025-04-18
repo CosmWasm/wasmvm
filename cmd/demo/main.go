@@ -150,10 +150,7 @@ func main() {
 		// If run() returned an error not already printed by printError,
 		// print it now. This handles potential fmt.Fprintf errors.
 		if exitCode == ExitSuccess { // Check if printError was already called
-			if _, printErr := fmt.Fprintf(os.Stderr, "Unhandled error: %v\n", err); printErr != nil {
-				// If we can't even print the error, there's not much else to do
-				// but at least we tried.
-			}
+			_, _ = fmt.Fprintf(os.Stderr, "Unhandled error: %v\n", err)
 			exitCode = ExitError
 		}
 		// No return needed here, defer will handle exit

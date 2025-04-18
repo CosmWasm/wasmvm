@@ -92,12 +92,13 @@ func (db *MemDB) Set(key []byte, value []byte) error {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.set(key, value)
+	db.dbSet(key, value)
 	return nil
 }
 
-// set sets a value without locking the mutex.
-func (db *MemDB) set(key []byte, value []byte) {
+// dbSet sets the value for the given key, taking the write lock.
+// It's not exposed publicly as it assumes the caller handles the lock.
+func (db *MemDB) dbSet(key []byte, value []byte) {
 	db.btree.ReplaceOrInsert(newPair(key, value))
 }
 
@@ -114,12 +115,13 @@ func (db *MemDB) Delete(key []byte) error {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	db.delete(key)
+	db.dbDelete(key)
 	return nil
 }
 
-// delete deletes a key without locking the mutex.
-func (db *MemDB) delete(key []byte) {
+// dbDelete deletes the key/value pair, taking the write lock.
+// It's not exposed publicly as it assumes the caller handles the lock.
+func (db *MemDB) dbDelete(key []byte) {
 	db.btree.Delete(newKey(key))
 }
 
@@ -128,8 +130,8 @@ func (db *MemDB) DeleteSync(key []byte) error {
 	return db.Delete(key)
 }
 
-// Close implements DB.
-func (_ *MemDB) Close() error {
+// Close is a noop.
+func (*MemDB) Close() error {
 	// Close is a noop since for an in-memory database, we don't have a destination to flush
 	// contents to nor do we want any data loss on invoking Close().
 	// See the discussion in https://github.com/tendermint/tendermint/libs/pull/56

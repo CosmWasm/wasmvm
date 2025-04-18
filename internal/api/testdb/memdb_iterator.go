@@ -160,8 +160,8 @@ func (i *memDBIterator) Next() {
 	}
 }
 
-// Error implements Iterator.
-func (_ *memDBIterator) Error() error {
+// Error implements the types.Iterator interface.
+func (*memDBIterator) Error() error {
 	return nil // famous last words
 }
 

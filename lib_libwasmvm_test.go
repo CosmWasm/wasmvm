@@ -96,8 +96,9 @@ func TestStoreCode(t *testing.T) {
 
 	// Nil
 	{
-		var wasm []byte = nil
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		var wasm []byte
+		var err error
+		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
 		require.ErrorContains(t, err, "Null/Nil argument")
 	}
 }

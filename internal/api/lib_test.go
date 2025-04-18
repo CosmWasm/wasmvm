@@ -649,7 +649,7 @@ func TestExecutePanic(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
-	_, _, err = testExecute(ContractCallParams{
+	_, _, err = localTestExecute(ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
@@ -704,7 +704,7 @@ func TestExecuteUnreachable(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
-	_, _, err = testExecute(ContractCallParams{
+	_, _, err = localTestExecute(ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
@@ -764,7 +764,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start = time.Now()
-	_, cost, err = testExecute(ContractCallParams{
+	_, cost, err = localTestExecute(ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
@@ -822,7 +822,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	start := time.Now()
-	_, gasReport, err := testExecute(ContractCallParams{
+	_, gasReport, err := localTestExecute(ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
@@ -886,7 +886,7 @@ func BenchmarkContractCall(b *testing.B) {
 		store.SetGasMeter(gasMeter2)
 		info = MockInfoBin(b, "fred")
 		msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
-		res, _, err = testExecute(ContractCallParams{
+		res, _, err = localTestExecute(ContractCallParams{
 			Cache:      cache,
 			Checksum:   checksum,
 			Env:        env,
@@ -955,7 +955,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 				igasMeter2 := types.GasMeter(gasMeter2)
 				store.SetGasMeter(gasMeter2)
 				msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
-				res, _, err = testExecute(ContractCallParams{
+				res, _, err = localTestExecute(ContractCallParams{
 					Cache:      cache,
 					Checksum:   checksum,
 					Env:        env,
@@ -1022,7 +1022,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	store.SetGasMeter(gasMeter2)
 	info = MockInfoBin(t, "fred")
 	failingApi := NewMockFailureAPI()
-	res, _, err = testExecute(ContractCallParams{
+	res, _, err = localTestExecute(ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
@@ -2023,6 +2023,6 @@ func testInstantiate(params ContractCallParams) ([]byte, types.GasReport, error)
 	return Instantiate(params)
 }
 
-func testExecute(params ContractCallParams) ([]byte, types.GasReport, error) {
+func localTestExecute(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return Execute(params)
 }

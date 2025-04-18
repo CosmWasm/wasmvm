@@ -433,7 +433,7 @@ func TestMockAPI(t *testing.T) {
 	require.Equal(t, CostHuman, cost)
 }
 
-/**** MockQuerier ****/
+/***** MockQuerier *****/
 
 // DefaultQuerierGasLimit is the default gas limit for querier operations.
 const DefaultQuerierGasLimit = 1_000_000
@@ -536,7 +536,7 @@ type CustomQuerier interface {
 type NoCustom struct{}
 
 // Query implements the CustomQuerier interface.
-func (_ NoCustom) Query(_ json.RawMessage) ([]byte, error) {
+func (NoCustom) Query(_ json.RawMessage) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
@@ -560,7 +560,7 @@ type CustomResponse struct {
 }
 
 // Query implements the CustomQuerier interface for ReflectCustom.
-func (_ ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
+func (ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	var query CustomQuery
 	err := json.Unmarshal(request, &query)
 	if err != nil {
