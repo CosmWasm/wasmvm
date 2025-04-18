@@ -81,6 +81,10 @@ linters:
           disabled: true
         - name: flag-parameter
           disabled: true
+        - name: max-public-structs
+          disabled: false
+          severity: warning
+          arguments: [100]
         
 
         
