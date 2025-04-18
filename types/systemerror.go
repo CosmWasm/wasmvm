@@ -85,7 +85,7 @@ func (e NoSuchCode) Error() string {
 // Unknown represents an unknown error
 type Unknown struct{}
 
-func (e Unknown) Error() string {
+func (Unknown) Error() string {
 	return "unknown system error"
 }
 
