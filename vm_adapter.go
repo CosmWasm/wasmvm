@@ -25,7 +25,7 @@ func (vm *VM) InstantiateWithConfig(config VMConfig) (types.ContractResult, uint
 	}
 
 	// Create a GasMeter interface pointer for ContractCallParams
-	var gasMeter types.GasMeter = config.GasMeter
+	gasMeter := config.GasMeter
 
 	// Convert GoAPI to pointer form
 	goapi := &config.GoAPI
@@ -64,8 +64,8 @@ func (vm *VM) InstantiateWithConfig(config VMConfig) (types.ContractResult, uint
 // ExecuteWithOldParams is a compatibility method for the old-style Execute function
 func (vm *VM) ExecuteWithOldParams(checksum types.Checksum, env types.Env, info types.MessageInfo,
 	msg []byte, store KVStore, goapi GoAPI, querier Querier,
-	gasMeter GasMeter, gasLimit uint64, deserCost types.UFraction) (types.ContractResult, uint64, error) {
-
+	gasMeter GasMeter, gasLimit uint64, deserCost types.UFraction,
+) (types.ContractResult, uint64, error) {
 	// Convert to the new style
 	envBytes, err := json.Marshal(env)
 	if err != nil {
@@ -78,7 +78,7 @@ func (vm *VM) ExecuteWithOldParams(checksum types.Checksum, env types.Env, info 
 	}
 
 	// Type conversion for interface
-	var gasMeterInterface types.GasMeter = gasMeter
+	gasMeterInterface := gasMeter
 
 	params := api.ContractCallParams{
 		Cache:      vm.cache,

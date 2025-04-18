@@ -96,7 +96,7 @@ func TestIBCHandshake(t *testing.T) {
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	mockQuerier := api.DefaultQuerier(api.MockContractAddr, types.Array[types.Coin]{})
-	var querier types.Querier = mockQuerier
+	querier := mockQuerier
 	var gasMeter types.GasMeter = gasMeter1
 
 	// instantiate

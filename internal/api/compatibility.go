@@ -6,8 +6,8 @@ import (
 
 // WrapInstantiate is a helper function to convert from old param style to new ContractCallParams style
 func WrapInstantiate(cache Cache, checksum []byte, env []byte, info []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
@@ -27,8 +27,8 @@ func WrapInstantiate(cache Cache, checksum []byte, env []byte, info []byte, msg 
 
 // WrapExecute is a helper function to convert from old param style to new ContractCallParams style
 func WrapExecute(cache Cache, checksum []byte, env []byte, info []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
@@ -48,8 +48,8 @@ func WrapExecute(cache Cache, checksum []byte, env []byte, info []byte, msg []by
 
 // WrapMigrate is a helper function to convert from old param style to new ContractCallParams style
 func WrapMigrate(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
@@ -68,8 +68,8 @@ func WrapMigrate(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter 
 
 // WrapSudo is a helper function to convert from old param style to new ContractCallParams style
 func WrapSudo(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
@@ -88,8 +88,8 @@ func WrapSudo(cache Cache, checksum []byte, env []byte, msg []byte, gasMeter *ty
 
 // WrapReply is a helper function to convert from old param style to new ContractCallParams style
 func WrapReply(cache Cache, checksum []byte, env []byte, reply []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
@@ -108,8 +108,8 @@ func WrapReply(cache Cache, checksum []byte, env []byte, reply []byte, gasMeter 
 
 // WrapQuery is a helper function to convert from old param style to new ContractCallParams style
 func WrapQuery(cache Cache, checksum []byte, env []byte, query []byte, gasMeter *types.GasMeter,
-	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool) ([]byte, types.GasReport, error) {
-
+	store *Lookup, api *types.GoAPI, querier *types.Querier, gasLimit uint64, printDebug bool,
+) ([]byte, types.GasReport, error) {
 	params := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,

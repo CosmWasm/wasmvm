@@ -405,7 +405,7 @@ func TestGetMetrics(t *testing.T) {
 		Checksum:   checksum,
 		Env:        env,
 		Info:       info,
-		Msg:        []byte(`{"release":{}}`),
+		Msg:        []byte(ReleaseJSON),
 		GasMeter:   &igasMeter2,
 		Store:      store,
 		API:        api,
@@ -531,13 +531,12 @@ func TestExecute(t *testing.T) {
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter1 := types.GasMeter(gasMeter1)
-	// instantiate it with this store
 	store := NewLookup(gasMeter1)
 	api := NewMockAPI()
-	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
+	balance := types.Array[types.Coin]{types.NewCoin(TwoHundredFifty, ATOM)}
 	querier := DefaultQuerier(MockContractAddr, balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, Creator)
 
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 
@@ -558,23 +557,23 @@ func TestExecute(t *testing.T) {
 	res, cost, err := Instantiate(params)
 	diff := time.Since(start)
 	require.NoError(t, err)
-	requireOkResponse(t, res, 0)
-	require.Equal(t, uint64(0xd35950), cost.UsedInternally)
-	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
+	requireOkResponse(t, res, Zero)
+	require.Equal(t, uint64(GasD35950), cost.UsedInternally)
+	t.Logf(TimeFormat, cost.UsedInternally, diff)
 
 	// execute with the same store
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, Fred)
 	start = time.Now()
 	executeParams := ContractCallParams{
 		Cache:      cache,
 		Checksum:   checksum,
 		Env:        env,
 		Info:       info,
-		Msg:        []byte(`{"release":{}}`),
+		Msg:        []byte(ReleaseJSON),
 		GasMeter:   &igasMeter2,
 		Store:      store,
 		API:        api,
@@ -585,31 +584,31 @@ func TestExecute(t *testing.T) {
 	res, cost, err = Execute(executeParams)
 	diff = time.Since(start)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0x16057d3), cost.UsedInternally)
-	t.Logf("Time (%d gas): %s\n", cost.UsedInternally, diff)
+	require.Equal(t, uint64(Gas16057d3), cost.UsedInternally)
+	t.Logf(TimeFormat, cost.UsedInternally, diff)
 
 	// make sure it read the balance properly and we got 250 atoms
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
 	require.Empty(t, result.Err)
-	require.Len(t, result.Ok.Messages, 1)
+	require.Len(t, result.Ok.Messages, One)
 	// Ensure we got our custom event
-	require.Len(t, result.Ok.Events, 1)
-	ev := result.Ok.Events[0]
+	require.Len(t, result.Ok.Events, One)
+	ev := result.Ok.Events[Zero]
 	require.Equal(t, "hackatom", ev.Type)
-	require.Len(t, ev.Attributes, 1)
-	require.Equal(t, "action", ev.Attributes[0].Key)
-	require.Equal(t, "release", ev.Attributes[0].Value)
+	require.Len(t, ev.Attributes, One)
+	require.Equal(t, "action", ev.Attributes[Zero].Key)
+	require.Equal(t, "release", ev.Attributes[Zero].Value)
 
-	dispatch := result.Ok.Messages[0].Msg
+	dispatch := result.Ok.Messages[Zero].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
 	require.Equal(t, "bob", send.ToAddress)
 	require.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
-	expectedData := []byte{0xF0, 0x0B, 0xAA}
+	expectedData := []byte{Hex0xf0, Hex0x0B, Hex0xaa}
 	require.Equal(t, expectedData, result.Ok.Data)
 }
 
@@ -1497,27 +1496,27 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 
 func createHackatomContract(tb testing.TB, cache Cache) []byte {
 	tb.Helper()
-	return createContract(tb, cache, "../../testdata/hackatom.wasm")
+	return createContract(tb, cache, HackatomWasmPath)
 }
 
 func createCyberpunkContract(tb testing.TB, cache Cache) []byte {
 	tb.Helper()
-	return createContract(tb, cache, "../../testdata/cyberpunk.wasm")
+	return createContract(tb, cache, CyberpunkWasmPath)
 }
 
 func createQueueContract(tb testing.TB, cache Cache) []byte {
 	tb.Helper()
-	return createContract(tb, cache, "../../testdata/queue.wasm")
+	return createContract(tb, cache, QueueWasmPath)
 }
 
 func createReflectContract(tb testing.TB, cache Cache) []byte {
 	tb.Helper()
-	return createContract(tb, cache, "../../testdata/reflect.wasm")
+	return createContract(tb, cache, ReflectWasmPath)
 }
 
 func createFloaty2(tb testing.TB, cache Cache) []byte {
 	tb.Helper()
-	return createContract(tb, cache, "../../testdata/floaty_2.0.wasm")
+	return createContract(tb, cache, Floaty2WasmPath)
 }
 
 func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
