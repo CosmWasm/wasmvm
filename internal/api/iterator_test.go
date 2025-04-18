@@ -37,7 +37,20 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	msg := []byte(`{}`)
 
 	igasMeter1 := types.GasMeter(gasMeter1)
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	params := ContractCallParams{
+		Cache:      cache,
+		Checksum:   checksum,
+		Env:        env,
+		Info:       info,
+		Msg:        msg,
+		GasMeter:   &igasMeter1,
+		Store:      store,
+		API:        api,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: TESTING_PRINT_DEBUG,
+	}
+	res, _, err := Instantiate(params)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
 
@@ -46,7 +59,20 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 		var gasMeter2 types.GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
 		var buf []byte
 		push := fmt.Appendf(buf, `{"enqueue":{"value":%d}}`, value)
-		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+		params := ContractCallParams{
+			Cache:      cache,
+			Checksum:   checksum,
+			Env:        env,
+			Info:       info,
+			Msg:        push,
+			GasMeter:   &gasMeter2,
+			Store:      store,
+			API:        api,
+			Querier:    &querier,
+			GasLimit:   TESTING_GAS_LIMIT,
+			PrintDebug: TESTING_PRINT_DEBUG,
+		}
+		res, _, err = Execute(params)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
 	}
@@ -188,7 +214,19 @@ func TestQueueIteratorSimple(t *testing.T) {
 	store := setup.Store(gasMeter)
 	query := []byte(`{"sum":{}}`)
 	env := MockEnvBin(t)
-	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	params := ContractCallParams{
+		Cache:      cache,
+		Checksum:   checksum,
+		Env:        env,
+		Msg:        query,
+		GasMeter:   &igasMeter,
+		Store:      store,
+		API:        api,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: TESTING_PRINT_DEBUG,
+	}
+	data, _, err := Query(params)
 	require.NoError(t, err)
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
@@ -198,7 +236,8 @@ func TestQueueIteratorSimple(t *testing.T) {
 
 	// query reduce (multiple iterators at once)
 	query = []byte(`{"reducer":{}}`)
-	data, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	params.Msg = query
+	data, _, err = Query(params)
 	require.NoError(t, err)
 	var reduced types.QueryResult
 	err = json.Unmarshal(data, &reduced)
@@ -227,7 +266,19 @@ func TestQueueIteratorRaces(t *testing.T) {
 
 		// query reduce (multiple iterators at once)
 		query := []byte(`{"reducer":{}}`)
-		data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+		params := ContractCallParams{
+			Cache:      cache,
+			Checksum:   checksum,
+			Env:        env,
+			Msg:        query,
+			GasMeter:   &igasMeter,
+			Store:      store,
+			API:        api,
+			Querier:    &querier,
+			GasLimit:   TESTING_GAS_LIMIT,
+			PrintDebug: TESTING_PRINT_DEBUG,
+		}
+		data, _, err := Query(params)
 		require.NoError(t, err)
 		var reduced types.QueryResult
 		err = json.Unmarshal(data, &reduced)
@@ -280,7 +331,19 @@ func TestQueueIteratorLimit(t *testing.T) {
 	store := setup.Store(gasMeter)
 	query := []byte(`{"open_iterators":{"count":5000}}`)
 	env := MockEnvBin(t)
-	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	params := ContractCallParams{
+		Cache:      cache,
+		Checksum:   checksum,
+		Env:        env,
+		Msg:        query,
+		GasMeter:   &igasMeter,
+		Store:      store,
+		API:        api,
+		Querier:    &querier,
+		GasLimit:   gasLimit,
+		PrintDebug: TESTING_PRINT_DEBUG,
+	}
+	data, _, err := Query(params)
 	require.NoError(t, err)
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
@@ -289,11 +352,10 @@ func TestQueueIteratorLimit(t *testing.T) {
 
 	// Open 35000 iterators
 	gasLimit = TESTING_GAS_LIMIT * 4
-	gasMeter = NewMockGasMeter(gasLimit)
-	igasMeter = types.GasMeter(gasMeter)
-	store = setup.Store(gasMeter)
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
-	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
+	params.Msg = query
+	params.GasLimit = gasLimit
+	_, _, err = Query(params)
 	require.ErrorContains(t, err, "reached iterator limit (32768)")
 }

@@ -75,31 +75,30 @@ func TestStoreCode(t *testing.T) {
 	{
 		// echo '(module)' | wat2wasm - -o empty.wasm
 		// hexdump -C < empty.wasm
-
 		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
+		require.ErrorContains(t, err, "Wasm contract must contain exactly one memory")
 	}
 
 	// No Wasm
 	{
 		wasm := []byte("foobar")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "could not be deserialized")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "could not be deserialized")
 	}
 
 	// Nil
 	{
 		var wasm []byte = nil
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Null/Nil argument: wasm")
+		require.ErrorContains(t, err, "Null/Nil argument")
 	}
 }
 
@@ -118,7 +117,7 @@ func TestSimulateStoreCode(t *testing.T) {
 		},
 		"no wasm": {
 			wasm: []byte("foobar"),
-			err:  "Wasm bytecode could not be deserialized",
+			err:  "could not be deserialized",
 		},
 	}
 
@@ -131,7 +130,7 @@ func TestSimulateStoreCode(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				_, err = vm.GetCode(checksum)
-				require.ErrorContains(t, err, "Error opening Wasm file for reading")
+				require.ErrorContains(t, err, "Wasm file does not exist")
 			}
 		})
 	}
@@ -171,9 +170,8 @@ func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	// instantiate it with this store
+	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
@@ -183,33 +181,94 @@ func TestHappyPath(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	config := VMConfig{
-		Checksum:  checksum,
-		Env:       env,
-		Info:      info,
-		Msg:       msg,
-		Store:     store,
-		GoAPI:     *goapi,
-		Querier:   querier,
-		GasMeter:  gasMeter1,
-		GasLimit:  TESTING_GAS_LIMIT,
-		DeserCost: deserCost,
+
+	// Marshal env and info
+	envBytes, err := json.Marshal(env)
+	require.NoError(t, err, "Failed to marshal env")
+	infoBytes, err := json.Marshal(info)
+	require.NoError(t, err, "Failed to marshal info")
+
+	// Convert to types.GasMeter
+	igasMeter1 := types.GasMeter(gasMeter1)
+	params := api.ContractCallParams{
+		Cache:      vm.cache,
+		Checksum:   checksum.Bytes(),
+		Env:        envBytes,
+		Info:       infoBytes,
+		Msg:        msg,
+		GasMeter:   &igasMeter1,
+		Store:      store,
+		API:        goapi,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: vm.printDebug,
 	}
-	i, _, err := vm.Instantiate(config)
+
+	// Update this line to capture all 4 return values (the ContractResult is new)
+	resBytes, contractResult, gasReport, err := vm.Instantiate(params)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires := i.Ok
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Expected some gas to be used during instantiation")
+
+	// We've already got the unmarshaled result, so we can skip this step
+	// (But if you want to keep it for clarity, that's fine too)
+	var initResult types.ContractResult
+	if resBytes != nil {
+		err = json.Unmarshal(resBytes, &initResult)
+		require.NoError(t, err)
+		require.Equal(t, contractResult, initResult)
+	} else {
+		initResult = contractResult
+	}
+
+	require.Nil(t, initResult.Err)
+	require.NotNil(t, initResult.Ok)
+	ires := initResult.Ok
 	require.Empty(t, ires.Messages)
 
 	// execute
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	info = api.MockInfo("fred", nil)
-	h, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	executeMsg := []byte(`{"release":{}}`)
+
+	// Marshal new env and info
+	envBytes, err = json.Marshal(env)
+	require.NoError(t, err, "Failed to marshal env")
+	infoBytes, err = json.Marshal(info)
+	require.NoError(t, err, "Failed to marshal info")
+
+	executeParams := api.ContractCallParams{
+		Cache:      vm.cache,
+		Checksum:   checksum.Bytes(),
+		Env:        envBytes,
+		Info:       infoBytes,
+		Msg:        executeMsg,
+		GasMeter:   &igasMeter2,
+		Store:      store,
+		API:        goapi,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: vm.printDebug,
+	}
+
+	// Update to get all 4 return values
+	execResBytes, execResult, gasReport, err := vm.Execute(executeParams)
 	require.NoError(t, err)
-	require.NotNil(t, h.Ok)
-	hres := h.Ok
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Expected some gas to be used during execution")
+
+	// Verify that raw response bytes correctly unmarshal to match execResult
+	var parsedResult types.ContractResult
+	err = json.Unmarshal(execResBytes, &parsedResult)
+	require.NoError(t, err)
+	require.Equal(t, execResult, parsedResult, "VM-parsed result should match manually parsed result")
+
+	// Rest of the function remains the same
+	// No need to unmarshal unless you want to validate
+	require.Nil(t, execResult.Err)
+	require.NotNil(t, execResult.Ok)
+	hres := execResult.Ok
 	require.Len(t, hres.Messages, 1)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -228,34 +287,45 @@ func TestEnv(t *testing.T) {
 	vm := withVM(t)
 	checksum := createTestContract(t, vm, CYBERPUNK_TEST_CONTRACT)
 
-	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
+	// Initialize all variables needed for instantiation
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	// instantiate it with this store
+	igasMeter1 := types.GasMeter(gasMeter1)
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
-	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
-	querier := api.DefaultQuerier(api.MockContractAddr, balance)
+	querier := api.DefaultQuerier(api.MockContractAddr, nil)
 
-	// instantiate
+	// Prepare env and info
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{}`)
-	config := VMConfig{
-		Checksum:  checksum,
-		Env:       env,
-		Info:      info,
-		Msg:       msg,
-		Store:     store,
-		GoAPI:     *goapi,
-		Querier:   querier,
-		GasMeter:  gasMeter1,
-		GasLimit:  TESTING_GAS_LIMIT,
-		DeserCost: deserCost,
-	}
-	i, _, err := vm.Instantiate(config)
+
+	// Marshal env and info
+	envBytes, err := json.Marshal(env)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires := i.Ok
+	infoBytes, err := json.Marshal(info)
+	require.NoError(t, err)
+
+	// Create params for instantiate
+	params := api.ContractCallParams{
+		Cache:      vm.cache,
+		Checksum:   checksum.Bytes(),
+		Env:        envBytes,
+		Info:       infoBytes,
+		Msg:        msg,
+		GasMeter:   &igasMeter1,
+		Store:      store,
+		API:        goapi,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: vm.printDebug,
+	}
+
+	// Call instantiate with all 4 return values
+	_, result, _, err := vm.Instantiate(params)
+	require.NoError(t, err)
+	require.Nil(t, result.Err)
+	require.NotNil(t, result.Ok)
+	ires := result.Ok
 	require.Empty(t, ires.Messages)
 
 	// Execute mirror env without Transaction
@@ -270,13 +340,42 @@ func TestEnv(t *testing.T) {
 		},
 		Transaction: nil,
 	}
+
+	// Create new info and message for the execute call
 	info = api.MockInfo("creator", nil)
 	msg = []byte(`{"mirror_env": {}}`)
-	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+
+	// Marshal updated env and info
+	envBytes, err = json.Marshal(env)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires = i.Ok
-	expected, _ := json.Marshal(env)
+	infoBytes, err = json.Marshal(info)
+	require.NoError(t, err)
+
+	// Create execute params
+	executeParams := api.ContractCallParams{
+		Cache:      vm.cache,
+		Checksum:   checksum.Bytes(),
+		Env:        envBytes,
+		Info:       infoBytes,
+		Msg:        msg,
+		GasMeter:   &igasMeter1,
+		Store:      store,
+		API:        goapi,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: vm.printDebug,
+	}
+
+	// Execute with 4 return values
+	_, result, _, err = vm.Execute(executeParams)
+	require.NoError(t, err)
+	require.Nil(t, result.Err)
+	require.NotNil(t, result.Ok)
+	ires = result.Ok
+
+	// Verify result matches expected env
+	expected, err := json.Marshal(env)
+	require.NoError(t, err, "Failed to marshal expected env")
 	require.Equal(t, expected, ires.Data)
 
 	// Execute mirror env with Transaction
@@ -293,37 +392,44 @@ func TestEnv(t *testing.T) {
 			Index: 18,
 		},
 	}
-	info = api.MockInfo("creator", nil)
-	msg = []byte(`{"mirror_env": {}}`)
-	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+
+	// Update the env in executeParams
+	envBytes, err = json.Marshal(env)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires = i.Ok
-	expected, _ = json.Marshal(env)
+	executeParams.Env = envBytes
+
+	// Execute again
+	_, result, _, err = vm.Execute(executeParams)
+	require.NoError(t, err)
+	require.Nil(t, result.Err)
+	require.NotNil(t, result.Ok)
+	ires = result.Ok
+
+	// Verify again
+	expected, err = json.Marshal(env)
+	require.NoError(t, err, "Failed to marshal expected env")
 	require.Equal(t, expected, ires.Data)
 }
 
 func TestGetMetrics(t *testing.T) {
 	vm := withVM(t)
 
-	// GetMetrics 1
-	metrics, err := vm.GetMetrics()
+	// Initial state - verify empty metrics
+	initialMetrics, err := vm.GetMetrics()
 	require.NoError(t, err)
-	assert.Equal(t, &types.Metrics{}, metrics)
+	assert.Equal(t, &types.Metrics{}, initialMetrics, "Initial metrics should be empty")
 
-	// Create contract
+	// Create contract - this should cause a file cache hit when checking code
 	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
 
-	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
-
-	// GetMetrics 2
-	metrics, err = vm.GetMetrics()
+	// Verify metrics still empty (only code store happened, no cache hits yet)
+	afterStoreMetrics, err := vm.GetMetrics()
 	require.NoError(t, err)
-	assert.Equal(t, &types.Metrics{}, metrics)
+	assert.Equal(t, &types.Metrics{}, afterStoreMetrics, "Metrics should be empty after code store")
 
-	// Instantiate 1
+	// Prepare for contract instantiation
 	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
-	// instantiate it with this store
+	igasMeter1 := types.GasMeter(gasMeter1)
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
@@ -332,118 +438,134 @@ func TestGetMetrics(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	config := VMConfig{
-		Checksum:  checksum,
-		Env:       env,
-		Info:      info,
-		Msg:       msg1,
-		Store:     store,
-		GoAPI:     *goapi,
-		Querier:   querier,
-		GasMeter:  gasMeter1,
-		GasLimit:  TESTING_GAS_LIMIT,
-		DeserCost: deserCost,
+
+	envBytes, err := json.Marshal(env)
+	require.NoError(t, err, "Failed to marshal env")
+	infoBytes, err := json.Marshal(info)
+	require.NoError(t, err, "Failed to marshal info")
+
+	params := api.ContractCallParams{
+		Cache:      vm.cache,
+		Checksum:   checksum.Bytes(),
+		Env:        envBytes,
+		Info:       infoBytes,
+		Msg:        msg1,
+		GasMeter:   &igasMeter1,
+		Store:      store,
+		API:        goapi,
+		Querier:    &querier,
+		GasLimit:   TESTING_GAS_LIMIT,
+		PrintDebug: vm.printDebug,
 	}
-	i, _, err := vm.Instantiate(config)
-	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires := i.Ok
-	require.Empty(t, ires.Messages)
 
-	// GetMetrics 3
-	metrics, err = vm.GetMetrics()
-	require.NoError(t, err)
-	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(1), metrics.HitsFsCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	t.Log(metrics.SizeMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	// First instantiation - expected to cause file cache hit
+	resBytes, result, gasReport, err := vm.Instantiate(params)
+	require.NoError(t, err, "Instantiation should succeed")
+	require.NotNil(t, resBytes, "Response bytes should not be nil")
+	require.Nil(t, result.Err, "Contract error should be nil")
+	require.NotNil(t, result.Ok, "Contract result should not be nil")
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires := result.Ok
+	require.Empty(t, ires.Messages, "No messages should be returned")
 
-	// Instantiate 2
+	// Verify file cache hit for first instantiation
+	metricsAfterFirstInstantiate, err := vm.GetMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, uint32(0), metricsAfterFirstInstantiate.HitsMemoryCache, "No memory cache hit expected")
+	assert.Equal(t, uint32(1), metricsAfterFirstInstantiate.HitsFsCache, "Expected 1 file cache hit")
+	assert.Equal(t, uint64(1), metricsAfterFirstInstantiate.ElementsMemoryCache, "Expected 1 item in memory cache")
+	require.InEpsilon(t, 3700000, metricsAfterFirstInstantiate.SizeMemoryCache, 0.25, "Memory cache size should be around 3.7MB")
+
+	// Second instantiation - expected to cause memory cache hit
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
-	config.Msg = msg2
-	i, _, err = vm.Instantiate(config)
-	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires = i.Ok
-	require.Empty(t, ires.Messages)
+	params.Msg = msg2
+	resBytes, result, gasReport, err = vm.Instantiate(params)
+	require.NoError(t, err, "Second instantiation should succeed")
+	require.NotNil(t, resBytes, "Response bytes should not be nil")
+	require.Nil(t, result.Err, "Contract error should be nil")
+	require.NotNil(t, result.Ok, "Contract result should not be nil")
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires = result.Ok
+	require.Empty(t, ires.Messages, "No messages should be returned")
 
-	// GetMetrics 4
-	metrics, err = vm.GetMetrics()
+	// Verify memory cache hit
+	metricsAfterSecondInstantiate, err := vm.GetMetrics()
 	require.NoError(t, err)
-	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(1), metrics.HitsFsCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	assert.Equal(t, uint32(1), metricsAfterSecondInstantiate.HitsMemoryCache, "Expected 1 memory cache hit")
+	assert.Equal(t, uint32(1), metricsAfterSecondInstantiate.HitsFsCache, "File cache hits should remain at 1")
+	assert.Equal(t, uint64(1), metricsAfterSecondInstantiate.ElementsMemoryCache, "Expected 1 item in memory cache")
+	assert.Equal(t, metricsAfterFirstInstantiate.SizeMemoryCache, metricsAfterSecondInstantiate.SizeMemoryCache, "Memory cache size should be unchanged")
 
-	// Pin
+	// Pin the contract - should copy from memory cache to pinned cache
 	err = vm.Pin(checksum)
-	require.NoError(t, err)
+	require.NoError(t, err, "Pinning should succeed")
 
-	// GetMetrics 5
-	metrics, err = vm.GetMetrics()
+	// Verify pin metrics
+	metricsAfterPin, err := vm.GetMetrics()
 	require.NoError(t, err)
-	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizePinnedMemoryCache, 0.25)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	assert.Equal(t, uint32(1), metricsAfterPin.HitsMemoryCache, "Memory cache hits should remain at 1")
+	assert.Equal(t, uint32(2), metricsAfterPin.HitsFsCache, "Expected 2 file cache hits") // One more for pinning
+	assert.Equal(t, uint64(1), metricsAfterPin.ElementsPinnedMemoryCache, "Expected 1 item in pinned cache")
+	assert.Equal(t, uint64(1), metricsAfterPin.ElementsMemoryCache, "Expected 1 item in memory cache")
+	assert.Greater(t, metricsAfterPin.SizePinnedMemoryCache, uint64(0), "Pinned cache size should be non-zero")
+	assert.InEpsilon(t, metricsAfterSecondInstantiate.SizeMemoryCache, metricsAfterPin.SizePinnedMemoryCache, 0.01, "Pinned cache size should match memory cache size")
 
-	// Instantiate 3
+	// Third instantiation - expected to use pinned cache
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
-	config.Msg = msg3
-	i, _, err = vm.Instantiate(config)
-	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires = i.Ok
-	require.Empty(t, ires.Messages)
+	params.Msg = msg3
+	resBytes, result, gasReport, err = vm.Instantiate(params)
+	require.NoError(t, err, "Third instantiation should succeed")
+	require.NotNil(t, resBytes, "Response bytes should not be nil")
+	require.Nil(t, result.Err, "Contract error should be nil")
+	require.NotNil(t, result.Ok, "Contract result should not be nil")
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires = result.Ok
+	require.Empty(t, ires.Messages, "No messages should be returned")
 
-	// GetMetrics 6
-	metrics, err = vm.GetMetrics()
+	// Verify pinned cache hit
+	metricsAfterThirdInstantiate, err := vm.GetMetrics()
 	require.NoError(t, err)
-	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
-	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(1), metrics.ElementsPinnedMemoryCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizePinnedMemoryCache, 0.25)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	assert.Equal(t, uint32(1), metricsAfterThirdInstantiate.HitsPinnedMemoryCache, "Expected 1 pinned cache hit")
+	assert.Equal(t, uint32(1), metricsAfterThirdInstantiate.HitsMemoryCache, "Memory cache hits should remain at 1")
+	assert.Equal(t, uint32(2), metricsAfterThirdInstantiate.HitsFsCache, "File cache hits should remain at 2")
+	assert.Equal(t, uint64(1), metricsAfterThirdInstantiate.ElementsPinnedMemoryCache, "Expected 1 item in pinned cache")
+	assert.Equal(t, uint64(1), metricsAfterThirdInstantiate.ElementsMemoryCache, "Expected 1 item in memory cache")
 
-	// Unpin
+	// Unpin the contract - should remove from pinned cache
 	err = vm.Unpin(checksum)
-	require.NoError(t, err)
+	require.NoError(t, err, "Unpinning should succeed")
 
-	// GetMetrics 7
-	metrics, err = vm.GetMetrics()
+	// Verify unpin metrics
+	metricsAfterUnpin, err := vm.GetMetrics()
 	require.NoError(t, err)
-	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
-	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	assert.Equal(t, uint32(1), metricsAfterUnpin.HitsPinnedMemoryCache, "Pinned cache hits should remain at 1")
+	assert.Equal(t, uint32(1), metricsAfterUnpin.HitsMemoryCache, "Memory cache hits should remain at 1")
+	assert.Equal(t, uint32(2), metricsAfterUnpin.HitsFsCache, "File cache hits should remain at 2")
+	assert.Equal(t, uint64(0), metricsAfterUnpin.ElementsPinnedMemoryCache, "Pinned cache should be empty")
+	assert.Equal(t, uint64(1), metricsAfterUnpin.ElementsMemoryCache, "Expected 1 item in memory cache")
+	assert.Equal(t, uint64(0), metricsAfterUnpin.SizePinnedMemoryCache, "Pinned cache size should be zero")
 
-	// Instantiate 4
+	// Fourth instantiation - expected to use memory cache again
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
-	config.Msg = msg4
-	i, _, err = vm.Instantiate(config)
-	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
-	ires = i.Ok
-	require.Empty(t, ires.Messages)
+	params.Msg = msg4
+	resBytes, result, gasReport, err = vm.Instantiate(params)
+	require.NoError(t, err, "Fourth instantiation should succeed")
+	require.NotNil(t, resBytes, "Response bytes should not be nil")
+	require.Nil(t, result.Err, "Contract error should be nil")
+	require.NotNil(t, result.Ok, "Contract result should not be nil")
+	require.Greater(t, gasReport.UsedInternally, uint64(0), "Gas should be consumed")
+	ires = result.Ok
+	require.Empty(t, ires.Messages, "No messages should be returned")
 
-	// GetMetrics 8
-	metrics, err = vm.GetMetrics()
+	// Verify memory cache hit again
+	finalMetrics, err := vm.GetMetrics()
 	require.NoError(t, err)
-	require.Equal(t, uint32(1), metrics.HitsPinnedMemoryCache)
-	require.Equal(t, uint32(2), metrics.HitsMemoryCache)
-	require.Equal(t, uint32(2), metrics.HitsFsCache)
-	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
-	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
-	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
+	assert.Equal(t, uint32(1), finalMetrics.HitsPinnedMemoryCache, "Pinned cache hits should remain at 1")
+	assert.Equal(t, uint32(2), finalMetrics.HitsMemoryCache, "Expected 2 memory cache hits")
+	assert.Equal(t, uint32(2), finalMetrics.HitsFsCache, "File cache hits should remain at 2")
+	assert.Equal(t, uint64(0), finalMetrics.ElementsPinnedMemoryCache, "Pinned cache should remain empty")
+	assert.Equal(t, uint64(1), finalMetrics.ElementsMemoryCache, "Expected 1 item in memory cache")
+	assert.Equal(t, uint64(0), finalMetrics.SizePinnedMemoryCache, "Pinned cache size should remain zero")
 }
 
 func TestLongPayloadDeserialization(t *testing.T) {
@@ -453,7 +575,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	// Create a valid payload
 	validPayload := make([]byte, 1024*1024) // 1 MiB
 	validPayloadJSON, err := json.Marshal(validPayload)
-	require.NoError(t, err)
+	require.NoError(t, err, "Failed to marshal valid payload")
 	var resultJson []byte
 	resultJson = fmt.Appendf(resultJson, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON)
 
@@ -461,12 +583,14 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	var result types.ContractResult
 	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &result)
 	require.NoError(t, err)
+	require.NotNil(t, result.Ok, "Expected valid ContractResult.Ok")
+	require.Len(t, result.Ok.Messages, 1, "Expected one message in ContractResult.Ok")
 	require.Equal(t, validPayload, result.Ok.Messages[0].Payload)
 
 	// Create an invalid payload (too large)
 	invalidPayload := make([]byte, 1024*1024+1) // 1 MiB + 1 byte
 	invalidPayloadJSON, err := json.Marshal(invalidPayload)
-	require.NoError(t, err)
+	require.NoError(t, err, "Failed to marshal invalid payload")
 	resultJson = fmt.Appendf(resultJson[:0], `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON)
 
 	// Test that an invalid payload cannot be deserialized

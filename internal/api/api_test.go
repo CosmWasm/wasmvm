@@ -34,7 +34,7 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
 	igasMeter := types.GasMeter(gasMeter)
-	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	res, _, err := WrapInstantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)

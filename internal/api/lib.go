@@ -471,7 +471,7 @@ func Query(params ContractCallParams) ([]byte, types.GasReport, error) {
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
-// IBCChannelOpen handles IBC channel open handshake
+// IBCChannelOpen handles the IBC channel open handshake
 func IBCChannelOpen(params ContractCallParams) ([]byte, types.GasReport, error) {
 	cs := makeView(params.Checksum)
 	defer runtime.KeepAlive(params.Checksum)
@@ -495,9 +495,9 @@ func IBCChannelOpen(params ContractCallParams) ([]byte, types.GasReport, error) 
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, channelOpenErr := C.ibc_channel_open(params.Cache.ptr, cs, e, m, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
-	if channelOpenErr != nil {
-		return nil, types.GasReport{}, errorWithMessage(channelOpenErr, errmsg)
+	res, openErr := C.ibc_channel_open(params.Cache.ptr, cs, e, m, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
+	if openErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(openErr, errmsg)
 	}
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
@@ -627,41 +627,30 @@ func IBC2PacketReceive(params ContractCallParams) ([]byte, types.GasReport, erro
 }
 
 // IBCPacketAck handles acknowledging an IBC packet
-func IBCPacketAck(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	ack []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	e := makeView(env)
-	defer runtime.KeepAlive(env)
-	ac := makeView(ack)
-	defer runtime.KeepAlive(ack)
+func IBCPacketAck(params ContractCallParams) ([]byte, types.GasReport, error) {
+	cs := makeView(params.Checksum)
+	defer runtime.KeepAlive(params.Checksum)
+	e := makeView(params.Env)
+	defer runtime.KeepAlive(params.Env)
+	ac := makeView(params.Msg)
+	defer runtime.KeepAlive(params.Msg)
 	var pinner runtime.Pinner
-	pinner.Pin(gasMeter)
-	checkAndPinAPI(api, pinner)
-	checkAndPinQuerier(querier, pinner)
+	pinner.Pin(params.GasMeter)
+	checkAndPinAPI(params.API, pinner)
+	checkAndPinQuerier(params.Querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
 
-	dbState := buildDBState(store, callID)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
+	dbState := buildDBState(params.Store, callID)
+	db := buildDB(&dbState, params.GasMeter)
+	a := buildAPI(params.API)
+	q := buildQuerier(params.Querier)
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, packetAckErr := C.ibc_packet_ack(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, packetAckErr := C.ibc_packet_ack(params.Cache.ptr, cs, e, ac, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
 	if packetAckErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packetAckErr, errmsg)
 	}
@@ -669,41 +658,30 @@ func IBCPacketAck(
 }
 
 // IBCPacketTimeout handles timing out an IBC packet
-func IBCPacketTimeout(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	packet []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	e := makeView(env)
-	defer runtime.KeepAlive(env)
-	pa := makeView(packet)
-	defer runtime.KeepAlive(packet)
+func IBCPacketTimeout(params ContractCallParams) ([]byte, types.GasReport, error) {
+	cs := makeView(params.Checksum)
+	defer runtime.KeepAlive(params.Checksum)
+	e := makeView(params.Env)
+	defer runtime.KeepAlive(params.Env)
+	pa := makeView(params.Msg)
+	defer runtime.KeepAlive(params.Msg)
 	var pinner runtime.Pinner
-	pinner.Pin(gasMeter)
-	checkAndPinAPI(api, pinner)
-	checkAndPinQuerier(querier, pinner)
+	pinner.Pin(params.GasMeter)
+	checkAndPinAPI(params.API, pinner)
+	checkAndPinQuerier(params.Querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
 
-	dbState := buildDBState(store, callID)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
+	dbState := buildDBState(params.Store, callID)
+	db := buildDB(&dbState, params.GasMeter)
+	a := buildAPI(params.API)
+	q := buildQuerier(params.Querier)
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, packetTimeoutErr := C.ibc_packet_timeout(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, packetTimeoutErr := C.ibc_packet_timeout(params.Cache.ptr, cs, e, pa, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
 	if packetTimeoutErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packetTimeoutErr, errmsg)
 	}
@@ -711,41 +689,30 @@ func IBCPacketTimeout(
 }
 
 // IBCSourceCallback handles IBC source chain callbacks
-func IBCSourceCallback(
-	cache Cache,
-	checksum []byte,
-	env []byte,
-	msg []byte,
-	gasMeter *types.GasMeter,
-	store types.KVStore,
-	api *types.GoAPI,
-	querier *Querier,
-	gasLimit uint64,
-	printDebug bool,
-) ([]byte, types.GasReport, error) {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	e := makeView(env)
-	defer runtime.KeepAlive(env)
-	m := makeView(msg)
-	defer runtime.KeepAlive(msg)
+func IBCSourceCallback(params ContractCallParams) ([]byte, types.GasReport, error) {
+	cs := makeView(params.Checksum)
+	defer runtime.KeepAlive(params.Checksum)
+	e := makeView(params.Env)
+	defer runtime.KeepAlive(params.Env)
+	m := makeView(params.Msg)
+	defer runtime.KeepAlive(params.Msg)
 	var pinner runtime.Pinner
-	pinner.Pin(gasMeter)
-	checkAndPinAPI(api, pinner)
-	checkAndPinQuerier(querier, pinner)
+	pinner.Pin(params.GasMeter)
+	checkAndPinAPI(params.API, pinner)
+	checkAndPinQuerier(params.Querier, pinner)
 	defer pinner.Unpin()
 
 	callID := startCall()
 	defer endCall(callID)
 
-	dbState := buildDBState(store, callID)
-	db := buildDB(&dbState, gasMeter)
-	a := buildAPI(api)
-	q := buildQuerier(querier)
+	dbState := buildDBState(params.Store, callID)
+	db := buildDB(&dbState, params.GasMeter)
+	a := buildAPI(params.API)
+	q := buildQuerier(params.Querier)
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, sourceCallbackErr := C.ibc_source_callback(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, sourceCallbackErr := C.ibc_source_callback(params.Cache.ptr, cs, e, m, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
 	if sourceCallbackErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(sourceCallbackErr, errmsg)
 	}
