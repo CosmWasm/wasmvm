@@ -322,9 +322,9 @@ type IBC2Msg struct {
 // Sends an IBC packet with given payloads over the existing channel.
 // IBC2SendPacketMsg represents a message to send an IBC packet with additional context
 type IBC2SendPacketMsg struct {
-	ChannelID string        `json:"channel_id"`
-	Payloads  []IBC2Payload `json:"payloads"`
-	Timeout   uint64        `json:"timeout,string,omitempty"`
+	SourceClient string        `json:"source_client"`
+	Payloads     []IBC2Payload `json:"payloads"`
+	Timeout      uint64        `json:"timeout,string,omitempty"`
 }
 
 // IBC2WriteAcknowledgementMsg represents a message to write an IBC acknowledgement with additional context
@@ -332,7 +332,7 @@ type IBC2WriteAcknowledgementMsg struct {
 	// The acknowledgement to send back
 	Ack IBCAcknowledgement `json:"ack"`
 	// Existing channel where the packet was received
-	ChannelID string `json:"channel_id"`
+	SourceClient string `json:"source_client"`
 	// Sequence number of the packet that was received
 	PacketSequence uint64 `json:"packet_sequence"`
 }
