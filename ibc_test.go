@@ -214,11 +214,11 @@ func TestIBCHandshake(t *testing.T) {
 
 func TestIBCPacketDispatch(t *testing.T) {
 	// code id of the reflect contract
-	const REFLECT_ID uint64 = 77
+	const reflectID uint64 = 77
 	// address of first reflect contract instance that we created
-	const REFLECT_ADDR = "reflect-acct-1"
+	const reflectAddr = "reflect-acct-1"
 	// channel id for handshake
-	const CHANNEL_ID = "channel-234"
+	const channelID = "channel-234"
 
 	// setup
 	vm := withVM(t)
@@ -234,7 +234,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	initMsg := IBCInstantiateMsg{
-		ReflectCodeID: REFLECT_ID,
+		ReflectCodeID: reflectID,
 	}
 	envBytes, err := json.Marshal(env)
 	require.NoError(t, err)
@@ -261,7 +261,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	// channel open
 	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter2)
-	openMsg := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, IBC_VERSION)
+	openMsg := api.MockIBCChannelOpenInit(channelID, types.Ordered, IBC_VERSION)
 	openMsgBytes, err := json.Marshal(openMsg)
 	require.NoError(t, err)
 	env = api.MockEnv()
@@ -292,7 +292,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 	gasMeter3 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
 	store.SetGasMeter(gasMeter3)
 	// completes and dispatches message to create reflect contract
-	connectMsg := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, IBC_VERSION)
+	connectMsg := api.MockIBCChannelConnectAck(channelID, types.Ordered, IBC_VERSION)
 	connectMsgBytes, err := json.Marshal(connectMsg)
 	require.NoError(t, err)
 	var gasMeter3GasMeter types.GasMeter = gasMeter3
@@ -332,7 +332,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 					Attributes: types.Array[types.EventAttribute]{
 						{
 							Key:   "_contract_address",
-							Value: REFLECT_ADDR,
+							Value: reflectAddr,
 						},
 					},
 				}},
@@ -389,8 +389,8 @@ func TestIBCPacketDispatch(t *testing.T) {
 	err = json.Unmarshal(queryResult.Result.Ok, &accounts)
 	require.NoError(t, err)
 	require.Len(t, accounts.Accounts, 1)
-	require.Equal(t, CHANNEL_ID, accounts.Accounts[0].ChannelID)
-	require.Equal(t, REFLECT_ADDR, accounts.Accounts[0].Account)
+	require.Equal(t, channelID, accounts.Accounts[0].ChannelID)
+	require.Equal(t, reflectAddr, accounts.Accounts[0].Account)
 
 	// process message received on this channel
 	gasMeter5 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -405,7 +405,7 @@ func TestIBCPacketDispatch(t *testing.T) {
 			}},
 		},
 	}
-	msg := api.MockIBCPacketReceive(CHANNEL_ID, toBytes(t, ibcMsg))
+	msg := api.MockIBCPacketReceive(channelID, toBytes(t, ibcMsg))
 	msgBytes, err = json.Marshal(msg)
 	require.NoError(t, err)
 	var gasMeter5GasMeter types.GasMeter = gasMeter5
@@ -506,42 +506,42 @@ func TestAnalyzeCode(t *testing.T) {
 }
 
 func TestIBCMsgGetChannel(t *testing.T) {
-	const CHANNEL_ID = "channel-432"
+	const channelID = "channel-432"
 
-	msg1 := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, "random-garbage")
-	msg2 := api.MockIBCChannelOpenTry(CHANNEL_ID, types.Ordered, "random-garbage")
-	msg3 := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, "random-garbage")
-	msg4 := api.MockIBCChannelConnectConfirm(CHANNEL_ID, types.Ordered, "random-garbage")
-	msg5 := api.MockIBCChannelCloseInit(CHANNEL_ID, types.Ordered, "random-garbage")
-	msg6 := api.MockIBCChannelCloseConfirm(CHANNEL_ID, types.Ordered, "random-garbage")
+	msg1 := api.MockIBCChannelOpenInit(channelID, types.Ordered, "random-garbage")
+	msg2 := api.MockIBCChannelOpenTry(channelID, types.Ordered, "random-garbage")
+	msg3 := api.MockIBCChannelConnectAck(channelID, types.Ordered, "random-garbage")
+	msg4 := api.MockIBCChannelConnectConfirm(channelID, types.Ordered, "random-garbage")
+	msg5 := api.MockIBCChannelCloseInit(channelID, types.Ordered, "random-garbage")
+	msg6 := api.MockIBCChannelCloseConfirm(channelID, types.Ordered, "random-garbage")
 
 	require.Equal(t, msg1.GetChannel(), msg2.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg3.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg4.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg5.GetChannel())
 	require.Equal(t, msg1.GetChannel(), msg6.GetChannel())
-	require.Equal(t, CHANNEL_ID, msg1.GetChannel().Endpoint.ChannelID)
+	require.Equal(t, channelID, msg1.GetChannel().Endpoint.ChannelID)
 }
 
 func TestIBCMsgGetCounterVersion(t *testing.T) {
-	const CHANNEL_ID = "channel-432"
-	const VERSION = "random-garbage"
+	const channelID = "channel-432"
+	const version = "random-garbage"
 
-	msg1 := api.MockIBCChannelOpenInit(CHANNEL_ID, types.Ordered, VERSION)
+	msg1 := api.MockIBCChannelOpenInit(channelID, types.Ordered, version)
 	_, ok := msg1.GetCounterVersion()
 	require.False(t, ok)
 
-	msg2 := api.MockIBCChannelOpenTry(CHANNEL_ID, types.Ordered, VERSION)
+	msg2 := api.MockIBCChannelOpenTry(channelID, types.Ordered, version)
 	v, ok := msg2.GetCounterVersion()
 	require.True(t, ok)
-	require.Equal(t, VERSION, v)
+	require.Equal(t, version, v)
 
-	msg3 := api.MockIBCChannelConnectAck(CHANNEL_ID, types.Ordered, VERSION)
+	msg3 := api.MockIBCChannelConnectAck(channelID, types.Ordered, version)
 	v, ok = msg3.GetCounterVersion()
 	require.True(t, ok)
-	require.Equal(t, VERSION, v)
+	require.Equal(t, version, v)
 
-	msg4 := api.MockIBCChannelConnectConfirm(CHANNEL_ID, types.Ordered, VERSION)
+	msg4 := api.MockIBCChannelConnectConfirm(channelID, types.Ordered, version)
 	_, ok = msg4.GetCounterVersion()
 	require.False(t, ok)
 }
