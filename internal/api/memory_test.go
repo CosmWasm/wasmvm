@@ -32,7 +32,10 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		require.Equal(t, cbool(false), unmanaged.is_none)
 		require.Equal(t, uint64(3), uint64(unmanaged.len))
 		require.GreaterOrEqual(t, uint64(3), uint64(unmanaged.cap)) // Rust implementation decides this
-		copied := copyAndDestroyUnmanagedVector(unmanaged)
+
+		// Use safer approach to copy and destroy
+		safeVec := CopyAndDestroyToSafeVector(unmanaged)
+		copied := safeVec.ToBytesAndDestroy()
 		require.Equal(t, original, copied)
 	}
 
@@ -43,7 +46,10 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		require.Equal(t, cbool(false), unmanaged.is_none)
 		require.Equal(t, uint64(0), uint64(unmanaged.len))
 		require.GreaterOrEqual(t, uint64(0), uint64(unmanaged.cap)) // Rust implementation decides this
-		copied := copyAndDestroyUnmanagedVector(unmanaged)
+
+		// Use safer approach to copy and destroy
+		safeVec := CopyAndDestroyToSafeVector(unmanaged)
+		copied := safeVec.ToBytesAndDestroy()
 		require.Equal(t, original, copied)
 	}
 
@@ -53,7 +59,10 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		unmanaged := newUnmanagedVector(original)
 		require.Equal(t, cbool(true), unmanaged.is_none)
 		// We must not make assumptions on the other fields in this case
-		copied := copyAndDestroyUnmanagedVector(unmanaged)
+
+		// Use safer approach to copy and destroy
+		safeVec := CopyAndDestroyToSafeVector(unmanaged)
+		copied := safeVec.ToBytesAndDestroy()
 		require.Nil(t, copied)
 	}
 }
@@ -68,7 +77,10 @@ func TestCopyDestroyUnmanagedVector(t *testing.T) {
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalid_ptr), cusize(0xBB), cusize(0xAA))
-		copied := copyAndDestroyUnmanagedVector(uv)
+
+		// Use safer approach to copy and destroy
+		safeVec := CopyAndDestroyToSafeVector(uv)
+		copied := safeVec.ToBytesAndDestroy()
 		require.Nil(t, copied)
 	}
 	{
@@ -76,7 +88,10 @@ func TestCopyDestroyUnmanagedVector(t *testing.T) {
 		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec  // This is a test-only code that requires unsafe pointer for low-level memory testing
 		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalid_ptr), cusize(0), cusize(0))
-		copied := copyAndDestroyUnmanagedVector(uv)
+
+		// Use safer approach to copy and destroy
+		safeVec := CopyAndDestroyToSafeVector(uv)
+		copied := safeVec.ToBytesAndDestroy()
 		require.Equal(t, []byte{}, copied)
 	}
 }

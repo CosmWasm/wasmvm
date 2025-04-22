@@ -150,7 +150,8 @@ func StoreCode(cache Cache, wasm []byte, persist bool) ([]byte, error) {
 	csafeVec := storeCodeSafe(cache.ptr, wasm, true, persist, &errmsg)
 	if csafeVec == nil {
 		// Get the error message from the Rust code
-		errMsg := string(copyAndDestroyUnmanagedVector(errmsg))
+		safeVec := CopyAndDestroyToSafeVector(errmsg)
+		errMsg := string(safeVec.ToBytesAndDestroy())
 		if errMsg == "" {
 			// Fallback error if no specific message was returned
 			return nil, errors.New("store code failed")
@@ -190,7 +191,8 @@ func StoreCodeUnchecked(cache Cache, wasm []byte) ([]byte, error) {
 	csafeVec := storeCodeSafe(cache.ptr, wasm, false, true, &errmsg)
 	if csafeVec == nil {
 		// Get the error message from the Rust code
-		errMsg := string(copyAndDestroyUnmanagedVector(errmsg))
+		safeVec := CopyAndDestroyToSafeVector(errmsg)
+		errMsg := string(safeVec.ToBytesAndDestroy())
 		if errMsg == "" {
 			// Fallback error if no specific message was returned
 			return nil, errors.New("store code unchecked failed")
