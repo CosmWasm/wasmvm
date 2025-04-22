@@ -84,10 +84,8 @@ impl BackendApi for GoApi {
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to canonicalize the address: {human}");
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let result = output.ok_or_else(|| BackendError::unknown("Unset output"));
@@ -122,10 +120,8 @@ impl BackendApi for GoApi {
                 hex::encode_upper(canonical)
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let result = output
@@ -153,7 +149,7 @@ impl BackendApi for GoApi {
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to validate the address: {input}");
-        let result = unsafe { go_error.into_result(error_msg, default) };
+        let result = go_error.into_result_safe(error_msg, default);
         (result, gas_info)
     }
 }

@@ -7,7 +7,7 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 use crate::db::Db;
 use crate::error::GoError;
 use crate::iterator::GoIter;
-use crate::memory::{U8SliceView, UnmanagedVector};
+use crate::memory::{validate_memory_size, U8SliceView, UnmanagedVector};
 
 pub struct GoStorage {
     db: Db,
@@ -25,6 +25,16 @@ impl GoStorage {
 
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+        if let Err(e) = validate_memory_size(key.len()) {
+            return (
+                Err(BackendError::unknown(format!(
+                    "Key size validation failed: {}",
+                    e
+                ))),
+                GasInfo::free(),
+            );
+        }
+
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -42,25 +52,25 @@ impl Storage for GoStorage {
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
-        // We destruct the UnmanagedVector here, no matter if we need the data.
-        let output = output.consume();
 
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read a key in the db: {}",
                 String::from_utf8_lossy(key)
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        // First check the error result using the safe wrapper
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
-        (Ok(output), gas_info)
+        // If we got here, no error occurred, so we can safely consume the output
+        let output_data = output.consume();
+
+        (Ok(output_data), gas_info)
     }
 
     fn scan(
@@ -90,7 +100,6 @@ impl Storage for GoStorage {
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read the next key between {:?} and {:?}",
@@ -98,10 +107,9 @@ impl Storage for GoStorage {
                 end.map(String::from_utf8_lossy),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let next_id: u32 = self
@@ -109,7 +117,7 @@ impl Storage for GoStorage {
             .len()
             .try_into()
             .expect("Iterator count exceeded uint32 range. This is a bug.");
-        self.iterators.insert(next_id, iter); // This moves iter. Is this okay?
+        self.iterators.insert(next_id, iter);
         (Ok(next_id), gas_info)
     }
 
@@ -163,18 +171,17 @@ impl Storage for GoStorage {
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to set a key in the db: {}",
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 
@@ -201,11 +208,11 @@ impl Storage for GoStorage {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 }

@@ -26,6 +26,29 @@ use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 use crate::GasReport;
 
+// Constants for gas limit validation
+const MIN_GAS_LIMIT: u64 = 10_000; // Lower bound for reasonable gas limit
+const MAX_GAS_LIMIT: u64 = 1_000_000_000_000; // Upper bound (1 trillion, arbitrary high number)
+
+/// Validates that the gas limit is within reasonable bounds
+fn validate_gas_limit(gas_limit: u64) -> Result<(), Error> {
+    if gas_limit < MIN_GAS_LIMIT {
+        return Err(Error::invalid_gas_limit(format!(
+            "Gas limit too low: {}. Minimum allowed: {}",
+            gas_limit, MIN_GAS_LIMIT
+        )));
+    }
+
+    if gas_limit > MAX_GAS_LIMIT {
+        return Err(Error::invalid_gas_limit(format!(
+            "Gas limit too high: {}. Maximum allowed: {}",
+            gas_limit, MAX_GAS_LIMIT
+        )));
+    }
+
+    Ok(())
+}
+
 fn into_backend(db: Db, api: GoApi, querier: GoQuerier) -> Backend<GoApi, GoStorage, GoQuerier> {
     Backend {
         api,
@@ -591,6 +614,9 @@ fn do_call_2_args(
     let arg1 = arg1.read().ok_or_else(|| Error::unset_arg(ARG1))?;
     let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
 
+    // Validate gas limit
+    validate_gas_limit(gas_limit)?;
+
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions { gas_limit };
     let mut instance: Instance<GoApi, GoStorage, GoQuerier> =
@@ -686,6 +712,9 @@ fn do_call_3_args(
     let arg2 = arg2.read().ok_or_else(|| Error::unset_arg(ARG2))?;
     let arg3 = arg3.read().ok_or_else(|| Error::unset_arg(ARG3))?;
 
+    // Validate gas limit
+    validate_gas_limit(gas_limit)?;
+
     let backend = into_backend(db, api, querier);
     let options = InstanceOptions { gas_limit };
     let mut instance = cache.get_instance(&checksum, backend, options)?;
@@ -708,4 +737,32 @@ fn do_call_3_args(
 fn now_rfc3339() -> String {
     let dt = OffsetDateTime::from(SystemTime::now());
     dt.format(&Rfc3339).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_gas_limit() {
+        // Valid gas limits
+        assert!(validate_gas_limit(10_000).is_ok());
+        assert!(validate_gas_limit(100_000).is_ok());
+        assert!(validate_gas_limit(1_000_000).is_ok());
+        assert!(validate_gas_limit(1_000_000_000).is_ok());
+
+        // Too low
+        let err = validate_gas_limit(9_999).unwrap_err();
+        match err {
+            Error::InvalidGasLimit { .. } => {}
+            _ => panic!("Expected InvalidGasLimit error"),
+        }
+
+        // Too high
+        let err = validate_gas_limit(1_000_000_000_001).unwrap_err();
+        match err {
+            Error::InvalidGasLimit { .. } => {}
+            _ => panic!("Expected InvalidGasLimit error"),
+        }
+    }
 }

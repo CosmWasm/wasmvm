@@ -17,9 +17,8 @@ type IBC2Payload struct {
 	Value []byte `json:"value"`
 }
 
+// IBC2PacketReceiveMsg represents a message to receive an IBC2 packet.
 type IBC2PacketReceiveMsg struct {
-	Payload        IBC2Payload `json:"payload"`
-	Relayer        string      `json:"relayer"`
-	SourceClient   string      `json:"source_client"`
-	PacketSequence uint64      `json:"packet_sequence"`
+	Packet  IBCPacket `json:"packet"`
+	Relayer string    `json:"relayer"`
 }

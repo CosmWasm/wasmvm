@@ -10,12 +10,33 @@ use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
-use crate::memory::{ByteSliceView, UnmanagedVector};
+use crate::memory::{
+    validate_memory_size, ByteSliceView, SafeByteSlice, SafeUnmanagedVector, UnmanagedVector,
+};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct cache_t {}
+
+/// Validates checksum format and length
+/// Requires that checksums must be exactly 32 bytes in length
+fn validate_checksum(checksum_bytes: &[u8]) -> Result<(), Error> {
+    // Check the length is exactly 32 bytes
+    if checksum_bytes.len() != 32 {
+        return Err(Error::invalid_checksum_format(format!(
+            "Checksum must be 32 bytes, got {} bytes",
+            checksum_bytes.len()
+        )));
+    }
+
+    // We don't need to validate the content of each byte since the cosmwasm_std::Checksum
+    // type will handle this validation when we call try_into(). The primary issue is
+    // ensuring the length is correct.
+
+    Ok(())
+}
 
 pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
     if ptr.is_null() {
@@ -39,9 +60,23 @@ pub extern "C" fn init_cache(
 }
 
 fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    let config =
-        serde_json::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
-    // parse the supported capabilities
+    let mut safe_config = SafeByteSlice::new(config);
+    let config_data = safe_config
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CONFIG_ARG))?;
+
+    // Validate config size
+    if let Err(e) = validate_memory_size(config_data.len()) {
+        return Err(Error::vm_err(format!(
+            "Config size validation failed: {}",
+            e
+        )));
+    }
+
+    // Parse the JSON config
+    let config = serde_json::from_slice(config_data)?;
+
+    // Create the cache
     let cache = unsafe { Cache::new_with_config(config) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
@@ -69,14 +104,47 @@ pub extern "C" fn store_code(
     UnmanagedVector::new(Some(checksum))
 }
 
+/// A safer version of store_code that returns a SafeUnmanagedVector to prevent double-free issues
+#[no_mangle]
+pub extern "C" fn store_code_safe(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    checked: bool,
+    persist: bool,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> *mut SafeUnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_store_code(c, wasm, checked, persist)
+        }))
+        .unwrap_or_else(|err| {
+            handle_vm_panic("do_store_code", err);
+            Err(Error::panic())
+        }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let checksum = handle_c_error_binary(r, error_msg);
+    // Return a boxed SafeUnmanagedVector
+    SafeUnmanagedVector::into_boxed_raw(UnmanagedVector::new(Some(checksum)))
+}
+
 fn do_store_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
     checked: bool,
     persist: bool,
 ) -> Result<Checksum, Error> {
-    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    Ok(cache.store_code(wasm, checked, persist)?)
+    let mut safe_slice = SafeByteSlice::new(wasm);
+    let wasm_data = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+
+    // Additional validation for WASM size
+    if let Err(e) = validate_memory_size(wasm_data.len()) {
+        return Err(Error::vm_err(format!("WASM size validation failed: {}", e)));
+    }
+
+    Ok(cache.store_code(wasm_data, checked, persist)?)
 }
 
 #[no_mangle]
@@ -100,10 +168,15 @@ fn do_remove_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Validate checksum
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.remove_wasm(&checksum)?;
     Ok(())
 }
@@ -126,14 +199,39 @@ pub extern "C" fn load_wasm(
     UnmanagedVector::new(Some(data))
 }
 
+/// A safer version of load_wasm that returns a SafeUnmanagedVector to prevent double-free issues
+#[no_mangle]
+pub extern "C" fn load_wasm_safe(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> *mut SafeUnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_load_wasm", err);
+                Err(Error::panic())
+            }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error_binary(r, error_msg);
+    // Return a boxed SafeUnmanagedVector
+    SafeUnmanagedVector::into_boxed_raw(UnmanagedVector::new(Some(data)))
+}
+
 fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<Vec<u8>, Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Validate checksum
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
 }
@@ -160,10 +258,15 @@ fn do_pin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Validate checksum
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.pin(&checksum)?;
     Ok(())
 }
@@ -190,10 +293,15 @@ fn do_unpin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Validate checksum
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.unpin(&checksum)?;
     Ok(())
 }
@@ -297,10 +405,15 @@ fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<AnalysisReport, Error> {
-    let checksum: Checksum = checksum
-        .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Validate checksum
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     let report = cache.analyze(&checksum)?;
     Ok(report.into())
 }
@@ -1074,5 +1187,40 @@ mod tests {
         );
         assert_eq!(config.cache.memory_cache_size_bytes, Size::new(100));
         assert_eq!(config.cache.instance_memory_limit_bytes, Size::new(100));
+    }
+
+    #[test]
+    fn validate_checksum_works() {
+        // Valid checksum - 32 bytes of hex characters
+        let valid_checksum = [
+            0x72, 0x2c, 0x8c, 0x99, 0x3f, 0xd7, 0x5a, 0x76, 0x27, 0xd6, 0x9e, 0xd9, 0x41, 0x34,
+            0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
+            0x84, 0x22, 0x71, 0x04,
+        ];
+        assert!(validate_checksum(&valid_checksum).is_ok());
+
+        // Too short
+        let short_checksum = [0xFF; 16];
+        let err = validate_checksum(&short_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
+
+        // Too long
+        let long_checksum = [0xFF; 64];
+        let err = validate_checksum(&long_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
+
+        // Empty
+        let empty_checksum = [];
+        let err = validate_checksum(&empty_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
     }
 }
