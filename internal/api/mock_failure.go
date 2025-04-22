@@ -1,25 +1,29 @@
 package api
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-/***** Mock types.GoAPI ****/
+/* **** Mock types.GoAPI *****/
 
-func MockFailureCanonicalizeAddress(human string) ([]byte, uint64, error) {
-	return nil, 0, fmt.Errorf("mock failure - canonical_address")
+// MockFailureCanonicalizeAddress returns a generic error
+func MockFailureCanonicalizeAddress(_ string) (canonical []byte, gasCost uint64, err error) {
+	return nil, 0, errors.New("mock failure - canonicalize address")
 }
 
-func MockFailureHumanizeAddress(canon []byte) (string, uint64, error) {
-	return "", 0, fmt.Errorf("mock failure - human_address")
+// MockFailureHumanizeAddress returns a generic error
+func MockFailureHumanizeAddress(_ []byte) (human string, gasCost uint64, err error) {
+	return "", 0, errors.New("mock failure - humanize address")
 }
 
-func MockFailureValidateAddress(human string) (uint64, error) {
-	return 0, fmt.Errorf("mock failure - validate_address")
+// MockFailureValidateAddress returns a generic error
+func MockFailureValidateAddress(_ string) (uint64, error) {
+	return 0, errors.New("mock failure - validate address")
 }
 
+// NewMockFailureAPI creates a new mock API that fails
 func NewMockFailureAPI() *types.GoAPI {
 	return &types.GoAPI{
 		HumanizeAddress:     MockFailureHumanizeAddress,

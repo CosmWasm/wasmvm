@@ -2,25 +2,95 @@ version: "2"
 
 run:
   tests: true
+  timeout: 5m
 
 linters:
   # Enable specific linters
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
-    - misspell
-    - testifylint
-    - thelper
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    - copyloopvar # Detect copy loops
+    - errcheck # Detect unchecked errors
+    - govet # Reports suspicious constructs
+    - ineffassign # Detect unused assignments
+    - staticcheck # Go static analysis
+    - unused # Detect unused constants, variables, functions and types
+
+    # Additional recommended linters
+    - gocritic # A more opinionated linter
+    - gosec # Security checker
+    - misspell # Find commonly misspelled words
+    - revive # a metalinter with more checks
+    - maintidx
+    - bodyclose # Check HTTP response bodies are closed
+    - goconst # Find repeated strings that could be constants
+    - gocyclo # Check function complexity
+    - gocognit # Check cognitive complexity
+    - whitespace # Check trailing whitespace
+    - thelper # Detect test helpers not using t.Helper()
+    - usetesting # Detect incorrect usage of testing package
+    - tparallel # Detect incorrect usage of t.Parallel()
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - dupSubExpr
+        - paramTypeCombine
+        - dupImport
+        - hugeParam
+        - rangeValCopy
+        - ptrToRefParam
+
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    dupl:
+      threshold: 100
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    revive:
+      enable-all-rules: true
+
+      rules:
+        # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
+        - name: var-naming
+          severity: warning
+          disabled: true
+          exclude: [""]
+          arguments:
+            - ["ID"] # AllowList
+            - ["VM"] # DenyList
+            - - upperCaseConst: true # Extra parameter (upperCaseConst|skipPackageNameChecks)
+        - name: line-length-limit
+          severity: warning
+          disabled: true
+          exclude: [""]
+          arguments: [80]
+        - name: add-constant
+          disabled: true
+        - name: exported
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: nested-structs
+          disabled: true
+        - name: flag-parameter
+          disabled: true
+        - name: max-public-structs
+          disabled: false
+          severity: warning
+          arguments: [100]
+        
+
+        
+
+        
+        
 
 issues:
   max-issues-per-linter: 0
@@ -46,12 +116,7 @@ formatters:
         - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
         - alias # Alias section: contains all alias imports. This section is not present unless explicitly enabled.
         - localmodule # Local module section: contains all local packages. This section is not present unless explicitly enabled.
-      # Enable custom order of sections.
-      # If `true`, make the section order the same as the order of `sections`.
-      # Default: false
       custom-order: true
-      # Drops lexical ordering for custom sections.
-      # Default: false
       no-lex-order: true
   exclusions:
     # Skip generated files.
