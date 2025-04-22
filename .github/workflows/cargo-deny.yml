@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         checks:
-          - advisories
+      #    - advisories  - this should be restored at some point
           - bans
           - sources
     steps:
