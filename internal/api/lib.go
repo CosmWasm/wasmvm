@@ -591,7 +591,9 @@ func IBCChannelOpen(params ContractCallParams) ([]byte, types.GasReport, error) 
 	if openErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(openErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCChannelConnect handles IBC channel connect handshake
@@ -622,7 +624,9 @@ func IBCChannelConnect(params ContractCallParams) ([]byte, types.GasReport, erro
 	if channelConnectErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(channelConnectErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCChannelClose handles IBC channel close handshake
@@ -653,7 +657,9 @@ func IBCChannelClose(params ContractCallParams) ([]byte, types.GasReport, error)
 	if channelCloseErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(channelCloseErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCPacketReceive handles receiving an IBC packet
@@ -717,7 +723,9 @@ func IBC2PacketReceive(params ContractCallParams) ([]byte, types.GasReport, erro
 	if packet2ReceiveErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packet2ReceiveErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCPacketAck handles acknowledging an IBC packet
@@ -748,7 +756,9 @@ func IBCPacketAck(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if packetAckErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packetAckErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCPacketTimeout handles timing out an IBC packet
@@ -779,7 +789,9 @@ func IBCPacketTimeout(params ContractCallParams) ([]byte, types.GasReport, error
 	if packetTimeoutErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packetTimeoutErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCSourceCallback handles IBC source chain callbacks
@@ -810,7 +822,9 @@ func IBCSourceCallback(params ContractCallParams) ([]byte, types.GasReport, erro
 	if sourceCallbackErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(sourceCallbackErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCDestinationCallback handles IBC destination chain callbacks
@@ -841,7 +855,9 @@ func IBCDestinationCallback(params ContractCallParams) ([]byte, types.GasReport,
 	if destCallbackErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(destCallbackErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 func convertGasReport(report C.GasReport) types.GasReport {
@@ -856,8 +872,9 @@ func convertGasReport(report C.GasReport) types.GasReport {
 /* **** To error module *****/
 
 func errorWithMessage(err error, b C.UnmanagedVector) error {
-	// we always destroy the unmanaged vector to avoid a memory leak
-	msg := copyAndDestroyUnmanagedVector(b)
+	// Use the safer approach to get the error message
+	safeVec := CopyAndDestroyToSafeVector(b)
+	msg := safeVec.ToBytesAndDestroy()
 
 	// this checks for out of gas as a special case
 	if errno, ok := err.(syscall.Errno); ok && int(errno) == 2 {
@@ -913,8 +930,13 @@ func receiveVectorSafe(v C.UnmanagedVector) *SafeUnmanagedVector {
 }
 
 func receiveAnalysisReport(report C.AnalysisReport) *types.AnalysisReport {
-	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
-	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+	// Use the safer approach to get required capabilities
+	requiredCapabilitiesVec := CopyAndDestroyToSafeVector(report.required_capabilities)
+	requiredCapabilities := string(requiredCapabilitiesVec.ToBytesAndDestroy())
+
+	// Use the safer approach to get entrypoints
+	entrypointsVec := CopyAndDestroyToSafeVector(report.entrypoints)
+	entrypoints := string(entrypointsVec.ToBytesAndDestroy())
 	entrypoints_array := strings.Split(entrypoints, ",")
 	hasIBC2EntryPoints := slices.Contains(entrypoints_array, "ibc2_packet_receive")
 
@@ -943,7 +965,12 @@ func receiveMetrics(metrics C.Metrics) *types.Metrics {
 
 func receivePinnedMetrics(metrics C.UnmanagedVector) (*types.PinnedMetrics, error) {
 	var pinnedMetrics types.PinnedMetrics
-	if err := pinnedMetrics.UnmarshalMessagePack(copyAndDestroyUnmanagedVector(metrics)); err != nil {
+
+	// Use the safer approach to get metrics data
+	safeVec := CopyAndDestroyToSafeVector(metrics)
+	data := safeVec.ToBytesAndDestroy()
+
+	if err := pinnedMetrics.UnmarshalMessagePack(data); err != nil {
 		return nil, err
 	}
 	return &pinnedMetrics, nil
