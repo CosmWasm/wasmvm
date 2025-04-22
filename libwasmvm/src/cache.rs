@@ -1,38 +1,31 @@
 use std::collections::BTreeSet;
 use std::convert::TryInto;
-use std::fs;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::path::{Path, PathBuf};
-use std::str::from_utf8;
 
 use cosmwasm_std::Checksum;
 use cosmwasm_vm::Cache;
 use serde::Serialize;
-use serde_json::{from_slice, Map, Value};
-use wasmparser::{
-    BinaryReader, ExportSectionReader, FunctionSectionReader, ImportSectionReader, Parser,
-    SectionCode, Validator,
-};
 
 use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
-use crate::errors::Result;
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{
     validate_memory_size, ByteSliceView, SafeByteSlice, SafeUnmanagedVector, UnmanagedVector,
 };
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
-use crate::wasm_backend::{compile, make_runtime_store};
+
+// Create a type alias for Result to replace the missing crate::errors::Result
+type Result<T, E = Error> = std::result::Result<T, E>;
 
 // Constants for WASM validation
 const MIN_WASM_SIZE: usize = 4; // Minimum size to be a valid WASM file (magic bytes)
 const MAX_WASM_SIZE: usize = 1024 * 1024 * 10; // 10MB limit for WASM files
 const WASM_MAGIC_BYTES: [u8; 4] = [0x00, 0x61, 0x73, 0x6D]; // WebAssembly magic bytes (\0asm)
-const MAX_IMPORTS: usize = 100; // Maximum number of imports allowed
-const MAX_FUNCTIONS: usize = 10_000; // Maximum number of functions allowed
-const MAX_EXPORTS: usize = 100; // Maximum number of exports allowed
+const MAX_IMPORTS: u32 = 100; // Maximum number of imports allowed
+const MAX_FUNCTIONS: u32 = 10_000; // Maximum number of functions allowed
+const MAX_EXPORTS: u32 = 100; // Maximum number of exports allowed
 
 // Constants for cache config validation
 const MAX_CONFIG_SIZE: usize = 100 * 1024; // 100KB max config size
@@ -113,28 +106,12 @@ fn validate_wasm_bytecode(wasm_bytes: &[u8]) -> Result<(), Error> {
     }
 
     // Additional validation checks not covered by wasmparser
-    let mut reader = wasmparser::BinaryReader::new(wasm_bytes);
-    let mut import_count = 0;
-    let mut export_count = 0;
-    let mut function_count = 0;
-
-    while !reader.eof() {
-        let section = match reader.read_section() {
-            Ok(section) => section,
-            Err(e) => {
-                return Err(Error::vm_err(format!(
-                    "Invalid WASM binary structure: {}",
-                    e
-                )))
-            }
-        };
-
-        match section.code {
-            wasmparser::SectionCode::Import => {
-                // Count imports
-                let section =
-                    wasmparser::ImportSectionReader::new(section.data, section.data_offset)?;
-                import_count = section.count();
+    // Use the updated wasmparser API
+    // Parse the binary to count imports, exports, and functions
+    for payload in wasmparser::Parser::new(0).parse_all(wasm_bytes) {
+        match payload {
+            Ok(wasmparser::Payload::ImportSection(reader)) => {
+                let import_count = reader.count();
                 if import_count > MAX_IMPORTS {
                     return Err(Error::vm_err(format!(
                         "Import count exceeds maximum allowed: {} > {}",
@@ -142,11 +119,8 @@ fn validate_wasm_bytecode(wasm_bytes: &[u8]) -> Result<(), Error> {
                     )));
                 }
             }
-            wasmparser::SectionCode::Function => {
-                // Count functions
-                let section =
-                    wasmparser::FunctionSectionReader::new(section.data, section.data_offset)?;
-                function_count = section.count();
+            Ok(wasmparser::Payload::FunctionSection(reader)) => {
+                let function_count = reader.count();
                 if function_count > MAX_FUNCTIONS {
                     return Err(Error::vm_err(format!(
                         "Function count exceeds maximum allowed: {} > {}",
@@ -154,11 +128,8 @@ fn validate_wasm_bytecode(wasm_bytes: &[u8]) -> Result<(), Error> {
                     )));
                 }
             }
-            wasmparser::SectionCode::Export => {
-                // Count exports
-                let section =
-                    wasmparser::ExportSectionReader::new(section.data, section.data_offset)?;
-                export_count = section.count();
+            Ok(wasmparser::Payload::ExportSection(reader)) => {
+                let export_count = reader.count();
                 if export_count > MAX_EXPORTS {
                     return Err(Error::vm_err(format!(
                         "Export count exceeds maximum allowed: {} > {}",
@@ -166,8 +137,14 @@ fn validate_wasm_bytecode(wasm_bytes: &[u8]) -> Result<(), Error> {
                     )));
                 }
             }
-            _ => {
+            Ok(_) => {
                 // Other sections are already validated by the wasmparser Validator
+            }
+            Err(e) => {
+                return Err(Error::vm_err(format!(
+                    "Invalid WASM binary structure: {}",
+                    e
+                )));
             }
         }
     }
@@ -199,35 +176,32 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
         return Err(Error::vm_err("Cache config must be a JSON object"));
     }
 
-    // The test structure in Config::new(CacheOptions::new()) is different from our expected structure
-    // So we need to handle two formats:
-    // 1. Direct format with base_dir at the root
-    // 2. Nested format with cache object containing base_dir
-
-    // Check if it's the nested format (used in tests)
-    if let Some(cache_obj) = config.get("cache") {
+    // Check for both lowercase "cache" and uppercase "Cache" fields to support both Go and Rust formats
+    // Go format - with capitalized "Cache" field (from VMConfig in Go)
+    if let Some(cache_obj) = config.get("Cache").or_else(|| config.get("cache")) {
         if !cache_obj.is_object() {
-            return Err(Error::vm_err("'cache' must be a JSON object"));
+            return Err(Error::vm_err("'Cache' must be a JSON object"));
         }
 
-        // Check required fields in nested format
+        // Check required fields in nested format - look for "BaseDir" (Go style) or "base_dir" (Rust style)
         let base_dir = cache_obj
-            .get("base_dir")
-            .ok_or_else(|| Error::vm_err("Missing 'base_dir' field in cache config"))?;
+            .get("BaseDir")
+            .or_else(|| cache_obj.get("base_dir"))
+            .ok_or_else(|| Error::vm_err("Missing 'BaseDir' field in cache config"))?;
 
         // Validate base_dir is a string of reasonable length
         if !base_dir.is_string() {
-            return Err(Error::vm_err("base_dir must be a string"));
+            return Err(Error::vm_err("BaseDir must be a string"));
         }
 
         if let Some(dir_str) = base_dir.as_str() {
             if dir_str.is_empty() {
-                return Err(Error::vm_err("base_dir cannot be empty"));
+                return Err(Error::vm_err("BaseDir cannot be empty"));
             }
 
             if dir_str.len() > MAX_CACHE_DIR_LENGTH {
                 return Err(Error::vm_err(format!(
-                    "base_dir exceeds maximum length: {} > {}",
+                    "BaseDir exceeds maximum length: {} > {}",
                     dir_str.len(),
                     MAX_CACHE_DIR_LENGTH
                 )));
@@ -240,7 +214,7 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
                 && dir_str.contains("..")
             {
                 return Err(Error::vm_err(
-                    "base_dir contains path traversal sequences '..' which is not allowed",
+                    "BaseDir contains path traversal sequences '..' which is not allowed",
                 ));
             }
         }
@@ -249,24 +223,25 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
     }
 
     // Direct format (expected in production)
-    // Check required fields
+    // Check required fields - both Go style (BaseDir) and Rust style (base_dir)
     let base_dir = config
-        .get("base_dir")
-        .ok_or_else(|| Error::vm_err("Missing 'base_dir' field in cache config"))?;
+        .get("BaseDir")
+        .or_else(|| config.get("base_dir"))
+        .ok_or_else(|| Error::vm_err("Missing 'BaseDir' field in cache config"))?;
 
     // Validate base_dir is a string of reasonable length
     if !base_dir.is_string() {
-        return Err(Error::vm_err("base_dir must be a string"));
+        return Err(Error::vm_err("BaseDir must be a string"));
     }
 
     if let Some(dir_str) = base_dir.as_str() {
         if dir_str.is_empty() {
-            return Err(Error::vm_err("base_dir cannot be empty"));
+            return Err(Error::vm_err("BaseDir cannot be empty"));
         }
 
         if dir_str.len() > MAX_CACHE_DIR_LENGTH {
             return Err(Error::vm_err(format!(
-                "base_dir exceeds maximum length: {} > {}",
+                "BaseDir exceeds maximum length: {} > {}",
                 dir_str.len(),
                 MAX_CACHE_DIR_LENGTH
             )));
@@ -275,26 +250,30 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
         // Path traversal protection: check for ".." in the path
         if dir_str.contains("..") {
             return Err(Error::vm_err(
-                "base_dir contains path traversal sequences '..' which is not allowed",
+                "BaseDir contains path traversal sequences '..' which is not allowed",
             ));
         }
     }
 
-    // Validate memory_cache_size if present
-    if let Some(size) = config.get("memory_cache_size") {
+    // Validate memory_cache_size if present - check both Go style (MemoryCacheSize) and Rust style (memory_cache_size)
+    if let Some(size) = config
+        .get("MemoryCacheSize")
+        .or_else(|| config.get("memory_cache_size"))
+    {
         if !size.is_object() {
-            return Err(Error::vm_err("memory_cache_size must be an object"));
+            return Err(Error::vm_err("MemoryCacheSize must be an object"));
         }
 
-        // Validate the size object has the correct structure
+        // Validate the size object has the correct structure - support both "Size" (Go) and "size" (Rust)
         let size_obj = size.as_object().unwrap();
-        if !size_obj.contains_key("size") {
-            return Err(Error::vm_err("memory_cache_size.size field is missing"));
+        if !size_obj.contains_key("Size") && !size_obj.contains_key("size") {
+            return Err(Error::vm_err("MemoryCacheSize.Size field is missing"));
         }
 
-        if let Some(size_val) = size_obj.get("size") {
+        // Check size field with either capitalized or lowercase field
+        if let Some(size_val) = size_obj.get("Size").or_else(|| size_obj.get("size")) {
             if !size_val.is_number() {
-                return Err(Error::vm_err("memory_cache_size.size must be a number"));
+                return Err(Error::vm_err("MemoryCacheSize.Size must be a number"));
             }
 
             // Make sure the size is reasonable
@@ -302,23 +281,23 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
                 if size_num > 10_000_000_000 {
                     // 10GB limit
                     return Err(Error::vm_err(
-                        "memory_cache_size.size exceeds maximum allowed value",
+                        "MemoryCacheSize.Size exceeds maximum allowed value",
                     ));
                 }
             }
         }
 
-        // Check the unit field if present
-        if let Some(unit) = size_obj.get("unit") {
+        // Check the unit field if present - with both capitalized and lowercase field names
+        if let Some(unit) = size_obj.get("Unit").or_else(|| size_obj.get("unit")) {
             if !unit.is_string() {
-                return Err(Error::vm_err("memory_cache_size.unit must be a string"));
+                return Err(Error::vm_err("MemoryCacheSize.Unit must be a string"));
             }
 
             if let Some(unit_str) = unit.as_str() {
                 let allowed_units = ["B", "KB", "MB", "GB"];
                 if !allowed_units.contains(&unit_str) {
                     return Err(Error::vm_err(format!(
-                        "memory_cache_size.unit '{}' is not supported. Allowed values: {:?}",
+                        "MemoryCacheSize.Unit '{}' is not supported. Allowed values: {:?}",
                         unit_str, allowed_units
                     )));
                 }
@@ -326,10 +305,13 @@ fn validate_cache_config(config_data: &[u8]) -> Result<(), Error> {
         }
     }
 
-    // Validate supported capabilities if present
-    if let Some(capabilities) = config.get("supported_capabilities") {
+    // Validate supported capabilities if present - both Go style (SupportedCapabilities) and Rust style (supported_capabilities)
+    if let Some(capabilities) = config
+        .get("SupportedCapabilities")
+        .or_else(|| config.get("supported_capabilities"))
+    {
         if !capabilities.is_array() {
-            return Err(Error::vm_err("supported_capabilities must be an array"));
+            return Err(Error::vm_err("SupportedCapabilities must be an array"));
         }
 
         // Check each capability is a valid string

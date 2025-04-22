@@ -96,12 +96,27 @@ fn validate_environment(env_data: &[u8]) -> Result<(), Error> {
         return Err(Error::vm_err("Block height must be a positive integer"));
     }
 
-    // Validate block time is present and is an unsigned integer
+    // Validate block time is present and is either an unsigned integer or a string-encoded unsigned integer
     let time = block
         .get("time")
         .ok_or_else(|| Error::vm_err("Missing 'time' field in block"))?;
-    if !time.is_u64() {
-        return Err(Error::vm_err("Block time must be a positive integer"));
+
+    // Check if time is a direct number or a string-encoded number
+    if !time.is_u64() && !time.is_string() {
+        return Err(Error::vm_err(
+            "Block time must be a positive integer or a string-encoded positive integer",
+        ));
+    }
+
+    // If it's a string, validate it contains a valid positive integer
+    if time.is_string() {
+        if let Some(time_str) = time.as_str() {
+            if let Err(_) = time_str.parse::<u64>() {
+                return Err(Error::vm_err(
+                    "Block time string must contain a valid positive integer",
+                ));
+            }
+        }
     }
 
     // Validate chain_id is present and is a string of reasonable length

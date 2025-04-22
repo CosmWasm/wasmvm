@@ -29,7 +29,7 @@ func MockEnv() types.Env {
 	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
-			Time:    1578939743_987654321,
+			Time:    1578939743987654321,
 			ChainID: testAddress,
 		},
 		Transaction: &types.TransactionInfo{
