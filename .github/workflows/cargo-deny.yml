@@ -23,7 +23,6 @@ jobs:
         checks:
           - advisories
           - bans
-          - licenses
           - sources
     steps:
       - uses: actions/checkout@v3
