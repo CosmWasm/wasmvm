@@ -30,6 +30,6 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
-          arguments: --all-features --exclude-dev --hide-inclusion-graph
+          arguments: --all-features --exclude-dev
           rust-version: stable
           manifest-path: libwasmvm/Cargo.toml
