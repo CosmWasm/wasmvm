@@ -380,3 +380,22 @@ func GetVectorStats() (created, consumed uint64) {
 func EnableVectorDebug(enable bool) {
 	debugSafeVectors = enable
 }
+
+// CopyAndDestroyToSafeVector converts an UnmanagedVector to a SafeUnmanagedVector
+// This is a safer alternative to copyAndDestroyUnmanagedVector for functions
+// that need to continue processing the data.
+func CopyAndDestroyToSafeVector(v C.UnmanagedVector) *SafeUnmanagedVector {
+	var data []byte
+	switch {
+	case bool(v.is_none):
+		data = nil
+	case v.cap == cusize(0):
+		// There is no allocation we can copy
+		data = []byte{}
+	default:
+		// C.GoBytes create a copy (https://stackoverflow.com/a/40950744/2013738)
+		data = C.GoBytes(unsafe.Pointer(v.ptr), C.int(v.len))
+	}
+	C.destroy_unmanaged_vector(v)
+	return NewSafeUnmanagedVector(data)
+}

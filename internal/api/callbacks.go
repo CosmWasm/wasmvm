@@ -181,6 +181,33 @@ func cGet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView
 	return C.GoError_None
 }
 
+// cGetSafe is a safer version of cGet that uses SafeUnmanagedVector for output parameters
+// to prevent double-free issues.
+func cGetSafe(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, errOut *C.UnmanagedVector) *SafeUnmanagedVector {
+	// Handle panic recovery
+	var ret C.GoError
+	defer recoverPanic(&ret)
+
+	if ptr == nil || gasMeter == nil || usedGas == nil || errOut == nil {
+		// we received an invalid pointer
+		*errOut = newUnmanagedVector([]byte("Invalid pointer argument"))
+		return nil
+	}
+
+	gm := *(*types.GasMeter)(unsafe.Pointer(gasMeter))
+	kv := *(*types.KVStore)(unsafe.Pointer(ptr))
+	k := copyU8Slice(key)
+
+	gasBefore := gm.GasConsumed()
+	v := kv.Get(k)
+	gasAfter := gm.GasConsumed()
+	*usedGas = cu64(gasAfter - gasBefore)
+
+	// v will equal nil when the key is missing
+	// https://github.com/cosmos/cosmos-sdk/blob/1083fa948e347135861f88e07ec76b0314296832/store/types/store.go#L174
+	return NewSafeUnmanagedVector(v)
+}
+
 //export cSet
 func cSet(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, key C.U8SliceView, val C.U8SliceView, errOut *C.UnmanagedVector) (ret C.GoError) {
 	defer recoverPanic(&ret)

@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -211,6 +212,39 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	safeVec := &SafeUnmanagedVector{ptr: csafeVec}
 	runtime.SetFinalizer(safeVec, finalizeSafeUnmanagedVector)
 	return safeVec.ToBytesAndDestroy(), nil
+}
+
+// GetCodeSafe is a safer version of GetCode that uses SafeUnmanagedVector
+// to prevent double-free issues.
+func (vm *VM) GetCodeSafe(checksum Checksum) (*SafeUnmanagedVector, error) {
+	if vm.cache == nil {
+		return nil, errors.New("no cache")
+	}
+
+	// Safety check
+	if len(checksum) != 32 {
+		return nil, fmt.Errorf("invalid checksum format: Checksum must be 32 bytes, got %d bytes", len(checksum))
+	}
+
+	errmsg := uninitializedUnmanagedVector()
+	csafeVec := C.load_wasm_safe(vm.cache, makeView(checksum), &errmsg)
+	if csafeVec == nil {
+		// This must be an error case
+		errMsg := string(copyAndDestroyUnmanagedVector(errmsg))
+		return nil, fmt.Errorf("error loading Wasm: %s", errMsg)
+	}
+
+	// Create SafeUnmanagedVector with finalizer to prevent memory leaks
+	safeVec := &SafeUnmanagedVector{
+		ptr:          csafeVec,
+		consumed:     0,
+		createdAt:    "",
+		consumeTrace: nil,
+	}
+	runtime.SetFinalizer(safeVec, finalizeSafeUnmanagedVector)
+	atomic.AddUint64(&totalVectorsCreated, 1)
+
+	return safeVec, nil
 }
 
 // Pin pins the wasm code with the given checksum in the cache.
