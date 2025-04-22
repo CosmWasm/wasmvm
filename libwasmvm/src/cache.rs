@@ -17,6 +17,24 @@ use crate::storage::GoStorage;
 #[repr(C)]
 pub struct cache_t {}
 
+/// Validates checksum format and length
+/// Requires that checksums must be exactly 32 bytes in length
+fn validate_checksum(checksum_bytes: &[u8]) -> Result<(), Error> {
+    // Check the length is exactly 32 bytes
+    if checksum_bytes.len() != 32 {
+        return Err(Error::invalid_checksum_format(format!(
+            "Checksum must be 32 bytes, got {} bytes",
+            checksum_bytes.len()
+        )));
+    }
+
+    // We don't need to validate the content of each byte since the cosmwasm_std::Checksum
+    // type will handle this validation when we call try_into(). The primary issue is
+    // ensuring the length is correct.
+
+    Ok(())
+}
+
 pub fn to_cache(ptr: *mut cache_t) -> Option<&'static mut Cache<GoApi, GoStorage, GoQuerier>> {
     if ptr.is_null() {
         None
@@ -100,10 +118,14 @@ fn do_remove_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
+    let checksum_bytes = checksum
         .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Add explicit validation
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.remove_wasm(&checksum)?;
     Ok(())
 }
@@ -130,10 +152,14 @@ fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<Vec<u8>, Error> {
-    let checksum: Checksum = checksum
+    let checksum_bytes = checksum
         .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Add explicit validation
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     let wasm = cache.load_wasm(&checksum)?;
     Ok(wasm)
 }
@@ -160,10 +186,14 @@ fn do_pin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
+    let checksum_bytes = checksum
         .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Add explicit validation
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.pin(&checksum)?;
     Ok(())
 }
@@ -190,10 +220,14 @@ fn do_unpin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum: Checksum = checksum
+    let checksum_bytes = checksum
         .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Add explicit validation
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     cache.unpin(&checksum)?;
     Ok(())
 }
@@ -297,10 +331,14 @@ fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<AnalysisReport, Error> {
-    let checksum: Checksum = checksum
+    let checksum_bytes = checksum
         .read()
-        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
-        .try_into()?;
+        .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
+
+    // Add explicit validation
+    validate_checksum(checksum_bytes)?;
+
+    let checksum: Checksum = checksum_bytes.try_into()?;
     let report = cache.analyze(&checksum)?;
     Ok(report.into())
 }
@@ -1074,5 +1112,40 @@ mod tests {
         );
         assert_eq!(config.cache.memory_cache_size_bytes, Size::new(100));
         assert_eq!(config.cache.instance_memory_limit_bytes, Size::new(100));
+    }
+
+    #[test]
+    fn validate_checksum_works() {
+        // Valid checksum - 32 bytes of hex characters
+        let valid_checksum = [
+            0x72, 0x2c, 0x8c, 0x99, 0x3f, 0xd7, 0x5a, 0x76, 0x27, 0xd6, 0x9e, 0xd9, 0x41, 0x34,
+            0x4f, 0xe2, 0xa1, 0x42, 0x3a, 0x3e, 0x75, 0xef, 0xd3, 0xe6, 0x77, 0x8a, 0x14, 0x28,
+            0x84, 0x22, 0x71, 0x04,
+        ];
+        assert!(validate_checksum(&valid_checksum).is_ok());
+
+        // Too short
+        let short_checksum = [0xFF; 16];
+        let err = validate_checksum(&short_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
+
+        // Too long
+        let long_checksum = [0xFF; 64];
+        let err = validate_checksum(&long_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
+
+        // Empty
+        let empty_checksum = [];
+        let err = validate_checksum(&empty_checksum).unwrap_err();
+        match err {
+            Error::InvalidChecksumFormat { .. } => {}
+            _ => panic!("Expected InvalidChecksumFormat error"),
+        }
     }
 }
