@@ -367,6 +367,20 @@ impl SafeUnmanagedVector {
     pub fn into_boxed_raw(vector: UnmanagedVector) -> *mut SafeUnmanagedVector {
         Box::into_raw(Box::new(Self::from_raw(vector)))
     }
+
+    /// Helper method to check if a vector is none without consuming it
+    pub fn check_none(&self) -> bool {
+        self.inner.is_none()
+    }
+
+    /// Helper method to get the length of the vector without consuming it
+    pub fn len(&self) -> usize {
+        if self.inner.is_none || self.consumed {
+            0
+        } else {
+            self.inner.len
+        }
+    }
 }
 
 impl Default for SafeUnmanagedVector {
@@ -570,6 +584,101 @@ pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
     if let Err(e) = safe_vector.consume() {
         // Log error but don't crash - better than double free
         eprintln!("Error during vector destruction: {}", e);
+    }
+}
+
+/// Checks if a SafeUnmanagedVector contains a None value
+///
+/// # Safety
+///
+/// The pointer must point to a valid SafeUnmanagedVector created with
+/// new_safe_unmanaged_vector or a related function.
+#[no_mangle]
+pub extern "C" fn safe_unmanaged_vector_is_none(v: *const SafeUnmanagedVector) -> bool {
+    if v.is_null() {
+        true // Null pointers are treated as None
+    } else {
+        let safe_vec = unsafe { &*v };
+        safe_vec.check_none()
+    }
+}
+
+/// Gets the length of a SafeUnmanagedVector
+/// Returns 0 if the vector is None or has been consumed
+///
+/// # Safety
+///
+/// The pointer must point to a valid SafeUnmanagedVector created with
+/// new_safe_unmanaged_vector or a related function.
+#[no_mangle]
+pub extern "C" fn safe_unmanaged_vector_length(v: *const SafeUnmanagedVector) -> usize {
+    if v.is_null() {
+        0 // Null pointers have zero length
+    } else {
+        let safe_vec = unsafe { &*v };
+        safe_vec.len()
+    }
+}
+
+/// Copies the content of a SafeUnmanagedVector into a newly allocated Go byte slice
+/// Returns a pointer to the data and its length, which must be freed by Go
+///
+/// # Safety
+///
+/// The pointer must point to a valid SafeUnmanagedVector created with
+/// new_safe_unmanaged_vector or a related function.
+#[no_mangle]
+pub extern "C" fn safe_unmanaged_vector_to_bytes(
+    v: *mut SafeUnmanagedVector,
+    output_data: *mut *mut u8,
+    output_len: *mut usize,
+) -> bool {
+    if v.is_null() || output_data.is_null() || output_len.is_null() {
+        return false;
+    }
+
+    // Get a mutable reference to the vector
+    let safe_vec = unsafe { &mut *v };
+
+    // Try to consume the vector safely
+    match safe_vec.consume() {
+        Ok(maybe_data) => {
+            if let Some(data) = maybe_data {
+                if data.is_empty() {
+                    // Empty data case
+                    unsafe {
+                        *output_data = std::ptr::null_mut();
+                        *output_len = 0;
+                    }
+                } else {
+                    // Convert the Vec<u8> into a raw pointer and length
+                    // The Go side will take ownership of this memory
+                    let mut data_clone = data.clone();
+                    let len = data_clone.len();
+                    let ptr = data_clone.as_mut_ptr();
+
+                    // Prevent Rust from freeing the memory when data_clone goes out of scope
+                    std::mem::forget(data_clone);
+
+                    unsafe {
+                        *output_data = ptr;
+                        *output_len = len;
+                    }
+                }
+                true
+            } else {
+                // None case
+                unsafe {
+                    *output_data = std::ptr::null_mut();
+                    *output_len = 0;
+                }
+                true
+            }
+        }
+        Err(_) => {
+            // Vector was already consumed or other error
+            false
+        }
     }
 }
 

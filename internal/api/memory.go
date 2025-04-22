@@ -2,10 +2,14 @@ package api
 
 /*
 #include "bindings.h"
+#include <stdlib.h>
 */
 import "C"
 
-import "unsafe"
+import (
+	"runtime"
+	"unsafe"
+)
 
 // makeView creates a view into the given byte slice what allows Rust code to read it.
 // The byte slice is managed by Go and will be garbage collected. Use runtime.KeepAlive
@@ -69,6 +73,119 @@ func newUnmanagedVector(data []byte) C.UnmanagedVector {
 // These functions return opaque pointers to SafeUnmanagedVector structures that need
 // specialized functions for accessing their data. To use these in Go, additional
 // wrapper functions would need to be created.
+
+// SafeUnmanagedVector is a Go wrapper for the Rust SafeUnmanagedVector
+// It provides a safer interface for working with data returned from FFI calls
+type SafeUnmanagedVector struct {
+	ptr *C.SafeUnmanagedVector
+}
+
+// newSafeUnmanagedVector creates a new SafeUnmanagedVector from a Go byte slice
+// It provides a safer alternative to newUnmanagedVector that tracks consumption
+// to prevent double-free issues
+func newSafeUnmanagedVector(data []byte) *SafeUnmanagedVector {
+	var ptr *C.SafeUnmanagedVector
+	switch {
+	case data == nil:
+		ptr = C.new_safe_unmanaged_vector(cbool(true), cu8_ptr(nil), cusize(0))
+	case len(data) == 0:
+		ptr = C.new_safe_unmanaged_vector(cbool(false), cu8_ptr(nil), cusize(0))
+	default:
+		ptr = C.new_safe_unmanaged_vector(cbool(false), cu8_ptr(unsafe.Pointer(&data[0])), cusize(len(data)))
+	}
+
+	result := &SafeUnmanagedVector{ptr: ptr}
+	runtime.SetFinalizer(result, finalizeSafeUnmanagedVector)
+	return result
+}
+
+// finalizeSafeUnmanagedVector ensures that the Rust SafeUnmanagedVector is properly destroyed
+// when the Go wrapper is garbage collected
+func finalizeSafeUnmanagedVector(v *SafeUnmanagedVector) {
+	if v.ptr != nil {
+		C.destroy_safe_unmanaged_vector(v.ptr)
+		v.ptr = nil
+	}
+}
+
+// IsNone returns true if the SafeUnmanagedVector represents a None value
+func (v *SafeUnmanagedVector) IsNone() bool {
+	if v.ptr == nil {
+		return true
+	}
+	return bool(C.safe_unmanaged_vector_is_none(v.ptr))
+}
+
+// Length returns the length of the data in the SafeUnmanagedVector
+// Returns 0 if the vector is None or has been consumed
+func (v *SafeUnmanagedVector) Length() int {
+	if v.ptr == nil {
+		return 0
+	}
+	return int(C.safe_unmanaged_vector_length(v.ptr))
+}
+
+// ToBytesAndDestroy consumes the SafeUnmanagedVector and returns its content as a Go byte slice
+// This function destroys the SafeUnmanagedVector, so it can only be called once
+func (v *SafeUnmanagedVector) ToBytesAndDestroy() []byte {
+	if v.ptr == nil {
+		return nil
+	}
+
+	var dataPtr *C.uchar
+	var dataLen C.uintptr_t
+
+	success := C.safe_unmanaged_vector_to_bytes(v.ptr, &dataPtr, &dataLen)
+	if !bool(success) {
+		// Error occurred, likely already consumed
+		return nil
+	}
+
+	// Mark as destroyed to prevent double-free in finalizer
+	defer func() {
+		v.ptr = nil
+	}()
+
+	if dataPtr == nil {
+		if bool(C.safe_unmanaged_vector_is_none(v.ptr)) {
+			// Was a None value
+			C.destroy_safe_unmanaged_vector(v.ptr)
+			return nil
+		}
+		// Was an empty slice
+		C.destroy_safe_unmanaged_vector(v.ptr)
+		return []byte{}
+	}
+
+	// Copy data to Go memory
+	bytes := C.GoBytes(unsafe.Pointer(dataPtr), C.int(dataLen))
+
+	// Free the C memory allocated by safe_unmanaged_vector_to_bytes
+	C.free(unsafe.Pointer(dataPtr))
+
+	// Destroy the SafeUnmanagedVector
+	C.destroy_safe_unmanaged_vector(v.ptr)
+
+	return bytes
+}
+
+// SafeStoreCode is a safer version of store_code that uses SafeUnmanagedVector
+func SafeStoreCode(cache *C.cache_t, wasm []byte, checked, persist bool, errorMsg *C.UnmanagedVector) *SafeUnmanagedVector {
+	view := makeView(wasm)
+	ptr := C.store_code_safe(cache, view, cbool(checked), cbool(persist), errorMsg)
+	result := &SafeUnmanagedVector{ptr: ptr}
+	runtime.SetFinalizer(result, finalizeSafeUnmanagedVector)
+	return result
+}
+
+// SafeLoadWasm is a safer version of load_wasm that uses SafeUnmanagedVector
+func SafeLoadWasm(cache *C.cache_t, checksum []byte, errorMsg *C.UnmanagedVector) *SafeUnmanagedVector {
+	view := makeView(checksum)
+	ptr := C.load_wasm_safe(cache, view, errorMsg)
+	result := &SafeUnmanagedVector{ptr: ptr}
+	runtime.SetFinalizer(result, finalizeSafeUnmanagedVector)
+	return result
+}
 
 func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 	var out []byte

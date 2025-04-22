@@ -698,6 +698,40 @@ void destroy_safe_unmanaged_vector(struct SafeUnmanagedVector *v);
 void destroy_unmanaged_vector(struct UnmanagedVector v);
 
 /**
+ * Checks if a SafeUnmanagedVector contains a None value
+ *
+ * # Safety
+ *
+ * The pointer must point to a valid SafeUnmanagedVector created with
+ * new_safe_unmanaged_vector or a related function.
+ */
+bool safe_unmanaged_vector_is_none(const struct SafeUnmanagedVector *v);
+
+/**
+ * Gets the length of a SafeUnmanagedVector
+ * Returns 0 if the vector is None or has been consumed
+ *
+ * # Safety
+ *
+ * The pointer must point to a valid SafeUnmanagedVector created with
+ * new_safe_unmanaged_vector or a related function.
+ */
+uintptr_t safe_unmanaged_vector_length(const struct SafeUnmanagedVector *v);
+
+/**
+ * Copies the content of a SafeUnmanagedVector into a newly allocated Go byte slice
+ * Returns a pointer to the data and its length, which must be freed by Go
+ *
+ * # Safety
+ *
+ * The pointer must point to a valid SafeUnmanagedVector created with
+ * new_safe_unmanaged_vector or a related function.
+ */
+bool safe_unmanaged_vector_to_bytes(struct SafeUnmanagedVector *v,
+                                    uint8_t **output_data,
+                                    uintptr_t *output_len);
+
+/**
  * Returns a version number of this library as a C string.
  *
  * The string is owned by libwasmvm and must not be mutated or destroyed by the caller.
