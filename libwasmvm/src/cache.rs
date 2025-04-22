@@ -10,7 +10,9 @@ use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
-use crate::memory::{validate_memory_size, ByteSliceView, SafeByteSlice, UnmanagedVector};
+use crate::memory::{
+    validate_memory_size, ByteSliceView, SafeByteSlice, SafeUnmanagedVector, UnmanagedVector,
+};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -101,6 +103,30 @@ pub extern "C" fn store_code(
     UnmanagedVector::new(Some(checksum))
 }
 
+/// A safer version of store_code that returns a SafeUnmanagedVector to prevent double-free issues
+#[no_mangle]
+pub extern "C" fn store_code_safe(
+    cache: *mut cache_t,
+    wasm: ByteSliceView,
+    checked: bool,
+    persist: bool,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> *mut SafeUnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || {
+            do_store_code(c, wasm, checked, persist)
+        }))
+        .unwrap_or_else(|err| {
+            handle_vm_panic("do_store_code", err);
+            Err(Error::panic())
+        }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let checksum = handle_c_error_binary(r, error_msg);
+    // Return a boxed SafeUnmanagedVector
+    SafeUnmanagedVector::into_boxed_raw(UnmanagedVector::new(Some(checksum)))
+}
+
 fn do_store_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     wasm: ByteSliceView,
@@ -170,6 +196,26 @@ pub extern "C" fn load_wasm(
     };
     let data = handle_c_error_binary(r, error_msg);
     UnmanagedVector::new(Some(data))
+}
+
+/// A safer version of load_wasm that returns a SafeUnmanagedVector to prevent double-free issues
+#[no_mangle]
+pub extern "C" fn load_wasm_safe(
+    cache: *mut cache_t,
+    checksum: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) -> *mut SafeUnmanagedVector {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_load_wasm(c, checksum)))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_load_wasm", err);
+                Err(Error::panic())
+            }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    let data = handle_c_error_binary(r, error_msg);
+    // Return a boxed SafeUnmanagedVector
+    SafeUnmanagedVector::into_boxed_raw(UnmanagedVector::new(Some(data)))
 }
 
 fn do_load_wasm(

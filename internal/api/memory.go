@@ -61,6 +61,15 @@ func newUnmanagedVector(data []byte) C.UnmanagedVector {
 	}
 }
 
+// NOTE: The Rust code provides safer alternatives to UnmanagedVector through functions like:
+// - new_safe_unmanaged_vector: Creates a SafeUnmanagedVector that tracks consumption
+// - destroy_safe_unmanaged_vector: Safely destroys a SafeUnmanagedVector, preventing double-free
+// - store_code_safe and load_wasm_safe: Safer variants of store_code and load_wasm
+//
+// These functions return opaque pointers to SafeUnmanagedVector structures that need
+// specialized functions for accessing their data. To use these in Go, additional
+// wrapper functions would need to be created.
+
 func copyAndDestroyUnmanagedVector(v C.UnmanagedVector) []byte {
 	var out []byte
 	switch {

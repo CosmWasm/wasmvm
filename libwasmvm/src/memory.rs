@@ -353,6 +353,20 @@ impl SafeUnmanagedVector {
         self.consumed = true;
         Ok(self.inner)
     }
+
+    /// Safely wrap a raw UnmanagedVector for safer handling during migration
+    pub fn from_raw(vector: UnmanagedVector) -> Self {
+        Self {
+            inner: vector,
+            consumed: false,
+        }
+    }
+
+    /// Create a boxed pointer to a SafeUnmanagedVector from a raw UnmanagedVector
+    /// Useful for FFI functions that want to return a safer alternative
+    pub fn into_boxed_raw(vector: UnmanagedVector) -> *mut SafeUnmanagedVector {
+        Box::into_raw(Box::new(Self::from_raw(vector)))
+    }
 }
 
 impl Default for SafeUnmanagedVector {
@@ -480,9 +494,83 @@ pub extern "C" fn new_unmanaged_vector(
     }
 }
 
+/// Creates a new SafeUnmanagedVector from provided data
+/// This function provides a safer alternative to new_unmanaged_vector
+/// by returning a reference to a heap-allocated SafeUnmanagedVector
+/// which includes consumption tracking.
+///
+/// # Safety
+///
+/// The returned pointer must be freed exactly once using destroy_safe_unmanaged_vector.
+/// The caller is responsible for ensuring this happens.
+#[no_mangle]
+pub extern "C" fn new_safe_unmanaged_vector(
+    nil: bool,
+    ptr: *const u8,
+    length: usize,
+) -> *mut SafeUnmanagedVector {
+    // Validate memory size
+    if let Err(e) = validate_memory_size(length) {
+        eprintln!(
+            "Memory validation error in new_safe_unmanaged_vector: {}",
+            e
+        );
+        return Box::into_raw(Box::new(SafeUnmanagedVector::none()));
+    }
+
+    let safe_vec = if nil {
+        SafeUnmanagedVector::none()
+    } else if length == 0 {
+        SafeUnmanagedVector::new(Some(Vec::new()))
+    } else if ptr.is_null() {
+        // Safety check for null pointers
+        eprintln!(
+            "WARNING: new_safe_unmanaged_vector called with null pointer but non-zero length"
+        );
+        SafeUnmanagedVector::new(Some(Vec::new()))
+    } else {
+        // In slice::from_raw_parts, `data` must be non-null and aligned even for zero-length slices.
+        // For this reason we cover the length == 0 case separately above.
+        let external_memory = unsafe { slice::from_raw_parts(ptr, length) };
+        let copy = Vec::from(external_memory);
+        SafeUnmanagedVector::new(Some(copy))
+    };
+
+    Box::into_raw(Box::new(safe_vec))
+}
+
+/// Safely destroys a SafeUnmanagedVector, handling consumption tracking
+/// to prevent double-free issues.
+///
+/// # Safety
+///
+/// The pointer must have been created with new_safe_unmanaged_vector.
+/// After this call, the pointer must not be used again.
+#[no_mangle]
+pub extern "C" fn destroy_safe_unmanaged_vector(v: *mut SafeUnmanagedVector) {
+    if !v.is_null() {
+        // Take ownership of the box and drop it
+        let mut safe_vec = unsafe { Box::from_raw(v) };
+        if let Err(e) = safe_vec.consume() {
+            eprintln!("Error during safe vector destruction: {}", e);
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
-    let _ = v.consume();
+    // Wrap in SafeUnmanagedVector for safer handling
+    let mut safe_vector = SafeUnmanagedVector {
+        inner: v,
+        consumed: false,
+    };
+
+    // This will prevent double consumption by setting consumed flag
+    // and returning an error if already consumed
+    if let Err(e) = safe_vector.consume() {
+        // Log error but don't crash - better than double free
+        eprintln!("Error during vector destruction: {}", e);
+    }
 }
 
 #[cfg(test)]

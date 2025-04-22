@@ -53,6 +53,12 @@ enum GoError {
 };
 typedef int32_t GoError;
 
+/**
+ * A safety wrapper around UnmanagedVector that prevents double consumption
+ * of the same vector and adds additional safety checks
+ */
+typedef struct SafeUnmanagedVector SafeUnmanagedVector;
+
 typedef struct cache_t {
 
 } cache_t;
@@ -420,6 +426,15 @@ struct UnmanagedVector store_code(struct cache_t *cache,
                                   bool persist,
                                   struct UnmanagedVector *error_msg);
 
+/**
+ * A safer version of store_code that returns a SafeUnmanagedVector to prevent double-free issues
+ */
+struct SafeUnmanagedVector *store_code_safe(struct cache_t *cache,
+                                            struct ByteSliceView wasm,
+                                            bool checked,
+                                            bool persist,
+                                            struct UnmanagedVector *error_msg);
+
 void remove_wasm(struct cache_t *cache,
                  struct ByteSliceView checksum,
                  struct UnmanagedVector *error_msg);
@@ -427,6 +442,13 @@ void remove_wasm(struct cache_t *cache,
 struct UnmanagedVector load_wasm(struct cache_t *cache,
                                  struct ByteSliceView checksum,
                                  struct UnmanagedVector *error_msg);
+
+/**
+ * A safer version of load_wasm that returns a SafeUnmanagedVector to prevent double-free issues
+ */
+struct SafeUnmanagedVector *load_wasm_safe(struct cache_t *cache,
+                                           struct ByteSliceView checksum,
+                                           struct UnmanagedVector *error_msg);
 
 void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
@@ -646,6 +668,32 @@ struct UnmanagedVector ibc2_packet_receive(struct cache_t *cache,
                                            struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
+
+/**
+ * Creates a new SafeUnmanagedVector from provided data
+ * This function provides a safer alternative to new_unmanaged_vector
+ * by returning a reference to a heap-allocated SafeUnmanagedVector
+ * which includes consumption tracking.
+ *
+ * # Safety
+ *
+ * The returned pointer must be freed exactly once using destroy_safe_unmanaged_vector.
+ * The caller is responsible for ensuring this happens.
+ */
+struct SafeUnmanagedVector *new_safe_unmanaged_vector(bool nil,
+                                                      const uint8_t *ptr,
+                                                      uintptr_t length);
+
+/**
+ * Safely destroys a SafeUnmanagedVector, handling consumption tracking
+ * to prevent double-free issues.
+ *
+ * # Safety
+ *
+ * The pointer must have been created with new_safe_unmanaged_vector.
+ * After this call, the pointer must not be used again.
+ */
+void destroy_safe_unmanaged_vector(struct SafeUnmanagedVector *v);
 
 void destroy_unmanaged_vector(struct UnmanagedVector v);
 
