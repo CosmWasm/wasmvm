@@ -94,6 +94,21 @@ impl GoError {
             }
         }
     }
+
+    /// A safe wrapper for into_result that takes ownership of error_msg to prevent its reuse.
+    /// This eliminates the need for unsafe blocks when calling this function.
+    pub fn into_result_safe<F>(
+        self,
+        error_msg: UnmanagedVector,
+        default_error_msg: F,
+    ) -> Result<(), BackendError>
+    where
+        F: FnOnce() -> String,
+    {
+        // Safety: We're ensuring the safety by taking ownership of error_msg,
+        // which guarantees it won't be used after this call
+        unsafe { self.into_result(error_msg, default_error_msg) }
+    }
 }
 
 #[cfg(test)]
@@ -185,6 +200,28 @@ mod tests {
             a.unwrap_err(),
             BackendError::Unknown {
                 msg: "a".repeat(8192)
+            }
+        );
+    }
+
+    #[test]
+    fn into_result_safe_works() {
+        let default = || "Something went wrong but we don't know".to_string();
+
+        // Test success case
+        let error = GoError::None;
+        let error_msg = UnmanagedVector::new(None);
+        let result = error.into_result_safe(error_msg, default);
+        assert_eq!(result, Ok(()));
+
+        // Test error case
+        let error = GoError::User;
+        let error_msg = UnmanagedVector::new(Some(Vec::from(b"kaputt" as &[u8])));
+        let result = error.into_result_safe(error_msg, default);
+        assert_eq!(
+            result.unwrap_err(),
+            BackendError::UserErr {
+                msg: "kaputt".to_string()
             }
         );
     }

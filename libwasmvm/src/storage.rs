@@ -5,9 +5,9 @@ use cosmwasm_std::{Order, Record};
 use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 
 use crate::db::Db;
-use crate::error::{Error, GoError};
+use crate::error::GoError;
 use crate::iterator::GoIter;
-use crate::memory::{validate_memory_size, SafeUnmanagedVector, U8SliceView, UnmanagedVector};
+use crate::memory::{validate_memory_size, U8SliceView, UnmanagedVector};
 
 pub struct GoStorage {
     db: Db,
@@ -53,11 +53,6 @@ impl Storage for GoStorage {
         )
         .into();
 
-        let mut safe_output = SafeUnmanagedVector::new(None);
-        safe_output.inner = output;
-        let mut safe_error_msg = SafeUnmanagedVector::new(None);
-        safe_error_msg.inner = error_msg;
-
         let gas_info = GasInfo::with_externally_used(used_gas);
 
         let default = || {
@@ -67,28 +62,15 @@ impl Storage for GoStorage {
             )
         };
 
-        match unsafe { go_error.into_result(error_msg, default) } {
-            Err(err) => {
-                safe_error_msg.consumed = true;
-                return (Err(err), gas_info);
-            }
-            Ok(()) => {}
+        // First check the error result using the safe wrapper
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
-        let output_result = match safe_output.consume() {
-            Ok(data) => data,
-            Err(e) => {
-                return (
-                    Err(BackendError::unknown(format!(
-                        "Failed to consume output: {}",
-                        e
-                    ))),
-                    gas_info,
-                );
-            }
-        };
+        // If we got here, no error occurred, so we can safely consume the output
+        let output_data = output.consume();
 
-        (Ok(output_result), gas_info)
+        (Ok(output_data), gas_info)
     }
 
     fn scan(
@@ -125,10 +107,9 @@ impl Storage for GoStorage {
                 end.map(String::from_utf8_lossy),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let next_id: u32 = self
@@ -196,11 +177,11 @@ impl Storage for GoStorage {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 
@@ -227,11 +208,11 @@ impl Storage for GoStorage {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 }
