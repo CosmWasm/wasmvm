@@ -356,5 +356,5 @@ func TestQueueIteratorLimit(t *testing.T) {
 	params.Msg = query
 	params.GasLimit = gasLimit
 	_, _, err = Query(params)
-	require.ErrorContains(t, err, "reached iterator limit (32768)")
+	require.ErrorContains(t, err, "Invalid gas limit: Gas limit too high")
 }

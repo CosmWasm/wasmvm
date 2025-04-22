@@ -312,7 +312,7 @@ func TestPinErrors(t *testing.T) {
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}
 	err = Pin(cache, brokenChecksum)
-	require.ErrorContains(t, err, "Checksum not of length 32")
+	require.ErrorContains(t, err, "Invalid checksum format: Checksum must be 32 bytes, got 4 bytes")
 
 	// Unknown checksum (errors in cosmwasm-vm)
 	unknownChecksum := []byte{
@@ -343,6 +343,11 @@ func TestUnpin(t *testing.T) {
 	// Can be called again with no effect
 	err = Unpin(cache, checksum)
 	require.NoError(t, err)
+
+	// Invalid checksum format
+	checksum = make([]byte, 4)
+	err = Unpin(cache, checksum)
+	require.ErrorContains(t, err, "Invalid checksum format: Checksum must be 32 bytes, got 4 bytes")
 }
 
 func TestUnpinErrors(t *testing.T) {
@@ -358,7 +363,7 @@ func TestUnpinErrors(t *testing.T) {
 	// Checksum too short (errors in wasmvm Rust code)
 	brokenChecksum := []byte{0x3f, 0xd7, 0x5a, 0x76}
 	err = Unpin(cache, brokenChecksum)
-	require.ErrorContains(t, err, "Checksum not of length 32")
+	require.ErrorContains(t, err, "Invalid checksum format: Checksum must be 32 bytes, got 4 bytes")
 
 	// No error case triggered in cosmwasm-vm is known right now
 }
@@ -1952,7 +1957,7 @@ func TestGasLimit(t *testing.T) {
 		PrintDebug: TESTING_PRINT_DEBUG,
 	}
 	_, _, err = Execute(executeParams)
-	require.ErrorIs(t, err, types.OutOfGasError{})
+	require.ErrorContains(t, err, "Invalid gas limit: Gas limit too low: 1000. Minimum allowed: 10000")
 }
 
 func TestRustPanic(t *testing.T) {
