@@ -16,7 +16,7 @@ type ExpectedJSONSize interface {
 // Do not use it when a precise value is required.
 func ExpectedJSONSizeString(s string) int {
 	// 2x quote + length of string + escaping overhead
-	var out int = quotes + len(s)
+	out := quotes + len(s)
 	for _, r := range s {
 		if r == '"' || r == '\\' {
 			out += 1
