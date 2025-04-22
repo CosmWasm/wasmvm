@@ -213,9 +213,12 @@ func (*VM) Instantiate(params api.ContractCallParams) (InstantiateResult, error)
 		return InstantiateResult{GasReport: gasReport}, err
 	}
 
-	// Unmarshal the result
+	// Use a default deserCost value of 1/10000 gas per byte as defined in the VMConfig
+	deserCost := types.UFraction{Numerator: 1, Denominator: 10000}
+
+	// Unmarshal the result using DeserializeResponse to account for gas costs
 	var result types.ContractResult
-	err = json.Unmarshal(resBytes, &result)
+	err = DeserializeResponse(params.GasLimit, deserCost, &gasReport, resBytes, &result)
 	if err != nil {
 		return InstantiateResult{Data: resBytes, GasReport: gasReport}, err
 	}
@@ -240,9 +243,12 @@ func (*VM) Execute(params api.ContractCallParams) (ExecuteResult, error) {
 		return ExecuteResult{GasReport: gasReport}, err
 	}
 
-	// Unmarshal the result
+	// Use a default deserCost value of 1/10000 gas per byte as defined in the VMConfig
+	deserCost := types.UFraction{Numerator: 1, Denominator: 10000}
+
+	// Unmarshal the result using DeserializeResponse to account for gas costs
 	var result types.ContractResult
-	err = json.Unmarshal(resBytes, &result)
+	err = DeserializeResponse(params.GasLimit, deserCost, &gasReport, resBytes, &result)
 	if err != nil {
 		return ExecuteResult{Data: resBytes, GasReport: gasReport}, err
 	}
@@ -264,9 +270,12 @@ func (*VM) Query(params api.ContractCallParams) (QueryResult, error) {
 		return QueryResult{GasReport: gasReport}, err
 	}
 
-	// Unmarshal the query result
+	// Use a default deserCost value of 1/10000 gas per byte as defined in the VMConfig
+	deserCost := types.UFraction{Numerator: 1, Denominator: 10000}
+
+	// Unmarshal the query result using DeserializeResponse to account for gas costs
 	var result types.QueryResult
-	err = json.Unmarshal(resBytes, &result)
+	err = DeserializeResponse(params.GasLimit, deserCost, &gasReport, resBytes, &result)
 	if err != nil {
 		return QueryResult{Data: resBytes, GasReport: gasReport}, err
 	}

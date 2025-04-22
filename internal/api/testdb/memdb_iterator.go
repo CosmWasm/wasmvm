@@ -197,17 +197,12 @@ func newMemDBIteratorNoMtxDescending(db *MemDB, start, end []byte) *memDBIterato
 // Close implements Iterator.
 func (i *memDBIterator) Close() error {
 	i.cancel()
-	// drain the channel in a separate goroutine to avoid blocking
-	go drainItemChannel(i.ch)
-	i.item = nil
-	return nil
-}
-
-// drainItemChannel consumes all items from a channel until it's closed
-func drainItemChannel(ch <-chan *item) {
-	for item := range ch {
+	// Drain the channel synchronously to ensure the traversal goroutine completes
+	for item := range i.ch {
 		_ = item // explicitly discard the item
 	}
+	i.item = nil
+	return nil
 }
 
 // Domain implements Iterator.

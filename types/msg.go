@@ -216,11 +216,15 @@ func (m *VoteMsg) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if tmp.Option != nil && tmp.Vote != nil {
+	// Determine which fields are set
+	switch {
+	case tmp.Option != nil && tmp.Vote != nil:
 		return errors.New("invalid VoteMsg: both 'option' and 'vote' fields are set")
-	} else if tmp.Option == nil && tmp.Vote != nil {
+	case tmp.Option == nil && tmp.Vote != nil:
 		// Use "Option" for both variants
 		tmp.Option = tmp.Vote
+	case tmp.Option == nil && tmp.Vote == nil:
+		return errors.New("invalid VoteMsg: either 'option' or 'vote' field must be set")
 	}
 
 	*m = VoteMsg{
