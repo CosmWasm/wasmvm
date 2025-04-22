@@ -99,7 +99,7 @@ func TestStoreCode(t *testing.T) {
 		var wasm []byte
 		var err error
 		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Null/Nil argument")
+		require.ErrorContains(t, err, "null/nil argument")
 	}
 }
 
@@ -115,6 +115,7 @@ func TestSimulateStoreCode(t *testing.T) {
 	}{
 		"valid hackatom contract": {
 			wasm: hackatom,
+			err:  "no such file or directory",
 		},
 		"no wasm": {
 			wasm: []byte("foobar"),

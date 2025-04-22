@@ -81,7 +81,7 @@ func newUnmanagedVector(data []byte) C.UnmanagedVector {
 // It provides a safer interface for working with data returned from FFI calls
 type SafeUnmanagedVector struct {
 	ptr      *C.SafeUnmanagedVector
-	consumed bool // Track consumption state in Go to prevent multiple FFI calls
+	consumed uint32 // Using uint32 for atomic operations
 	// Store debug info
 	createdAt    string   // Record where vector was created (if debug enabled)
 	consumeTrace []string // Stack traces of consumption attempts
@@ -152,7 +152,7 @@ func NewSafeUnmanagedVector(data []byte) *SafeUnmanagedVector {
 
 	result := &SafeUnmanagedVector{
 		ptr:          ptr,
-		consumed:     false,
+		consumed:     0,
 		createdAt:    createdInfo,
 		consumeTrace: nil,
 	}
@@ -163,18 +163,18 @@ func NewSafeUnmanagedVector(data []byte) *SafeUnmanagedVector {
 // finalizeSafeUnmanagedVector ensures that the Rust SafeUnmanagedVector is properly destroyed
 // when the Go wrapper is garbage collected
 func finalizeSafeUnmanagedVector(v *SafeUnmanagedVector) {
-	// Use atomic operation to check consumed state
-	if v.ptr != nil && !v.consumed {
+	// Use atomic operation to ensure we only destroy once
+	// If consumed is already 1, this will return false
+	if v.ptr != nil && atomic.CompareAndSwapUint32(&v.consumed, 0, 1) {
 		if debugSafeVectors {
 			v.consumeTrace = append(v.consumeTrace, "finalizer")
 		}
 		C.destroy_safe_unmanaged_vector(v.ptr)
 		v.ptr = nil
-		v.consumed = true
 		atomic.AddUint64(&totalVectorsConsumed, 1)
-	} else if debugSafeVectors && v.consumed {
-		// Log attempted double consumption in finalizer
-		fmt.Printf("WARNING: Finalizer called on already consumed vector created at: %s\n", v.createdAt)
+	} else if debugSafeVectors && atomic.LoadUint32(&v.consumed) == 1 && v.ptr != nil {
+		// Log attempted double consumption in finalizer - only if debug enabled
+		fmt.Printf("DEBUG: Finalizer called on already consumed vector created at: %s\n", v.createdAt)
 		if len(v.consumeTrace) > 0 {
 			fmt.Printf("  Previous consumption(s): %v\n", v.consumeTrace)
 		}
@@ -183,7 +183,7 @@ func finalizeSafeUnmanagedVector(v *SafeUnmanagedVector) {
 
 // IsNone returns true if the SafeUnmanagedVector represents a None value
 func (v *SafeUnmanagedVector) IsNone() bool {
-	if v.ptr == nil || v.consumed {
+	if v.ptr == nil || atomic.LoadUint32(&v.consumed) == 1 {
 		return true
 	}
 	return bool(C.safe_unmanaged_vector_is_none(v.ptr))
@@ -192,15 +192,21 @@ func (v *SafeUnmanagedVector) IsNone() bool {
 // Length returns the length of the data in the SafeUnmanagedVector
 // Returns 0 if the vector is None or has been consumed
 func (v *SafeUnmanagedVector) Length() int {
-	if v.ptr == nil || v.consumed {
+	if v.ptr == nil || atomic.LoadUint32(&v.consumed) == 1 {
 		return 0
 	}
 	return int(C.safe_unmanaged_vector_length(v.ptr))
 }
 
+// IsConsumed returns whether this vector has been consumed
+func (v *SafeUnmanagedVector) IsConsumed() bool {
+	return atomic.LoadUint32(&v.consumed) == 1
+}
+
 // ToBytesAndDestroy consumes the SafeUnmanagedVector and returns its content as a Go byte slice
 // This function destroys the SafeUnmanagedVector, so it can only be called once
 func (v *SafeUnmanagedVector) ToBytesAndDestroy() []byte {
+	// Use atomic operations to prevent race conditions with finalizer
 	if v.ptr == nil {
 		if debugSafeVectors {
 			fmt.Printf("WARNING: ToBytesAndDestroy called on nil vector pointer\n")
@@ -211,7 +217,10 @@ func (v *SafeUnmanagedVector) ToBytesAndDestroy() []byte {
 		return nil
 	}
 
-	if v.consumed {
+	// Use atomic swap to ensure we only proceed if not yet consumed
+	// This guarantees only one goroutine can proceed past this point
+	swapped := atomic.CompareAndSwapUint32((*uint32)(unsafe.Pointer(&v.consumed)), 0, 1)
+	if !swapped {
 		if debugSafeVectors {
 			fmt.Printf("WARNING: ToBytesAndDestroy called on already consumed vector created at: %s\n", v.createdAt)
 			if len(v.consumeTrace) > 0 {
@@ -236,31 +245,30 @@ func (v *SafeUnmanagedVector) ToBytesAndDestroy() []byte {
 	// Remove the finalizer first to prevent double destruction
 	runtime.SetFinalizer(v, nil)
 
-	// Mark as consumed before any FFI calls to prevent double-free
-	v.consumed = true
+	// Already marked as consumed via atomic operation
 	atomic.AddUint64(&totalVectorsConsumed, 1)
+
+	// Store ptr locally to avoid races
+	ptr := v.ptr
+	v.ptr = nil // Clear pointer immediately to prevent other access
 
 	var dataPtr *C.uchar
 	var dataLen C.uintptr_t
 
-	success := C.safe_unmanaged_vector_to_bytes(v.ptr, &dataPtr, &dataLen)
+	success := C.safe_unmanaged_vector_to_bytes(ptr, &dataPtr, &dataLen)
 	if !bool(success) {
 		// Error occurred, likely already consumed on Rust side
 		return nil
 	}
 
-	defer func() {
-		v.ptr = nil
-	}()
-
 	if dataPtr == nil {
-		if bool(C.safe_unmanaged_vector_is_none(v.ptr)) {
+		if bool(C.safe_unmanaged_vector_is_none(ptr)) {
 			// Was a None value
-			C.destroy_safe_unmanaged_vector(v.ptr)
+			C.destroy_safe_unmanaged_vector(ptr)
 			return nil
 		}
 		// Was an empty slice
-		C.destroy_safe_unmanaged_vector(v.ptr)
+		C.destroy_safe_unmanaged_vector(ptr)
 		return []byte{}
 	}
 
@@ -271,7 +279,7 @@ func (v *SafeUnmanagedVector) ToBytesAndDestroy() []byte {
 	C.free(unsafe.Pointer(dataPtr))
 
 	// Destroy the SafeUnmanagedVector
-	C.destroy_safe_unmanaged_vector(v.ptr)
+	C.destroy_safe_unmanaged_vector(ptr)
 
 	return bytes
 }
@@ -292,7 +300,7 @@ func SafeStoreCode(cache *C.cache_t, wasm []byte, checked, persist bool, errorMs
 
 	result := &SafeUnmanagedVector{
 		ptr:          ptr,
-		consumed:     false,
+		consumed:     0,
 		createdAt:    createdInfo,
 		consumeTrace: nil,
 	}
@@ -316,7 +324,7 @@ func SafeLoadWasm(cache *C.cache_t, checksum []byte, errorMsg *C.UnmanagedVector
 
 	result := &SafeUnmanagedVector{
 		ptr:          ptr,
-		consumed:     false,
+		consumed:     0,
 		createdAt:    createdInfo,
 		consumeTrace: nil,
 	}

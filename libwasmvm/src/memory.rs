@@ -562,12 +562,24 @@ pub extern "C" fn new_safe_unmanaged_vector(
 /// After this call, the pointer must not be used again.
 #[no_mangle]
 pub extern "C" fn destroy_safe_unmanaged_vector(v: *mut SafeUnmanagedVector) {
-    if !v.is_null() {
-        // Take ownership of the box and drop it
-        let mut safe_vec = unsafe { Box::from_raw(v) };
-        if let Err(e) = safe_vec.consume() {
-            eprintln!("Error during safe vector destruction: {}", e);
-        }
+    if v.is_null() {
+        return; // Silently ignore null pointers
+    }
+
+    // Take ownership of the box and check if it's already been consumed
+    // This is safe because we take ownership of the whole box
+    let mut safe_vec = unsafe { Box::from_raw(v) };
+
+    // Check if the vector is already consumed or has a None inner vector
+    // to avoid the error message for double consumption
+    if safe_vec.is_consumed() || safe_vec.inner.is_none() {
+        // Already consumed or None vector - just drop the box without error
+        return;
+    }
+
+    // Attempt to consume the vector
+    if let Err(e) = safe_vec.consume() {
+        eprintln!("Error during safe vector destruction: {}", e);
     }
 }
 
