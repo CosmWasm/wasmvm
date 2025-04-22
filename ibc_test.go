@@ -100,7 +100,8 @@ func setupIBCTest(t *testing.T) TestContext {
 	t.Helper()
 	// code id of the reflect contract
 	// address of first reflect contract instance that we created
-	const reflectAddr = "reflect-acct-1"
+	// Using a Bech32-compliant address format
+	const reflectAddr = "cosmos1reflect"
 	// channel id for handshake
 	const channelID = "channel-234"
 
@@ -348,7 +349,8 @@ func processSuccessfulPacket(t *testing.T, ctx TestContext) {
 		Dispatch: &DispatchMsg{
 			Msgs: []types.CosmosMsg{{
 				Bank: &types.BankMsg{Send: &types.SendMsg{
-					ToAddress: "my-friend",
+					// Using a valid Bech32 address
+					ToAddress: "cosmos1friend",
 					Amount:    types.Array[types.Coin]{types.NewCoin(12345678, "uatom")},
 				}},
 			}},
@@ -399,7 +401,8 @@ func processErrorPacket(t *testing.T, ctx TestContext) {
 		Dispatch: &DispatchMsg{
 			Msgs: []types.CosmosMsg{{
 				Bank: &types.BankMsg{Send: &types.SendMsg{
-					ToAddress: "my-friend",
+					// Using a valid Bech32 address
+					ToAddress: "cosmos1friend",
 					Amount:    types.Array[types.Coin]{types.NewCoin(12345678, "uatom")},
 				}},
 			}},

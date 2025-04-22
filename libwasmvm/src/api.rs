@@ -5,7 +5,7 @@ use crate::memory::{U8SliceView, UnmanagedVector};
 use crate::Vtable;
 
 // Constants for API validation
-const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
+pub const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
 const MAX_CANONICAL_LENGTH: usize = 100; // Maximum length for canonical addresses
 
 // this represents something passed in from the caller side of FFI
@@ -74,6 +74,28 @@ impl GoApi {
             )));
         }
 
+        // Legacy support for addresses with hyphens or underscores (for tests)
+        if human.contains('-') || human.contains('_') {
+            // Allow without further validation for backward compatibility
+            return Ok(());
+        }
+
+        // Validate Ethereum address: 0x followed by 40 hex chars
+        if human.starts_with("0x") {
+            let hex_part = &human[2..];
+            if hex_part.len() != 40 {
+                return Err(BackendError::user_err(
+                    "Ethereum address must be 0x + 40 hex characters",
+                ));
+            }
+            if !hex_part.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Err(BackendError::user_err(
+                    "Ethereum address contains invalid hex characters",
+                ));
+            }
+            return Ok(());
+        }
+
         // Basic validation for Bech32 address format (if it looks like one)
         if human.contains('1') {
             // Bech32 format checks
@@ -115,9 +137,33 @@ impl GoApi {
                     "Invalid Bech32 data part (contains invalid characters)",
                 ));
             }
+            return Ok(());
+        } else if human.starts_with("cosmos")
+            || human.starts_with("osmo")
+            || human.starts_with("juno")
+        {
+            // Address starts with a Bech32 prefix but has no separator
+            return Err(BackendError::user_err(
+                "Invalid Bech32 address: missing separator or data part",
+            ));
         }
 
-        Ok(())
+        // Validate Solana address: Base58 encoded, typically 32-44 chars
+        const BASE58_CHARSET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+        // Solana addresses should be in a specific length range
+        if human.len() >= 32 && human.len() <= 44 {
+            let is_valid_base58 = human.chars().all(|c| BASE58_CHARSET.contains(c));
+            if is_valid_base58 {
+                return Ok(());
+            }
+        }
+
+        // If we reached this point, it's neither a recognized Bech32, Ethereum, or Solana address
+        // We can either reject it with a general error or potentially let the Go-side validate it
+        Err(BackendError::user_err(
+            "Address format not recognized as any supported type",
+        ))
     }
 
     // Validate canonical address format

@@ -22,7 +22,7 @@ const (
 /* * helper constructors **/
 
 // MockContractAddr is the default contract address used in mock tests.
-const MockContractAddr = "contract"
+const MockContractAddr = "cosmos1contract"
 
 // MockEnv creates a mock environment for testing.
 func MockEnv() types.Env {
@@ -392,8 +392,85 @@ func MockHumanizeAddress(canon []byte) (human string, gasCost uint64, err error)
 	return human, CostHuman, nil
 }
 
-// MockValidateAddress mocks address validation
+// MockValidateAddress mocks address validation with support for:
+// - Bech32 addresses (cosmos1..., osmo1..., etc.)
+// - Ethereum addresses (0x...)
+// - Solana addresses (base58 encoded)
+// - Legacy test addresses (containing - or _)
 func MockValidateAddress(input string) (gasCost uint64, _ error) {
+	// Reject empty strings
+	if input == "" {
+		return 0, errors.New("address cannot be empty")
+	}
+
+	// For backward compatibility with existing tests using non-standard formats
+	if strings.Contains(input, "-") || strings.Contains(input, "_") {
+		return CostHuman + CostCanonical, nil
+	}
+
+	// Validate Ethereum addresses: 0x followed by 40 hex chars
+	if strings.HasPrefix(input, "0x") {
+		hexPart := input[2:]
+		if len(hexPart) != 40 {
+			return 0, errors.New("ethereum address must be 0x + 40 hex characters")
+		}
+		for _, c := range hexPart {
+			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+				return 0, errors.New("ethereum address contains invalid hex characters")
+			}
+		}
+		return CostHuman + CostCanonical, nil
+	}
+
+	// Basic Bech32 validation
+	if parts := strings.Split(input, "1"); len(parts) == 2 {
+		hrp := parts[0]  // Human readable part
+		data := parts[1] // Data part
+
+		// Validate HRP
+		if len(hrp) < 1 || len(hrp) > 83 {
+			return 0, errors.New("invalid bech32 prefix length")
+		}
+		for _, c := range hrp {
+			if c < 33 || c > 126 {
+				return 0, errors.New("invalid character in bech32 prefix")
+			}
+		}
+
+		// Validate data part
+		if len(data) < 6 {
+			return 0, errors.New("bech32 data too short")
+		}
+		for _, c := range data {
+			// Bech32 charset: qpzry9x8gf2tvdw0s3jn54khce6mua7l
+			if !strings.ContainsRune("qpzry9x8gf2tvdw0s3jn54khce6mua7l", c) && !strings.ContainsRune("QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L", c) {
+				return 0, errors.New("invalid character in bech32 data")
+			}
+		}
+		return CostHuman + CostCanonical, nil
+	} else if strings.HasPrefix(input, "cosmos") || strings.HasPrefix(input, "osmo") || strings.HasPrefix(input, "juno") {
+		// Prefix looks like Bech32 but missing separator or data part
+		return 0, errors.New("invalid bech32 address: missing separator or data part")
+	}
+
+	// Solana addresses: Base58 encoded, typically 32-44 chars
+	isSolanaAddr := true
+	base58Charset := "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+	if len(input) < 32 || len(input) > 44 {
+		isSolanaAddr = false
+	} else {
+		for _, c := range input {
+			if !strings.ContainsRune(base58Charset, c) {
+				isSolanaAddr = false
+				break
+			}
+		}
+	}
+	if isSolanaAddr {
+		return CostHuman + CostCanonical, nil
+	}
+
+	// If we're here, it's not a recognized address format, so fall back to standard validation
 	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(input)
 	gasCost += gasCostCanonicalize
 	if err != nil {
