@@ -81,8 +81,7 @@ impl GoApi {
         }
 
         // Validate Ethereum address: 0x followed by 40 hex chars
-        if human.starts_with("0x") {
-            let hex_part = &human[2..];
+        if let Some(hex_part) = human.strip_prefix("0x") {
             if hex_part.len() != 40 {
                 return Err(BackendError::user_err(
                     "Ethereum address must be 0x + 40 hex characters",
