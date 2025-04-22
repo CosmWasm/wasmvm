@@ -7,7 +7,11 @@ use cosmwasm_vm::{BackendError, BackendResult, GasInfo, Storage};
 use crate::db::Db;
 use crate::error::GoError;
 use crate::iterator::GoIter;
-use crate::memory::{U8SliceView, UnmanagedVector};
+use crate::memory::{validate_memory_size, U8SliceView, UnmanagedVector};
+
+// Constants for DB access validation
+const MAX_KEY_SIZE: usize = 64 * 1024; // 64KB max key size
+const MAX_VALUE_SIZE: usize = 1024 * 1024; // 1MB max value size
 
 pub struct GoStorage {
     db: Db,
@@ -21,10 +25,57 @@ impl GoStorage {
             iterators: HashMap::new(),
         }
     }
+
+    // Validate database key for safety
+    fn validate_db_key(&self, key: &[u8]) -> Result<(), BackendError> {
+        // Check key size
+        if key.is_empty() {
+            return Err(BackendError::unknown("Key cannot be empty"));
+        }
+
+        if key.len() > MAX_KEY_SIZE {
+            return Err(BackendError::unknown(format!(
+                "Key size exceeds limit: {} > {}",
+                key.len(),
+                MAX_KEY_SIZE
+            )));
+        }
+
+        Ok(())
+    }
+
+    // Validate database value for safety
+    fn validate_db_value(&self, value: &[u8]) -> Result<(), BackendError> {
+        // Check value size
+        if value.len() > MAX_VALUE_SIZE {
+            return Err(BackendError::unknown(format!(
+                "Value size exceeds limit: {} > {}",
+                value.len(),
+                MAX_VALUE_SIZE
+            )));
+        }
+
+        Ok(())
+    }
 }
 
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+        // Validate key
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
+        if let Err(e) = validate_memory_size(key.len()) {
+            return (
+                Err(BackendError::unknown(format!(
+                    "Key size validation failed: {}",
+                    e
+                ))),
+                GasInfo::free(),
+            );
+        }
+
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -42,25 +93,32 @@ impl Storage for GoStorage {
             &mut error_msg as *mut UnmanagedVector,
         )
         .into();
-        // We destruct the UnmanagedVector here, no matter if we need the data.
-        let output = output.consume();
 
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read a key in the db: {}",
                 String::from_utf8_lossy(key)
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
+
+        // First check the error result using the safe wrapper
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
+        }
+
+        // If we got here, no error occurred, so we can safely consume the output
+        let output_data = output.consume();
+
+        // Validate returned value if present
+        if let Some(ref value) = output_data {
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), gas_info);
             }
         }
 
-        (Ok(output), gas_info)
+        (Ok(output_data), gas_info)
     }
 
     fn scan(
@@ -69,6 +127,19 @@ impl Storage for GoStorage {
         end: Option<&[u8]>,
         order: Order,
     ) -> BackendResult<u32> {
+        // Validate start and end keys if present
+        if let Some(start_key) = start {
+            if let Err(e) = self.validate_db_key(start_key) {
+                return (Err(e), GasInfo::free());
+            }
+        }
+
+        if let Some(end_key) = end {
+            if let Err(e) = self.validate_db_key(end_key) {
+                return (Err(e), GasInfo::free());
+            }
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut iter = GoIter::stub();
         let mut used_gas = 0_u64;
@@ -90,7 +161,6 @@ impl Storage for GoStorage {
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
 
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to read the next key between {:?} and {:?}",
@@ -98,10 +168,9 @@ impl Storage for GoStorage {
                 end.map(String::from_utf8_lossy),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let next_id: u32 = self
@@ -109,7 +178,7 @@ impl Storage for GoStorage {
             .len()
             .try_into()
             .expect("Iterator count exceeded uint32 range. This is a bug.");
-        self.iterators.insert(next_id, iter); // This moves iter. Is this okay?
+        self.iterators.insert(next_id, iter);
         (Ok(next_id), gas_info)
     }
 
@@ -120,7 +189,21 @@ impl Storage for GoStorage {
                 GasInfo::free(),
             );
         };
-        iterator.next()
+
+        let result = iterator.next();
+
+        // Validate the returned record if present
+        if let Ok(Some((key, value))) = &result.0 {
+            if let Err(e) = self.validate_db_key(key) {
+                return (Err(e), result.1);
+            }
+
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn next_key(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
@@ -131,7 +214,16 @@ impl Storage for GoStorage {
             );
         };
 
-        iterator.next_key()
+        let result = iterator.next_key();
+
+        // Validate the returned key if present
+        if let Ok(Some(ref key)) = &result.0 {
+            if let Err(e) = self.validate_db_key(key) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn next_value(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
@@ -142,10 +234,28 @@ impl Storage for GoStorage {
             );
         };
 
-        iterator.next_value()
+        let result = iterator.next_value();
+
+        // Validate the returned value if present
+        if let Ok(Some(ref value)) = &result.0 {
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
+        // Validate key and value
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
+        if let Err(e) = self.validate_db_value(value) {
+            return (Err(e), GasInfo::free());
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let write_db = self
@@ -163,22 +273,26 @@ impl Storage for GoStorage {
         )
         .into();
         let gas_info = GasInfo::with_externally_used(used_gas);
-        // return complete error message (reading from buffer for GoError::Other)
         let default = || {
             format!(
                 "Failed to set a key in the db: {}",
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
+        // Validate key
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let remove_db = self
@@ -201,11 +315,11 @@ impl Storage for GoStorage {
                 String::from_utf8_lossy(key),
             )
         };
-        unsafe {
-            if let Err(err) = go_error.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_error.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
+
         (Ok(()), gas_info)
     }
 }

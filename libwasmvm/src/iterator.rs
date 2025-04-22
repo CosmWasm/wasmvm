@@ -104,10 +104,8 @@ impl GoIter {
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to fetch next item from iterator".to_string();
-        unsafe {
-            if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+        if let Err(err) = go_result.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let result = match output_key {
@@ -170,10 +168,8 @@ impl GoIter {
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || "Failed to fetch next item from iterator".to_string();
-        unsafe {
-            if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+        if let Err(err) = go_result.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         (Ok(output), gas_info)

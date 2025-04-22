@@ -1,12 +1,12 @@
 // This file contains the part of the API that is exposed no matter if libwasmvm
 // is available or not. Symbols from lib_libwasmvm.go are added conditionally.
 
-package cosmwasm
+package wasmvm
 
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
+	"errors"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
@@ -14,19 +14,19 @@ import (
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
 type Checksum = types.Checksum
 
-// WasmCode is an alias for raw bytes of the wasm compiled code
+// WasmCode is an alias for raw bytes of the wasm compiled code.
 type WasmCode []byte
 
-// KVStore is a reference to some sub-kvstore that is valid for one instance of a code
+// KVStore is a reference to some sub-kvstore that is valid for one instance of a code.
 type KVStore = types.KVStore
 
-// GoAPI is a reference to some "precompiles", go callbacks
+// GoAPI is a reference to some "precompiles", go callbacks.
 type GoAPI = types.GoAPI
 
-// Querier lets us make read-only queries on other modules
+// Querier lets us make read-only queries on other modules.
 type Querier = types.Querier
 
-// GasMeter is a read-only version of the sdk gas meter
+// GasMeter is a read-only version of the sdk gas meter.
 type GasMeter = types.GasMeter
 
 // LibwasmvmVersion returns the version of the loaded library
@@ -44,15 +44,15 @@ func LibwasmvmVersion() (string, error) {
 // to avoid accidental misusage.
 func CreateChecksum(wasm []byte) (Checksum, error) {
 	if len(wasm) == 0 {
-		return Checksum{}, fmt.Errorf("wasm bytes nil or empty")
+		return Checksum{}, errors.New("wasm bytes nil or empty")
 	}
 	if len(wasm) < 4 {
-		return Checksum{}, fmt.Errorf("wasm bytes shorter than 4 bytes")
+		return Checksum{}, errors.New("wasm bytes shorter than 4 bytes")
 	}
 	// magic number for Wasm is "\0asm"
 	// See https://webassembly.github.io/spec/core/binary/modules.html#binary-module
 	if !bytes.Equal(wasm[:4], []byte("\x00\x61\x73\x6D")) {
-		return Checksum{}, fmt.Errorf("wasm bytes do not start with Wasm magic number")
+		return Checksum{}, errors.New("wasm bytes do not start with Wasm magic number")
 	}
 	hash := sha256.Sum256(wasm)
 	return Checksum(hash[:]), nil

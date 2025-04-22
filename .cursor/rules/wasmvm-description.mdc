@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+this project is written in both go and rust.  Please make sure to frequently check both golangci-lint and cargo clippy.
