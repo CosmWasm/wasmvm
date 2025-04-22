@@ -325,7 +325,7 @@ func GetPinnedMetrics(cache Cache) (*types.PinnedMetrics, error) {
 	return pinnedMetrics, nil
 }
 
-// Instantiate creates a new contract instance
+// Instantiate runs a contract's instantiate function
 func Instantiate(params ContractCallParams) ([]byte, types.GasReport, error) {
 	cs := makeView(params.Checksum)
 	defer runtime.KeepAlive(params.Checksum)
@@ -355,7 +355,9 @@ func Instantiate(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if instantiateErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(instantiateErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // Execute runs a contract's execute function
@@ -388,10 +390,12 @@ func Execute(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if executeErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(executeErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
-// Migrate updates a contract's code
+// Migrate runs a contract's migrate function
 func Migrate(params ContractCallParams) ([]byte, types.GasReport, error) {
 	cs := makeView(params.Checksum)
 	defer runtime.KeepAlive(params.Checksum)
@@ -419,7 +423,9 @@ func Migrate(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if migrateErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(migrateErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // MigrateWithInfo updates a contract's code with additional info
@@ -428,10 +434,11 @@ func MigrateWithInfo(params MigrateWithInfoParams) ([]byte, types.GasReport, err
 	defer runtime.KeepAlive(params.Checksum)
 	e := makeView(params.Env)
 	defer runtime.KeepAlive(params.Env)
-	m := makeView(params.Msg)
-	defer runtime.KeepAlive(params.Msg)
 	i := makeView(params.MigrateInfo)
 	defer runtime.KeepAlive(params.MigrateInfo)
+	m := makeView(params.Msg)
+	defer runtime.KeepAlive(params.Msg)
+
 	var pinner runtime.Pinner
 	pinner.Pin(params.GasMeter)
 	checkAndPinAPI(params.API, pinner)
@@ -448,11 +455,13 @@ func MigrateWithInfo(params MigrateWithInfoParams) ([]byte, types.GasReport, err
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, migrateInfoErr := C.migrate_with_info(params.Cache.ptr, cs, e, m, i, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
-	if migrateInfoErr != nil {
-		return nil, types.GasReport{}, errorWithMessage(migrateInfoErr, errmsg)
+	res, migrateErr := C.migrate_with_info(params.Cache.ptr, cs, e, i, m, db, a, q, cu64(params.GasLimit), cbool(params.PrintDebug), &gasReport, &errmsg)
+	if migrateErr != nil {
+		return nil, types.GasReport{}, errorWithMessage(migrateErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // Sudo runs a contract's sudo function
@@ -483,7 +492,9 @@ func Sudo(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if sudoErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(sudoErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // Reply handles a contract's reply to a submessage
@@ -514,7 +525,9 @@ func Reply(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if replyErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(replyErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // Query executes a contract's query function
@@ -545,7 +558,9 @@ func Query(params ContractCallParams) ([]byte, types.GasReport, error) {
 	if queryErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(queryErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBCChannelOpen handles the IBC channel open handshake
@@ -669,7 +684,9 @@ func IBCPacketReceive(params ContractCallParams) ([]byte, types.GasReport, error
 	if packetReceiveErr != nil {
 		return nil, types.GasReport{}, errorWithMessage(packetReceiveErr, errmsg)
 	}
-	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+	// Use the safer pattern with SafeUnmanagedVector
+	safeVec := CopyAndDestroyToSafeVector(res)
+	return safeVec.ToBytesAndDestroy(), convertGasReport(gasReport), nil
 }
 
 // IBC2PacketReceive handles receiving an IBC packet with additional context
@@ -889,8 +906,10 @@ func checkAndPinQuerier(querier *Querier, pinner runtime.Pinner) {
 	pinner.Pin(querier) // this pointer is used in Rust (`state` in `C.GoQuerier`) and must not change
 }
 
-func receiveVector(v C.UnmanagedVector) []byte {
-	return copyAndDestroyUnmanagedVector(v)
+// receiveVectorSafe safely receives an UnmanagedVector and returns it as a SafeUnmanagedVector
+// This prevents double-free issues when the data is needed for further processing
+func receiveVectorSafe(v C.UnmanagedVector) *SafeUnmanagedVector {
+	return CopyAndDestroyToSafeVector(v)
 }
 
 func receiveAnalysisReport(report C.AnalysisReport) *types.AnalysisReport {
