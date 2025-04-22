@@ -1,6 +1,21 @@
 use std::mem;
 use std::slice;
 
+use crate::error::Error;
+
+// Constants for memory validation
+const MAX_MEMORY_SIZE: usize = 1024 * 1024 * 10; // 10MB limit
+
+/// Validates that memory operations don't exceed safe limits
+pub fn validate_memory_size(len: usize) -> Result<(), Error> {
+    if len > MAX_MEMORY_SIZE {
+        return Err(Error::vm_err(format!(
+            "Memory size exceeds limit: {len} > {MAX_MEMORY_SIZE}"
+        )));
+    }
+    Ok(())
+}
+
 /// A view into an externally owned byte slice (Go `[]byte`).
 /// Use this for the current call only. A view cannot be copied for safety reasons.
 /// If you need a copy, use [`ByteSliceView::to_owned`].
@@ -44,11 +59,21 @@ impl ByteSliceView {
         if self.is_nil {
             None
         } else {
+            // Validate length before creating slice
+            if let Err(e) = validate_memory_size(self.len) {
+                // Log error and return None instead of panicking
+                eprintln!("Memory validation error: {}", e);
+                return None;
+            }
+
             Some(
                 // "`data` must be non-null and aligned even for zero-length slices"
                 if self.len == 0 {
                     let dangling = std::ptr::NonNull::<u8>::dangling();
                     unsafe { slice::from_raw_parts(dangling.as_ptr(), 0) }
+                } else if self.ptr.is_null() {
+                    // Don't create slice from null pointer
+                    &[]
                 } else {
                     unsafe { slice::from_raw_parts(self.ptr, self.len) }
                 },
@@ -60,6 +85,41 @@ impl ByteSliceView {
     #[allow(dead_code)]
     pub fn to_owned(&self) -> Option<Vec<u8>> {
         self.read().map(|slice| slice.to_owned())
+    }
+}
+
+/// A safer wrapper around ByteSliceView that tracks consumption
+/// to prevent double use of the same data
+#[derive(Debug)]
+pub struct SafeByteSlice {
+    inner: ByteSliceView,
+    // Tracks whether this slice has been consumed
+    consumed: bool,
+}
+
+impl SafeByteSlice {
+    /// Creates from ByteSliceView but tracks consumption
+    pub fn new(view: ByteSliceView) -> Self {
+        Self {
+            inner: view,
+            consumed: false,
+        }
+    }
+
+    /// Return data if not yet consumed
+    pub fn read(&mut self) -> Result<Option<&[u8]>, Error> {
+        if self.consumed {
+            return Err(Error::vm_err(
+                "Attempted to read already consumed byte slice",
+            ));
+        }
+        self.consumed = true;
+        Ok(self.inner.read())
+    }
+
+    /// Check if this slice has been consumed
+    pub fn is_consumed(&self) -> bool {
+        self.consumed
     }
 }
 
@@ -77,15 +137,27 @@ pub struct U8SliceView {
 impl U8SliceView {
     pub fn new(source: Option<&[u8]>) -> Self {
         match source {
-            Some(data) => Self {
-                is_none: false,
-                ptr: if data.is_empty() {
-                    std::ptr::null::<u8>()
-                } else {
-                    data.as_ptr()
-                },
-                len: data.len(),
-            },
+            Some(data) => {
+                // Validate memory size
+                if let Err(e) = validate_memory_size(data.len()) {
+                    eprintln!("Memory validation error in U8SliceView: {}", e);
+                    return Self {
+                        is_none: true,
+                        ptr: std::ptr::null::<u8>(),
+                        len: 0,
+                    };
+                }
+
+                Self {
+                    is_none: false,
+                    ptr: if data.is_empty() {
+                        std::ptr::null::<u8>()
+                    } else {
+                        data.as_ptr()
+                    },
+                    len: data.len(),
+                }
+            }
             None => Self {
                 is_none: true,
                 ptr: std::ptr::null::<u8>(),
@@ -214,12 +286,94 @@ pub struct UnmanagedVector {
     cap: usize,
 }
 
+/// A safety wrapper around UnmanagedVector that prevents double consumption
+/// of the same vector and adds additional safety checks
+#[derive(Debug)]
+pub struct SafeUnmanagedVector {
+    inner: UnmanagedVector,
+    consumed: bool,
+}
+
+impl SafeUnmanagedVector {
+    /// Creates a new safe wrapper around an UnmanagedVector
+    pub fn new(source: Option<Vec<u8>>) -> Self {
+        Self {
+            inner: UnmanagedVector::new(source),
+            consumed: false,
+        }
+    }
+
+    /// Safely consumes the vector, preventing double-free
+    pub fn consume(&mut self) -> Result<Option<Vec<u8>>, Error> {
+        if self.consumed {
+            return Err(Error::vm_err(
+                "Attempted to consume an already consumed vector",
+            ));
+        }
+        self.consumed = true;
+        Ok(self.inner.consume())
+    }
+
+    /// Creates a non-none SafeUnmanagedVector with the given data
+    pub fn some(data: impl Into<Vec<u8>>) -> Self {
+        Self {
+            inner: UnmanagedVector::some(data),
+            consumed: false,
+        }
+    }
+
+    /// Creates a none SafeUnmanagedVector
+    pub fn none() -> Self {
+        Self {
+            inner: UnmanagedVector::none(),
+            consumed: false,
+        }
+    }
+
+    /// Check if this is a None vector
+    pub fn is_none(&self) -> bool {
+        self.inner.is_none()
+    }
+
+    /// Check if this is a Some vector
+    pub fn is_some(&self) -> bool {
+        self.inner.is_some()
+    }
+
+    /// Check if this vector has been consumed
+    pub fn is_consumed(&self) -> bool {
+        self.consumed
+    }
+
+    /// Get the raw UnmanagedVector (use with caution!)
+    pub fn into_raw(mut self) -> Result<UnmanagedVector, Error> {
+        if self.consumed {
+            return Err(Error::vm_err("Cannot convert consumed vector to raw"));
+        }
+        self.consumed = true;
+        Ok(self.inner)
+    }
+}
+
+impl Default for SafeUnmanagedVector {
+    fn default() -> Self {
+        Self::none()
+    }
+}
+
 impl UnmanagedVector {
     /// Consumes this optional vector for manual management.
     /// This is a zero-copy operation.
     pub fn new(source: Option<Vec<u8>>) -> Self {
         match source {
             Some(data) => {
+                // Validate vector length
+                if let Err(e) = validate_memory_size(data.len()) {
+                    // Log and return empty vector instead of panicking
+                    eprintln!("Memory validation error in UnmanagedVector: {}", e);
+                    return Self::none();
+                }
+
                 let (ptr, len, cap) = {
                     if data.capacity() == 0 {
                         // we need to explicitly use a null pointer here, since `as_mut_ptr`
@@ -280,7 +434,13 @@ impl UnmanagedVector {
             // so no memory is leaked by ignoring the ptr field here.
             Some(Vec::new())
         } else {
-            Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
+            // Additional safety check for null pointers
+            if self.ptr.is_null() {
+                eprintln!("WARNING: UnmanagedVector::consume called with null pointer but non-zero capacity");
+                Some(Vec::new())
+            } else {
+                Some(unsafe { Vec::from_raw_parts(self.ptr, self.len, self.cap) })
+            }
         }
     }
 }
@@ -297,9 +457,19 @@ pub extern "C" fn new_unmanaged_vector(
     ptr: *const u8,
     length: usize,
 ) -> UnmanagedVector {
+    // Validate memory size
+    if let Err(e) = validate_memory_size(length) {
+        eprintln!("Memory validation error in new_unmanaged_vector: {}", e);
+        return UnmanagedVector::none();
+    }
+
     if nil {
         UnmanagedVector::new(None)
     } else if length == 0 {
+        UnmanagedVector::new(Some(Vec::new()))
+    } else if ptr.is_null() {
+        // Safety check for null pointers
+        eprintln!("WARNING: new_unmanaged_vector called with null pointer but non-zero length");
         UnmanagedVector::new(Some(Vec::new()))
     } else {
         // In slice::from_raw_parts, `data` must be non-null and aligned even for zero-length slices.
@@ -470,5 +640,60 @@ mod test {
         // nil with null pointer
         let x = new_unmanaged_vector(true, std::ptr::null::<u8>(), 0);
         assert_eq!(x.consume(), None);
+    }
+
+    #[test]
+    fn safe_byte_slice_prevents_double_read() {
+        let data = vec![0xAA, 0xBB, 0xCC];
+        let view = ByteSliceView::new(&data);
+        let mut safe_slice = SafeByteSlice::new(view);
+
+        // First read should succeed
+        let first_read = safe_slice.read();
+        assert!(first_read.is_ok());
+        let bytes = first_read.unwrap();
+        assert!(bytes.is_some());
+        assert_eq!(bytes.unwrap(), &[0xAA, 0xBB, 0xCC]);
+
+        // Second read should fail with error
+        let second_read = safe_slice.read();
+        assert!(second_read.is_err());
+        match second_read.unwrap_err() {
+            err => assert!(err.to_string().contains("already consumed")),
+        }
+    }
+
+    #[test]
+    fn safe_unmanaged_vector_prevents_double_consume() {
+        let data = vec![0x11, 0x22, 0x33];
+        let mut safe_vec = SafeUnmanagedVector::new(Some(data.clone()));
+
+        // First consume should succeed
+        let first_consume = safe_vec.consume();
+        assert!(first_consume.is_ok());
+        let vec = first_consume.unwrap();
+        assert!(vec.is_some());
+        assert_eq!(vec.unwrap(), data);
+
+        // Second consume should fail with error
+        let second_consume = safe_vec.consume();
+        assert!(second_consume.is_err());
+        match second_consume.unwrap_err() {
+            err => assert!(err.to_string().contains("already consumed")),
+        }
+    }
+
+    #[test]
+    fn validate_memory_size_rejects_too_large() {
+        // 10MB + 1 byte should fail
+        let size = 1024 * 1024 * 10 + 1;
+        let result = validate_memory_size(size);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("exceeds limit"));
+
+        // 10MB exactly should be fine
+        let valid_size = 1024 * 1024 * 10;
+        let valid_result = validate_memory_size(valid_size);
+        assert!(valid_result.is_ok());
     }
 }

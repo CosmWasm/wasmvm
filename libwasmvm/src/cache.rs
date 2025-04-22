@@ -10,7 +10,7 @@ use crate::api::GoApi;
 use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
-use crate::memory::{ByteSliceView, UnmanagedVector};
+use crate::memory::{validate_memory_size, ByteSliceView, SafeByteSlice, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 
@@ -57,9 +57,23 @@ pub extern "C" fn init_cache(
 }
 
 fn do_init_cache(config: ByteSliceView) -> Result<*mut Cache<GoApi, GoStorage, GoQuerier>, Error> {
-    let config =
-        serde_json::from_slice(config.read().ok_or_else(|| Error::unset_arg(CONFIG_ARG))?)?;
-    // parse the supported capabilities
+    let mut safe_config = SafeByteSlice::new(config);
+    let config_data = safe_config
+        .read()?
+        .ok_or_else(|| Error::unset_arg(CONFIG_ARG))?;
+
+    // Validate config size
+    if let Err(e) = validate_memory_size(config_data.len()) {
+        return Err(Error::vm_err(format!(
+            "Config size validation failed: {}",
+            e
+        )));
+    }
+
+    // Parse the JSON config
+    let config = serde_json::from_slice(config_data)?;
+
+    // Create the cache
     let cache = unsafe { Cache::new_with_config(config) }?;
     let out = Box::new(cache);
     Ok(Box::into_raw(out))
@@ -93,8 +107,17 @@ fn do_store_code(
     checked: bool,
     persist: bool,
 ) -> Result<Checksum, Error> {
-    let wasm = wasm.read().ok_or_else(|| Error::unset_arg(WASM_ARG))?;
-    Ok(cache.store_code(wasm, checked, persist)?)
+    let mut safe_slice = SafeByteSlice::new(wasm);
+    let wasm_data = safe_slice
+        .read()?
+        .ok_or_else(|| Error::unset_arg(WASM_ARG))?;
+
+    // Additional validation for WASM size
+    if let Err(e) = validate_memory_size(wasm_data.len()) {
+        return Err(Error::vm_err(format!("WASM size validation failed: {}", e)));
+    }
+
+    Ok(cache.store_code(wasm_data, checked, persist)?)
 }
 
 #[no_mangle]
@@ -118,11 +141,12 @@ fn do_remove_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum_bytes = checksum
-        .read()
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
 
-    // Add explicit validation
+    // Validate checksum
     validate_checksum(checksum_bytes)?;
 
     let checksum: Checksum = checksum_bytes.try_into()?;
@@ -152,11 +176,12 @@ fn do_load_wasm(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<Vec<u8>, Error> {
-    let checksum_bytes = checksum
-        .read()
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
 
-    // Add explicit validation
+    // Validate checksum
     validate_checksum(checksum_bytes)?;
 
     let checksum: Checksum = checksum_bytes.try_into()?;
@@ -186,11 +211,12 @@ fn do_pin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum_bytes = checksum
-        .read()
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
 
-    // Add explicit validation
+    // Validate checksum
     validate_checksum(checksum_bytes)?;
 
     let checksum: Checksum = checksum_bytes.try_into()?;
@@ -220,11 +246,12 @@ fn do_unpin(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<(), Error> {
-    let checksum_bytes = checksum
-        .read()
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
 
-    // Add explicit validation
+    // Validate checksum
     validate_checksum(checksum_bytes)?;
 
     let checksum: Checksum = checksum_bytes.try_into()?;
@@ -331,11 +358,12 @@ fn do_analyze_code(
     cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
     checksum: ByteSliceView,
 ) -> Result<AnalysisReport, Error> {
-    let checksum_bytes = checksum
-        .read()
+    let mut safe_slice = SafeByteSlice::new(checksum);
+    let checksum_bytes = safe_slice
+        .read()?
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?;
 
-    // Add explicit validation
+    // Validate checksum
     validate_checksum(checksum_bytes)?;
 
     let checksum: Checksum = checksum_bytes.try_into()?;

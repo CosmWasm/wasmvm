@@ -21,7 +21,7 @@ use crate::cache::{cache_t, to_cache};
 use crate::db::Db;
 use crate::error::{handle_c_error_binary, Error};
 use crate::handle_vm_panic::handle_vm_panic;
-use crate::memory::{ByteSliceView, UnmanagedVector};
+use crate::memory::{ByteSliceView, SafeUnmanagedVector, UnmanagedVector};
 use crate::querier::GoQuerier;
 use crate::storage::GoStorage;
 use crate::GasReport;
