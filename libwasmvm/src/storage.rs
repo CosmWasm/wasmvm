@@ -9,6 +9,10 @@ use crate::error::GoError;
 use crate::iterator::GoIter;
 use crate::memory::{validate_memory_size, U8SliceView, UnmanagedVector};
 
+// Constants for DB access validation
+const MAX_KEY_SIZE: usize = 64 * 1024; // 64KB max key size
+const MAX_VALUE_SIZE: usize = 1024 * 1024; // 1MB max value size
+
 pub struct GoStorage {
     db: Db,
     iterators: HashMap<u32, GoIter>,
@@ -21,10 +25,47 @@ impl GoStorage {
             iterators: HashMap::new(),
         }
     }
+
+    // Validate database key for safety
+    fn validate_db_key(&self, key: &[u8]) -> Result<(), BackendError> {
+        // Check key size
+        if key.is_empty() {
+            return Err(BackendError::unknown("Key cannot be empty"));
+        }
+
+        if key.len() > MAX_KEY_SIZE {
+            return Err(BackendError::unknown(format!(
+                "Key size exceeds limit: {} > {}",
+                key.len(),
+                MAX_KEY_SIZE
+            )));
+        }
+
+        Ok(())
+    }
+
+    // Validate database value for safety
+    fn validate_db_value(&self, value: &[u8]) -> Result<(), BackendError> {
+        // Check value size
+        if value.len() > MAX_VALUE_SIZE {
+            return Err(BackendError::unknown(format!(
+                "Value size exceeds limit: {} > {}",
+                value.len(),
+                MAX_VALUE_SIZE
+            )));
+        }
+
+        Ok(())
+    }
 }
 
 impl Storage for GoStorage {
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
+        // Validate key
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
         if let Err(e) = validate_memory_size(key.len()) {
             return (
                 Err(BackendError::unknown(format!(
@@ -70,6 +111,13 @@ impl Storage for GoStorage {
         // If we got here, no error occurred, so we can safely consume the output
         let output_data = output.consume();
 
+        // Validate returned value if present
+        if let Some(ref value) = output_data {
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), gas_info);
+            }
+        }
+
         (Ok(output_data), gas_info)
     }
 
@@ -79,6 +127,19 @@ impl Storage for GoStorage {
         end: Option<&[u8]>,
         order: Order,
     ) -> BackendResult<u32> {
+        // Validate start and end keys if present
+        if let Some(start_key) = start {
+            if let Err(e) = self.validate_db_key(start_key) {
+                return (Err(e), GasInfo::free());
+            }
+        }
+
+        if let Some(end_key) = end {
+            if let Err(e) = self.validate_db_key(end_key) {
+                return (Err(e), GasInfo::free());
+            }
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut iter = GoIter::stub();
         let mut used_gas = 0_u64;
@@ -128,7 +189,21 @@ impl Storage for GoStorage {
                 GasInfo::free(),
             );
         };
-        iterator.next()
+
+        let result = iterator.next();
+
+        // Validate the returned record if present
+        if let Ok(Some((key, value))) = &result.0 {
+            if let Err(e) = self.validate_db_key(key) {
+                return (Err(e), result.1);
+            }
+
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn next_key(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
@@ -139,7 +214,16 @@ impl Storage for GoStorage {
             );
         };
 
-        iterator.next_key()
+        let result = iterator.next_key();
+
+        // Validate the returned key if present
+        if let Ok(Some(ref key)) = &result.0 {
+            if let Err(e) = self.validate_db_key(key) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn next_value(&mut self, iterator_id: u32) -> BackendResult<Option<Vec<u8>>> {
@@ -150,10 +234,28 @@ impl Storage for GoStorage {
             );
         };
 
-        iterator.next_value()
+        let result = iterator.next_value();
+
+        // Validate the returned value if present
+        if let Ok(Some(ref value)) = &result.0 {
+            if let Err(e) = self.validate_db_value(value) {
+                return (Err(e), result.1);
+            }
+        }
+
+        result
     }
 
     fn set(&mut self, key: &[u8], value: &[u8]) -> BackendResult<()> {
+        // Validate key and value
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
+        if let Err(e) = self.validate_db_value(value) {
+            return (Err(e), GasInfo::free());
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let write_db = self
@@ -186,6 +288,11 @@ impl Storage for GoStorage {
     }
 
     fn remove(&mut self, key: &[u8]) -> BackendResult<()> {
+        // Validate key
+        if let Err(e) = self.validate_db_key(key) {
+            return (Err(e), GasInfo::free());
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let remove_db = self

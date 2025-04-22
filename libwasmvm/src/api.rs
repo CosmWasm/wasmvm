@@ -4,6 +4,10 @@ use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use crate::Vtable;
 
+// Constants for API validation
+const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
+const MAX_CANONICAL_LENGTH: usize = 100; // Maximum length for canonical addresses
+
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
 #[repr(C)]
@@ -53,6 +57,89 @@ pub struct GoApi {
     pub vtable: GoApiVtable,
 }
 
+impl GoApi {
+    // Validate human address format
+    fn validate_human_address(&self, human: &str) -> Result<(), BackendError> {
+        // Check for empty addresses
+        if human.is_empty() {
+            return Err(BackendError::user_err("Human address cannot be empty"));
+        }
+
+        // Check address length
+        if human.len() > MAX_ADDRESS_LENGTH {
+            return Err(BackendError::user_err(format!(
+                "Human address exceeds maximum length: {} > {}",
+                human.len(),
+                MAX_ADDRESS_LENGTH
+            )));
+        }
+
+        // Basic validation for Bech32 address format (if it looks like one)
+        if human.contains('1') {
+            // Bech32 format checks
+            let parts: Vec<&str> = human.split('1').collect();
+            if parts.len() != 2 {
+                return Err(BackendError::user_err(
+                    "Invalid Bech32 address format (should contain exactly one '1' separator)",
+                ));
+            }
+
+            // Validate HRP (Human Readable Part)
+            let hrp = parts[0];
+            if hrp.is_empty() || hrp.len() > 20 {
+                return Err(BackendError::user_err(
+                    "Invalid Bech32 HRP (prefix before '1') length",
+                ));
+            }
+
+            // Check HRP is lowercase letters only
+            if !hrp.chars().all(|c| c.is_ascii_lowercase()) {
+                return Err(BackendError::user_err(
+                    "Invalid Bech32 HRP (prefix must contain only lowercase letters)",
+                ));
+            }
+
+            // Basic data part validation
+            let data = parts[1];
+            if data.is_empty() {
+                return Err(BackendError::user_err("Invalid Bech32 data part (empty)"));
+            }
+
+            // Check data uses only Bech32 charset
+            if !data.chars().all(|c| {
+                c.is_ascii_lowercase()
+                    || c.is_ascii_digit()
+                    || "qpzry9x8gf2tvdw0s3jn54khce6mua7l".contains(c)
+            }) {
+                return Err(BackendError::user_err(
+                    "Invalid Bech32 data part (contains invalid characters)",
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    // Validate canonical address format
+    fn validate_canonical_address(&self, canonical: &[u8]) -> Result<(), BackendError> {
+        // Check for empty addresses
+        if canonical.is_empty() {
+            return Err(BackendError::user_err("Canonical address cannot be empty"));
+        }
+
+        // Check address length
+        if canonical.len() > MAX_CANONICAL_LENGTH {
+            return Err(BackendError::user_err(format!(
+                "Canonical address exceeds maximum length: {} > {}",
+                canonical.len(),
+                MAX_CANONICAL_LENGTH
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 // We must declare that these are safe to Send, to use in wasm.
 // The known go caller passes in immutable function pointers, but this is indeed
 // unsafe for possible other callers.
@@ -62,6 +149,11 @@ unsafe impl Send for GoApi {}
 
 impl BackendApi for GoApi {
     fn addr_canonicalize(&self, human: &str) -> BackendResult<Vec<u8>> {
+        // Validate the input address before passing to Go
+        if let Err(err) = self.validate_human_address(human) {
+            return (Err(err), GasInfo::free());
+        }
+
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -89,10 +181,25 @@ impl BackendApi for GoApi {
         }
 
         let result = output.ok_or_else(|| BackendError::unknown("Unset output"));
+        // Validate the output canonical address
+        match &result {
+            Ok(canonical) => {
+                if let Err(err) = self.validate_canonical_address(canonical) {
+                    return (Err(err), gas_info);
+                }
+            }
+            Err(_) => {} // If already an error, we'll return that
+        }
+
         (result, gas_info)
     }
 
     fn addr_humanize(&self, canonical: &[u8]) -> BackendResult<String> {
+        // Validate the input canonical address
+        if let Err(err) = self.validate_canonical_address(canonical) {
+            return (Err(err), GasInfo::free());
+        }
+
         let mut output = UnmanagedVector::default();
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
@@ -127,10 +234,26 @@ impl BackendApi for GoApi {
         let result = output
             .ok_or_else(|| BackendError::unknown("Unset output"))
             .and_then(|human_data| String::from_utf8(human_data).map_err(BackendError::from));
+
+        // Validate the output human address
+        match &result {
+            Ok(human) => {
+                if let Err(err) = self.validate_human_address(human) {
+                    return (Err(err), gas_info);
+                }
+            }
+            Err(_) => {} // If already an error, we'll return that
+        }
+
         (result, gas_info)
     }
 
     fn addr_validate(&self, input: &str) -> BackendResult<()> {
+        // Validate the input address format first
+        if let Err(err) = self.validate_human_address(input) {
+            return (Err(err), GasInfo::free());
+        }
+
         let mut error_msg = UnmanagedVector::default();
         let mut used_gas = 0_u64;
         let validate_address = self
