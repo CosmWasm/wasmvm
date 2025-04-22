@@ -1,3 +1,4 @@
+// Package types provides core data structures and interfaces for the CosmWasm virtual machine.
 package types
 
 type (
@@ -11,6 +12,8 @@ type (
 	ValidateAddressFunc func(string) (uint64, error)
 )
 
+// GoAPI represents the Go-side API interface for the CosmWasm virtual machine.
+// It provides methods for address validation, canonicalization, and humanization.
 type GoAPI struct {
 	HumanizeAddress     HumanizeAddressFunc
 	CanonicalizeAddress CanonicalizeAddressFunc

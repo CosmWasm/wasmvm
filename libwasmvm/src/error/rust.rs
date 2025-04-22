@@ -55,6 +55,12 @@ pub enum RustError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
+    #[error("Invalid checksum format: {}", msg)]
+    InvalidChecksumFormat {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
     #[error("Error calling the VM: {}", msg)]
     VmErr {
         msg: String,
@@ -120,6 +126,14 @@ impl RustError {
 
     pub fn checksum_err() -> Self {
         RustError::ChecksumError {
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn invalid_checksum_format<S: ToString>(msg: S) -> Self {
+        RustError::InvalidChecksumFormat {
+            msg: msg.to_string(),
             #[cfg(feature = "backtraces")]
             backtrace: Backtrace::capture(),
         }
