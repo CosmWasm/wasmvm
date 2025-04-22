@@ -1,0 +1,149 @@
+name: Fuzzing Tests
+
+on:
+  schedule:
+    - cron: "0 0 * * 0" # Run weekly on Sundays at midnight UTC
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  go-fuzzers-basic:
+    name: Go Basic Fuzzing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fuzzer: [FuzzStoreCode, FuzzContractExecution, FuzzQuery]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.18"
+
+      - name: Install libwasmvm
+        run: |
+          make build-rust
+          make install-rust
+
+      - name: Run Go fuzzer - ${{ matrix.fuzzer }}
+        run: |
+          cd fuzz/go
+          go test -fuzz=${{ matrix.fuzzer }} -fuzztime=15m -parallel=4
+
+      - name: Archive crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-fuzz-${{ matrix.fuzzer }}-crashes
+          path: |
+            fuzz/go/testdata/fuzz/${{ matrix.fuzzer }}/*
+
+  go-fuzzers-advanced:
+    name: Go Advanced Fuzzing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fuzzer:
+          [
+            FuzzPinUnpin,
+            FuzzCodeManagement,
+            FuzzGasMetering,
+            FuzzMetadata,
+            FuzzMultiContract,
+          ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.18"
+
+      - name: Install libwasmvm
+        run: |
+          make build-rust
+          make install-rust
+
+      - name: Run Go fuzzer - ${{ matrix.fuzzer }}
+        run: |
+          cd fuzz/go
+          go test -fuzz=${{ matrix.fuzzer }} -fuzztime=15m -parallel=4 -fuzzminimizetime=10s
+
+      - name: Archive crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-fuzz-${{ matrix.fuzzer }}-crashes
+          path: |
+            fuzz/go/testdata/fuzz/${{ matrix.fuzzer }}/*
+
+  rust-fuzzers-basic:
+    name: Rust Basic Fuzzing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fuzzer: [store_code, instantiate, execute, query]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run Rust fuzzer - ${{ matrix.fuzzer }}
+        run: |
+          cd fuzz/rust
+          cargo fuzz build
+          timeout 300 cargo fuzz run ${{ matrix.fuzzer }} -- -max_len=10240 -runs=15000 -jobs=4
+
+      - name: Archive crash artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: rust-fuzz-${{ matrix.fuzzer }}-crashes
+          path: |
+            fuzz/rust/fuzz/artifacts/${{ matrix.fuzzer }}/*
+
+  rust-fuzzers-advanced:
+    name: Rust Advanced Fuzzing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fuzzer:
+          [pin_unpin, migrate, ibc_operations, gas_metering, multi_contract]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run Rust fuzzer - ${{ matrix.fuzzer }}
+        run: |
+          cd fuzz/rust
+          cargo fuzz build
+          timeout 300 cargo fuzz run ${{ matrix.fuzzer }} -- -max_len=10240 -runs=15000 -jobs=4
+
+      - name: Archive crash artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: rust-fuzz-${{ matrix.fuzzer }}-crashes
+          path: |
+            fuzz/rust/fuzz/artifacts/${{ matrix.fuzzer }}/*
