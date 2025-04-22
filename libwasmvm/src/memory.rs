@@ -118,12 +118,14 @@ impl SafeByteSlice {
     }
 
     /// Check if this slice has been consumed
+    #[allow(dead_code)]
     pub fn is_consumed(&self) -> bool {
         self.consumed
     }
 
     /// Safely checks if the byte slice is available (not consumed and not nil)
     /// Helpful for defensive programming without consuming the slice
+    #[allow(dead_code)]
     pub fn is_available(&self) -> bool {
         !self.consumed && self.inner.read().is_some()
     }
@@ -321,6 +323,7 @@ impl SafeUnmanagedVector {
     }
 
     /// Creates a non-none SafeUnmanagedVector with the given data
+    #[allow(dead_code)]
     pub fn some(data: impl Into<Vec<u8>>) -> Self {
         Self {
             inner: UnmanagedVector::some(data),
@@ -337,11 +340,13 @@ impl SafeUnmanagedVector {
     }
 
     /// Check if this is a None vector
+    #[allow(dead_code)]
     pub fn is_none(&self) -> bool {
         self.inner.is_none()
     }
 
     /// Check if this is a Some vector
+    #[allow(dead_code)]
     pub fn is_some(&self) -> bool {
         self.inner.is_some()
     }
@@ -352,6 +357,7 @@ impl SafeUnmanagedVector {
     }
 
     /// Get the raw UnmanagedVector (use with caution!)
+    #[allow(dead_code)]
     pub fn into_raw(mut self) -> Result<UnmanagedVector, Error> {
         if self.consumed {
             return Err(Error::vm_err("Cannot convert consumed vector to raw"));
