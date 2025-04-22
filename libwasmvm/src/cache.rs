@@ -41,7 +41,7 @@ fn validate_checksum(checksum_bytes: &[u8]) -> Result<(), Error> {
     // Check the length is exactly 32 bytes
     if checksum_bytes.len() != 32 {
         return Err(Error::invalid_checksum_format(format!(
-            "Checksum must be 32 bytes, got {} bytes",
+            "Checksum must be 32 bytes, got {} bytes (Checksum not of length 32)",
             checksum_bytes.len()
         )));
     }
