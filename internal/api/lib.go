@@ -216,8 +216,8 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 
 // GetCodeSafe is a safer version of GetCode that uses SafeUnmanagedVector
 // to prevent double-free issues.
-func (vm *VM) GetCodeSafe(checksum Checksum) (*SafeUnmanagedVector, error) {
-	if vm.cache == nil {
+func GetCodeSafe(cache Cache, checksum []byte) (*SafeUnmanagedVector, error) {
+	if cache.ptr == nil {
 		return nil, errors.New("no cache")
 	}
 
@@ -227,7 +227,7 @@ func (vm *VM) GetCodeSafe(checksum Checksum) (*SafeUnmanagedVector, error) {
 	}
 
 	errmsg := uninitializedUnmanagedVector()
-	csafeVec := C.load_wasm_safe(vm.cache, makeView(checksum), &errmsg)
+	csafeVec := C.load_wasm_safe(cache.ptr, makeView(checksum), &errmsg)
 	if csafeVec == nil {
 		// This must be an error case
 		errMsg := string(copyAndDestroyUnmanagedVector(errmsg))
