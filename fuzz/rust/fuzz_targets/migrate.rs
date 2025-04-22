@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use arbitrary::Arbitrary;
+use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 use cosmwasm_vm::{
     call_instantiate_raw, call_migrate_raw, capabilities_from_csv,
     testing::{mock_backend, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
@@ -16,11 +16,17 @@ const MEMORY_CACHE_SIZE: Size = Size::mebi(200);
 const MEMORY_LIMIT: Size = Size::mebi(32);
 const GAS_LIMIT: u64 = 200_000_000_000; // ~0.2ms
 
-#[derive(Arbitrary, Debug)]
+#[derive(Debug)]
 struct MigrateFuzzInput {
     // The migrate message
-    #[arbitrary(with = |u: &mut arbitrary::Unstructured| u.bytes(100))]
     migrate_msg: Vec<u8>,
+}
+
+impl<'a> Arbitrary<'a> for MigrateFuzzInput {
+    fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
+        let migrate_msg = u.bytes(100)?.to_vec();
+        Ok(MigrateFuzzInput { migrate_msg })
+    }
 }
 
 fuzz_target!(|input: MigrateFuzzInput| {
