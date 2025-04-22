@@ -61,6 +61,12 @@ pub enum RustError {
         #[cfg(feature = "backtraces")]
         backtrace: Backtrace,
     },
+    #[error("Invalid gas limit: {}", msg)]
+    InvalidGasLimit {
+        msg: String,
+        #[cfg(feature = "backtraces")]
+        backtrace: Backtrace,
+    },
     #[error("Error calling the VM: {}", msg)]
     VmErr {
         msg: String,
@@ -133,6 +139,14 @@ impl RustError {
 
     pub fn invalid_checksum_format<S: ToString>(msg: S) -> Self {
         RustError::InvalidChecksumFormat {
+            msg: msg.to_string(),
+            #[cfg(feature = "backtraces")]
+            backtrace: Backtrace::capture(),
+        }
+    }
+
+    pub fn invalid_gas_limit<S: ToString>(msg: S) -> Self {
+        RustError::InvalidGasLimit {
             msg: msg.to_string(),
             #[cfg(feature = "backtraces")]
             backtrace: Backtrace::capture(),
