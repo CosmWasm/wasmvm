@@ -121,6 +121,12 @@ impl SafeByteSlice {
     pub fn is_consumed(&self) -> bool {
         self.consumed
     }
+
+    /// Safely checks if the byte slice is available (not consumed and not nil)
+    /// Helpful for defensive programming without consuming the slice
+    pub fn is_available(&self) -> bool {
+        !self.consumed && self.inner.read().is_some()
+    }
 }
 
 /// A view into a `Option<&[u8]>`, created and maintained by Rust.
@@ -591,6 +597,11 @@ pub extern "C" fn destroy_unmanaged_vector(v: UnmanagedVector) {
         consumed: false,
     };
 
+    // If the vector is None, we don't need to consume it
+    if safe_vector.inner.is_none() {
+        return;
+    }
+
     // This will prevent double consumption by setting consumed flag
     // and returning an error if already consumed
     if let Err(e) = safe_vector.consume() {
@@ -651,6 +662,11 @@ pub extern "C" fn safe_unmanaged_vector_to_bytes(
 
     // Get a mutable reference to the vector
     let safe_vec = unsafe { &mut *v };
+
+    // Early check to avoid trying to consume already consumed vector
+    if safe_vec.is_consumed() {
+        return false;
+    }
 
     // Try to consume the vector safely
     match safe_vec.consume() {
@@ -867,9 +883,8 @@ mod test {
         // Second read should fail with error
         let second_read = safe_slice.read();
         assert!(second_read.is_err());
-        match second_read.unwrap_err() {
-            err => assert!(err.to_string().contains("already consumed")),
-        }
+        let err = second_read.unwrap_err();
+        assert!(err.to_string().contains("already consumed"));
     }
 
     #[test]
@@ -887,9 +902,8 @@ mod test {
         // Second consume should fail with error
         let second_consume = safe_vec.consume();
         assert!(second_consume.is_err());
-        match second_consume.unwrap_err() {
-            err => assert!(err.to_string().contains("already consumed")),
-        }
+        let err = second_consume.unwrap_err();
+        assert!(err.to_string().contains("already consumed"));
     }
 
     #[test]
