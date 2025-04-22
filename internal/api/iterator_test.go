@@ -44,7 +44,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	for _, value := range values {
 		// push 17
 		var gasMeter2 types.GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
-		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
+		push := fmt.Appendf(nil, `{"enqueue":{"value":%d}}`, value)
 		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
@@ -241,7 +241,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	var wg sync.WaitGroup
 	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
 	wg.Add(numBatches * 3)
-	for i := 0; i < numBatches; i++ {
+	for range numBatches {
 		go func() {
 			reduceQuery(t, contract1, "[[17,22],[22,0]]")
 			wg.Done()

@@ -75,7 +75,7 @@ type AcknowledgeDispatch struct {
 	Err string `json:"error"`
 }
 
-func toBytes(t *testing.T, v interface{}) []byte {
+func toBytes(t *testing.T, v any) []byte {
 	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
