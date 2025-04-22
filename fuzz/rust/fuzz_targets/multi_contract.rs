@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use arbitrary::Arbitrary;
 use cosmwasm_vm::{
     call_execute_raw, call_instantiate_raw, capabilities_from_csv,
-    testing::{mock_backend, mock_env, mock_info},
-    to_vec, Cache, CacheOptions, Size,
+    testing::{mock_backend, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
+    to_vec, Backend, Cache, CacheOptions, Size,
 };
 use libfuzzer_sys::fuzz_target;
 
@@ -41,8 +41,8 @@ fuzz_target!(|input: MultiContractFuzzInput| {
         MEMORY_LIMIT,
     );
 
-    // Create cache
-    let cache = match unsafe { Cache::new(options) } {
+    // Create cache with explicit type annotation
+    let cache: Cache<MockApi, MockStorage, MockQuerier> = match unsafe { Cache::new(options) } {
         Ok(cache) => cache,
         Err(_) => return,
     };
@@ -86,7 +86,9 @@ fuzz_target!(|input: MultiContractFuzzInput| {
     // Create instances of both contracts
     let mut instances = Vec::new();
     for checksum in &checksums[0..2] {
-        match cache.get_instance(checksum, backend.clone(), options) {
+        // Create a new backend for each instance instead of cloning
+        let new_backend = mock_backend(&[]);
+        match cache.get_instance(checksum, new_backend, options) {
             Ok(instance) => instances.push(instance),
             Err(_) => return,
         }

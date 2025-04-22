@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use arbitrary::Arbitrary;
 use cosmwasm_vm::{
     call_instantiate_raw, call_migrate_raw, capabilities_from_csv,
-    testing::{mock_backend, mock_env, mock_info},
+    testing::{mock_backend, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
     to_vec, Cache, CacheOptions, Size,
 };
 use libfuzzer_sys::fuzz_target;
@@ -38,8 +38,8 @@ fuzz_target!(|input: MigrateFuzzInput| {
         MEMORY_LIMIT,
     );
 
-    // Create cache
-    let cache = match unsafe { Cache::new(options) } {
+    // Create cache with explicit type annotation
+    let cache: Cache<MockApi, MockStorage, MockQuerier> = match unsafe { Cache::new(options) } {
         Ok(cache) => cache,
         Err(_) => return,
     };
@@ -65,7 +65,7 @@ fuzz_target!(|input: MigrateFuzzInput| {
     };
 
     // Store the second contract
-    let checksum2 = match cache.store_code(&wasm2, true, true) {
+    let _checksum2 = match cache.store_code(&wasm2, true, true) {
         Ok(checksum) => checksum,
         Err(_) => return,
     };
@@ -109,19 +109,13 @@ fuzz_target!(|input: MigrateFuzzInput| {
     // Prepare for migration
     // Admin info (typically the creator or a designated admin)
     let admin_info = mock_info("creator", &[]);
-    let raw_admin_info = match to_vec(&admin_info) {
+    let _raw_admin_info = match to_vec(&admin_info) {
         Ok(raw) => raw,
         Err(_) => return,
     };
 
     // Now try to migrate the contract to the new code with the fuzzed message
-    let _migrate_result = call_migrate_raw(
-        &mut instance,
-        &checksum2, // Target code to migrate to
-        &raw_env,
-        &raw_admin_info,
-        &input.migrate_msg,
-    );
+    let _migrate_result = call_migrate_raw(&mut instance, &raw_env, &input.migrate_msg);
 
     // The result is ignored as we just want to test if migration crashes the VM
 });

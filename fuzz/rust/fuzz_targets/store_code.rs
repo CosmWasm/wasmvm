@@ -1,6 +1,10 @@
 #![no_main]
 
-use cosmwasm_vm::{capabilities_from_csv, Cache, CacheOptions, Size};
+use cosmwasm_vm::{
+    capabilities_from_csv,
+    testing::{MockApi, MockQuerier, MockStorage},
+    Cache, CacheOptions, Size,
+};
 use libfuzzer_sys::fuzz_target;
 
 // Define constants for the fuzzing
@@ -22,8 +26,8 @@ fuzz_target!(|data: &[u8]| {
         MEMORY_LIMIT,
     );
 
-    // Create cache
-    let cache = match unsafe { Cache::new(options) } {
+    // Create cache with explicit type annotation
+    let cache: Cache<MockApi, MockStorage, MockQuerier> = match unsafe { Cache::new(options) } {
         Ok(cache) => cache,
         Err(_) => return,
     };

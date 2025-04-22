@@ -181,15 +181,15 @@ fuzz-rust:
 		cargo install cargo-fuzz; \
 	fi
 	@echo "Running all Rust fuzzers for 1 minute each..."
-	cd fuzz/rust && cargo fuzz run store_code -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run instantiate -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run execute -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run query -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run pin_unpin -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run migrate -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run ibc_operations -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run gas_metering -- -max_total_time=60
-	cd fuzz/rust && cargo fuzz run multi_contract -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz store_code -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz instantiate -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz execute -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz query -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz pin_unpin -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz migrate -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz ibc_operations -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz gas_metering -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz multi_contract -- -max_total_time=60
 	@echo "All Rust fuzzers completed!"
 
 # Run all fuzzers (both Go and Rust) for 1 minute each

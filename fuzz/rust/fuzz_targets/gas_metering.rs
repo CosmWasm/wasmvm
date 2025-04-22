@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use arbitrary::Arbitrary;
 use cosmwasm_vm::{
     call_execute_raw, call_instantiate_raw, call_query_raw, capabilities_from_csv,
-    testing::{mock_backend, mock_env, mock_info},
+    testing::{mock_backend, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
     to_vec, Cache, CacheOptions, Size,
 };
 use libfuzzer_sys::fuzz_target;
@@ -50,8 +50,8 @@ fuzz_target!(|input: GasMeteringFuzzInput| {
         MEMORY_LIMIT,
     );
 
-    // Create cache
-    let cache = match unsafe { Cache::new(options) } {
+    // Create cache with explicit type annotation
+    let cache: Cache<MockApi, MockStorage, MockQuerier> = match unsafe { Cache::new(options) } {
         Ok(cache) => cache,
         Err(_) => return,
     };
@@ -100,7 +100,7 @@ fuzz_target!(|input: GasMeteringFuzzInput| {
     let instantiate_result = call_instantiate_raw(&mut instance, &raw_env, &raw_info, &input.msg);
 
     // Get the gas usage after instantiation
-    let gas_after_instantiate = instance.get_gas_left();
+    let _gas_after_instantiate = instance.get_gas_left();
 
     // If instantiate succeeded and we want to execute
     if instantiate_result.is_ok() && input.execute_after_instantiate {
