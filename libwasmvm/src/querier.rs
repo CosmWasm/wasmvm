@@ -74,10 +74,9 @@ impl Querier for GoQuerier {
                 String::from_utf8_lossy(request)
             )
         };
-        unsafe {
-            if let Err(err) = go_result.into_result(error_msg, default) {
-                return (Err(err), gas_info);
-            }
+
+        if let Err(err) = go_result.into_result_safe(error_msg, default) {
+            return (Err(err), gas_info);
         }
 
         let bin_result: Vec<u8> = output.unwrap_or_default();

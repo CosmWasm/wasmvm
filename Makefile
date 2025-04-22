@@ -157,3 +157,42 @@ lint:
 .PHONY: lint-fix
 lint-fix:
 	golangci-lint run --fix
+
+# Run all Go fuzzers for 1 minute each
+.PHONY: fuzz-go
+fuzz-go:
+	@echo "Running all Go fuzzers for 1 minute each..."
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzMultiContract -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzPinUnpin -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzGasMetering -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzContractExecution -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzQuery -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzCodeManagement -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzMetadata -fuzztime=1m
+	cd fuzz/go && go test -run=^$$ -fuzz=FuzzStoreWasm -fuzztime=1m
+	@echo "All fuzzers completed!"
+
+# Run all Rust fuzzers for 1 minute each
+.PHONY: fuzz-rust
+fuzz-rust:
+	@echo "Checking if cargo-fuzz is installed..."
+	@if ! command -v cargo-fuzz >/dev/null 2>&1; then \
+		echo "cargo-fuzz not found. Installing..."; \
+		cargo install cargo-fuzz; \
+	fi
+	@echo "Running all Rust fuzzers for 1 minute each..."
+	cargo fuzz run -p wasmvm-fuzz store_code -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz instantiate -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz execute -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz query -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz pin_unpin -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz migrate -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz ibc_operations -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz gas_metering -- -max_total_time=60
+	cargo fuzz run -p wasmvm-fuzz multi_contract -- -max_total_time=60
+	@echo "All Rust fuzzers completed!"
+
+# Run all fuzzers (both Go and Rust) for 1 minute each
+.PHONY: fuzz
+fuzz: fuzz-go fuzz-rust
+	@echo "All Go and Rust fuzzers completed!"
