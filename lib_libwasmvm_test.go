@@ -554,9 +554,8 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	// Create a valid payload
 	validPayload := make([]byte, 1024*1024) // 1 MiB
 	validPayloadJSON, err := json.Marshal(validPayload)
-	require.NoError(t, err, "Failed to marshal valid payload")
-	var resultJson []byte
-	resultJson = fmt.Appendf(resultJson, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON)
+	require.NoError(t, err)
+	resultJson := fmt.Appendf(nil, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON)
 
 	// Test that a valid payload can be deserialized
 	var result types.ContractResult
@@ -569,7 +568,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	// Create a larger payload (20 MiB) - this is now supported as well
 	largerPayload := make([]byte, 20*1024*1024) // 20 MiB
 	largerPayloadJSON, err := json.Marshal(largerPayload)
-	require.NoError(t, err, "Failed to marshal larger payload")
+	require.NoError(t, err)
 	resultJson = fmt.Appendf(resultJson[:0], `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, largerPayloadJSON)
 
 	// Test that a larger payload can also be deserialized

@@ -948,7 +948,9 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
 
-		for range make([]struct{}, callCount) {
+		info = MockInfoBin(b, "fred")
+
+		for range callCount {
 			go func() {
 				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
