@@ -9,6 +9,35 @@ type ExpectedJSONSize interface {
 	ExpectedJSONSize() int
 }
 
+// runeOverheadMap maps specific runes to their JSON escape overhead
+var runeOverheadMap = map[rune]int{
+	'"':  1,
+	'\\': 1,
+	'\b': 1,
+	'\f': 1,
+	'\n': 1,
+	'\r': 1,
+	'\t': 1,
+	'<':  5,
+	'>':  5,
+	'&':  5,
+}
+
+// getRuneOverhead returns the overhead in bytes for a rune when JSON encoding
+func getRuneOverhead(r rune) int {
+	// Check special characters first
+	if overhead, found := runeOverheadMap[r]; found {
+		return overhead
+	}
+
+	// Control codes have 5-byte overhead
+	if r <= 0x1F {
+		return 5
+	}
+
+	return 0
+}
+
 // ExpectedJSONSizeString returns the expected JSON size in bytes when using
 // json.Marshal with the given value.
 // Since JSON marshalling does not have a guaranteed output format,
@@ -18,19 +47,7 @@ func ExpectedJSONSizeString(s string) int {
 	// 2x quote + length of string + escaping overhead
 	out := quotes + len(s)
 	for _, r := range s {
-		if r == '"' || r == '\\' {
-			out += 1
-		} else if r == '\b' || r == '\f' || r == '\n' || r == '\r' || r == '\t' {
-			// https://cs.opensource.google/go/go/+/master:src/encoding/json/encode.go;l=992-1001;drc=0909bcd9e4acb01089d588d608d669d69710e50a
-			out += 1
-		} else if r <= 0x1F {
-			// control codes \u0000 - \u001f
-			out += 5
-		} else if r == '<' || r == '>' || r == '&' {
-			// Go escapes HTML which is a bit pointless but legal
-			// \u003c, \u003e, \u0026
-			out += 5
-		}
+		out += getRuneOverhead(r)
 	}
 	return out
 }
@@ -59,11 +76,11 @@ func ExpectedJSONSizeInt(i int) int {
 	// minus sign or zero
 	if i <= 0 {
 		i = -i
-		out += 1
+		out++
 	}
 	for i > 0 {
 		i /= 10
-		out += 1
+		out++
 	}
 	return out
 }
@@ -81,7 +98,7 @@ func ExpectedJSONSizeUint64(i uint64) int {
 	out := 0
 	for i > 0 {
 		i /= 10
-		out += 1
+		out++
 	}
 	return out
 }
@@ -94,9 +111,8 @@ func ExpectedJSONSizeUint64(i uint64) int {
 func ExpectedJSONSizeBool(b bool) int {
 	if b {
 		return 4 // true
-	} else {
-		return 5 // false
 	}
+	return 5 // false
 }
 
 // The size in bytes in JSON serialization

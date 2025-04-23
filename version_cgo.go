@@ -1,6 +1,6 @@
 //go:build cgo && !nolink_libwasmvm
 
-package cosmwasm
+package wasmvm
 
 import (
 	"github.com/CosmWasm/wasmvm/v2/internal/api"

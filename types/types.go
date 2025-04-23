@@ -8,13 +8,15 @@ import (
 	"github.com/shamaton/msgpack/v2"
 )
 
-// Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string
+// Uint64 is a wrapper for uint64, but it is marshalled to and from JSON as a string.
 type Uint64 uint64
 
+// MarshalJSON implements json.Marshaler
 func (u Uint64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatUint(uint64(u), 10))
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (u *Uint64) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -28,13 +30,15 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string
+// Int64 is a wrapper for int64, but it is marshalled to and from JSON as a string.
 type Int64 int64
 
+// MarshalJSON implements json.Marshaler
 func (i Int64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatInt(int64(i), 10))
 }
 
+// UnmarshalJSON implements json.Unmarshaler
 func (i *Int64) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -51,10 +55,10 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 // HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
 type HumanAddress = string
 
-// CanonicalAddress uses standard base64 encoding, just use it as a label for developers
+// CanonicalAddress uses standard base64 encoding, just use it as a label for developers.
 type CanonicalAddress = []byte
 
-// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
+// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int).
 type Coin struct {
 	// Denom is the denomination string registered in the chain's bank module.
 	// E.g. "uatom" or "ibc/7F1D3FCF4AE79E1554D670D1AD949A9BA4E4A3C76C63093E17E446A46061A7A2".
@@ -66,6 +70,7 @@ type Coin struct {
 	Amount string `json:"amount"`
 }
 
+// NewCoin creates a new coin
 func NewCoin(amount uint64, denom string) Coin {
 	return Coin{
 		Denom:  denom,
@@ -73,7 +78,7 @@ func NewCoin(amount uint64, denom string) Coin {
 	}
 }
 
-// Replicating the cosmos-sdk bank module Metadata type
+// Replicating the cosmos-sdk bank module Metadata type.
 type DenomMetadata struct {
 	Description string `json:"description"`
 	// DenomUnits represents the list of DenomUnits for a given coin
@@ -103,7 +108,7 @@ type DenomMetadata struct {
 	URIHash string `json:"uri_hash"`
 }
 
-// Replicating the cosmos-sdk bank module DenomUnit type
+// DenomUnit represents a unit of a denomination
 type DenomUnit struct {
 	// Denom represents the string name of the given denom unit (e.g uatom).
 	Denom string `json:"denom"`
@@ -134,7 +139,7 @@ type DecCoin struct {
 	Denom  string `json:"denom"`
 }
 
-// Simplified version of the cosmos-sdk PageRequest type
+// Simplified version of the cosmos-sdk PageRequest type.
 type PageRequest struct {
 	// Key is a value returned in PageResponse.next_key to begin
 	// querying the next page most efficiently. Only one of offset or key
@@ -147,14 +152,16 @@ type PageRequest struct {
 	Reverse bool `json:"reverse"`
 }
 
+// OutOfGasError represents an out of gas error
 type OutOfGasError struct{}
 
 var _ error = OutOfGasError{}
 
-func (o OutOfGasError) Error() string {
+func (OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
+// GasReport represents a report of gas usage
 type GasReport struct {
 	Limit          uint64
 	Remaining      uint64
@@ -162,6 +169,7 @@ type GasReport struct {
 	UsedInternally uint64
 }
 
+// EmptyGasReport creates an empty gas report
 func EmptyGasReport(limit uint64) GasReport {
 	return GasReport{
 		Limit:          limit,
@@ -185,6 +193,7 @@ type AnalysisReport struct {
 	ContractMigrateVersion *uint64
 }
 
+// Metrics represents contract metrics
 type Metrics struct {
 	HitsPinnedMemoryCache     uint32
 	HitsMemoryCache           uint32
@@ -198,20 +207,24 @@ type Metrics struct {
 	SizeMemoryCache uint64
 }
 
+// PerModuleMetrics represents metrics per module
 type PerModuleMetrics struct {
 	Hits uint32 `msgpack:"hits"`
 	Size uint64 `msgpack:"size"`
 }
 
+// PerModuleEntry represents an entry in per-module metrics
 type PerModuleEntry struct {
 	Checksum Checksum
 	Metrics  PerModuleMetrics
 }
 
+// PinnedMetrics represents pinned contract metrics
 type PinnedMetrics struct {
 	PerModule []PerModuleEntry `msgpack:"per_module"`
 }
 
+// UnmarshalMessagePack implements msgpack.Unmarshaler
 func (pm *PinnedMetrics) UnmarshalMessagePack(data []byte) error {
 	return msgpack.UnmarshalAsArray(data, pm)
 }
@@ -240,7 +253,7 @@ type MigrateInfo struct {
 	OldMigrateVersion *uint64 `json:"old_migrate_version"`
 }
 
-// MarshalJSON ensures that we get "[]" for nil arrays
+// MarshalJSON ensures that we get "[]" for nil arrays.
 func (a Array[C]) MarshalJSON() ([]byte, error) {
 	if len(a) == 0 {
 		return []byte("[]"), nil
@@ -249,7 +262,7 @@ func (a Array[C]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-// UnmarshalJSON ensures that we get an empty slice for "[]" and "null"
+// UnmarshalJSON ensures that we get an empty slice for "[]" and "null".
 func (a *Array[C]) UnmarshalJSON(data []byte) error {
 	var raw []C
 	if err := json.Unmarshal(data, &raw); err != nil {

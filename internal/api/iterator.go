@@ -1,14 +1,16 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 
 	"github.com/CosmWasm/wasmvm/v2/types"
 )
 
-// frame stores all Iterators for one contract call
+// frame stores all Iterators for one contract call.
 type frame []types.Iterator
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
@@ -17,7 +19,7 @@ var (
 	iteratorFramesMutex sync.Mutex
 )
 
-// this is a global counter for creating call IDs
+// this is a global counter for creating call IDs.
 var (
 	latestCallID      uint64
 	latestCallIDMutex sync.Mutex
@@ -28,7 +30,7 @@ var (
 func startCall() uint64 {
 	latestCallIDMutex.Lock()
 	defer latestCallIDMutex.Unlock()
-	latestCallID += 1
+	latestCallID++
 	return latestCallID
 }
 
@@ -44,13 +46,18 @@ func removeFrame(callID uint64) frame {
 	return remove
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item the iteratorFrames.
 func endCall(callID uint64) {
 	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
 	remove := removeFrame(callID)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
-		iter.Close()
+		if err := iter.Close(); err != nil {
+			// ignore the error from close, it is deadlock-prone.
+			// See: https://github.com/golang/go/issues/25466
+			//nolint:gocritic
+			_, _ = fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err)
+		}
 	}
 }
 
@@ -60,6 +67,9 @@ func endCall(callID uint64) {
 // We assign iterator IDs starting with 1 for historic reasons. This could be changed to 0
 // I guess.
 func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64, error) {
+	if it == nil {
+		return 0, errors.New("cannot store nil iterator")
+	}
 	iteratorFramesMutex.Lock()
 	defer iteratorFramesMutex.Unlock()
 
@@ -75,7 +85,7 @@ func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64,
 	if !ok {
 		// This error case is not expected to happen since the above code ensures the
 		// index is in the range [0, frameLenLimit-1]
-		return 0, fmt.Errorf("could not convert index to iterator ID")
+		return 0, errors.New("could not convert index to iterator ID")
 	}
 	return iterator_id, nil
 }

@@ -1,4 +1,4 @@
-package cosmwasm
+package wasmvm
 
 import (
 	"testing"

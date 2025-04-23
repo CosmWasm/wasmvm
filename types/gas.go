@@ -1,5 +1,7 @@
+// Package types provides core types used throughout the wasmvm package.
 package types
 
+// Gas represents the amount of computational resources consumed during execution.
 type Gas = uint64
 
 // GasMeter is a read-only version of the sdk gas meter
