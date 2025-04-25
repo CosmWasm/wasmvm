@@ -20,10 +20,10 @@ func TestMessageInfoHandlesMultipleCoins(t *testing.T) {
 	require.NoError(t, err)
 
 	// we can unmarshal it properly into struct
-	var recover MessageInfo
-	err = json.Unmarshal(bz, &recover)
+	var recovery MessageInfo
+	err = json.Unmarshal(bz, &recovery)
 	require.NoError(t, err)
-	assert.Equal(t, info, recover)
+	assert.Equal(t, info, recovery)
 }
 
 func TestMessageInfoHandlesMissingCoins(t *testing.T) {

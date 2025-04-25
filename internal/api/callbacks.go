@@ -350,7 +350,7 @@ func nextPart(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, o
 	// check iter.Error() ????
 	iter.Next()
 	gasAfter := gm.GasConsumed()
-	*usedGas = (cu64)(gasAfter - gasBefore)
+	*usedGas = (cu64(gasAfter - gasBefore))
 
 	*output = newUnmanagedVector(out)
 	return C.GoError_None
@@ -392,7 +392,7 @@ func cHumanizeAddress(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVector, 
 		*errOut = newUnmanagedVector([]byte(err.Error()))
 		return C.GoError_User
 	}
-	if len(h) == 0 {
+	if h == "" {
 		panic(fmt.Sprintf("`api.HumanizeAddress()` returned an empty string for %q", s))
 	}
 	*dest = newUnmanagedVector([]byte(h))

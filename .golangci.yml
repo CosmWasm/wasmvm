@@ -24,7 +24,6 @@ linters:
     - misspell # Find commonly misspelled words
     - bodyclose # Check HTTP response bodies are closed
     - goconst # Find repeated strings that could be constants
-    - godot # Check comment endings
     - gocognit # Check cognitive complexity
     - whitespace # Check trailing whitespace
     - thelper # Detect test helpers not using t.Helper()
@@ -32,6 +31,15 @@ linters:
 
   # enable lager because changes are huge
     # - revive
+
+  settings:
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - dupSubExpr
+        - dupImport
+
+
 
   exclusions:
     generated: lax

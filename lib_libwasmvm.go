@@ -749,10 +749,11 @@ func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *
 	// All responses that have sub-messages need their payload size to be checked
 	const ReplyPayloadMaxBytes = 128 * 1024 // 128 KiB
 	if response, ok := response.(hasSubMessages); ok {
-		for i, m := range response.SubMessages() {
+		messages := response.SubMessages()
+		for i := 0; i < len(messages); i++ {
 			// each payload needs to be below maximum size
-			if len(m.Payload) > ReplyPayloadMaxBytes {
-				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, ReplyPayloadMaxBytes, len(m.Payload))
+			if len(messages[i].Payload) > ReplyPayloadMaxBytes {
+				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, ReplyPayloadMaxBytes, len(messages[i].Payload))
 			}
 		}
 	}

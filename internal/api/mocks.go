@@ -378,7 +378,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	if err != nil {
 		return gasCost, err
 	}
-	if humanized != strings.ToLower(input) {
+	if !strings.EqualFold(humanized, input) {
 		return gasCost, fmt.Errorf("address validation failed")
 	}
 
@@ -537,7 +537,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	case query.Capitalized != nil:
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
 	default:
-		return nil, errors.New("Unsupported query")
+		return nil, errors.New("unsupported query")
 	}
 	return json.Marshal(resp)
 }
