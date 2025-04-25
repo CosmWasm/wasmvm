@@ -139,8 +139,8 @@ func ToSystemError(err error) *SystemError {
 	}
 }
 
-// check if an interface is nil (even if it has type info).
-func isNil(i interface{}) bool {
+// check if an interface is nil (even if it has type info)
+func isNil(i any) bool {
 	if i == nil {
 		return true
 	}

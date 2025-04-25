@@ -75,7 +75,7 @@ type AcknowledgeDispatch struct {
 	Err string `json:"error"`
 }
 
-func toBytes(t *testing.T, v interface{}) []byte {
+func toBytes(t *testing.T, v any) []byte {
 	t.Helper()
 	bz, err := json.Marshal(v)
 	require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestAnalyzeCode(t *testing.T) {
 	report, err := vm.AnalyzeCode(checksum)
 	require.NoError(t, err)
 	require.False(t, report.HasIBCEntryPoints)
-	require.Equal(t, "", report.RequiredCapabilities)
+	require.Empty(t, report.RequiredCapabilities)
 	require.Equal(t, uint64(42), *report.ContractMigrateVersion)
 
 	// Store IBC contract

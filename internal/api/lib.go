@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -47,26 +48,26 @@ func InitCache(config types.VMConfig) (Cache, error) {
 	// libwasmvm would create this directory too but we need it earlier for the lockfile.
 	err := os.MkdirAll(config.Cache.BaseDir, 0o755)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not create base directory")
+		return Cache{}, fmt.Errorf("could not create base directory")
 	}
 
 	lockfile, err := os.OpenFile(filepath.Join(config.Cache.BaseDir, "exclusive.lock"), os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not open exclusive.lock")
+		return Cache{}, fmt.Errorf("could not open exclusive.lock")
 	}
 	_, err = lockfile.WriteString("This is a lockfile that prevent two VM instances to operate on the same directory in parallel.\nSee codebase at github.com/CosmWasm/wasmvm for more information.\nSafety first – brought to you by Confio ❤️\n")
 	if err != nil {
-		return Cache{}, fmt.Errorf("Error writing to exclusive.lock")
+		return Cache{}, fmt.Errorf("error writing to exclusive.lock")
 	}
 
 	err = unix.Flock(int(lockfile.Fd()), unix.LOCK_EX|unix.LOCK_NB)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not lock exclusive.lock. Is a different VM running in the same directory already?")
+		return Cache{}, fmt.Errorf("could not lock exclusive.lock. Is a different VM running in the same directory already?")
 	}
 
 	configBytes, err := json.Marshal(config)
 	if err != nil {
-		return Cache{}, fmt.Errorf("Could not serialize config")
+		return Cache{}, fmt.Errorf("could not serialize config")
 	}
 	configView := makeView(configBytes)
 	defer runtime.KeepAlive(configBytes)
@@ -165,11 +166,14 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	}
 	requiredCapabilities := string(copyAndDestroyUnmanagedVector(report.required_capabilities))
 	entrypoints := string(copyAndDestroyUnmanagedVector(report.entrypoints))
+	entrypoints_array := strings.Split(entrypoints, ",")
+	hasIBC2EntryPoints := slices.Contains(entrypoints_array, "ibc2_packet_receive")
 
 	res := types.AnalysisReport{
 		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		HasIBC2EntryPoints:     hasIBC2EntryPoints,
 		RequiredCapabilities:   requiredCapabilities,
-		Entrypoints:            strings.Split(entrypoints, ","),
+		Entrypoints:            entrypoints_array,
 		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),
 	}
 	return &res, nil
@@ -673,6 +677,48 @@ func IBCPacketReceive(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
+		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
+	}
+	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
+}
+
+func IBC2PacketReceive(
+	cache Cache,
+	checksum []byte,
+	env []byte,
+	payload []byte,
+	gasMeter *types.GasMeter,
+	store types.KVStore,
+	api *types.GoAPI,
+	querier *Querier,
+	gasLimit uint64,
+	printDebug bool,
+) ([]byte, types.GasReport, error) {
+	cs := makeView(checksum)
+	defer runtime.KeepAlive(checksum)
+	e := makeView(env)
+	defer runtime.KeepAlive(env)
+	pa := makeView(payload)
+	defer runtime.KeepAlive(payload)
+	var pinner runtime.Pinner
+	pinner.Pin(gasMeter)
+	checkAndPinAPI(api, pinner)
+	checkAndPinQuerier(querier, pinner)
+	defer pinner.Unpin()
+
+	callID := startCall()
+	defer endCall(callID)
+
+	dbState := buildDBState(store, callID)
+	db := buildDB(&dbState, gasMeter)
+	a := buildAPI(api)
+	q := buildQuerier(querier)
+	var gasReport C.GasReport
+	errmsg := uninitializedUnmanagedVector()
+
+	res, err := C.ibc2_packet_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)

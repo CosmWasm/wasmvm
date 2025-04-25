@@ -44,7 +44,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	for _, value := range values {
 		// push 17
 		var gasMeter2 types.GasMeter = NewMockGasMeter(TESTING_GAS_LIMIT)
-		push := []byte(fmt.Sprintf(`{"enqueue":{"value":%d}}`, value))
+		push := fmt.Appendf(nil, `{"enqueue":{"value":%d}}`, value)
 		res, _, err = Execute(cache, checksum, env, info, push, &gasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(t, err)
 		requireOkResponse(t, res, 0)
@@ -117,7 +117,7 @@ func TestStoreIteratorHitsLimit(t *testing.T) {
 
 	iter, _ = store.Iterator(nil, nil)
 	_, err = storeIterator(callID, iter, limit)
-	require.ErrorContains(t, err, "Reached iterator limit (2)")
+	require.ErrorContains(t, err, "reached iterator limit (2)")
 
 	endCall(callID)
 }
@@ -192,7 +192,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.Equal(t, `{"sum":39}`, string(qResult.Ok))
 
 	// query reduce (multiple iterators at once)
@@ -202,7 +202,7 @@ func TestQueueIteratorSimple(t *testing.T) {
 	var reduced types.QueryResult
 	err = json.Unmarshal(data, &reduced)
 	require.NoError(t, err)
-	require.Equal(t, "", reduced.Err)
+	require.Empty(t, reduced.Err)
 	require.JSONEq(t, `{"counters":[[17,22],[22,0]]}`, string(reduced.Ok))
 }
 
@@ -231,7 +231,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 		var reduced types.QueryResult
 		err = json.Unmarshal(data, &reduced)
 		require.NoError(t, err)
-		require.Equal(t, "", reduced.Err)
+		require.Empty(t, reduced.Err)
 		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(reduced.Ok))
 	}
 
@@ -241,7 +241,7 @@ func TestQueueIteratorRaces(t *testing.T) {
 	var wg sync.WaitGroup
 	// for each batch, query each of the 3 contracts - so the contract queries get mixed together
 	wg.Add(numBatches * 3)
-	for i := 0; i < numBatches; i++ {
+	for range numBatches {
 		go func() {
 			reduceQuery(t, contract1, "[[17,22],[22,0]]")
 			wg.Done()
@@ -283,7 +283,7 @@ func TestQueueIteratorLimit(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.Equal(t, `{}`, string(qResult.Ok))
 
 	// Open 35000 iterators
@@ -294,5 +294,5 @@ func TestQueueIteratorLimit(t *testing.T) {
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
 	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "Reached iterator limit (32768)")
+	require.ErrorContains(t, err, "reached iterator limit (32768)")
 }

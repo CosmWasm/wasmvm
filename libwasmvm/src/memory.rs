@@ -79,7 +79,11 @@ impl U8SliceView {
         match source {
             Some(data) => Self {
                 is_none: false,
-                ptr: data.as_ptr(),
+                ptr: if data.is_empty() {
+                    std::ptr::null::<u8>()
+                } else {
+                    data.as_ptr()
+                },
                 len: data.len(),
             },
             None => Self {
@@ -188,7 +192,7 @@ impl U8SliceView {
 /// let mut mutable: Vec<u8> = input.consume().unwrap_or_default();
 /// assert_eq!(mutable, vec![0xAA]);
 ///
-/// // `input` is now gone and we cam do everything we want to `mutable`,
+/// // `input` is now gone and we can do everything we want to `mutable`,
 /// // including operations that reallocate the underlying data.
 ///
 /// mutable.push(0xBB);

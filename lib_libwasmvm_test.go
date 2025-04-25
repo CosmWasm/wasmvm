@@ -32,16 +32,12 @@ const (
 
 func withVM(t *testing.T) *VM {
 	t.Helper()
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
+	tmpdir := t.TempDir()
 	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		vm.Cleanup()
-		if err := os.RemoveAll(tmpdir); err != nil {
-			t.Fatal(err)
-		}
 	})
 	return vm
 }
@@ -418,7 +414,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	validPayload := make([]byte, 128*1024)
 	validPayloadJSON, err := json.Marshal(validPayload)
 	require.NoError(t, err)
-	resultJson := []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON))
+	resultJson := fmt.Appendf(nil, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"data":"8Auq","attributes":[],"events":[]}}`, validPayloadJSON)
 
 	// Test that a valid payload can be deserialized
 	var result types.ContractResult
@@ -430,7 +426,7 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	invalidPayload := make([]byte, 128*1024+1)
 	invalidPayloadJSON, err := json.Marshal(invalidPayload)
 	require.NoError(t, err)
-	resultJson = []byte(fmt.Sprintf(`{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON))
+	resultJson = fmt.Appendf(nil, `{"ok":{"messages":[{"id":0,"msg":{"bank":{"send":{"to_address":"bob","amount":[{"denom":"ATOM","amount":"250"}]}}},"payload":%s,"reply_on":"never"}],"attributes":[],"events":[]}}`, invalidPayloadJSON)
 
 	// Test that an invalid payload cannot be deserialized
 	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &result)
