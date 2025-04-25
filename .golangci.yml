@@ -56,7 +56,7 @@ linters:
       - examples$
 
 issues:
-  exclude-use-default: false
+  exclude-use-default-linters: false
   max-issues-per-linter: 0
   max-same-issues: 0
 
