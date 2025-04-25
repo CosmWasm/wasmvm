@@ -19,7 +19,6 @@ linters:
     - unused # Detect unused constants, variables, functions and types
 
     # Additional recommended linters
-    - gocritic # A more opinionated linter
     - gosec # Security checker
     - misspell # Find commonly misspelled words
     - bodyclose # Check HTTP response bodies are closed
@@ -31,6 +30,8 @@ linters:
 
   # enable lager because changes are huge
     # - revive
+    #    - gocritic # A more opinionated linter
+
 
   settings:
     gocritic:
@@ -38,6 +39,7 @@ linters:
       disabled-checks:
         - dupSubExpr
         - dupImport
+        - paramTypeCombine
 
 
 
