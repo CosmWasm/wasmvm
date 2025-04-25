@@ -401,7 +401,7 @@ func TestMockApi(t *testing.T) {
 
 	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
-	require.Equal(t, recover, testAddress)
+	require.Equal(t, testAddress, recover)
 	require.Equal(t, CostHuman, cost)
 }
 

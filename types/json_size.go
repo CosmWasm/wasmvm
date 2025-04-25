@@ -99,7 +99,7 @@ func ExpectedJSONSizeBool(b bool) int {
 	}
 }
 
-// The size in bytes in JSON serialization
+// The size in bytes in JSON serialization.
 const (
 	brackets int = 2 // a pair of brackets {} or []
 	quotes   int = 2 // a pair of quotes ""

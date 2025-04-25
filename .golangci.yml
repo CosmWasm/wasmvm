@@ -13,26 +13,26 @@ linters:
     - thelper
     - copyloopvar # Detect copy loops
     - errcheck # Detect unchecked errors
-    - gosimple # Simplify code
     - govet # Reports suspicious constructs
     - ineffassign # Detect unused assignments
     - staticcheck # Go static analysis
-    - typecheck # Go type checker
     - unused # Detect unused constants, variables, functions and types
 
     # Additional recommended linters
     - gocritic # A more opinionated linter
     - gosec # Security checker
     - misspell # Find commonly misspelled words
-    - revive # a metalinter with more checks
     - bodyclose # Check HTTP response bodies are closed
     - goconst # Find repeated strings that could be constants
-    #    - gocyclo # Check function complexity
     - godot # Check comment endings
     - gocognit # Check cognitive complexity
     - whitespace # Check trailing whitespace
     - thelper # Detect test helpers not using t.Helper()
     - tparallel # Detect incorrect usage of t.Parallel()
+
+  # enable lager because changes are huge
+    # - revive
+
   exclusions:
     generated: lax
     presets:

@@ -678,8 +678,7 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
-// packet is received on a channel belonging to this contract
+// packet is received on a channel belonging to this contract.
 func (vm *VM) IBC2PacketReceive(
 	checksum Checksum,
 	env types.Env,
