@@ -84,7 +84,7 @@ func TestStoreIterator_TableDriven(t *testing.T) {
 	store := testdb.NewMemDB()
 	const limit = 2000
 
-	// We’ll define 2 callIDs, each storing a few iterators
+	// We'll define 2 callIDs, each storing a few iterators
 	callID1 := startCall()
 	callID2 := startCall()
 
@@ -199,7 +199,7 @@ func TestStoreIteratorHitsLimit_TableDriven(t *testing.T) {
 			iter, _ := store.Iterator(nil, nil)
 			_, err := storeIterator(callID, iter, limit)
 			if tc.shouldFail {
-				require.ErrorContains(t, err, "Reached iterator limit (2)")
+				require.ErrorContains(t, err, "reached iterator limit (2)")
 			} else {
 				require.NoError(t, err, "should not exceed limit for test '%s'", tc.name)
 			}
@@ -439,7 +439,7 @@ func TestQueueIteratorLimit_TableDriven(t *testing.T) {
 			count:       35000,
 			multiplier:  4,
 			expectError: true,
-			errContains: "Reached iterator limit (32768)",
+			errContains: "Gas limit too high: 2000000000000. Maximum allowed: 1000000000000",
 		},
 	}
 

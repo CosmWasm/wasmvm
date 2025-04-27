@@ -25,25 +25,25 @@ func TestCreateChecksum(t *testing.T) {
 			name:    "Nil input",
 			input:   nil,
 			wantErr: true,
-			errMsg:  "Wasm bytes nil or empty",
+			errMsg:  "wasm bytes nil or empty",
 		},
 		{
 			name:    "Empty input",
 			input:   []byte{},
 			wantErr: true,
-			errMsg:  "Wasm bytes nil or empty",
+			errMsg:  "wasm bytes nil or empty",
 		},
 		{
 			name:    "Too short (1 byte)",
 			input:   []byte{0x00},
 			wantErr: true,
-			errMsg:  "Wasm bytes shorter than 4 bytes",
+			errMsg:  "wasm bytes shorter than 4 bytes",
 		},
 		{
 			name:    "Too short (3 bytes)",
 			input:   []byte{0x00, 0x61, 0x73},
 			wantErr: true,
-			errMsg:  "Wasm bytes shorter than 4 bytes",
+			errMsg:  "wasm bytes shorter than 4 bytes",
 		},
 		{
 			name:    "Valid minimal Wasm",
@@ -55,13 +55,13 @@ func TestCreateChecksum(t *testing.T) {
 			name:    "Invalid Wasm magic number",
 			input:   []byte{0x01, 0x02, 0x03, 0x04},
 			wantErr: true,
-			errMsg:  "Wasm bytes do not start with Wasm magic number",
+			errMsg:  "wasm bytes do not start with Wasm magic number",
 		},
 		{
 			name:    "Text file",
 			input:   []byte("Hello world"),
 			wantErr: true,
-			errMsg:  "Wasm bytes do not start with Wasm magic number",
+			errMsg:  "wasm bytes do not start with Wasm magic number",
 		},
 		{
 			name:    "Large valid Wasm prefix",
@@ -73,7 +73,7 @@ func TestCreateChecksum(t *testing.T) {
 			name:    "Exact 4 bytes with wrong magic",
 			input:   []byte{0xFF, 0xFF, 0xFF, 0xFF},
 			wantErr: true,
-			errMsg:  "Wasm bytes do not start with Wasm magic number",
+			errMsg:  "wasm bytes do not start with Wasm magic number",
 		},
 	}
 
@@ -135,7 +135,7 @@ func TestCreateChecksumInvalidMagicVariations(t *testing.T) {
 	for _, input := range invalidMagics {
 		_, err := CreateChecksum(input)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "Wasm bytes do not start with Wasm magic number")
+		require.Contains(t, err.Error(), "wasm bytes do not start with Wasm magic number")
 	}
 }
 
