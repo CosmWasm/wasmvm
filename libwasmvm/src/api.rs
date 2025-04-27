@@ -4,10 +4,20 @@ use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use crate::Vtable;
 use bech32::{self, Variant};
+use sha3::{Digest, Keccak256};
 
 // Constants for API validation
 pub const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
 const MAX_CANONICAL_LENGTH: usize = 100; // Maximum length for canonical addresses
+
+// Gas costs for different validation operations
+// Base costs represent the minimum computation needed regardless of address length
+const BASE_VALIDATION_GAS: u64 = 100; // Base cost for any validation operation
+const PER_BYTE_GAS: u64 = 10; // Cost per byte of address length
+const BECH32_BASE_GAS: u64 = 300; // Higher base cost for Bech32 validation (checksum is expensive)
+const ETHEREUM_BASE_GAS: u64 = 200; // Ethereum address validation cost
+const SOLANA_BASE_GAS: u64 = 250; // Solana address validation cost
+const LEGACY_BASE_GAS: u64 = 50; // Simple legacy address validation cost
 
 // this represents something passed in from the caller side of FFI
 // in this case a struct with go function pointers
@@ -59,6 +69,42 @@ pub struct GoApi {
 }
 
 impl GoApi {
+    // Computes gas cost for address validation based on type and complexity
+    fn compute_validation_gas_cost(&self, human: &str) -> u64 {
+        // Base cost plus per-byte cost for any address
+        let mut gas_cost = BASE_VALIDATION_GAS + (human.len() as u64 * PER_BYTE_GAS);
+
+        // Add extra cost based on address type
+        if human.contains('-') || human.contains('_') {
+            // Legacy address format with least validation required
+            gas_cost += LEGACY_BASE_GAS;
+        } else if let Some(hex_part) = human.strip_prefix("0x") {
+            // Ethereum address validation
+            gas_cost += ETHEREUM_BASE_GAS;
+
+            // Extra cost for hex validation
+            if hex_part.len() > 0 {
+                gas_cost += hex_part.len() as u64 * 5; // Higher per-char cost for hex validation
+            }
+        } else if human.contains('1') {
+            // Bech32 validation is the most expensive due to checksum calculation
+            gas_cost += BECH32_BASE_GAS;
+
+            // Extra cost for longer addresses (checksum becomes more expensive)
+            if human.len() > 30 {
+                gas_cost += (human.len() as u64 - 30) * 15;
+            }
+        } else if human.len() >= 32 && human.len() <= 44 {
+            // Potential Solana address (Base58 checking)
+            gas_cost += SOLANA_BASE_GAS;
+        } else {
+            // Simple alphanumeric check for test addresses
+            gas_cost += LEGACY_BASE_GAS;
+        }
+
+        gas_cost
+    }
+
     // Validate human address format
     fn validate_human_address(&self, human: &str) -> Result<(), BackendError> {
         // Check for empty addresses
@@ -93,6 +139,50 @@ impl GoApi {
                     "Ethereum address contains invalid hex characters",
                 ));
             }
+
+            // EIP-55 checksum validation for Ethereum addresses
+            // Mixed-case Ethereum addresses should be validated against their checksum
+            if hex_part.chars().any(|c| c.is_ascii_uppercase()) {
+                // If there are uppercase chars, validate the checksum
+                let lowercase_hex = hex_part.to_lowercase();
+
+                // Create a hash of the lowercase address
+                let mut hasher = Keccak256::new();
+                hasher.update(lowercase_hex.as_bytes());
+                let hash = hasher.finalize();
+
+                // Check each character against the hash to validate EIP-55 checksum
+                for (i, c) in hex_part.chars().enumerate() {
+                    let hash_nibble = if i < 39 {
+                        // Get the corresponding nibble from the hash (4 bits)
+                        let byte_pos = i / 2;
+                        let nibble_pos = 1 - (i % 2); // 0 or 1
+                        (hash[byte_pos] >> (4 * nibble_pos)) & 0xf
+                    } else {
+                        // Handle the last character separately
+                        let byte_pos = i / 2;
+                        hash[byte_pos] & 0xf
+                    };
+
+                    // Check if the character should be uppercase
+                    let is_upper = hash_nibble >= 8; // If the hash value is 8 or higher, char should be uppercase
+
+                    let char_lower = c.to_ascii_lowercase();
+                    if is_upper && ('a'..='f').contains(&char_lower) && !c.is_ascii_uppercase() {
+                        return Err(BackendError::user_err(
+                            "Invalid Ethereum address EIP-55 checksum: Incorrect capitalization",
+                        ));
+                    } else if !is_upper
+                        && ('a'..='f').contains(&char_lower)
+                        && c.is_ascii_uppercase()
+                    {
+                        return Err(BackendError::user_err(
+                            "Invalid Ethereum address EIP-55 checksum: Incorrect capitalization",
+                        ));
+                    }
+                }
+            }
+
             return Ok(());
         }
 
@@ -241,7 +331,10 @@ impl BackendApi for GoApi {
         // We destruct the UnmanagedVector here, no matter if we need the data.
         let output = output.consume();
 
-        let gas_info = GasInfo::with_cost(used_gas);
+        // Add our own gas cost for Rust-side validation on top of Go-side costs
+        let validation_gas = self.compute_validation_gas_cost(human);
+        let total_gas = used_gas + validation_gas;
+        let gas_info = GasInfo::with_cost(total_gas);
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to canonicalize the address: {human}");
@@ -287,7 +380,11 @@ impl BackendApi for GoApi {
         // We destruct the UnmanagedVector here, no matter if we need the data.
         let output = output.consume();
 
-        let gas_info = GasInfo::with_cost(used_gas);
+        // Canonical validation gas cost (simpler than human address validation)
+        let canonical_validation_gas =
+            BASE_VALIDATION_GAS + (canonical.len() as u64 * PER_BYTE_GAS);
+        let total_gas = used_gas + canonical_validation_gas;
+        let gas_info = GasInfo::with_cost(total_gas);
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || {
@@ -310,17 +407,24 @@ impl BackendApi for GoApi {
                 if let Err(err) = self.validate_human_address(human) {
                     return (Err(err), gas_info);
                 }
-            }
-            Err(_) => {} // If already an error, we'll return that
-        }
 
-        (result, gas_info)
+                // Add validation gas cost for the output human address
+                let human_validation_gas = self.compute_validation_gas_cost(human);
+                let final_gas_info = GasInfo::with_cost(total_gas + human_validation_gas);
+
+                (Ok(human.clone()), final_gas_info)
+            }
+            Err(_) => (result, gas_info), // If already an error, we'll return that
+        }
     }
 
     fn addr_validate(&self, input: &str) -> BackendResult<()> {
+        // Calculate gas cost based on address complexity
+        let rust_validation_gas = self.compute_validation_gas_cost(input);
+
         // Validate the input address format first
         if let Err(err) = self.validate_human_address(input) {
-            return (Err(err), GasInfo::free());
+            return (Err(err), GasInfo::with_cost(rust_validation_gas));
         }
 
         let mut error_msg = UnmanagedVector::default();
@@ -337,7 +441,9 @@ impl BackendApi for GoApi {
         )
         .into();
 
-        let gas_info = GasInfo::with_cost(used_gas);
+        // Total gas is the sum of our Rust validation and the Go-side validation
+        let total_gas = used_gas + rust_validation_gas;
+        let gas_info = GasInfo::with_cost(total_gas);
 
         // return complete error message (reading from buffer for GoError::Other)
         let default = || format!("Failed to validate the address: {input}");
@@ -345,3 +451,6 @@ impl BackendApi for GoApi {
         (result, gas_info)
     }
 }
+
+#[cfg(test)]
+mod tests;
