@@ -821,7 +821,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 
 	// the "sdk gas" * GasMultiplier + the wasm cost should equal the maxGas (or be very close)
 	totalCost := gasReport.UsedInternally + gasMeter2.GasConsumed()
-	require.Equal(t, uint64(maxGas), totalCost)
+	require.Equal(t, maxGas, totalCost)
 }
 
 func BenchmarkContractCall(b *testing.B) {
