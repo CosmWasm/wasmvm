@@ -111,7 +111,7 @@ fn validate_environment(env_data: &[u8]) -> Result<(), Error> {
     // If it's a string, validate it contains a valid positive integer
     if time.is_string() {
         if let Some(time_str) = time.as_str() {
-            if let Err(_) = time_str.parse::<u64>() {
+            if time_str.parse::<u64>().is_err() {
                 return Err(Error::vm_err(
                     "Block time string must contain a valid positive integer",
                 ));
