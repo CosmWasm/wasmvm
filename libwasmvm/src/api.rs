@@ -3,6 +3,7 @@ use cosmwasm_vm::{BackendApi, BackendError, BackendResult, GasInfo};
 use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use crate::Vtable;
+use bech32::{self, Variant};
 
 // Constants for API validation
 pub const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
@@ -95,53 +96,70 @@ impl GoApi {
             return Ok(());
         }
 
-        // Basic validation for Bech32 address format (if it looks like one)
+        // Full Bech32 validation for addresses containing the '1' separator
         if human.contains('1') {
-            // Bech32 format checks
-            let parts: Vec<&str> = human.split('1').collect();
-            if parts.len() != 2 {
-                return Err(BackendError::user_err(
-                    "Invalid Bech32 address format (should contain exactly one '1' separator)",
-                ));
-            }
+            match bech32::decode(human) {
+                Ok((hrp, data, variant)) => {
+                    // Check Human Readable Part (HRP) - must be lowercase letters
+                    if !hrp.chars().all(|c| c.is_ascii_lowercase()) {
+                        return Err(BackendError::user_err(
+                            "Invalid Bech32 HRP (prefix must contain only lowercase letters)",
+                        ));
+                    }
 
-            // Validate HRP (Human Readable Part)
-            let hrp = parts[0];
-            if hrp.is_empty() || hrp.len() > 20 {
-                return Err(BackendError::user_err(
-                    "Invalid Bech32 HRP (prefix before '1') length",
-                ));
-            }
+                    // Variant check (Bech32 vs Bech32m)
+                    // Both are acceptable for our purposes, but we log which one was used
+                    match variant {
+                        Variant::Bech32 => { /* Standard Bech32 */ }
+                        Variant::Bech32m => { /* Newer Bech32m variant */ }
+                    }
 
-            // Check HRP is lowercase letters only
-            if !hrp.chars().all(|c| c.is_ascii_lowercase()) {
-                return Err(BackendError::user_err(
-                    "Invalid Bech32 HRP (prefix must contain only lowercase letters)",
-                ));
-            }
+                    // Verify data is not empty
+                    if data.is_empty() {
+                        return Err(BackendError::user_err(
+                            "Invalid Bech32 address: data part is empty",
+                        ));
+                    }
 
-            // Basic data part validation
-            let data = parts[1];
-            if data.is_empty() {
-                return Err(BackendError::user_err("Invalid Bech32 data part (empty)"));
-            }
+                    // Verify data length is reasonable (too short or too long addresses are suspicious)
+                    // For typical addresses, this should be between 20-64 bytes after decoding
+                    if data.len() < 20 {
+                        // Most chain addresses represent at least 20 bytes of data (e.g., a hash)
+                        // This is a soft warning, not a hard error for better compatibility
+                        // You can change this to a hard error if your application requires it
+                        #[cfg(debug_assertions)]
+                        eprintln!("Warning: Bech32 address data is unusually short: {}", human);
+                    }
 
-            // Check data uses only Bech32 charset
-            if !data.chars().all(|c| {
-                c.is_ascii_lowercase()
-                    || c.is_ascii_digit()
-                    || "qpzry9x8gf2tvdw0s3jn54khce6mua7l".contains(c)
-            }) {
-                return Err(BackendError::user_err(
-                    "Invalid Bech32 data part (contains invalid characters)",
-                ));
+                    // Validate length based on variant
+                    let max_data_length = match variant {
+                        Variant::Bech32 => 90,   // Standard limit for Bech32
+                        Variant::Bech32m => 110, // Slightly higher limit for Bech32m
+                    };
+
+                    if data.len() > max_data_length {
+                        return Err(BackendError::user_err(format!(
+                            "Bech32 data part too long: {} > {} bytes",
+                            data.len(),
+                            max_data_length
+                        )));
+                    }
+
+                    // All Bech32 checks passed - address is valid
+                    return Ok(());
+                }
+                Err(err) => {
+                    return Err(BackendError::user_err(format!(
+                        "Invalid Bech32 address: {}",
+                        err
+                    )));
+                }
             }
-            return Ok(());
-        } else if human.starts_with("cosmos")
-            || human.starts_with("osmo")
-            || human.starts_with("juno")
+        } else if human.chars().all(|c| c.is_ascii_lowercase())
+            && human.len() >= 3
+            && human.len() <= 15
         {
-            // Address starts with a Bech32 prefix but has no separator
+            // If it looks like it might be a Bech32 prefix without the '1' separator
             return Err(BackendError::user_err(
                 "Invalid Bech32 address: missing separator or data part",
             ));

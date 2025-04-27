@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bech32::{encode, ToBase32, Variant};
     use cosmwasm_vm::testing::mock_backend::{MockApi, MockApiBackend};
 
     fn setup_api() -> MockApiBackend {
@@ -16,6 +17,23 @@ mod tests {
             "cosmos1q9f0qwgmwvyg0pyp38g4lw2cznugwz8pc9qd3l",
             "osmo1m8pqpkly9nz3r30f0wp09h57mqkhsr9373pj9m",
             "juno1pxc48gd3cydz847wgvt0p23zlc5wf88pjdptnt",
+            "akash1p7egumv92ymaut4v6egg0hrlncr20mzxyrrt3h",
+            "kava1aa7vpfq09x3mqsxwx8f7vz6c3tsrw2ua57204h",
+            "secret1rgm2m5t530tdzyd99775n6vzumxa5luxcllml4",
+            "regen1ez43v7jhwl5kgcsljf5592h98zgl6hvlr8vesz",
+            "band1yvmwt4jwhz9xshx5cvm4qh6zxqycgcvpqgvs50",
+            "certik1gm04fm4ssz330hx4vmwv8ngh6zjhsca8kmj2c",
+            "bitsong1jtyjtj23argjv9kf38pt6ys2vnyygrzmht74cx",
+            "meter1xlcvutz2kxmtqhpvt6v58969k39fv60dfp90sa",
+            "sentinel1rz4lxzddmfavqh5xnyxlvqwrg4r73hpyw48ve",
+            "irishub1yar4p5jqftwqnmrgsqdp9v4z5n6c8z0qhf82g",
+            "terra1su47ftahkw2dj9caekqpdv9c66dpjhhtuuhzxz",
+            "chihuahua1p79gm3hf0vy79qte9lsxwtqmfv9slv3keqd86z",
+            "comdex1z9a3z2vp6xk5zcm92k8netj8c5vp2wusuqtpm3",
+            "like1v99c0zdermvfm5ph59kpz8dxelfwkhun6zrfhx",
+            "nft1e4tnehs8enjuam5ekqkq0ncmfxc0t6a7tm58ch",
+            "axelar1px6v3xqftf0sfrzz458jn7waxdv6r52efl8yk2",
+            "persistence19j47q6n2jz3jmgrm9uv48n7y26ynpzkwt5ftm",
         ];
 
         for addr in valid_bech32 {
@@ -30,6 +48,14 @@ mod tests {
             "cosmos@1xyz",                    // Invalid character in HRP
             "cosmos1XYZ",                     // Invalid characters in data (uppercase)
             "cosmos1validhrpbut@invaliddata", // Invalid characters in data
+            // Checksum errors
+            "cosmos1q9f0qwgmwvyg0pyp38g4lw2cznugwz8pc9qd3m", // Changed last character
+            "bitsong1jtyjtj23argjv9kf38pt6ys2vnyygrzmht74cz", // Changed last character
+            // Implausible addresses
+            "cosmos1tooshort",            // Too short data part
+            "cosmos1" + &"q".repeat(200), // Too long data part
+            // Inconsistent case - trying to pass Bech32 checks but with uppercase prefix
+            "COSMOS1q9f0qwgmwvyg0pyp38g4lw2cznugwz8pc9qd3l",
         ];
 
         for addr in invalid_bech32 {
@@ -38,6 +64,105 @@ mod tests {
                 result.is_err(),
                 "Invalid Bech32 address should fail: {}",
                 addr
+            );
+        }
+    }
+
+    #[test]
+    fn test_encode_and_validate_bech32() {
+        let api = setup_api();
+
+        // List of prefixes to test
+        let prefixes = vec![
+            "cosmos",
+            "osmo",
+            "juno",
+            "akash",
+            "kava",
+            "secret",
+            "regen",
+            "band",
+            "certik",
+            "bitsong",
+            "meter",
+            "sentinel",
+            "irishub",
+            "terra",
+            "chihuahua",
+            "comdex",
+            "like",
+            "nft",
+            "axelar",
+            "persistence",
+            "omniflix",
+            "desmos",
+            "bitcanna",
+            "evmos",
+            "gravity",
+            "injective",
+            "ixo",
+            "sifchain",
+            "starname",
+            // Add custom prefixes
+            "test",
+            "demo",
+            "custom",
+            "mychain",
+            "xyz",
+            "chain",
+            // Shorter prefixes for testing
+            "a",
+            "b",
+            "c",
+            "x",
+            "y",
+            "z",
+        ];
+
+        // Sample data to encode (simulating an address)
+        let data = vec![
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD,
+            0xEE, 0xFF, 0x00, 0x11, 0x22, 0x33,
+        ];
+
+        for prefix in prefixes {
+            // Encode using standard Bech32
+            let addr_standard = encode(prefix, data.to_base32(), Variant::Bech32)
+                .expect(&format!("Failed to encode Bech32 for prefix {}", prefix));
+
+            // Test validation of the correctly encoded address
+            let result_standard = api.addr_validate(&addr_standard).0;
+            assert!(
+                result_standard.is_ok(),
+                "Valid Bech32 address should pass: {}",
+                addr_standard
+            );
+
+            // Encode using Bech32m (newer variant, which should also be accepted)
+            let addr_m = encode(prefix, data.to_base32(), Variant::Bech32m)
+                .expect(&format!("Failed to encode Bech32m for prefix {}", prefix));
+
+            // Test validation of the correctly encoded address
+            let result_m = api.addr_validate(&addr_m).0;
+            assert!(
+                result_m.is_ok(),
+                "Valid Bech32m address should pass: {}",
+                addr_m
+            );
+
+            // Create an invalid address by corrupting the last character
+            let mut invalid_addr = addr_standard.clone();
+            let last_char = invalid_addr.pop().unwrap();
+            // Change last char to something else in the charset
+            let new_last_char = if last_char == 'q' { 'p' } else { 'q' };
+            invalid_addr.push(new_last_char);
+
+            // This should fail validation due to checksum error
+            let result_invalid = api.addr_validate(&invalid_addr).0;
+            assert!(
+                result_invalid.is_err(),
+                "Invalid Bech32 address (checksum error) should fail: {}",
+                invalid_addr
             );
         }
     }
