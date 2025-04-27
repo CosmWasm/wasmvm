@@ -379,7 +379,7 @@ func TestQueueIteratorRaces_TableDriven(t *testing.T) {
 		var r types.QueryResult
 		err = json.Unmarshal(data, &r)
 		require.NoError(t, err)
-		require.Equal(t, "", r.Err)
+		require.Empty(t, r.Err)
 		require.Equal(t, fmt.Sprintf(`{"counters":%s}`, expected), string(r.Ok))
 	}
 
@@ -465,7 +465,7 @@ func TestQueueIteratorLimit_TableDriven(t *testing.T) {
 			var qResult types.QueryResult
 			err = json.Unmarshal(data, &qResult)
 			require.NoError(t, err, "JSON decode must succeed in test '%s'", tc.name)
-			require.Equal(t, "", qResult.Err, "Expected no error in QueryResult for test '%s'", tc.name)
+			require.Empty(t, qResult.Err, "Expected no error in QueryResult for test '%s'", tc.name)
 			require.Equal(t, `{}`, string(qResult.Ok),
 				"Expected an empty obj response for test '%s'", tc.name)
 		})
