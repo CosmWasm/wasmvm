@@ -272,6 +272,11 @@ func cScan(ptr *C.db_t, gasMeter *C.gas_meter_t, usedGas *cu64, start C.U8SliceV
 
 //export cNext
 func cNext(ref C.IteratorReference, gasMeter *C.gas_meter_t, usedGas *cu64, key *C.UnmanagedVector, val *C.UnmanagedVector, errOut *C.UnmanagedVector) (ret C.GoError) {
+	// typical usage of iterator
+	// 	for ; itr.Valid(); itr.Next() {
+	// 		k, v := itr.Key(); itr.Value()
+	// 		...
+	// 	}
 	defer recoverPanic(&ret)
 	if ref.call_id == 0 || gasMeter == nil || usedGas == nil || key == nil || val == nil || errOut == nil {
 		// we received an invalid pointer
