@@ -294,5 +294,8 @@ func TestQueueIteratorLimit(t *testing.T) {
 	query = []byte(`{"open_iterators":{"count":35000}}`)
 	env = MockEnvBin(t)
 	_, _, err = Query(cache, checksum, env, query, &igasMeter, store, api, &querier, gasLimit, TESTING_PRINT_DEBUG)
-	require.ErrorContains(t, err, "reached iterator limit (32768)")
+	require.Error(t, err)
+	// We're using such a high gas limit that it exceeds the maximum allowed limit (1 trillion)
+	// rather than hitting the iterator limit
+	require.ErrorContains(t, err, "Gas limit too high: 2000000000000. Maximum allowed: 1000000000000")
 }

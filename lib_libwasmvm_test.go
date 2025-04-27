@@ -84,14 +84,14 @@ func TestStoreCode(t *testing.T) {
 	{
 		wasm := []byte("foobar")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "Invalid WASM bytecode: missing WebAssembly magic bytes")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
 		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
-		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
+		require.ErrorContains(t, err, "WASM bytecode too small: 0 bytes")
 	}
 
 	// Nil
@@ -117,7 +117,7 @@ func TestSimulateStoreCode(t *testing.T) {
 		},
 		"no wasm": {
 			wasm: []byte("foobar"),
-			err:  "Wasm bytecode could not be deserialized",
+			err:  "Invalid WASM bytecode: missing WebAssembly magic bytes",
 		},
 	}
 
