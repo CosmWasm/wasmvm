@@ -453,4 +453,90 @@ impl BackendApi for GoApi {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+    use cosmwasm_vm::testing::MockApi;
+    use sha3::{Digest, Keccak256};
+
+    #[test]
+    fn test_validate_ethereum_eip55_checksum() {
+        let api = MockApi::default();
+
+        // Helper function to generate EIP-55 checksum
+        fn to_eip55_checksum(address: &str) -> String {
+            let address = address.strip_prefix("0x").unwrap_or(address).to_lowercase();
+            let mut hasher = Keccak256::new();
+            hasher.update(address.as_bytes());
+            let hash = hasher.finalize();
+            let mut result = String::from("0x");
+            for (i, c) in address.chars().enumerate() {
+                let hash_byte = hash[i / 2];
+                let nibble = if i % 2 == 0 {
+                    hash_byte >> 4
+                } else {
+                    hash_byte & 0x0F
+                };
+                if nibble >= 8 {
+                    result.push(c.to_ascii_uppercase());
+                } else {
+                    result.push(c);
+                }
+            }
+            result
+        }
+
+        // Valid base addresses (without checksum)
+        let valid_base_addresses = vec![
+            "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed",
+            "0xFb6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+            "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb",
+            "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb",
+        ];
+
+        // Test valid checksummed addresses
+        for base_addr in &valid_base_addresses {
+            let checksummed = to_eip55_checksum(base_addr);
+            let result = api.addr_validate(&checksummed);
+            assert!(
+                result.0.is_ok(),
+                "Valid checksummed address {} failed validation",
+                checksummed
+            );
+        }
+
+        // Test invalid checksummed addresses (flip case of one character)
+        for base_addr in &valid_base_addresses {
+            let mut checksummed = to_eip55_checksum(base_addr);
+            // Flip the case of the 3rd character (index 2, after '0x')
+            let mut invalid = checksummed.chars().collect::<Vec<char>>();
+            if invalid[2].is_uppercase() {
+                invalid[2] = invalid[2].to_lowercase().next().unwrap();
+            } else {
+                invalid[2] = invalid[2].to_uppercase().next().unwrap();
+            }
+            let invalid_addr = invalid.iter().collect::<String>();
+            let result = api.addr_validate(&invalid_addr);
+            assert!(
+                result.0.is_err(),
+                "Invalid checksummed address {} passed validation",
+                invalid_addr
+            );
+        }
+
+        // Test all lowercase and all uppercase (should fail if not properly checksummed)
+        for base_addr in &valid_base_addresses {
+            let lowercase = base_addr.to_lowercase();
+            let uppercase = base_addr.to_uppercase();
+            assert!(
+                api.addr_validate(&lowercase).0.is_err(),
+                "Lowercase address {} passed validation",
+                lowercase
+            );
+            assert!(
+                api.addr_validate(&uppercase).0.is_err(),
+                "Uppercase address {} passed validation",
+                uppercase
+            );
+        }
+    }
+}
