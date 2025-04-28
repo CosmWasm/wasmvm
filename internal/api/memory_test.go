@@ -713,7 +713,8 @@ func TestWasmVMMemoryLeakStress(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping WASM VM stress test in short mode")
 	}
-	t.Parallel()
+	// This test must run sequentially because it's sensitive to initial memory conditions
+	// and checks for doubling of memory which can be affected by other parallel tests.
 
 	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
 	t.Logf("Baseline: Heap=%d bytes, Mallocs=%d, Frees=%d", baseAlloc, baseMallocs, baseFrees)

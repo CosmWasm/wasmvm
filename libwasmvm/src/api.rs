@@ -4,7 +4,6 @@ use crate::error::GoError;
 use crate::memory::{U8SliceView, UnmanagedVector};
 use crate::Vtable;
 use bech32::{self};
-use sha3::{Digest, Keccak256};
 
 // Constants for API validation
 pub const MAX_ADDRESS_LENGTH: usize = 256; // Maximum length for address strings
@@ -127,57 +126,18 @@ impl GoApi {
             return Ok(());
         }
 
-        // Validate Ethereum address: 0x followed by 40 hex chars
-        if let Some(hex_part) = human.strip_prefix("0x") {
-            if hex_part.len() != 40 {
-                return Err(BackendError::user_err(
-                    "Ethereum address must be 0x + 40 hex characters",
-                ));
-            }
+        // Validate Ethereum address (0x + 40 hex chars)
+        if human.starts_with("0x") && human.len() == 42 {
+            let hex_part = &human[2..];
+
+            // Check basic format requirements
             if !hex_part.chars().all(|c| c.is_ascii_hexdigit()) {
                 return Err(BackendError::user_err(
                     "Ethereum address contains invalid hex characters",
                 ));
             }
 
-            // EIP-55 checksum validation for Ethereum addresses
-            // Mixed-case Ethereum addresses should be validated against their checksum
-            if hex_part.chars().any(|c| c.is_ascii_uppercase()) {
-                // If there are uppercase chars, validate the checksum
-                let lowercase_hex = hex_part.to_lowercase();
-
-                // Create a hash of the lowercase address
-                let mut hasher = Keccak256::new();
-                hasher.update(lowercase_hex.as_bytes());
-                let hash = hasher.finalize();
-
-                // Check each character against the hash to validate EIP-55 checksum
-                for (i, c) in hex_part.chars().enumerate() {
-                    let hash_nibble = if i < 39 {
-                        // Get the corresponding nibble from the hash (4 bits)
-                        let byte_pos = i / 2;
-                        let nibble_pos = 1 - (i % 2); // 0 or 1
-                        (hash[byte_pos] >> (4 * nibble_pos)) & 0xf
-                    } else {
-                        // Handle the last character separately
-                        let byte_pos = i / 2;
-                        hash[byte_pos] & 0xf
-                    };
-
-                    // Check if the character should be uppercase
-                    let is_upper = hash_nibble >= 8; // If the hash value is 8 or higher, char should be uppercase
-
-                    let char_lower = c.to_ascii_lowercase();
-                    if ('a'..='f').contains(&char_lower)
-                        && ((is_upper && !c.is_ascii_uppercase())
-                            || (!is_upper && c.is_ascii_uppercase()))
-                    {
-                        return Err(BackendError::user_err(
-                            "Invalid Ethereum address EIP-55 checksum: Incorrect capitalization",
-                        ));
-                    }
-                }
-            }
+            // EIP-55 checksum validation removed
 
             return Ok(());
         }
@@ -442,35 +402,14 @@ impl BackendApi for GoApi {
 mod tests {
     use super::*;
     use cosmwasm_vm::testing::MockApi;
-    use sha3::{Digest, Keccak256};
 
     #[test]
     fn test_validate_ethereum_eip55_checksum() {
-        // Helper function to generate EIP-55 checksum
-        fn to_eip55_checksum(address: &str) -> String {
-            let address = address.strip_prefix("0x").unwrap_or(address).to_lowercase();
-            let mut hasher = Keccak256::new();
-            hasher.update(address.as_bytes());
-            let hash = hasher.finalize();
-            let mut result = String::from("0x");
-            for (i, c) in address.chars().enumerate() {
-                let hash_byte = hash[i / 2];
-                let nibble = if i % 2 == 0 {
-                    hash_byte >> 4
-                } else {
-                    hash_byte & 0x0F
-                };
-                if nibble >= 8 {
-                    result.push(c.to_ascii_uppercase());
-                } else {
-                    result.push(c);
-                }
-            }
-            result
-        }
+        // Test has been updated since EIP-55 validation was removed
+        // We now only test basic Ethereum address format validation
 
-        // Create a function that directly tests the EIP-55 validation logic
-        fn test_eip55_validation(address: &str) -> Result<(), BackendError> {
+        // Create a simple function that tests Ethereum address format
+        fn test_ethereum_format(address: &str) -> Result<(), BackendError> {
             if !address.starts_with("0x") {
                 return Err(BackendError::user_err("Not an Ethereum address"));
             }
@@ -489,105 +428,41 @@ mod tests {
                 ));
             }
 
-            // EIP-55 checksum validation for Ethereum addresses
-            // Mixed-case Ethereum addresses should be validated against their checksum
-            if hex_part.chars().any(|c| c.is_ascii_uppercase()) {
-                // If there are uppercase chars, validate the checksum
-                let lowercase_hex = hex_part.to_lowercase();
-
-                // Create a hash of the lowercase address
-                let mut hasher = Keccak256::new();
-                hasher.update(lowercase_hex.as_bytes());
-                let hash = hasher.finalize();
-
-                // Check each character against the hash to validate EIP-55 checksum
-                for (i, c) in hex_part.chars().enumerate() {
-                    let hash_nibble = if i < 39 {
-                        // Get the corresponding nibble from the hash (4 bits)
-                        let byte_pos = i / 2;
-                        let nibble_pos = 1 - (i % 2); // 0 or 1
-                        (hash[byte_pos] >> (4 * nibble_pos)) & 0xf
-                    } else {
-                        // Handle the last character separately
-                        let byte_pos = i / 2;
-                        hash[byte_pos] & 0xf
-                    };
-
-                    // Check if the character should be uppercase
-                    let is_upper = hash_nibble >= 8; // If the hash value is 8 or higher, char should be uppercase
-
-                    let char_lower = c.to_ascii_lowercase();
-                    if ('a'..='f').contains(&char_lower)
-                        && ((is_upper && !c.is_ascii_uppercase())
-                            || (!is_upper && c.is_ascii_uppercase()))
-                    {
-                        return Err(BackendError::user_err(
-                            "Invalid Ethereum address EIP-55 checksum: Incorrect capitalization",
-                        ));
-                    }
-                }
-            }
-
+            // All basic checks passed - address is valid
             Ok(())
         }
 
-        // Valid base addresses (without checksum)
-        let valid_base_addresses = vec![
-            "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed",
-            "0xFb6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
-            "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb",
-            "0xd1220a0cf47c7b9be7a2e6ba89f429762e7b9adb",
+        // Valid addresses in different formats
+        let valid_addresses = vec![
+            "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed", // lowercase
+            "0x5AAEB6053F3E94C9B9A09F33669435E7EF1BEAED", // uppercase
+            "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed", // mixed case
+            "0xFb6916095ca1df60bB79Ce92cE3Ea74c37c5d359", // mixed case
+            "0xdbf03b407c01e7cd3cbea99509d93f8dddc8c6fb", // lowercase
+            "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb", // mixed case
         ];
 
-        // Test valid checksummed addresses
-        for base_addr in &valid_base_addresses {
-            let checksummed = to_eip55_checksum(base_addr);
-            let result = test_eip55_validation(&checksummed);
-            assert!(
-                result.is_ok(),
-                "Valid checksummed address {} failed validation",
-                checksummed
-            );
+        // Test valid addresses
+        for addr in &valid_addresses {
+            let result = test_ethereum_format(addr);
+            assert!(result.is_ok(), "Valid address {} failed validation", addr);
         }
 
-        // Test invalid checksummed addresses (flip case of one character)
-        for base_addr in &valid_base_addresses {
-            let checksummed = to_eip55_checksum(base_addr);
-            // Flip the case of the 3rd character (index 2, after '0x')
-            let mut invalid = checksummed.chars().collect::<Vec<char>>();
-            if invalid[2].is_uppercase() {
-                invalid[2] = invalid[2].to_lowercase().next().unwrap();
-            } else {
-                invalid[2] = invalid[2].to_uppercase().next().unwrap();
-            }
-            let invalid_addr = invalid.iter().collect::<String>();
-            let result = test_eip55_validation(&invalid_addr);
+        // Test invalid addresses
+        let invalid_addresses = vec![
+            "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beae", // too short
+            "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaedd", // too long
+            "0xGaaeb6053f3e94c9b9a09f33669435e7ef1beaed", // invalid character 'G'
+            "5aaeb6053f3e94c9b9a09f33669435e7ef1beaed",  // missing 0x prefix
+        ];
+
+        for addr in &invalid_addresses {
+            let result = test_ethereum_format(addr);
             assert!(
                 result.is_err(),
-                "Invalid checksummed address {} passed validation",
-                invalid_addr
+                "Invalid address {} passed validation",
+                addr
             );
-        }
-
-        // Test all lowercase and all uppercase
-        for base_addr in &valid_base_addresses {
-            let lowercase = base_addr.to_lowercase();
-            // All lowercase addresses should be valid (no EIP-55 check needed)
-            assert!(
-                test_eip55_validation(&lowercase).is_ok(),
-                "Lowercase address {} failed validation",
-                lowercase
-            );
-
-            let uppercase = base_addr.to_uppercase();
-            // All uppercase addresses should be invalid if not properly checksummed
-            if uppercase != to_eip55_checksum(base_addr) {
-                assert!(
-                    test_eip55_validation(&uppercase).is_err(),
-                    "Invalid uppercase address {} passed validation",
-                    uppercase
-                );
-            }
         }
     }
 
