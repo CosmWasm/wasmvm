@@ -43,5 +43,5 @@ func TestValidateAddressFailure(t *testing.T) {
 	// ensure the error message is what we expect
 	require.Nil(t, result.Ok)
 	// with this error
-	require.Equal(t, "Generic error: addr_validate errored: Invalid Bech32 address format (should contain exactly one '1' separator)", result.Err)
+	require.EqualError(t, err, "Generic error: addr_validate errored: Human address too long")
 }

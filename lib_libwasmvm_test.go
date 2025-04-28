@@ -165,8 +165,9 @@ func TestHappyPath(t *testing.T) {
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
 	i, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
+	require.NotNil(t, i)
 	ires := i.Ok
+	require.NotNil(t, ires)
 	require.Empty(t, ires.Messages)
 
 	// execute
@@ -176,8 +177,9 @@ func TestHappyPath(t *testing.T) {
 	info = api.MockInfo("fred", nil)
 	h, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.NotNil(t, h.Ok)
+	require.NotNil(t, h)
 	hres := h.Ok
+	require.NotNil(t, hres)
 	require.Len(t, hres.Messages, 1)
 
 	// make sure it read the balance properly and we got 250 atoms
@@ -229,8 +231,9 @@ func TestEnv(t *testing.T) {
 	msg := []byte(`{"mirror_env": {}}`)
 	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
+	require.NotNil(t, i)
 	ires = i.Ok
+	require.NotNil(t, ires)
 	expected, _ := json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
 
@@ -252,8 +255,9 @@ func TestEnv(t *testing.T) {
 	msg = []byte(`{"mirror_env": {}}`)
 	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
 	require.NoError(t, err)
-	require.NotNil(t, i.Ok)
+	require.NotNil(t, i)
 	ires = i.Ok
+	require.NotNil(t, ires)
 	expected, _ = json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
 }

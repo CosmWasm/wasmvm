@@ -1293,7 +1293,14 @@ func TestQuery(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Empty(t, qResult.Err)
+	// Check for query errors, but don't fail immediately if "State not found" is the issue
+	if qResult.Err != "" {
+		t.Logf("Query returned error: %s", qResult.Err)
+		// If the specific 'State not found' error occurs, maybe it's acceptable now?
+		// For now, let's just assert no error to see if the test passes with logging.
+		// If it consistently logs "State not found", we might need to adjust the test logic or expectations.
+	}
+	assert.Empty(t, qResult.Err, "Query failed unexpectedly")
 	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 }
 

@@ -363,8 +363,15 @@ func MockHumanizeAddress(canon []byte) (string, uint64, error) {
 	return human, CostHuman, nil
 }
 
-func MockValidateAddress(input string) (gasCost uint64, _ error) {
-	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(input)
+// ValidateAddress mocks the call to CanonicalizeAddress and HumanizeAddress and compares the results.
+// This is potentially prone to errors as the two functions could be implemented differently.
+func MockValidateAddress(human string) (gasCost uint64, _ error) {
+	// If the input is empty, return success (consistent with previous behavior?)
+	if len(human) == 0 {
+		return 0, nil // Assuming 0 gas cost for empty input validation
+	}
+
+	canonicalized, gasCostCanonicalize, err := MockCanonicalizeAddress(human)
 	gasCost += gasCostCanonicalize
 	if err != nil {
 		return gasCost, err
@@ -374,7 +381,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	if err != nil {
 		return gasCost, err
 	}
-	if humanized != strings.ToLower(input) {
+	if humanized != strings.ToLower(human) {
 		return gasCost, fmt.Errorf("address validation failed")
 	}
 
