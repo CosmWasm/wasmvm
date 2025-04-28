@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -608,7 +609,10 @@ func TestMemoryMetrics(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping memory metrics test in short mode")
 	}
-	t.Parallel()
+	// This test intentionally does not use t.Parallel() because it needs to measure
+	// precise allocation counts in isolation from other tests. Running in parallel
+	// would cause inconsistent results as other tests affect memory allocations.
+
 	var mBefore, mAfter runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&mBefore)
@@ -978,4 +982,286 @@ func TestWasmLongRunningMemoryStability(t *testing.T) {
 	t.Logf("Final: Heap=%d bytes (+%d), Net allocs=%d",
 		finalAlloc, finalAlloc-baseAlloc, (finalMallocs-finalFrees)-(baseMallocs-baseFrees))
 	require.LessOrEqual(t, finalAlloc, baseAlloc+25*1024*1024, "Long-running WASM leaked memory")
+}
+
+// TestContractExecutionMemoryLeak tests whether repeated executions of the same contract
+// cause memory leaks over time.
+func TestContractExecutionMemoryLeak(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract execution memory leak test in short mode")
+	}
+	t.Parallel()
+
+	// Set up the VM and contract
+	tempDir := t.TempDir()
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tempDir,
+			AvailableCapabilities:    []string{"iterator"},
+			MemoryCacheSizeBytes:     types.NewSizeMebi(64),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(32),
+		},
+	}
+
+	cache, err := InitCache(config)
+	require.NoError(t, err)
+	defer ReleaseCache(cache)
+
+	// Load a simple contract
+	wasmCode, err := os.ReadFile("../../testdata/hackatom.wasm")
+	require.NoError(t, err)
+	checksum, err := StoreCode(cache, wasmCode, true)
+	require.NoError(t, err)
+
+	// Pin the contract to ensure it's in memory
+	err = Pin(cache, checksum)
+	require.NoError(t, err)
+
+	// Set up execution environment
+	env := MockEnv()
+	envBin, err := json.Marshal(env)
+	require.NoError(t, err)
+
+	// Create a test database
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	// Record starting memory stats
+	runtime.GC()
+	var initialStats runtime.MemStats
+	runtime.ReadMemStats(&initialStats)
+
+	// Create some sample measurement buckets for analysis
+	type MemoryPoint struct {
+		Iteration int
+		HeapAlloc uint64
+		Objects   uint64
+	}
+	measurements := make([]MemoryPoint, 0, 100)
+
+	// Add initial measurement
+	measurements = append(measurements, MemoryPoint{
+		Iteration: 0,
+		HeapAlloc: initialStats.HeapAlloc,
+		Objects:   initialStats.HeapObjects,
+	})
+
+	// Number of contract executions to perform
+	const executions = 5000
+	const reportInterval = 250
+
+	t.Logf("Starting contract execution memory leak test with %d executions", executions)
+	t.Logf("Initial memory: HeapAlloc=%d bytes, Objects=%d", initialStats.HeapAlloc, initialStats.HeapObjects)
+
+	// Perform many executions
+	for i := 0; i < executions; i++ {
+		// Create a new gas meter for each execution
+		gasMeter := NewMockGasMeter(100000000)
+		var igasMeter types.GasMeter = gasMeter
+		store := NewLookup(gasMeter)
+		api := NewMockAPI()
+		info := MockInfoBin(t, "executor")
+		querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+
+		// Different message each time to avoid any caching effects
+		msg := []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "recipient%d"}`, i, i))
+
+		// Execute contract
+		_, _, err := Instantiate(cache, checksum, envBin, info, msg, &igasMeter, store, api, &querier, 100000000, false)
+		require.NoError(t, err)
+
+		// Measure memory at intervals
+		if i > 0 && (i%reportInterval == 0 || i == executions-1) {
+			runtime.GC()
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+
+			measurements = append(measurements, MemoryPoint{
+				Iteration: i,
+				HeapAlloc: m.HeapAlloc,
+				Objects:   m.HeapObjects,
+			})
+
+			// Use signed integers for memory diff to handle possible GC reductions
+			heapDiff := int64(m.HeapAlloc) - int64(initialStats.HeapAlloc)
+			objectsDiff := int64(m.HeapObjects) - int64(initialStats.HeapObjects)
+
+			t.Logf("After %d executions: HeapAlloc=%d bytes (%+d), Objects=%d (%+d)",
+				i, m.HeapAlloc, heapDiff, m.HeapObjects, objectsDiff)
+		}
+	}
+
+	// Final GC and measurement
+	runtime.GC()
+	var finalStats runtime.MemStats
+	runtime.ReadMemStats(&finalStats)
+
+	// Analyze the trend of memory usage
+	if len(measurements) >= 3 {
+		// Calculate the growth rate between first third and last third of measurements
+		firstPart := measurements[1 : len(measurements)/3+1]
+		lastPart := measurements[len(measurements)*2/3:]
+
+		var firstAvg, lastAvg uint64
+		for _, m := range firstPart {
+			firstAvg += m.HeapAlloc
+		}
+		firstAvg /= uint64(len(firstPart))
+
+		for _, m := range lastPart {
+			lastAvg += m.HeapAlloc
+		}
+		lastAvg /= uint64(len(lastPart))
+
+		var growthRate float64
+		// Handle cases where memory actually decreases
+		if lastAvg > firstAvg {
+			growthRate = float64(lastAvg-firstAvg) / float64(firstAvg)
+		} else {
+			growthRate = -float64(firstAvg-lastAvg) / float64(firstAvg)
+		}
+
+		t.Logf("Memory growth analysis: First third avg=%d bytes, Last third avg=%d bytes, Growth rate=%.2f%%",
+			firstAvg, lastAvg, growthRate*100)
+
+		// A well-behaved system should stabilize or have minimal growth
+		// We'll accept negative growth (shrinking) or growth up to 25%
+		require.LessOrEqual(t, growthRate, 0.25, "Excessive memory growth detected across executions")
+	}
+
+	// Check the final memory usage
+	// Use signed integers for memory diff
+	heapDiff := int64(finalStats.HeapAlloc) - int64(initialStats.HeapAlloc)
+	objectsDiff := int64(finalStats.HeapObjects) - int64(initialStats.HeapObjects)
+
+	t.Logf("Final memory: HeapAlloc=%d bytes (%+d), Objects=%d (%+d)",
+		finalStats.HeapAlloc, heapDiff, finalStats.HeapObjects, objectsDiff)
+
+	// Ensure total memory growth isn't excessive
+	// Note: some growth is expected as caches fill, but it should be bounded
+	if heapDiff > 0 {
+		maxAllowedGrowthBytes := int64(20 * 1024 * 1024) // 20 MB max growth allowed
+		require.Less(t, heapDiff, maxAllowedGrowthBytes,
+			"Excessive total memory growth after %d executions", executions)
+	}
+}
+
+// TestContractMultiInstanceMemoryLeak tests whether creating many instances of the
+// same contract causes memory leaks over time.
+func TestContractMultiInstanceMemoryLeak(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping multi-instance memory leak test in short mode")
+	}
+	t.Parallel()
+
+	// Set up the VM and contract
+	tempDir := t.TempDir()
+	config := types.VMConfig{
+		Cache: types.CacheOptions{
+			BaseDir:                  tempDir,
+			AvailableCapabilities:    []string{"iterator"},
+			MemoryCacheSizeBytes:     types.NewSizeMebi(64),
+			InstanceMemoryLimitBytes: types.NewSizeMebi(32),
+		},
+	}
+
+	cache, err := InitCache(config)
+	require.NoError(t, err)
+	defer ReleaseCache(cache)
+
+	// Load multiple contracts to simulate a blockchain with different contracts
+	contracts := []string{
+		"../../testdata/hackatom.wasm",
+		"../../testdata/cyberpunk.wasm",
+	}
+	checksums := make([][]byte, len(contracts))
+
+	for i, contractPath := range contracts {
+		wasmCode, err := os.ReadFile(contractPath)
+		require.NoError(t, err)
+		checksum, err := StoreCode(cache, wasmCode, true)
+		require.NoError(t, err)
+		checksums[i] = checksum
+	}
+
+	// Record starting memory stats
+	runtime.GC()
+	var initialStats runtime.MemStats
+	runtime.ReadMemStats(&initialStats)
+
+	// Number of instances to create
+	const instances = 1000
+	const reportInterval = 100
+
+	// Create a central DB
+	db := testdb.NewMemDB()
+	defer db.Close()
+
+	t.Logf("Starting multi-instance memory leak test with %d instances", instances)
+	t.Logf("Initial memory: HeapAlloc=%d bytes, Objects=%d", initialStats.HeapAlloc, initialStats.HeapObjects)
+
+	// Create many instances, cycling through contracts
+	for i := 0; i < instances; i++ {
+		contractIdx := i % len(contracts)
+		checksum := checksums[contractIdx]
+
+		// Create a new gas meter and store for each instance
+		gasMeter := NewMockGasMeter(100000000)
+		var igasMeter types.GasMeter = gasMeter
+		store := NewLookup(gasMeter)
+		api := NewMockAPI()
+		info := MockInfoBin(t, fmt.Sprintf("creator-%d", i))
+		env := MockEnv()
+		envBin, _ := json.Marshal(env)
+		querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
+
+		// Different instantiation message for each contract type
+		var msg []byte
+		if contractIdx == 0 {
+			// hackatom contract
+			msg = []byte(fmt.Sprintf(`{"verifier": "test%d", "beneficiary": "addr%d"}`, i, i))
+		} else {
+			// Cyberpunk contract
+			msg = []byte(`{}`)
+		}
+
+		// Create the instance
+		_, _, err := Instantiate(cache, checksum, envBin, info, msg, &igasMeter, store, api, &querier, 100000000, false)
+		require.NoError(t, err)
+
+		// Measure memory at intervals
+		if i > 0 && (i%reportInterval == 0 || i == instances-1) {
+			runtime.GC()
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+
+			// Use signed integers for memory diff to handle possible GC reductions
+			heapDiff := int64(m.HeapAlloc) - int64(initialStats.HeapAlloc)
+			objectsDiff := int64(m.HeapObjects) - int64(initialStats.HeapObjects)
+
+			t.Logf("After %d instances: HeapAlloc=%d bytes (%+d), Objects=%d (%+d)",
+				i, m.HeapAlloc, heapDiff, m.HeapObjects, objectsDiff)
+		}
+	}
+
+	// Final GC and measurement
+	runtime.GC()
+	var finalStats runtime.MemStats
+	runtime.ReadMemStats(&finalStats)
+
+	// Check the final memory usage
+	// Use signed integers for memory diff
+	heapDiff := int64(finalStats.HeapAlloc) - int64(initialStats.HeapAlloc)
+	objectsDiff := int64(finalStats.HeapObjects) - int64(initialStats.HeapObjects)
+
+	t.Logf("Final memory: HeapAlloc=%d bytes (%+d), Objects=%d (%+d)",
+		finalStats.HeapAlloc, heapDiff, finalStats.HeapObjects, objectsDiff)
+
+	// Ensure memory growth isn't excessive after creating many instances
+	// Multi-tenancy should efficiently manage memory in a real blockchain
+	if heapDiff > 0 {
+		maxAllowedGrowthBytes := int64(25 * 1024 * 1024) // 25 MB max growth allowed
+		require.Less(t, heapDiff, maxAllowedGrowthBytes,
+			"Excessive memory growth after creating %d contract instances", instances)
+	}
 }
