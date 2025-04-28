@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This project is written in go, c and rust, and it serves as the interop layer between cosmwasm's vm and cosmos blockchains written in go.  Please be attentive to the multi-lingual nature of the project when working with it.
