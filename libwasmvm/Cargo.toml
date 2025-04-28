@@ -36,17 +36,14 @@ backtraces = []
 #   "stargate",
 #   "iterator",
 # ] }
-# Temporarily using CosmWasm's `main` branch until the next release.
-# This allows us to build WasmVM with the latest CosmWasm changes to develop IBC2 support more easily.
-# You can also use a different branch or a local path in your branches and change it back to `main`
-# when the CosmWasm PR gets merged.
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
+# Temporarily using faddat's cosmwasm fork with Wasmer v6
+cosmwasm-std = { git = "https://github.com/faddat/cosmwasm.git", branch = "faddat/use-latest-wasmer-plus-fix", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
+cosmwasm-vm = { git = "https://github.com/faddat/cosmwasm.git", branch = "faddat/use-latest-wasmer-plus-fix", features = [
   "staking",
   "stargate",
   "iterator",
@@ -56,11 +53,11 @@ errno = "0.3.8"
 rmp-serde = "1.3.0"
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1.0.91"
-thiserror = "1.0.38"
+thiserror = "2.0.12"
 hex = "0.4.3"
 time = { version = "0.3.36", features = ["formatting"] }
 wasmparser = "0.229.0"
-bech32 = "0.9.1"
+bech32 = "0.11.0"
 sha3 = "0.10.8"
 
 [dev-dependencies]
