@@ -30,7 +30,7 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	// if the human address is larger than 32 bytes, this will lead to an error in the go side
 	longName := "long123456789012345678901234567890long"
-	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "bob"}`)
+	msg := []byte(`{"verifier": "` + longName + `", "beneficiary": "` + SafeBech32Address("bob") + `"}`)
 
 	// make sure the call doesn't error, but we get a JSON-encoded error result from ContractResult
 	igasMeter := types.GasMeter(gasMeter)
@@ -42,5 +42,5 @@ func TestValidateAddressFailure(t *testing.T) {
 
 	// ensure the error message is what we expect
 	require.NotNil(t, result.Err)
-	require.Contains(t, result.Err, "addr_validate errored: Human address too long")
+	require.Contains(t, result.Err, "addr_validate errored: Invalid Bech32 address")
 }
