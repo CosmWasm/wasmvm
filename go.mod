@@ -1,4 +1,4 @@
-module github.com/CosmWasm/wasmvm/v2
+module github.com/CosmWasm/wasmvm/v3
 
 go 1.22
 
