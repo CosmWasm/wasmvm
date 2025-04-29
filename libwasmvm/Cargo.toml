@@ -36,14 +36,17 @@ backtraces = []
 #   "stargate",
 #   "iterator",
 # ] }
-# Temporarily using faddat's cosmwasm fork with Wasmer v6
-cosmwasm-std = { git = "https://github.com/faddat/cosmwasm.git", branch = "faddat/use-latest-wasmer-plus-fix", features = [
+# Temporarily using CosmWasm's `main` branch until the next release.
+# This allows us to build WasmVM with the latest CosmWasm changes to develop IBC2 support more easily.
+# You can also use a different branch or a local path in your branches and change it back to `main`
+# when the CosmWasm PR gets merged.
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { git = "https://github.com/faddat/cosmwasm.git", branch = "faddat/use-latest-wasmer-plus-fix", features = [
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
   "staking",
   "stargate",
   "iterator",
