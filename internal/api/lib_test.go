@@ -1346,29 +1346,6 @@ func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
 	return checksum
 }
 
-// exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
-	t.Helper()
-
-	// Convert names to valid Bech32 addresses
-	if !strings.Contains(signer, "1") {
-		signer = SafeBech32Address(signer)
-	}
-
-	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
-	igasMeter := types.GasMeter(gasMeter)
-	env := MockEnvBin(t)
-	info := MockInfoBin(t, signer)
-	res, cost, err := Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
-	require.NoError(t, err)
-	assert.Equal(t, gasExpected, cost.UsedInternally)
-
-	var result types.ContractResult
-	err = json.Unmarshal(res, &result)
-	require.NoError(t, err)
-	return result
-}
-
 func TestQuery(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
