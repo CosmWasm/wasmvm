@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	wasmvm "github.com/CosmWasm/wasmvm/v2"
+	wasmvm "github.com/CosmWasm/wasmvm/v3"
 )
 
 // PrintDebug enables debug printing when true.
