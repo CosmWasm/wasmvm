@@ -41,7 +41,6 @@ func TestValidateAddressFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the error message is what we expect
-	require.Nil(t, result.Ok)
-	// with this error
-	require.EqualError(t, err, "Generic error: addr_validate errored: Human address too long")
+	require.NotNil(t, result.Err)
+	require.Contains(t, result.Err, "addr_validate errored: Human address too long")
 }

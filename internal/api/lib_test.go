@@ -575,7 +575,8 @@ func TestInstantiate(t *testing.T) {
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	// Use Bech32 format for addresses in the message
+	msg := []byte(`{"verifier": "cosmos1fred", "beneficiary": "cosmos1bob"}`)
 
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -604,7 +605,8 @@ func TestExecute(t *testing.T) {
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
 
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	// Use Bech32 format for addresses in the message
+	msg := []byte(`{"verifier": "cosmos1fred", "beneficiary": "cosmos1bob"}`)
 
 	start := time.Now()
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -645,7 +647,7 @@ func TestExecute(t *testing.T) {
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
-	require.Equal(t, "bob", send.ToAddress)
+	require.Equal(t, "cosmos1bob", send.ToAddress)
 	require.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
@@ -895,7 +897,8 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	info := MockInfoBin(t, "creator")
 
 	defaultApi := NewMockAPI()
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	// Use Bech32 format for addresses in the message
+	msg := []byte(`{"verifier": "cosmos1fred", "beneficiary": "cosmos1bob"}`)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, defaultApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -924,7 +927,8 @@ func TestMigrate(t *testing.T) {
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "creator")
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	// Use Bech32 format for addresses in the message
+	msg := []byte(`{"verifier": "cosmos1fred", "beneficiary": "cosmos1bob"}`)
 
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -938,11 +942,11 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
 	require.Empty(t, qResult.Err)
-	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
+	require.JSONEq(t, `{"verifier":"cosmos1fred"}`, string(qResult.Ok))
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
-	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"cosmos1alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
@@ -952,7 +956,7 @@ func TestMigrate(t *testing.T) {
 	err = json.Unmarshal(data, &qResult2)
 	require.NoError(t, err)
 	require.Empty(t, qResult2.Err)
-	require.JSONEq(t, `{"verifier":"alice"}`, string(qResult2.Ok))
+	require.JSONEq(t, `{"verifier":"cosmos1alice"}`, string(qResult2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -968,7 +972,8 @@ func TestMultipleInstances(t *testing.T) {
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
 	info := MockInfoBin(t, "regen")
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	// Use Bech32 format for addresses in the message
+	msg := []byte(`{"verifier": "cosmos1fred", "beneficiary": "cosmos1bob"}`)
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store1, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -980,7 +985,8 @@ func TestMultipleInstances(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store2 := NewLookup(gasMeter2)
 	info = MockInfoBin(t, "chrous")
-	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
+	// Use Bech32 format for addresses in the message
+	msg = []byte(`{"verifier": "cosmos1mary", "beneficiary": "cosmos1sue"}`)
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 	requireOkResponse(t, res, 0)
@@ -997,7 +1003,7 @@ func TestMultipleInstances(t *testing.T) {
 	attributes := resp.Ok.Attributes
 	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
-	require.Equal(t, "bob", attributes[1].Value)
+	require.Equal(t, "cosmos1bob", attributes[1].Value)
 
 	// succeed to execute store2 with mary
 	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x160131d)
@@ -1006,7 +1012,7 @@ func TestMultipleInstances(t *testing.T) {
 	attributes = resp.Ok.Attributes
 	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
-	require.Equal(t, "sue", attributes[1].Value)
+	require.Equal(t, "cosmos1sue", attributes[1].Value)
 }
 
 func TestSudo(t *testing.T) {
@@ -1240,6 +1246,12 @@ func createContract(tb testing.TB, cache Cache, wasmFile string) []byte {
 // exec runs the handle tx with the given signer
 func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
 	t.Helper()
+
+	// Convert simple names to Bech32 addresses for testing
+	if !strings.Contains(signer, "1") {
+		signer = "cosmos1" + signer
+	}
+
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)
