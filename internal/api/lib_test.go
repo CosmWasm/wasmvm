@@ -29,13 +29,7 @@ const (
 var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3"}
 
 func TestInitAndReleaseCache(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "wasmvm-testing")
-	require.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tmpdir); err != nil {
-			t.Errorf("failed to remove temp dir: %v", err)
-		}
-	}()
+	tmpdir := t.TempDir()
 
 	config := types.VMConfig{
 		Cache: types.CacheOptions{
