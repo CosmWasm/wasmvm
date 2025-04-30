@@ -570,12 +570,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -608,7 +608,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 dependencies = [
  "base64",
  "bech32",
@@ -617,7 +617,6 @@ dependencies = [
  "cosmwasm-crypto",
  "cosmwasm-derive",
  "derive_more 1.0.0-beta.6",
- "downcast-rs",
  "hex",
  "rand_core",
  "rmp-serde",
@@ -632,7 +631,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 dependencies = [
  "bech32",
  "blake2",
@@ -660,7 +659,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#34702fe678b128493298259201d01d81c9e3722e"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -922,12 +921,6 @@ dependencies = [
  "quote",
  "syn 2.0.98",
 ]
-
-[[package]]
-name = "downcast-rs"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
 
 [[package]]
 name = "dyn-clone"
@@ -3041,7 +3034,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "2.2.2"
+version = "3.0.0-ibc2.0"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",

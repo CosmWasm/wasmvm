@@ -171,7 +171,7 @@ typedef struct ByteSliceView {
  * let mut mutable: Vec<u8> = input.consume().unwrap_or_default();
  * assert_eq!(mutable, vec![0xAA]);
  *
- * // `input` is now gone and we cam do everything we want to `mutable`,
+ * // `input` is now gone and we can do everything we want to `mutable`,
  * // including operations that reallocate the underlying data.
  *
  * mutable.push(0xBB);
@@ -215,6 +215,11 @@ typedef struct AnalysisReport {
    * This does not guarantee they are functional or even have the correct signatures.
    */
   bool has_ibc_entry_points;
+  /**
+   * `true` if and only if all required ibc2 exports exist as exported functions.
+   * This does not guarantee they are functional or even have the correct signatures.
+   */
+  bool has_ibc2_entry_points;
   /**
    * A UTF-8 encoded comma separated list of all entrypoints that
    * are exported by the contract.
@@ -656,6 +661,18 @@ struct UnmanagedVector ibc2_acknowledge_receive(struct cache_t *cache,
                                                 bool print_debug,
                                                 struct GasReport *gas_report,
                                                 struct UnmanagedVector *error_msg);
+
+struct UnmanagedVector ibc2_packet_timeout(struct cache_t *cache,
+                                           struct ByteSliceView checksum,
+                                           struct ByteSliceView env,
+                                           struct ByteSliceView msg,
+                                           struct Db db,
+                                           struct GoApi api,
+                                           struct GoQuerier querier,
+                                           uint64_t gas_limit,
+                                           bool print_debug,
+                                           struct GasReport *gas_report,
+                                           struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 

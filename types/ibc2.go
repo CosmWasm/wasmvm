@@ -17,11 +17,34 @@ type IBC2Payload struct {
 	Value []byte `json:"value"`
 }
 
+// IBC2PacketReceiveMsg represents a message received via the IBC2 protocol.
+// It contains the payload data along with metadata about the source and relayer.
 type IBC2PacketReceiveMsg struct {
-	Payload        IBC2Payload `json:"payload"`
-	Relayer        string      `json:"relayer"`
-	SourceClient   string      `json:"source_client"`
-	PacketSequence uint64      `json:"packet_sequence"`
+	// The actual data being transmitted via IBC2.
+	Payload IBC2Payload `json:"payload"`
+	// The address of the entity that relayed the packet.
+	Relayer string `json:"relayer"`
+	// The identifier of the source IBC client.
+	SourceClient string `json:"source_client"`
+	// The unique sequence number of the received packet.
+	PacketSequence uint64 `json:"packet_sequence"`
+}
+
+// IBC2PacketTimeoutMsg represents a timeout event for a packet that was not
+// successfully delivered within the expected timeframe in the IBC2 protocol.
+// It includes details about the source and destination clients, and the sequence
+// number of the timed-out packet.
+type IBC2PacketTimeoutMsg struct {
+	// The data associated with the timed-out packet.
+	Payload IBC2Payload `json:"payload"`
+	// The identifier of the client that originally sent the packet.
+	SourceClient string `json:"source_client"`
+	// The identifier of the client that was the intended recipient.
+	DestinationClient string `json:"destination_client"`
+	// The sequence number of the timed-out packet.
+	PacketSequence uint64 `json:"packet_sequence"`
+	// The address of the relayer responsible for the packet.
+	Relayer string `json:"relayer"`
 }
 
 type IBC2AcknowledgeMsg struct {

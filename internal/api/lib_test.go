@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
 const (
@@ -855,7 +855,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 
 		info = MockInfoBin(b, "fred")
 
-		for i := 0; i < callCount; i++ {
+		for range callCount {
 			go func() {
 				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -872,7 +872,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		close(resChan)
 
 		// Now check results in the main test goroutine
-		for i := 0; i < callCount; i++ {
+		for range callCount {
 			require.NoError(b, <-errChan)
 			requireOkResponse(b, <-resChan, 0)
 		}
@@ -1084,7 +1084,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
-	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
+	payloadMsg := fmt.Appendf(nil, `{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := types.GasMeter(gasMeter2)
@@ -1433,7 +1433,7 @@ func TestFloats(t *testing.T) {
 	hasher := sha256.New()
 	const RUNS_PER_INSTRUCTION = 150
 	for _, instr := range instructions {
-		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
+		for seed := range RUNS_PER_INSTRUCTION {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
