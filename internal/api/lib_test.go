@@ -1369,10 +1369,6 @@ func TestCustomReflectQuerier(t *testing.T) {
 		// https://github.com/CosmWasm/cosmwasm/blob/v0.11.0-alpha3/contracts/reflect/src/msg.rs#L18-L28
 	}
 
-	type CapitalizedResponse struct {
-		Text string `json:"text"`
-	}
-
 	cache, cleanup := withCache(t)
 	defer cleanup()
 	checksum := createReflectContract(t, cache)
