@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/v2/internal/api/testdb"
-	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/CosmWasm/wasmvm/v3/internal/api/testdb"
+	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
 /** helper constructors **/
@@ -533,7 +533,7 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 	} else if query.Capitalized != nil {
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
 	} else {
-		return nil, errors.New("Unsupported query")
+		return nil, errors.New("unsupported query")
 	}
 	return json.Marshal(resp)
 }

@@ -5,7 +5,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
 // frame stores all Iterators for one contract call
@@ -65,7 +65,7 @@ func storeIterator(callID uint64, it types.Iterator, frameLenLimit int) (uint64,
 
 	new_index := len(iteratorFrames[callID])
 	if new_index >= frameLenLimit {
-		return 0, fmt.Errorf("Reached iterator limit (%d)", frameLenLimit)
+		return 0, fmt.Errorf("reached iterator limit (%d)", frameLenLimit)
 	}
 
 	// store at array position `new_index`

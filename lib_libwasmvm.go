@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/CosmWasm/wasmvm/v2/internal/api"
-	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/CosmWasm/wasmvm/v3/internal/api"
+	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
 // VM is the main entry point to this library.
@@ -712,6 +712,41 @@ func (vm *VM) IBC2PacketReceive(
 	return &result, gasReport.UsedInternally, nil
 }
 
+// IBC2PacketTimeout is available on IBCv2-enabled contracts and is called when an
+// outgoing packet (previously sent by this contract) will provably never be executed.
+// Usually handled like ack returning an error
+func (vm *VM) IBC2PacketTimeout(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2PacketTimeoutMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCBasicResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 func compileCost(code WasmCode) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
@@ -737,7 +772,7 @@ var (
 func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *types.GasReport, data []byte, response any) error {
 	gasForDeserialization := deserCost.Mul(uint64(len(data))).Floor()
 	if gasLimit < gasForDeserialization+gasReport.UsedInternally {
-		return fmt.Errorf("Insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
+		return fmt.Errorf("insufficient gas left to deserialize contract execution result (%d bytes)", len(data))
 	}
 	gasReport.UsedInternally += gasForDeserialization
 	gasReport.Remaining -= gasForDeserialization

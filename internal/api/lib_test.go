@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/CosmWasm/wasmvm/v2/types"
+	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
 const (
@@ -77,7 +77,7 @@ func TestInitCacheErrorsForBrokenDir(t *testing.T) {
 		},
 	}
 	_, err := InitCache(config)
-	require.ErrorContains(t, err, "Could not create base directory")
+	require.ErrorContains(t, err, "could not create base directory")
 }
 
 func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
@@ -103,7 +103,7 @@ func TestInitLockingPreventsConcurrentAccess(t *testing.T) {
 		},
 	}
 	_, err2 := InitCache(config2)
-	require.ErrorContains(t, err2, "Could not lock exclusive.lock")
+	require.ErrorContains(t, err2, "could not lock exclusive.lock")
 
 	ReleaseCache(cache1)
 
@@ -585,7 +585,7 @@ func TestInstantiate(t *testing.T) {
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
+	require.Empty(t, result.Err)
 	require.Empty(t, result.Ok.Messages)
 }
 
@@ -631,7 +631,7 @@ func TestExecute(t *testing.T) {
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
+	require.Empty(t, result.Err)
 	require.Len(t, result.Ok.Messages, 1)
 	// Ensure we got our custom event
 	require.Len(t, result.Ok.Events, 1)
@@ -855,7 +855,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 
 		info = MockInfoBin(b, "fred")
 
-		for i := 0; i < callCount; i++ {
+		for range callCount {
 			go func() {
 				defer wg.Done()
 				gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -872,7 +872,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		close(resChan)
 
 		// Now check results in the main test goroutine
-		for i := 0; i < callCount; i++ {
+		for range callCount {
 			require.NoError(b, <-errChan)
 			requireOkResponse(b, <-resChan, 0)
 		}
@@ -937,7 +937,7 @@ func TestMigrate(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 
 	// migrate to a new verifier - alice
@@ -951,7 +951,7 @@ func TestMigrate(t *testing.T) {
 	var qResult2 types.QueryResult
 	err = json.Unmarshal(data, &qResult2)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult2.Err)
+	require.Empty(t, qResult2.Err)
 	require.JSONEq(t, `{"verifier":"alice"}`, string(qResult2.Ok))
 }
 
@@ -992,7 +992,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// succeed to execute store1 with fred
 	resp = exec(t, cache, checksum, "fred", store1, api, querier, 0x15fce67)
-	require.Equal(t, "", resp.Err)
+	require.Empty(t, resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes := resp.Ok.Attributes
 	require.Len(t, attributes, 2)
@@ -1001,7 +1001,7 @@ func TestMultipleInstances(t *testing.T) {
 
 	// succeed to execute store2 with mary
 	resp = exec(t, cache, checksum, "mary", store2, api, querier, 0x160131d)
-	require.Equal(t, "", resp.Err)
+	require.Empty(t, resp.Err)
 	require.Len(t, resp.Ok.Messages, 1)
 	attributes = resp.Ok.Attributes
 	require.Len(t, attributes, 2)
@@ -1042,7 +1042,7 @@ func TestSudo(t *testing.T) {
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
+	require.Empty(t, result.Err)
 	require.Len(t, result.Ok.Messages, 1)
 	dispatch := result.Ok.Messages[0].Msg
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
@@ -1084,7 +1084,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	}
 	payloadBin, err := json.Marshal(payload)
 	require.NoError(t, err)
-	payloadMsg := []byte(fmt.Sprintf(`{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin)))
+	payloadMsg := fmt.Appendf(nil, `{"reflect_sub_msg":{"msgs":[%s]}}`, string(payloadBin))
 
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := types.GasMeter(gasMeter2)
@@ -1097,7 +1097,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	require.Equal(t, "", result.Err)
+	require.Empty(t, result.Err)
 	require.Len(t, result.Ok.Messages, 1)
 	dispatch := result.Ok.Messages[0]
 	assert.Equal(t, id, dispatch.ID)
@@ -1180,7 +1180,7 @@ func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(tb, err)
-	require.Equal(tb, "", result.Err)
+	require.Empty(tb, result.Err)
 	require.Len(tb, result.Ok.Messages, expectedMsgs)
 }
 
@@ -1293,7 +1293,7 @@ func TestQuery(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
 }
 
@@ -1319,7 +1319,7 @@ func TestHackatomQuerier(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 	var balances types.AllBalancesResponse
 	err = json.Unmarshal(qResult.Ok, &balances)
 	require.NoError(t, err)
@@ -1371,7 +1371,7 @@ func TestCustomReflectQuerier(t *testing.T) {
 	var qResult types.QueryResult
 	err = json.Unmarshal(data, &qResult)
 	require.NoError(t, err)
-	require.Equal(t, "", qResult.Err)
+	require.Empty(t, qResult.Err)
 
 	var response CapitalizedResponse
 	err = json.Unmarshal(qResult.Ok, &response)
@@ -1433,7 +1433,7 @@ func TestFloats(t *testing.T) {
 	hasher := sha256.New()
 	const RUNS_PER_INSTRUCTION = 150
 	for _, instr := range instructions {
-		for seed := 0; seed < RUNS_PER_INSTRUCTION; seed++ {
+		for seed := range RUNS_PER_INSTRUCTION {
 			// query some input values for the instruction
 			msg := fmt.Sprintf(`{"random_args_for":{"instruction":"%s","seed":%d}}`, instr, seed)
 			data, _, err = Query(cache, checksum, env, []byte(msg), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -1468,7 +1468,7 @@ func TestFloats(t *testing.T) {
 				result = debugStr(response)
 			}
 			// add the result to the hash
-			hasher.Write([]byte(fmt.Sprintf("%s%d%s", instr, seed, result)))
+			fmt.Fprintf(hasher, "%s%d%s", instr, seed, result)
 		}
 	}
 
