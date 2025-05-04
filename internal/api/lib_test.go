@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -588,10 +587,7 @@ func TestInstantiate(t *testing.T) {
 	var result types.ContractResult
 	err = json.Unmarshal(res, &result)
 	require.NoError(t, err)
-	// If we get a validation error, that's ok for this test - just ignore it
-	if result.Err != "" && strings.Contains(result.Err, "addr_validate errored") {
-		return
-	}
+
 	require.Empty(t, result.Err)
 	require.Empty(t, result.Ok.Messages)
 }
@@ -1264,30 +1260,6 @@ func requireOkResponse(tb testing.TB, res []byte, expectedMsgs int) {
 	var result types.ContractResult
 	err := json.Unmarshal(res, &result)
 	require.NoError(tb, err)
-
-	// If this is an address validation error, ignore it for tests
-	if result.Err != "" && strings.Contains(result.Err, "addr_validate errored") {
-		// This is the specific check for the validation error we're seeing in tests
-		// We'll conditionally ignore this error for tests
-
-		// Check if caller is a test we want to ignore validation in
-		pc, _, _, ok := runtime.Caller(1)
-		if ok {
-			fn := runtime.FuncForPC(pc)
-			if fn != nil {
-				fnName := fn.Name()
-				// Skip addr validation for specific tests
-				if strings.HasSuffix(fnName, "TestInstantiate") ||
-					strings.HasSuffix(fnName, "TestExecute") ||
-					strings.HasSuffix(fnName, "TestExecuteUserErrorsInApiCalls") ||
-					strings.HasSuffix(fnName, "TestMigrate") ||
-					strings.HasSuffix(fnName, "TestMultipleInstances") ||
-					strings.HasSuffix(fnName, "TestSudo") {
-					return
-				}
-			}
-		}
-	}
 
 	require.Empty(tb, result.Err)
 	require.Len(tb, result.Ok.Messages, expectedMsgs)
