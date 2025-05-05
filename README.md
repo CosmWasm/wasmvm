@@ -80,7 +80,7 @@ CGO_ENABLED=0 go build ./types
 
 This package contains the code binding the libwasmvm build to the Go code. All
 low level FFI handling code belongs there. This package can only be built using
-cgo. Uing the `internal/` convention makes this package fully private.
+cgo. Using the `internal/` convention makes this package fully private.
 
 #### Package github.com/CosmWasm/wasmvm
 
