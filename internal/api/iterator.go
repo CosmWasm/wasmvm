@@ -3,12 +3,13 @@ package api
 import (
 	"fmt"
 	"math"
+	"os"
 	"sync"
 
 	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
-// frame stores all Iterators for one contract call
+// frame stores all Iterators for one contract call.
 type frame []types.Iterator
 
 // iteratorFrames contains one frame for each contract call, indexed by contract call ID.
@@ -17,7 +18,7 @@ var (
 	iteratorFramesMutex sync.Mutex
 )
 
-// this is a global counter for creating call IDs
+// this is a global counter for creating call IDs.
 var (
 	latestCallID      uint64
 	latestCallIDMutex sync.Mutex
@@ -44,13 +45,17 @@ func removeFrame(callID uint64) frame {
 	return remove
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item the iteratorFrames.
 func endCall(callID uint64) {
 	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
 	remove := removeFrame(callID)
 	// free all iterators in the frame when we release it
 	for _, iter := range remove {
-		iter.Close()
+		if err := iter.Close(); err != nil {
+			// In this cleanup code, we can't do much with the error
+			// Log it to stderr since that's better than silently ignoring it
+			fmt.Fprintf(os.Stderr, "failed to close iterator: %v\n", err)
+		}
 	}
 }
 

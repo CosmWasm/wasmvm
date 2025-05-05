@@ -16,11 +16,11 @@ type queryResultImpl struct {
 }
 
 // A custom serializer that allows us to map QueryResult instances to the Rust
-// enum `ContractResult<Binary>`
+// enum `ContractResult<Binary>`.
 func (q QueryResult) MarshalJSON() ([]byte, error) {
 	// In case both Ok and Err are empty, this is interpreted and serialized
 	// as an Ok case with no data because errors must not be empty.
-	if len(q.Ok) == 0 && len(q.Err) == 0 {
+	if len(q.Ok) == 0 && q.Err == "" {
 		return []byte(`{"ok":""}`), nil
 	}
 	return json.Marshal(queryResultImpl(q))
@@ -52,7 +52,7 @@ type Querier interface {
 	GasConsumed() uint64
 }
 
-// this is a thin wrapper around the desired Go API to give us types closer to Rust FFI
+// this is a thin wrapper around the desired Go API to give us types closer to Rust FFI.
 func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResult {
 	var request QueryRequest
 	err := json.Unmarshal(binRequest, &request)
@@ -70,7 +70,7 @@ func RustQuery(querier Querier, binRequest []byte, gasLimit uint64) QuerierResul
 	return ToQuerierResult(bz, err)
 }
 
-// This is a 2-level result
+// This is a 2-level result.
 type QuerierResult struct {
 	Ok  *QueryResult `json:"ok,omitempty"`
 	Err *SystemError `json:"error,omitempty"`
@@ -122,7 +122,7 @@ type SupplyQuery struct {
 	Denom string `json:"denom"`
 }
 
-// SupplyResponse is the expected response to SupplyQuery
+// SupplyResponse is the expected response to SupplyQuery.
 type SupplyResponse struct {
 	Amount Coin `json:"amount"`
 }
@@ -132,7 +132,7 @@ type BalanceQuery struct {
 	Denom   string `json:"denom"`
 }
 
-// BalanceResponse is the expected response to BalanceQuery
+// BalanceResponse is the expected response to BalanceQuery.
 type BalanceResponse struct {
 	Amount Coin `json:"amount"`
 }
@@ -141,7 +141,7 @@ type AllBalancesQuery struct {
 	Address string `json:"address"`
 }
 
-// AllBalancesResponse is the expected response to AllBalancesQuery
+// AllBalancesResponse is the expected response to AllBalancesQuery.
 type AllBalancesResponse struct {
 	Amount Array[Coin] `json:"amount"`
 }
@@ -226,7 +226,7 @@ type StakingQuery struct {
 
 type AllValidatorsQuery struct{}
 
-// AllValidatorsResponse is the expected response to AllValidatorsQuery
+// AllValidatorsResponse is the expected response to AllValidatorsQuery.
 type AllValidatorsResponse struct {
 	Validators Array[Validator] `json:"validators"`
 }
@@ -236,7 +236,7 @@ type ValidatorQuery struct {
 	Address string `json:"address"`
 }
 
-// ValidatorResponse is the expected response to ValidatorQuery
+// ValidatorResponse is the expected response to ValidatorQuery.
 type ValidatorResponse struct {
 	Validator *Validator `json:"validator"` // serializes to `null` when unset which matches Rust's Option::None serialization
 }
@@ -260,7 +260,7 @@ type DelegationQuery struct {
 	Validator string `json:"validator"`
 }
 
-// AllDelegationsResponse is the expected response to AllDelegationsQuery
+// AllDelegationsResponse is the expected response to AllDelegationsQuery.
 type AllDelegationsResponse struct {
 	Delegations Array[Delegation] `json:"delegations"`
 }
@@ -324,7 +324,7 @@ type DelegatorValidatorsResponse struct {
 	Validators []string `json:"validators"`
 }
 
-// DelegationResponse is the expected response to Array[Delegation]Query
+// DelegationResponse is the expected response to Array[Delegation]Query.
 type DelegationResponse struct {
 	Delegation *FullDelegation `json:"delegation,omitempty"`
 }
@@ -375,14 +375,14 @@ type WasmQuery struct {
 	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
 }
 
-// SmartQuery response is raw bytes ([]byte)
+// SmartQuery response is raw bytes ([]byte).
 type SmartQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Msg          []byte `json:"msg"`
 }
 
-// RawQuery response is raw bytes ([]byte)
+// RawQuery response is raw bytes ([]byte).
 type RawQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`

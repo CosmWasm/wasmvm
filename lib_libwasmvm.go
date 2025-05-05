@@ -128,7 +128,7 @@ func (vm *VM) Unpin(checksum Checksum) error {
 
 // Returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
-// Only info currently returned is if it exposes all ibc entry points, but this may grow later
+// Only info currently returned is if it exposes all ibc entry points, but this may grow later.
 func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {
 	return api.AnalyzeCode(vm.cache, checksum)
 }
@@ -190,7 +190,7 @@ func (vm *VM) Instantiate(
 // (That is a detail for the external, sdk-facing, side).
 //
 // The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
-// and setting the env with relevant info on this instance (address, balance, etc)
+// and setting the env with relevant info on this instance (address, balance, etc).
 func (vm *VM) Execute(
 	checksum Checksum,
 	env types.Env,
@@ -226,7 +226,7 @@ func (vm *VM) Execute(
 
 // Query allows a client to execute a contract-specific query. If the result is not empty, it should be
 // valid json-encoded data to return to the client.
-// The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
+// The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path.
 func (vm *VM) Query(
 	checksum Checksum,
 	env types.Env,
@@ -370,7 +370,7 @@ func (vm *VM) Sudo(
 // Reply allows the native Go wasm modules to make a privileged call to return the result
 // of executing a SubMsg.
 //
-// These work much like Sudo (same scenario) but focuses on one specific case (and one message type)
+// These work much like Sudo (same scenario) but focuses on one specific case (and one message type).
 func (vm *VM) Reply(
 	checksum Checksum,
 	env types.Env,
@@ -404,7 +404,7 @@ func (vm *VM) Reply(
 }
 
 // IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake pahse.
 func (vm *VM) IBCChannelOpen(
 	checksum Checksum,
 	env types.Env,
@@ -438,7 +438,7 @@ func (vm *VM) IBCChannelOpen(
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
-// during the handshake pahse
+// during the handshake pahse.
 func (vm *VM) IBCChannelConnect(
 	checksum Checksum,
 	env types.Env,
@@ -472,7 +472,7 @@ func (vm *VM) IBCChannelConnect(
 }
 
 // IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
-// at the end of the channel lifetime
+// at the end of the channel lifetime.
 func (vm *VM) IBCChannelClose(
 	checksum Checksum,
 	env types.Env,
@@ -506,7 +506,7 @@ func (vm *VM) IBCChannelClose(
 }
 
 // IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
-// packet is received on a channel belonging to this contract
+// packet is received on a channel belonging to this contract.
 func (vm *VM) IBCPacketReceive(
 	checksum Checksum,
 	env types.Env,
@@ -541,7 +541,7 @@ func (vm *VM) IBCPacketReceive(
 
 // IBCPacketAck is available on IBC-enabled contracts and is called when an
 // the response for an outgoing packet (previously sent by this contract)
-// is received
+// is received.
 func (vm *VM) IBCPacketAck(
 	checksum Checksum,
 	env types.Env,
@@ -576,7 +576,7 @@ func (vm *VM) IBCPacketAck(
 
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
 // outgoing packet (previously sent by this contract) will provably never be executed.
-// Usually handled like ack returning an error
+// Usually handled like ack returning an error.
 func (vm *VM) IBCPacketTimeout(
 	checksum Checksum,
 	env types.Env,
@@ -678,8 +678,7 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
-// IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
-// packet is received on a channel belonging to this contract
+// packet is received on a channel belonging to this contract.
 func (vm *VM) IBC2PacketReceive(
 	checksum Checksum,
 	env types.Env,
@@ -762,7 +761,7 @@ type hasSubMessages interface {
 }
 
 // make sure the types implement the interface
-// cannot put these next to the types, as the interface is private
+// cannot put these next to the types, as the interface is private.
 var (
 	_ hasSubMessages = (*types.IBCBasicResult)(nil)
 	_ hasSubMessages = (*types.IBCReceiveResult)(nil)
@@ -785,10 +784,11 @@ func DeserializeResponse(gasLimit uint64, deserCost types.UFraction, gasReport *
 	// All responses that have sub-messages need their payload size to be checked
 	const ReplyPayloadMaxBytes = 128 * 1024 // 128 KiB
 	if response, ok := response.(hasSubMessages); ok {
-		for i, m := range response.SubMessages() {
+		messages := response.SubMessages()
+		for i := 0; i < len(messages); i++ {
 			// each payload needs to be below maximum size
-			if len(m.Payload) > ReplyPayloadMaxBytes {
-				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, ReplyPayloadMaxBytes, len(m.Payload))
+			if len(messages[i].Payload) > ReplyPayloadMaxBytes {
+				return fmt.Errorf("reply contains submessage at index %d with payload larger than %d bytes: %d bytes", i, ReplyPayloadMaxBytes, len(messages[i].Payload))
 			}
 		}
 	}

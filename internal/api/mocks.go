@@ -15,6 +15,10 @@ import (
 	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
+const (
+	testAddress = "foobar"
+)
+
 /** helper constructors **/
 
 const MOCK_CONTRACT_ADDR = "contract"
@@ -24,7 +28,7 @@ func MockEnv() types.Env {
 		Block: types.BlockInfo{
 			Height:  123,
 			Time:    1578939743_987654321,
-			ChainID: "foobar",
+			ChainID: testAddress,
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 4,
@@ -248,7 +252,7 @@ func (g *mockGasMeter) ConsumeGas(amount types.Gas, descriptor string) {
 // Note: these gas prices are all in *wasmer gas* and (sdk gas * 100)
 //
 // We making simple values and non-clear multiples so it is easy to see their impact in test output
-// Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests)
+// Also note we do not charge for each read on an iterator (out of simplicity and not needed for tests).
 const (
 	GetPrice    uint64 = 99000
 	SetPrice    uint64 = 187000
@@ -374,7 +378,7 @@ func MockValidateAddress(input string) (gasCost uint64, _ error) {
 	if err != nil {
 		return gasCost, err
 	}
-	if humanized != strings.ToLower(input) {
+	if !strings.EqualFold(humanized, input) {
 		return gasCost, fmt.Errorf("address validation failed")
 	}
 
@@ -390,15 +394,14 @@ func NewMockAPI() *types.GoAPI {
 }
 
 func TestMockApi(t *testing.T) {
-	human := "foobar"
-	canon, cost, err := MockCanonicalizeAddress(human)
+	canon, cost, err := MockCanonicalizeAddress(testAddress)
 	require.NoError(t, err)
 	require.Len(t, canon, CanonicalLength)
 	require.Equal(t, CostCanonical, cost)
 
 	recover, cost, err := MockHumanizeAddress(canon)
 	require.NoError(t, err)
-	require.Equal(t, recover, human)
+	require.Equal(t, testAddress, recover)
 	require.Equal(t, CostHuman, cost)
 }
 
@@ -502,7 +505,7 @@ func (q NoCustom) Query(request json.RawMessage) ([]byte, error) {
 	return nil, types.UnsupportedRequest{Kind: "custom"}
 }
 
-// ReflectCustom fulfills the requirements for testing `reflect` contract
+// ReflectCustom fulfills the requirements for testing `reflect` contract.
 type ReflectCustom struct{}
 
 var _ CustomQuerier = ReflectCustom{}
@@ -516,7 +519,7 @@ type CapitalizedQuery struct {
 	Text string `json:"text"`
 }
 
-// CustomResponse is the response for all `CustomQuery`s
+// CustomResponse is the response for all `CustomQuery`s.
 type CustomResponse struct {
 	Msg string `json:"msg"`
 }
@@ -528,17 +531,18 @@ func (q ReflectCustom) Query(request json.RawMessage) ([]byte, error) {
 		return nil, err
 	}
 	var resp CustomResponse
-	if query.Ping != nil {
+	switch {
+	case query.Ping != nil:
 		resp.Msg = "PONG"
-	} else if query.Capitalized != nil {
+	case query.Capitalized != nil:
 		resp.Msg = strings.ToUpper(query.Capitalized.Text)
-	} else {
+	default:
 		return nil, errors.New("unsupported query")
 	}
 	return json.Marshal(resp)
 }
 
-//************ test code for mocks *************************//
+// ************ test code for mocks *************************//
 
 func TestBankQuerierAllBalances(t *testing.T) {
 	addr := "foobar"

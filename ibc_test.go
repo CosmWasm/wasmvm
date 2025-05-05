@@ -70,7 +70,7 @@ type AccountInfo struct {
 	ChannelID string `json:"channel_id"`
 }
 
-// We just check if an error is returned or not
+// We just check if an error is returned or not.
 type AcknowledgeDispatch struct {
 	Err string `json:"error"`
 }

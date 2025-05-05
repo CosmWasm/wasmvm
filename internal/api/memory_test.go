@@ -28,8 +28,8 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		original := []byte{0xaa, 0xbb, 0x64}
 		unmanaged := newUnmanagedVector(original)
 		require.Equal(t, cbool(false), unmanaged.is_none)
-		require.Equal(t, 3, int(unmanaged.len))
-		require.GreaterOrEqual(t, 3, int(unmanaged.cap)) // Rust implementation decides this
+		require.Equal(t, uint64(3), uint64(unmanaged.len))
+		require.GreaterOrEqual(t, uint64(3), uint64(unmanaged.cap)) // Rust implementation decides this
 		copy := copyAndDestroyUnmanagedVector(unmanaged)
 		require.Equal(t, original, copy)
 	}
@@ -39,8 +39,8 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 		original := []byte{}
 		unmanaged := newUnmanagedVector(original)
 		require.Equal(t, cbool(false), unmanaged.is_none)
-		require.Equal(t, 0, int(unmanaged.len))
-		require.GreaterOrEqual(t, 0, int(unmanaged.cap)) // Rust implementation decides this
+		require.Equal(t, uint64(0), uint64(unmanaged.len))
+		require.GreaterOrEqual(t, uint64(0), uint64(unmanaged.cap)) // Rust implementation decides this
 		copy := copyAndDestroyUnmanagedVector(unmanaged)
 		require.Equal(t, original, copy)
 	}
@@ -63,14 +63,16 @@ func TestCreateAndDestroyUnmanagedVector(t *testing.T) {
 func TestCopyDestroyUnmanagedVector(t *testing.T) {
 	{
 		// ptr, cap and len broken. Do not access those values when is_none is true
-		invalid_ptr := unsafe.Pointer(uintptr(42))
+		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec
+		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(true), cu8_ptr(invalid_ptr), cusize(0xBB), cusize(0xAA))
 		copy := copyAndDestroyUnmanagedVector(uv)
 		require.Nil(t, copy)
 	}
 	{
 		// Capacity is 0, so no allocation happened. Do not access the pointer.
-		invalid_ptr := unsafe.Pointer(uintptr(42))
+		base := unsafe.Pointer(&struct{ x byte }{}) //nolint:gosec
+		invalid_ptr := unsafe.Add(base, 42)
 		uv := constructUnmanagedVector(cbool(false), cu8_ptr(invalid_ptr), cusize(0), cusize(0))
 		copy := copyAndDestroyUnmanagedVector(uv)
 		require.Equal(t, []byte{}, copy)
