@@ -1,0 +1,14 @@
+[sources]
+allow-git = ["https://github.com/CosmWasm/cosmwasm"]
+
+[bans]
+# Allow multiple versions of the same crate
+multiple-versions = "allow"
+
+[advisories]
+# Temporarily ignore unmaintained crates while waiting for upstream updates in cosmwasm and wasmer
+# Valid values are: "all", "workspace", "transitive", "none"
+unmaintained = "none"
+# vulnerability = "deny"
+# yanked = "deny"
+# notice = "deny"
