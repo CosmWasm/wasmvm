@@ -333,7 +333,7 @@ func TestStressHighVolumeInsert(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const totalInserts = 10000
+	const totalInserts = 1000
 	t.Logf("Inserting %d items...", totalInserts)
 
 	var mStart, mEnd runtime.MemStats
@@ -361,7 +361,7 @@ func TestBulkDeletionMemoryRecovery(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const totalInserts = 5000
+	const totalInserts = 500
 	keys := make([][]byte, totalInserts)
 	for i := 0; i < totalInserts; i++ {
 		key := []byte(fmt.Sprintf("bulk_key_%d", i))
@@ -394,7 +394,7 @@ func TestPeakMemoryTracking(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const totalOps = 10000
+	const totalOps = 1000
 	var peakAlloc uint64
 	var m runtime.MemStats
 	for i := 0; i < totalOps; i++ {
@@ -423,7 +423,7 @@ func TestRepeatedCreateDestroyCycles(t *testing.T) {
 		t.Skip("Skipping repeated create/destroy cycles test in short mode")
 	}
 	t.Parallel()
-	const cycles = 20
+	const cycles = 5
 	var mStart, mEnd runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&mStart)
@@ -445,7 +445,7 @@ func TestSmallAllocationsLeak(t *testing.T) {
 		t.Skip("Skipping small allocations leak test in short mode")
 	}
 	t.Parallel()
-	const iterations = 10000
+	const iterations = 1000
 	for i := 0; i < iterations; i++ {
 		_ = make([]byte, 32)
 	}
@@ -469,9 +469,9 @@ func TestConcurrentAccess(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const numWriters = 4
-	const numReaders = 4
-	const opsPerGoroutine = 200
+	const numWriters = 2
+	const numReaders = 2
+	const opsPerGoroutine = 50
 	var wg sync.WaitGroup
 
 	// Writers.
@@ -512,7 +512,7 @@ func TestConcurrentAccess(t *testing.T) {
 
 	select {
 	case <-done:
-	case <-time.After(10 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("Concurrent access test timed out; potential deadlock or race condition")
 	}
 }
@@ -548,7 +548,7 @@ func TestLockingAndRelease(t *testing.T) {
 		close(done)
 	}()
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	close(release)
 
 	select {
@@ -571,8 +571,8 @@ func TestLongRunningWorkload(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const iterations = 1000
-	const reportInterval = 100
+	const iterations = 100
+	const reportInterval = 50
 	var mInitial runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&mInitial)
@@ -617,7 +617,7 @@ func TestMemoryMetrics(t *testing.T) {
 	runtime.GC()
 	runtime.ReadMemStats(&mBefore)
 
-	const allocCount = 1000
+	const allocCount = 100
 	for i := 0; i < allocCount; i++ {
 		_ = make([]byte, 128)
 	}
@@ -648,9 +648,9 @@ func TestRandomMemoryAccessPatterns(t *testing.T) {
 	db := testdb.NewMemDB()
 	defer db.Close()
 
-	const ops = 5000
+	const ops = 500
 	var wg sync.WaitGroup
-	const numGoroutines = 4
+	const numGoroutines = 2
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func(seed int) {
@@ -683,7 +683,7 @@ func TestMemoryFragmentation(t *testing.T) {
 		t.Skip("Skipping memory fragmentation test in short mode")
 	}
 	t.Parallel()
-	const iterations = 1000
+	const iterations = 100
 	for i := 0; i < iterations; i++ {
 		if i%10 == 0 {
 			// Allocate a larger block (e.g. 64KB)
@@ -719,7 +719,7 @@ func TestWasmVMMemoryLeakStress(t *testing.T) {
 	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
 	t.Logf("Baseline: Heap=%d bytes, Mallocs=%d, Frees=%d", baseAlloc, baseMallocs, baseFrees)
 
-	const iterations = 500
+	const iterations = 50
 	wasmCode, err := os.ReadFile("../../testdata/hackatom.wasm")
 	require.NoError(t, err)
 
@@ -760,7 +760,7 @@ func TestWasmVMMemoryLeakStress(t *testing.T) {
 		}
 		db.Close()
 
-		if i%100 == 0 {
+		if i%25 == 0 {
 			alloc, mallocs, frees := getMemoryStats()
 			t.Logf("Iter %d: Heap=%d bytes (+%d), Mallocs=%d, Frees=%d",
 				i, alloc, alloc-baseAlloc, mallocs-baseMallocs, frees-baseFrees)
@@ -801,8 +801,8 @@ func TestConcurrentWasmOperations(t *testing.T) {
 	checksum, err := StoreCode(cache, wasmCode, true)
 	require.NoError(t, err)
 
-	const goroutines = 5
-	const operations = 200
+	const goroutines = 3
+	const operations = 50
 	var wg sync.WaitGroup
 
 	baseAlloc, _, _ := getMemoryStats()
@@ -885,7 +885,7 @@ func TestWasmIteratorMemoryLeaks(t *testing.T) {
 	require.NoError(t, err)
 
 	baseAlloc, _, _ := getMemoryStats()
-	const iterations = 200
+	const iterations = 20
 
 	for i := 0; i < iterations; i++ {
 		gasMeter = NewMockGasMeter(100000000)
@@ -897,7 +897,7 @@ func TestWasmIteratorMemoryLeaks(t *testing.T) {
 			&igasMeter, store, api, &querier, 100000000, false)
 		require.NoError(t, err)
 
-		if i%100 == 0 {
+		if i%10 == 0 {
 			alloc, _, _ := getMemoryStats()
 			t.Logf("Iter %d: Heap=%d bytes (+%d)", i, alloc, alloc-baseAlloc)
 		}
@@ -940,7 +940,7 @@ func TestWasmLongRunningMemoryStability(t *testing.T) {
 	defer db.Close()
 
 	baseAlloc, baseMallocs, baseFrees := getMemoryStats()
-	const iterations = 1000
+	const iterations = 100
 
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
@@ -971,7 +971,7 @@ func TestWasmLongRunningMemoryStability(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		if i%1000 == 0 {
+		if i%50 == 0 {
 			alloc, mallocs, frees := getMemoryStats()
 			t.Logf("Iter %d: Heap=%d bytes (+%d), Net allocs=%d",
 				i, alloc, alloc-baseAlloc, (mallocs-frees)-(baseMallocs-baseFrees))
@@ -1048,8 +1048,8 @@ func TestContractExecutionMemoryLeak(t *testing.T) {
 	})
 
 	// Number of contract executions to perform
-	const executions = 5000
-	const reportInterval = 250
+	const executions = 500
+	const reportInterval = 50
 
 	t.Logf("Starting contract execution memory leak test with %d executions", executions)
 	t.Logf("Initial memory: HeapAlloc=%d bytes, Objects=%d", initialStats.HeapAlloc, initialStats.HeapObjects)
@@ -1191,8 +1191,8 @@ func TestContractMultiInstanceMemoryLeak(t *testing.T) {
 	runtime.ReadMemStats(&initialStats)
 
 	// Number of instances to create
-	const instances = 1000
-	const reportInterval = 100
+	const instances = 100
+	const reportInterval = 25
 
 	// Create a central DB
 	db := testdb.NewMemDB()

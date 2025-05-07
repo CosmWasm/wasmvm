@@ -16,7 +16,7 @@ import (
 
 /** helper constructors **/
 
-const MOCK_CONTRACT_ADDR = "cosmos1pfk7zrxegx38u5xnejzzenmqgw5ceskzve3xd6"
+const MOCK_CONTRACT_ADDR = "cosmos17q9z4elcqgcgj0ztx5td3ymw75rr3ejre9"
 
 // Test Bech32 addresses with valid checksums
 var testAddresses = map[string]string{

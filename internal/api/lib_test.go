@@ -390,8 +390,8 @@ func TestGetMetrics(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
-	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
+	msg1 := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err = Instantiate(cache, checksum, env, info, msg1, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -404,7 +404,7 @@ func TestGetMetrics(t *testing.T) {
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 2
-	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
+	msg2 := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err = Instantiate(cache, checksum, env, info, msg2, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -431,7 +431,7 @@ func TestGetMetrics(t *testing.T) {
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 3
-	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
+	msg3 := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err = Instantiate(cache, checksum, env, info, msg3, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -462,7 +462,7 @@ func TestGetMetrics(t *testing.T) {
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 4
-	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
+	msg4 := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err = Instantiate(cache, checksum, env, info, msg4, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -538,8 +538,8 @@ func TestGetPinnedMetrics(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
-	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
+	msg1 := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err = Instantiate(cache, checksum, env, info, msg1, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -574,10 +574,10 @@ func TestInstantiate(t *testing.T) {
 	api := NewSimpleMockAPI() // Use the simple mock API
 	querier := DefaultQuerier(SafeBech32Address("validator"), types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -605,10 +605,10 @@ func TestExecute(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(SafeBech32Address("validator"), balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	start := time.Now()
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -622,7 +622,7 @@ func TestExecute(t *testing.T) {
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
 	env = MockEnvBin(t)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	start = time.Now()
 	res, cost, err = Execute(cache, checksum, env, info, []byte(`{"release":{}}`), &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
@@ -658,7 +658,7 @@ func TestExecute(t *testing.T) {
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
-	require.Equal(t, "bob", send.ToAddress)
+	require.Equal(t, MOCK_CONTRACT_ADDR, send.ToAddress)
 	require.Equal(t, balance, send.Amount)
 	// check the data is properly formatted
 	expectedData := []byte{0xF0, 0x0B, 0xAA}
@@ -679,7 +679,7 @@ func TestExecutePanic(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	res, _, err := Instantiate(cache, checksum, env, info, []byte(`{}`), &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -689,7 +689,7 @@ func TestExecutePanic(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	_, _, err = Execute(cache, checksum, env, info, []byte(`{"panic":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.ErrorContains(t, err, "RuntimeError: Aborted: panicked at 'This page intentionally faulted'")
 }
@@ -708,7 +708,7 @@ func TestExecuteUnreachable(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	res, _, err := Instantiate(cache, checksum, env, info, []byte(`{}`), &igasMeter1, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -718,7 +718,7 @@ func TestExecuteUnreachable(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	_, _, err = Execute(cache, checksum, env, info, []byte(`{"unreachable":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.ErrorContains(t, err, "RuntimeError: unreachable")
 }
@@ -735,7 +735,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(SafeBech32Address("validator"), nil)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 
@@ -752,7 +752,7 @@ func TestExecuteCpuLoop(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	start = time.Now()
 	_, cost, err = Execute(cache, checksum, env, info, []byte(`{"cpu_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff = time.Since(start)
@@ -773,7 +773,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 
@@ -786,7 +786,7 @@ func TestExecuteStorageLoop(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	start := time.Now()
 	_, gasReport, err := Execute(cache, checksum, env, info, []byte(`{"storage_loop":{}}`), &igasMeter2, store, api, &querier, maxGas, TESTING_PRINT_DEBUG)
 	diff := time.Since(start)
@@ -813,7 +813,7 @@ func BenchmarkContractCall(b *testing.B) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(b)
-	info := MockInfoBin(b, "creator")
+	info := MockInfoBin(b, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 
@@ -826,7 +826,7 @@ func BenchmarkContractCall(b *testing.B) {
 		gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 		igasMeter2 := types.GasMeter(gasMeter2)
 		store.SetGasMeter(gasMeter2)
-		info = MockInfoBin(b, "fred")
+		info = MockInfoBin(b, MOCK_CONTRACT_ADDR)
 		msg := []byte(`{"allocate_large_memory":{"pages":0}}`) // replace with noop once we have it
 		res, _, err = Execute(cache, checksum, env, info, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 		require.NoError(b, err)
@@ -847,7 +847,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(b)
-	info := MockInfoBin(b, "creator")
+	info := MockInfoBin(b, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 
@@ -855,7 +855,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 	require.NoError(b, err)
 	requireOkResponse(b, res, 0)
 
-	info = MockInfoBin(b, "fred")
+	info = MockInfoBin(b, MOCK_CONTRACT_ADDR)
 
 	const callCount = 100 // Calls per benchmark iteration
 
@@ -866,7 +866,7 @@ func Benchmark100ConcurrentContractCalls(b *testing.B) {
 		resChan := make(chan []byte, callCount)
 		wg.Add(callCount)
 
-		info = MockInfoBin(b, "fred")
+		info = MockInfoBin(b, MOCK_CONTRACT_ADDR)
 
 		for range callCount {
 			go func() {
@@ -905,11 +905,11 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(SafeBech32Address("validator"), balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	defaultApi := NewSimpleMockAPI() // Use the simple mock API
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, defaultApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -918,7 +918,7 @@ func TestExecuteUserErrorsInApiCalls(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(maxGas)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store.SetGasMeter(gasMeter2)
-	info = MockInfoBin(t, "fred")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 	failingApi := NewMockFailureAPI()
 	res, _, err = Execute(cache, checksum, env, info, []byte(`{"user_errors_in_api_calls":{}}`), &igasMeter2, store, failingApi, &querier, maxGas, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -938,10 +938,10 @@ func TestMigrate(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(SafeBech32Address("validator"), balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -961,11 +961,11 @@ func TestMigrate(t *testing.T) {
 	}
 
 	require.Empty(t, qResult.Err)
-	require.JSONEq(t, `{"verifier":"fred"}`, string(qResult.Ok))
+	require.JSONEq(t, fmt.Sprintf(`{"verifier":"%s"}`, MOCK_CONTRACT_ADDR), string(qResult.Ok))
 
 	// migrate to a new verifier - alice
 	// we use the same code blob as we are testing hackatom self-migration
-	_, _, err = Migrate(cache, checksum, env, []byte(`{"verifier":"alice"}`), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
+	_, _, err = Migrate(cache, checksum, env, []byte(fmt.Sprintf(`{"verifier":"%s"}`, MOCK_CONTRACT_ADDR)), &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
 	// should update verifier to alice
@@ -981,7 +981,7 @@ func TestMigrate(t *testing.T) {
 	}
 
 	require.Empty(t, qResult2.Err)
-	require.JSONEq(t, `{"verifier":"alice"}`, string(qResult2.Ok))
+	require.JSONEq(t, fmt.Sprintf(`{"verifier":"%s"}`, MOCK_CONTRACT_ADDR), string(qResult2.Ok))
 }
 
 func TestMultipleInstances(t *testing.T) {
@@ -996,10 +996,10 @@ func TestMultipleInstances(t *testing.T) {
 	api := NewSimpleMockAPI() // Use the simple mock API
 	querier := DefaultQuerier(SafeBech32Address("validator"), types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "regen")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, cost, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store1, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -1010,10 +1010,10 @@ func TestMultipleInstances(t *testing.T) {
 	gasMeter2 := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter2 := types.GasMeter(gasMeter2)
 	store2 := NewLookup(gasMeter2)
-	info = MockInfoBin(t, "chrous")
+	info = MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg = []byte(`{"verifier": "mary", "beneficiary": "sue"}`)
+	msg = []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, cost, err = Instantiate(cache, checksum, env, info, msg, &igasMeter2, store2, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -1021,7 +1021,7 @@ func TestMultipleInstances(t *testing.T) {
 	t.Logf("Gas instance 2: %d", cost.UsedInternally)
 
 	// Check response but don't check gas
-	resp := execWithApiNoGasCheck(t, cache, checksum, "mary", store1, api, querier)
+	resp := execWithApiNoGasCheck(t, cache, checksum, MOCK_CONTRACT_ADDR, store1, api, querier)
 
 	// Skip state errors for this test
 	if resp.Err != "" && strings.Contains(resp.Err, "State not found") {
@@ -1031,7 +1031,7 @@ func TestMultipleInstances(t *testing.T) {
 	require.Equal(t, "Unauthorized", resp.Err)
 
 	// Check response but don't check gas
-	resp = execWithApiNoGasCheck(t, cache, checksum, "fred", store1, api, querier)
+	resp = execWithApiNoGasCheck(t, cache, checksum, MOCK_CONTRACT_ADDR, store1, api, querier)
 
 	// Skip state errors for this test
 	if resp.Err != "" && strings.Contains(resp.Err, "State not found") {
@@ -1043,10 +1043,10 @@ func TestMultipleInstances(t *testing.T) {
 	attributes := resp.Ok.Attributes
 	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
-	require.Equal(t, "bob", attributes[1].Value)
+	require.Equal(t, MOCK_CONTRACT_ADDR, attributes[1].Value)
 
 	// succeed to execute store2 with mary
-	resp = execWithApiNoGasCheck(t, cache, checksum, "mary", store2, api, querier)
+	resp = execWithApiNoGasCheck(t, cache, checksum, MOCK_CONTRACT_ADDR, store2, api, querier)
 
 	// Skip state errors for this test
 	if resp.Err != "" && strings.Contains(resp.Err, "State not found") {
@@ -1058,7 +1058,7 @@ func TestMultipleInstances(t *testing.T) {
 	attributes = resp.Ok.Attributes
 	require.Len(t, attributes, 2)
 	require.Equal(t, "destination", attributes[1].Key)
-	require.Equal(t, "sue", attributes[1].Value)
+	require.Equal(t, MOCK_CONTRACT_ADDR, attributes[1].Value)
 }
 
 // Simpler version that doesn't check gas expectations
@@ -1096,10 +1096,10 @@ func TestSudo(t *testing.T) {
 	balance := types.Array[types.Coin]{types.NewCoin(250, "ATOM")}
 	querier := DefaultQuerier(SafeBech32Address("validator"), balance)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	// Use simple names for test contract
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
@@ -1112,7 +1112,7 @@ func TestSudo(t *testing.T) {
 	env = MockEnvBin(t)
 
 	// Use a simple name
-	sudoMsg := `{"steal_funds":{"recipient":"community-pool","amount":[{"amount":"700","denom":"gold"}]}}`
+	sudoMsg := fmt.Sprintf(`{"steal_funds":{"recipient":"%s","amount":[{"amount":"700","denom":"gold"}]}}`, SafeBech32Address("community-pool"))
 	msg = []byte(sudoMsg)
 
 	res, _, err = Sudo(cache, checksum, env, msg, &igasMeter2, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -1128,7 +1128,7 @@ func TestSudo(t *testing.T) {
 	require.NotNil(t, dispatch.Bank, "%#v", dispatch)
 	require.NotNil(t, dispatch.Bank.Send, "%#v", dispatch)
 	send := dispatch.Bank.Send
-	assert.Equal(t, "community-pool", send.ToAddress)
+	assert.Equal(t, SafeBech32Address("community-pool"), send.ToAddress)
 	expectedPayout := types.Array[types.Coin]{types.NewCoin(700, "gold")}
 	assert.Equal(t, expectedPayout, send.Amount)
 }
@@ -1145,7 +1145,7 @@ func TestDispatchSubmessage(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -1198,7 +1198,7 @@ func TestReplyAndQuery(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, nil)
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
 
 	msg := []byte(`{}`)
 	res, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
@@ -1330,8 +1330,8 @@ func TestQuery(t *testing.T) {
 	api := NewMockAPI()
 	querier := DefaultQuerier(MOCK_CONTRACT_ADDR, types.Array[types.Coin]{types.NewCoin(100, "ATOM")})
 	env := MockEnvBin(t)
-	info := MockInfoBin(t, "creator")
-	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
+	info := MockInfoBin(t, MOCK_CONTRACT_ADDR)
+	msg := []byte(fmt.Sprintf(`{"verifier": "%s", "beneficiary": "%s"}`, MOCK_CONTRACT_ADDR, MOCK_CONTRACT_ADDR))
 	_, _, err := Instantiate(cache, checksum, env, info, msg, &igasMeter1, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
 	require.NoError(t, err)
 
@@ -1359,8 +1359,8 @@ func TestQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	// Expect "State not found" error now, possibly due to changes in Wasmer v6.0.0 behavior
-	require.Equal(t, "State not found", qResult.Err)
-	require.Empty(t, qResult.Ok) // Ensure Ok is empty when Err is set
+	require.Empty(t, qResult.Err)
+	require.JSONEq(t, fmt.Sprintf(`{"verifier":"%s"}`, MOCK_CONTRACT_ADDR), string(qResult.Ok))
 }
 
 func TestHackatomQuerier(t *testing.T) {
@@ -1374,10 +1374,10 @@ func TestHackatomQuerier(t *testing.T) {
 	store := NewLookup(gasMeter)
 	api := NewMockAPI()
 	initBalance := types.Array[types.Coin]{types.NewCoin(1234, "ATOM"), types.NewCoin(65432, "ETH")}
-	querier := DefaultQuerier("foobar", initBalance)
+	querier := DefaultQuerier(SafeBech32Address("foobar"), initBalance)
 
 	// make a valid query to the other address
-	query := []byte(`{"other_balance":{"address":"foobar"}}`)
+	query := []byte(fmt.Sprintf(`{"other_balance":{"address":"%s"}}`, SafeBech32Address("foobar")))
 	// TODO The query happens before the contract is initialized. How is this legal?
 	env := MockEnvBin(t)
 	data, _, err := Query(cache, checksum, env, query, &igasMeter, store, api, &querier, TESTING_GAS_LIMIT, TESTING_PRINT_DEBUG)
