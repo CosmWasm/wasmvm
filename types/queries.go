@@ -373,6 +373,7 @@ type WasmQuery struct {
 	Raw          *RawQuery          `json:"raw,omitempty"`
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
+	RawRange     *RawRangeQuery     `json:"raw_range,omitempty"`
 }
 
 // SmartQuery response is raw bytes ([]byte)
@@ -387,6 +388,32 @@ type RawQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
+}
+
+type RawRangeQuery struct {
+	// The address of the contract to query
+	ContractAddr string `json:"contract_addr"`
+	// Inclusive start bound. This is the first key you would like to get data for.
+	//
+	// If `start` is lexicographically greater than or equal to `end`, an empty range is described, mo matter of the order.
+	Start *[]byte `json:"start,omitempty"`
+	// Exclusive end bound. This is the key after the last key you would like to get data for.
+	End *[]byte `json:"end,omitempty"`
+	// Maximum number of elements to return.
+	//
+	// Make sure to set a reasonable limit to avoid running out of memory or into the deserialization limits of the VM. Also keep in mind that these limitations depend on the full JSON size of the response type.
+	Limit uint16 `json:"limit"`
+	// The order in which you want to receive the key-value pairs.
+	Order string `json:"order"`
+}
+
+type RawRangeResponse struct {
+	// The key-value pairs
+	// Please note that the inner `Array` should always contain exactly two elements,
+	// the key and the value.
+	Data Array[Array[[]byte]] `json:"data"`
+	// `None` if there are no more key-value pairs within the given key range.
+	NextKey *[]byte `json:"next_key,omitempty"`
 }
 
 type ContractInfoQuery struct {
