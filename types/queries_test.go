@@ -204,6 +204,29 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }
 
+func TestRawRangeQuerySerialization(t *testing.T) {
+	// Serialization
+	start := []byte("start")
+	end := []byte("end")
+
+	query := RawRangeQuery{
+		ContractAddr: "contract",
+		Start:        &start,
+		End:          &end,
+		Limit:        100,
+		Order:        "ascending",
+	}
+	serialized, err := json.Marshal(&query)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"contract_addr":"contract","start":"c3RhcnQ=","end":"ZW5k","limit":100,"order":"ascending"}`, string(serialized))
+
+	// Deserialization
+	var deserialized RawRangeQuery
+	err = json.Unmarshal(serialized, &deserialized)
+	require.NoError(t, err)
+	require.Equal(t, query, deserialized)
+}
+
 func TestRawRangeResponseSerialization(t *testing.T) {
 	// Deserialization
 	document := []byte(`{"data":[["a2V5","dmFsdWU="], ["Zm9v","YmFy"]]}`)
