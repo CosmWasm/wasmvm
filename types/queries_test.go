@@ -203,3 +203,34 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }
+
+func TestRawRangeResponseSerialization(t *testing.T) {
+	// Deserialization
+	document := []byte(`{"data":[["a2V5","dmFsdWU="], ["Zm9v","YmFy"]]}`)
+	var res RawRangeResponse
+	err := json.Unmarshal(document, &res)
+	require.NoError(t, err)
+
+	require.Equal(t, RawRangeResponse{
+		Data: Array[Array[[]byte]]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
+	}, res)
+
+	// Serialization
+	// empty
+	myRes := RawRangeResponse{
+		Data: Array[Array[[]byte]]{},
+	}
+	serialized, err := json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"data":[]}`, string(serialized))
+
+	// non-empty
+	nextKey := []byte("next")
+	myRes = RawRangeResponse{
+		Data:    Array[Array[[]byte]]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
+		NextKey: &nextKey,
+	}
+	serialized, err = json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"data":[["a2V5","dmFsdWU="],["Zm9v","YmFy"]],"next_key":"bmV4dA=="}`, string(serialized))
+}

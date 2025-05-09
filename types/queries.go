@@ -390,11 +390,6 @@ type RawQuery struct {
 	Key          []byte `json:"key"`
 }
 
-type ContractInfoQuery struct {
-	// Bech32 encoded sdk.AccAddress of the contract
-	ContractAddr string `json:"contract_addr"`
-}
-
 type RawRangeQuery struct {
 	// The address of the contract to query
 	ContractAddr string `json:"contract_addr"`
@@ -410,6 +405,20 @@ type RawRangeQuery struct {
 	Limit uint16 `json:"limit"`
 	// The order in which you want to receive the key-value pairs.
 	Order string `json:"order"`
+}
+
+type RawRangeResponse struct {
+	// The key-value pairs
+	// Please note that the inner `Array` should always contain exactly two elements,
+	// the key and the value.
+	Data Array[Array[[]byte]] `json:"data"`
+	// `None` if there are no more key-value pairs within the given key range.
+	NextKey *[]byte `json:"next_key,omitempty"`
+}
+
+type ContractInfoQuery struct {
+	// Bech32 encoded sdk.AccAddress of the contract
+	ContractAddr string `json:"contract_addr"`
 }
 
 type ContractInfoResponse struct {
