@@ -650,17 +650,17 @@ struct UnmanagedVector ibc2_packet_receive(struct cache_t *cache,
                                            struct GasReport *gas_report,
                                            struct UnmanagedVector *error_msg);
 
-struct UnmanagedVector ibc2_acknowledge_receive(struct cache_t *cache,
-                                                struct ByteSliceView checksum,
-                                                struct ByteSliceView env,
-                                                struct ByteSliceView msg,
-                                                struct Db db,
-                                                struct GoApi api,
-                                                struct GoQuerier querier,
-                                                uint64_t gas_limit,
-                                                bool print_debug,
-                                                struct GasReport *gas_report,
-                                                struct UnmanagedVector *error_msg);
+struct UnmanagedVector ibc2_packet_ack(struct cache_t *cache,
+                                       struct ByteSliceView checksum,
+                                       struct ByteSliceView env,
+                                       struct ByteSliceView msg,
+                                       struct Db db,
+                                       struct GoApi api,
+                                       struct GoQuerier querier,
+                                       uint64_t gas_limit,
+                                       bool print_debug,
+                                       struct GasReport *gas_report,
+                                       struct UnmanagedVector *error_msg);
 
 struct UnmanagedVector ibc2_packet_timeout(struct cache_t *cache,
                                            struct ByteSliceView checksum,
