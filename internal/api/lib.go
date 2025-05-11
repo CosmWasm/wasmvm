@@ -721,7 +721,7 @@ func IBC2PacketReceive(
 	return copyAndDestroyUnmanagedVector(res), convertGasReport(gasReport), nil
 }
 
-func IBC2AcknowledgeReceive(
+func IBC2PacketAck(
 	cache Cache,
 	checksum []byte,
 	env []byte,
@@ -755,7 +755,7 @@ func IBC2AcknowledgeReceive(
 	var gasReport C.GasReport
 	errmsg := uninitializedUnmanagedVector()
 
-	res, err := C.ibc2_acknowledge_receive(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
+	res, err := C.ibc2_packet_ack(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
 	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)

@@ -678,7 +678,7 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
-func (vm *VM) IBC2PacketAckRecv(
+func (vm *VM) IBC2PacketAck(
 	checksum Checksum,
 	env types.Env,
 	msg types.IBC2AcknowledgeMsg,
@@ -697,7 +697,7 @@ func (vm *VM) IBC2PacketAckRecv(
 	if err != nil {
 		return nil, 0, err
 	}
-	data, gasReport, err := api.IBC2AcknowledgeReceive(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	data, gasReport, err := api.IBC2PacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}
