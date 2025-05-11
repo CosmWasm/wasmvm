@@ -570,12 +570,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -608,7 +608,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 dependencies = [
  "base64",
  "bech32",
@@ -631,7 +631,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 dependencies = [
  "bech32",
  "blake2",
@@ -659,7 +659,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#985b6f411f428a63bdaf25e84de55d3a7273e0b4"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=aw%2Fibcv2-ack-recv#84dad8c488eb3114259de7932526fbb28967fc59"
 dependencies = [
  "blake2",
  "proc-macro2",
