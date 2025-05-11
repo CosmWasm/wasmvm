@@ -48,9 +48,9 @@ type IBC2PacketTimeoutMsg struct {
 }
 
 type IBC2AcknowledgeMsg struct {
-	SourceChannel      string      `json:"source_channel"`
-	DestinationChannel string      `json:"destination_channel"`
-	Data               IBC2Payload `json:"data"`
-	Acknowledgement    []byte      `json:"acknowledgement"`
-	Relayer            string      `json:"relayer"`
+	SourceClient      string      `json:"source_client"`
+	DestinationClient string      `json:"destination_client"`
+	Data              IBC2Payload `json:"data"`
+	Acknowledgement   []byte      `json:"acknowledgement"`
+	Relayer           string      `json:"relayer"`
 }
