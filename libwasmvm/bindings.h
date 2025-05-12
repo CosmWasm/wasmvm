@@ -669,6 +669,18 @@ struct UnmanagedVector ibc2_packet_timeout(struct cache_t *cache,
                                            struct GasReport *gas_report,
                                            struct UnmanagedVector *error_msg);
 
+struct UnmanagedVector ibc2_packet_send(struct cache_t *cache,
+                                        struct ByteSliceView checksum,
+                                        struct ByteSliceView env,
+                                        struct ByteSliceView msg,
+                                        struct Db db,
+                                        struct GoApi api,
+                                        struct GoQuerier querier,
+                                        uint64_t gas_limit,
+                                        bool print_debug,
+                                        struct GasReport *gas_report,
+                                        struct UnmanagedVector *error_msg);
+
 struct UnmanagedVector new_unmanaged_vector(bool nil, const uint8_t *ptr, uintptr_t length);
 
 void destroy_unmanaged_vector(struct UnmanagedVector v);

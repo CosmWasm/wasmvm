@@ -511,12 +511,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -539,7 +539,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -549,7 +549,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 dependencies = [
  "base64",
  "bech32",
@@ -572,7 +572,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 dependencies = [
  "bech32",
  "blake2",
@@ -600,7 +600,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#e38f65283435e2c2344bed489b2d463c9c24360f"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
 dependencies = [
  "blake2",
  "proc-macro2",
