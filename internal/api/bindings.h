@@ -216,11 +216,6 @@ typedef struct AnalysisReport {
    */
   bool has_ibc_entry_points;
   /**
-   * `true` if and only if all required ibc2 exports exist as exported functions.
-   * This does not guarantee they are functional or even have the correct signatures.
-   */
-  bool has_ibc2_entry_points;
-  /**
    * A UTF-8 encoded comma separated list of all entrypoints that
    * are exported by the contract.
    */
