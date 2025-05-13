@@ -46,3 +46,11 @@ type IBC2PacketTimeoutMsg struct {
 	// The address of the relayer responsible for the packet.
 	Relayer string `json:"relayer"`
 }
+
+type IBC2AcknowledgeMsg struct {
+	SourceClient      string      `json:"source_client"`
+	DestinationClient string      `json:"destination_client"`
+	Data              IBC2Payload `json:"data"`
+	Acknowledgement   []byte      `json:"acknowledgement"`
+	Relayer           string      `json:"relayer"`
+}

@@ -209,9 +209,6 @@ pub struct AnalysisReport {
     /// `true` if and only if all required ibc exports exist as exported functions.
     /// This does not guarantee they are functional or even have the correct signatures.
     pub has_ibc_entry_points: bool,
-    /// `true` if and only if all required ibc2 exports exist as exported functions.
-    /// This does not guarantee they are functional or even have the correct signatures.
-    pub has_ibc2_entry_points: bool,
     /// A UTF-8 encoded comma separated list of all entrypoints that
     /// are exported by the contract.
     pub entrypoints: UnmanagedVector,
@@ -229,7 +226,6 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
     fn from(report: cosmwasm_vm::AnalysisReport) -> Self {
         let cosmwasm_vm::AnalysisReport {
             has_ibc_entry_points,
-            has_ibc2_entry_points,
             required_capabilities,
             entrypoints,
             contract_migrate_version,
@@ -240,7 +236,6 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
         let entrypoints = set_to_csv(entrypoints).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
-            has_ibc2_entry_points,
             required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
             entrypoints: UnmanagedVector::new(Some(entrypoints)),
             contract_migrate_version: contract_migrate_version.into(),

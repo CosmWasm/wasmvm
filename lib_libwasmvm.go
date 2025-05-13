@@ -678,6 +678,38 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
+func (vm *VM) IBC2PacketAck(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2AcknowledgeMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCBasicResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 // IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
 // packet is received on a channel belonging to this contract
 func (vm *VM) IBC2PacketReceive(
