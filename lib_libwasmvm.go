@@ -779,6 +779,40 @@ func (vm *VM) IBC2PacketTimeout(
 	return &result, gasReport.UsedInternally, nil
 }
 
+// IBC2PacketSend is available on IBCv2-enabled contracts and is called to verify an
+// outgoing packet before it is sent to another blockchain.
+func (vm *VM) IBC2PacketSend(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2PacketSendMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCBasicResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketSend(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 func compileCost(code WasmCode) uint64 {
 	// CostPerByte is how much CosmWasm gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers (in SDK Gas) were discussed in:
