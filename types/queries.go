@@ -409,11 +409,14 @@ type RawRangeQuery struct {
 
 type RawRangeResponse struct {
 	// The key-value pairs
-	// Please note that the inner `Array` should always contain exactly two elements,
-	// the key and the value.
-	Data Array[Array[[]byte]] `json:"data"`
+	Data Array[RawRangeEntry] `json:"data"`
 	// `None` if there are no more key-value pairs within the given key range.
 	NextKey *[]byte `json:"next_key,omitempty"`
+}
+
+type RawRangeEntry struct {
+	Key   []byte `json:"k"`
+	Value []byte `json:"v"`
 }
 
 type ContractInfoQuery struct {
