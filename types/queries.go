@@ -171,19 +171,9 @@ type AllDenomMetadataResponse struct {
 // IBCQuery defines a query request from the contract into the chain.
 // This is the counterpart of [IbcQuery](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L61-L83).
 type IBCQuery struct {
-	PortID            *PortIDQuery            `json:"port_id,omitempty"`
-	ListChannels      *ListChannelsQuery      `json:"list_channels,omitempty"`
-	Channel           *ChannelQuery           `json:"channel,omitempty"`
-	FeeEnabledChannel *FeeEnabledChannelQuery `json:"fee_enabled_channel,omitempty"`
-}
-
-type FeeEnabledChannelQuery struct {
-	ChannelID string `json:"channel_id"`
-	PortID    string `json:"port_id,omitempty"`
-}
-
-type FeeEnabledChannelResponse struct {
-	FeeEnabled bool `json:"fee_enabled"`
+	PortID       *PortIDQuery       `json:"port_id,omitempty"`
+	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
+	Channel      *ChannelQuery      `json:"channel,omitempty"`
 }
 
 type PortIDQuery struct{}
