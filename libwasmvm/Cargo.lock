@@ -2823,7 +2823,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "3.0.0-ibc2.0"
+version = "3.0.0-ibc2.1"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
