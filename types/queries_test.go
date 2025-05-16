@@ -206,13 +206,10 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 
 func TestRawRangeQuerySerialization(t *testing.T) {
 	// Serialization
-	start := []byte("start")
-	end := []byte("end")
-
 	query := RawRangeQuery{
 		ContractAddr: "contract",
-		Start:        &start,
-		End:          &end,
+		Start:        []byte("start"),
+		End:          []byte("end"),
 		Limit:        100,
 		Order:        "ascending",
 	}
@@ -245,13 +242,12 @@ func TestRawRangeResponseSerialization(t *testing.T) {
 	}
 	serialized, err := json.Marshal(&myRes)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"data":[]}`, string(serialized))
+	require.JSONEq(t, `{"data":[],"next_key":null}`, string(serialized))
 
 	// non-empty
-	nextKey := []byte("next")
 	myRes = RawRangeResponse{
 		Data:    Array[RawRangeEntry]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
-		NextKey: &nextKey,
+		NextKey: []byte("next"),
 	}
 	serialized, err = json.Marshal(&myRes)
 	require.NoError(t, err)
