@@ -226,7 +226,7 @@ func TestRawRangeQuerySerialization(t *testing.T) {
 
 func TestRawRangeResponseSerialization(t *testing.T) {
 	// Deserialization
-	document := []byte(`{"data":[{"k":"a2V5","v":"dmFsdWU="}, {"k":"Zm9v","v":"YmFy"}]}`)
+	document := []byte(`{"data":[["a2V5","dmFsdWU="],["Zm9v","YmFy"]],"next_key":null}`)
 	var res RawRangeResponse
 	err := json.Unmarshal(document, &res)
 	require.NoError(t, err)
@@ -235,12 +235,16 @@ func TestRawRangeResponseSerialization(t *testing.T) {
 		Data: Array[RawRangeEntry]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
 	}, res)
 
+	serialized, err := json.Marshal(&res)
+	require.NoError(t, err)
+	require.JSONEq(t, string(document), string(serialized))
+
 	// Serialization
 	// empty
 	myRes := RawRangeResponse{
 		Data: Array[RawRangeEntry]{},
 	}
-	serialized, err := json.Marshal(&myRes)
+	serialized, err = json.Marshal(&myRes)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"data":[],"next_key":null}`, string(serialized))
 
@@ -251,5 +255,5 @@ func TestRawRangeResponseSerialization(t *testing.T) {
 	}
 	serialized, err = json.Marshal(&myRes)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"data":[{"k":"a2V5","v":"dmFsdWU="},{"k":"Zm9v","v":"YmFy"}],"next_key":"bmV4dA=="}`, string(serialized))
+	require.JSONEq(t, `{"data":[["a2V5","dmFsdWU="],["Zm9v","YmFy"]],"next_key":"bmV4dA=="}`, string(serialized))
 }

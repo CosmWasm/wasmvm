@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 //-------- Queries --------
@@ -417,6 +418,25 @@ type RawRangeResponse struct {
 type RawRangeEntry struct {
 	Key   []byte `json:"k"`
 	Value []byte `json:"v"`
+}
+
+func (r RawRangeEntry) MarshalJSON() ([]byte, error) {
+	// marshal as [][]byte with two elements to match cosmwasm-std's RawRangeEntry
+	return json.Marshal([][]byte{r.Key, r.Value})
+}
+
+func (r *RawRangeEntry) UnmarshalJSON(data []byte) error {
+	// unmarshal as [][]byte with two elements
+	var arr [][]byte
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	if len(arr) != 2 {
+		return fmt.Errorf("invalid RawRange entry: expected array of length 2, got %d", len(arr))
+	}
+	r.Key = arr[0]
+	r.Value = arr[1]
+	return nil
 }
 
 type ContractInfoQuery struct {
