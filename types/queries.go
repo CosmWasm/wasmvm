@@ -416,8 +416,8 @@ type RawRangeResponse struct {
 }
 
 type RawRangeEntry struct {
-	Key   []byte `json:"k"`
-	Value []byte `json:"v"`
+	Key   []byte
+	Value []byte
 }
 
 func (r RawRangeEntry) MarshalJSON() ([]byte, error) {
