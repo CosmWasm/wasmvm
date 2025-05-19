@@ -203,3 +203,57 @@ func TestCodeInfoResponseSerialization(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `{"code_id":0,"creator":"sam","checksum":"ea4140c2d8ff498997f074cbe4f5236e52bc3176c61d1af6938aeb2f2e7b0e6d"}`, string(serialized))
 }
+
+func TestRawRangeQuerySerialization(t *testing.T) {
+	// Serialization
+	query := RawRangeQuery{
+		ContractAddr: "contract",
+		Start:        []byte("start"),
+		End:          []byte("end"),
+		Limit:        100,
+		Order:        "ascending",
+	}
+	serialized, err := json.Marshal(&query)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"contract_addr":"contract","start":"c3RhcnQ=","end":"ZW5k","limit":100,"order":"ascending"}`, string(serialized))
+
+	// Deserialization
+	var deserialized RawRangeQuery
+	err = json.Unmarshal(serialized, &deserialized)
+	require.NoError(t, err)
+	require.Equal(t, query, deserialized)
+}
+
+func TestRawRangeResponseSerialization(t *testing.T) {
+	// Deserialization
+	document := []byte(`{"data":[["a2V5","dmFsdWU="],["Zm9v","YmFy"]],"next_key":null}`)
+	var res RawRangeResponse
+	err := json.Unmarshal(document, &res)
+	require.NoError(t, err)
+
+	require.Equal(t, RawRangeResponse{
+		Data: Array[RawRangeEntry]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
+	}, res)
+
+	serialized, err := json.Marshal(&res)
+	require.NoError(t, err)
+	require.JSONEq(t, string(document), string(serialized))
+
+	// Serialization
+	// empty
+	myRes := RawRangeResponse{
+		Data: Array[RawRangeEntry]{},
+	}
+	serialized, err = json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"data":[],"next_key":null}`, string(serialized))
+
+	// non-empty
+	myRes = RawRangeResponse{
+		Data:    Array[RawRangeEntry]{{[]byte("key"), []byte("value")}, {[]byte("foo"), []byte("bar")}},
+		NextKey: []byte("next"),
+	}
+	serialized, err = json.Marshal(&myRes)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"data":[["a2V5","dmFsdWU="],["Zm9v","YmFy"]],"next_key":"bmV4dA=="}`, string(serialized))
+}
