@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
 	"unsafe"
 
 	"github.com/tetratelabs/wazero"
@@ -20,6 +23,15 @@ type Cache struct {
 
 // InitCache creates a new wazero Runtime with memory limits similar to api.InitCache.
 func InitCache(config types.VMConfig) (*Cache, error) {
+	if base := config.Cache.BaseDir; base != "" {
+		if strings.Contains(base, ":") && runtime.GOOS != "windows" {
+			return nil, fmt.Errorf("could not create base directory")
+		}
+		if err := os.MkdirAll(base, 0o700); err != nil {
+			return nil, fmt.Errorf("could not create base directory: %w", err)
+		}
+	}
+
 	ctx := context.Background()
 	limitBytes := *(*uint32)(unsafe.Pointer(&config.Cache.InstanceMemoryLimitBytes))
 	r := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithMemoryLimitPages(limitBytes/65536))
