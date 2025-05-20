@@ -2,7 +2,7 @@ name: Go Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: "1.24"
           cache: false
 
       - name: Check go mod tidy
@@ -27,6 +27,9 @@ jobs:
 
       - name: Go integration tests
         run: make test
+
+      - name: Go wazero tests
+        run: go test -tags wazero ./...
 
       - name: Go safety tests
         run: make test-safety
