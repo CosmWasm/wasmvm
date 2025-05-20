@@ -2,6 +2,7 @@ package wazeroimpl
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -206,10 +207,77 @@ func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *
 	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("db_remove")
 
 	// query_external - simplified: returns 0 length
+	// canonicalize_address: input human string -> canonical bytes
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
-		resPtr := uint32(stack[2])
-		_ = m.Memory().WriteUint32Le(resPtr, 0)
-	}), []api.ValueType{api.ValueTypeI64, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("query_external")
+		inputPtr := uint32(stack[0])
+		inputLen := uint32(stack[1])
+		outPtr := uint32(stack[2])
+		errPtr := uint32(stack[3])
+		gasPtr := uint32(stack[4])
+		mem := m.Memory()
+		input := mem.Read(inputPtr, inputLen)
+		// call GoAPI
+		canonical, usedGas, err := apiImpl.CanonicalizeAddress(string(input))
+		// write gas
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, usedGas)
+		mem.Write(gasPtr, buf)
+		if err != nil {
+			mem.WriteUint32Le(errPtr, uint32(len(err.Error())))
+			mem.Write(errPtr+4, []byte(err.Error()))
+			return
+		}
+		mem.WriteUint32Le(outPtr, uint32(len(canonical)))
+		mem.Write(outPtr+4, canonical)
+	}), []api.ValueType{
+		api.ValueTypeI32, api.ValueTypeI32,
+		api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32,
+	}, []api.ValueType{}).Export("canonicalize_address")
+	// humanize_address: input canonical bytes -> human string
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		inputPtr := uint32(stack[0])
+		inputLen := uint32(stack[1])
+		outPtr := uint32(stack[2])
+		errPtr := uint32(stack[3])
+		gasPtr := uint32(stack[4])
+		mem := m.Memory()
+		input := mem.Read(inputPtr, inputLen)
+		human, usedGas, err := apiImpl.HumanizeAddress(input)
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, usedGas)
+		mem.Write(gasPtr, buf)
+		if err != nil {
+			mem.WriteUint32Le(errPtr, uint32(len(err.Error())))
+			mem.Write(errPtr+4, []byte(err.Error()))
+			return
+		}
+		mem.WriteUint32Le(outPtr, uint32(len(human)))
+		mem.Write(outPtr+4, []byte(human))
+	}), []api.ValueType{
+		api.ValueTypeI32, api.ValueTypeI32,
+		api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32,
+	}, []api.ValueType{}).Export("humanize_address")
+	// validate_address: input human string -> error only
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		inputPtr := uint32(stack[0])
+		inputLen := uint32(stack[1])
+		errPtr := uint32(stack[2])
+		gasPtr := uint32(stack[3])
+		mem := m.Memory()
+		input := string(mem.Read(inputPtr, inputLen))
+		usedGas, err := apiImpl.ValidateAddress(input)
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, usedGas)
+		mem.Write(gasPtr, buf)
+		if err != nil {
+			msg := err.Error()
+			mem.WriteUint32Le(errPtr, uint32(len(msg)))
+			mem.Write(errPtr+4, []byte(msg))
+		}
+	}), []api.ValueType{
+		api.ValueTypeI32, api.ValueTypeI32,
+		api.ValueTypeI32, api.ValueTypeI32,
+	}, []api.ValueType{}).Export("validate_address")
 
 	return builder.Instantiate(ctx)
 }
