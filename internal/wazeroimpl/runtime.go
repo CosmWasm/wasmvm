@@ -215,7 +215,7 @@ func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *
 		errPtr := uint32(stack[3])
 		gasPtr := uint32(stack[4])
 		mem := m.Memory()
-		input := mem.Read(inputPtr, inputLen)
+		input, _ := mem.Read(inputPtr, inputLen)
 		// call GoAPI
 		canonical, usedGas, err := apiImpl.CanonicalizeAddress(string(input))
 		// write gas
@@ -241,7 +241,7 @@ func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *
 		errPtr := uint32(stack[3])
 		gasPtr := uint32(stack[4])
 		mem := m.Memory()
-		input := mem.Read(inputPtr, inputLen)
+		input, _ := mem.Read(inputPtr, inputLen)
 		human, usedGas, err := apiImpl.HumanizeAddress(input)
 		buf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(buf, usedGas)
@@ -264,7 +264,8 @@ func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *
 		errPtr := uint32(stack[2])
 		gasPtr := uint32(stack[3])
 		mem := m.Memory()
-		input := string(mem.Read(inputPtr, inputLen))
+		tmp, _ := mem.Read(inputPtr, inputLen)
+		input := string(tmp)
 		usedGas, err := apiImpl.ValidateAddress(input)
 		buf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(buf, usedGas)
