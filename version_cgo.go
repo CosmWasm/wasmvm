@@ -1,4 +1,4 @@
-//go:build cgo && !nolink_libwasmvm
+//go:build cgo && !wazero
 
 package cosmwasm
 
