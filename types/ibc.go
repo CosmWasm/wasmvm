@@ -187,6 +187,7 @@ type IBCTimeoutCallbackMsg struct {
 type IBCDestinationCallbackMsg struct {
 	Ack    IBCAcknowledgement `json:"ack"`
 	Packet IBCPacket          `json:"packet"`
+	Funds  Array[Coin]        `json:"funds"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back

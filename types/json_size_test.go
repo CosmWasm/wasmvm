@@ -309,3 +309,61 @@ func TestExpectedJSONSizeBool(t *testing.T) {
 		})
 	}
 }
+
+func TestExpectedJSONSizeCoin(t *testing.T) {
+	specs := map[string]struct {
+		input Coin
+	}{
+		"zero": {
+			input: NewCoin(0, "untrn"),
+		},
+		"three": {
+			input: NewCoin(3, "uatom"),
+		},
+		"max": {
+			input: Coin{
+				// 2^256 - 1
+				Amount: "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+				Denom:  "untrn",
+			},
+		},
+	}
+
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			serialized, err := json.Marshal(spec.input)
+			if err != nil {
+				panic("Could not marshal input")
+			}
+			require.Equal(t, len(serialized), spec.input.ExpectedJSONSize())
+		})
+	}
+}
+
+func TestExpectedJSONSizeArray(t *testing.T) {
+	specs := map[string]struct {
+		input Array[Coin]
+	}{
+		"empty": {
+			input: Array[Coin]{},
+		},
+		"zero": {
+			input: Array[Coin]{NewCoin(0, "untrn")},
+		},
+		"one": {
+			input: Array[Coin]{NewCoin(1, "uatom")},
+		},
+		"big": {
+			input: Array[Coin]{NewCoin(10000000, "untrn"), NewCoin(2000000, "uatom")},
+		},
+	}
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			serialized, err := json.Marshal(spec.input)
+			if err != nil {
+				panic("Could not marshal input")
+			}
+			require.Equal(t, len(serialized), ExpectedJSONSizeArray(spec.input))
+		})
+	}
+}

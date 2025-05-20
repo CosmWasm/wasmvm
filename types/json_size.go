@@ -113,6 +113,37 @@ const (
 // Since JSON marshalling does not have a guaranteed output format,
 // this should be understood as a best guess and correct in most cases.
 // Do not use it when a precise value is required.
+func (c Coin) ExpectedJSONSize() int {
+	// Denom  string `json:"denom"`
+	// Amount string `json:"amount"`
+	return brackets +
+		7 + colon + ExpectedJSONSizeString(c.Denom) + comma +
+		8 + colon + ExpectedJSONSizeString(c.Amount)
+}
+
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
+//
+// This is a free-standing function because methods don't support constraining the generic type.
+func ExpectedJSONSizeArray[T ExpectedJSONSize](a Array[T]) int {
+	out := brackets
+	for i, v := range a {
+		if i > 0 {
+			out += comma
+		}
+		out += v.ExpectedJSONSize()
+	}
+	return out
+}
+
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
 func (t IBCEndpoint) ExpectedJSONSize() int {
 	// PortID    string `json:"port_id"`
 	// ChannelID string `json:"channel_id"`
@@ -440,7 +471,9 @@ func (t IBCSourceCallbackMsg) ExpectedJSONSize() int {
 func (t IBCDestinationCallbackMsg) ExpectedJSONSize() int {
 	// Ack    IBCAcknowledgement `json:"ack"`
 	// Packet IBCPacket          `json:"packet"`
+	// Funds  Array[Coin]     	 `json:"funds"`
 	return brackets +
 		5 + colon + t.Ack.ExpectedJSONSize() + comma +
-		8 + colon + t.Packet.ExpectedJSONSize()
+		8 + colon + t.Packet.ExpectedJSONSize() + comma +
+		7 + colon + ExpectedJSONSizeArray(t.Funds)
 }
