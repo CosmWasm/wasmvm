@@ -8,6 +8,7 @@
 
 ## Testing
 
+- Use `golangci-lint run ./... --fix` before running `make test` and make sure that all lint issues are fixed before running tests.
 - When Go or Rust code is changed, run `make test` before committing.
 
 ## PR message
