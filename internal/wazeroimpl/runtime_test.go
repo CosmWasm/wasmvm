@@ -8,7 +8,6 @@ import (
     "testing"
 
     "github.com/tetratelabs/wazero"
-    "github.com/tetratelabs/wazero/experimental/wat"
 
     "github.com/CosmWasm/wasmvm/v3/types"
 )
@@ -31,19 +30,12 @@ func TestLocateData(t *testing.T) {
     r := wazero.NewRuntime(ctx)
     defer r.Close(ctx)
 
-    // Minimal wasm with "allocate" and exported memory.
-    moduleWat := `(module
-      (memory (export "memory") 1)
-      (global $heap (mut i32) (i32.const 0))
-      (func (export "allocate") (param $size i32) (result i32)
-        (global.get $heap)
-        (global.set $heap (i32.add (global.get $heap) (local.get $size)))
-      )
-    )`
-
-    wasmBytes, err := wat.Compile([]byte(moduleWat))
+    // We use a known-good CosmWasm contract binary that exports the required
+    // symbols (including `allocate`) instead of generating a module from WAT
+    // to avoid an extra dependency on the wazero experimental text parser.
+    wasmBytes, err := os.ReadFile("../../testdata/reflect.wasm")
     if err != nil {
-        t.Fatalf("compile wat: %v", err)
+        t.Fatalf("read wasm: %v", err)
     }
 
     compiled, err := r.CompileModule(ctx, wasmBytes)
@@ -75,29 +67,12 @@ func TestLocateData(t *testing.T) {
 // can be stored, instantiated, and executed without error using the public VM
 // surface. This validates that env/info/msg pointers are correctly passed.
 func TestInstantiateExecuteSmoke(t *testing.T) {
-    // The wasm module stores the lengths of env/info/msg into memory and does
-    // nothing else. This keeps host-function dependencies minimal.
-    moduleWat := `(module
-      (memory (export "memory") 1)
-      (global $heap (mut i32) (i32.const 0))
-      (func (export "allocate") (param $size i32) (result i32)
-        (global.get $heap)
-        (global.set $heap (i32.add (global.get $heap) (local.get $size)))
-      )
-
-      ;; params: env_ptr env_len info_ptr info_len msg_ptr msg_len
-      (func (export "instantiate") (param i32 i32 i32 i32 i32 i32) (result i32)
-        ;; return 0
-        (i32.const 0)
-      )
-      (func (export "execute") (param i32 i32 i32 i32 i32 i32) (result i32)
-        (i32.const 0)
-      )
-    )`
-
-    wasmBytes, err := wat.Compile([]byte(moduleWat))
+    // The reflect contract is sufficient for a smoke test of Instantiate and
+    // Execute because it exposes both entrypoints as well as the required
+    // allocator function.
+    wasmBytes, err := os.ReadFile("../../testdata/reflect.wasm")
     if err != nil {
-        t.Fatalf("compile wat: %v", err)
+        t.Fatalf("read wasm: %v", err)
     }
 
     cfg := types.VMConfig{
@@ -120,13 +95,14 @@ func TestInstantiateExecuteSmoke(t *testing.T) {
 
     store := memStore{}
 
-    // Instantiate
-    if err := cache.Instantiate(context.Background(), checksum, []byte("{}"), []byte("{}"), []byte("{}"), store, &types.GoAPI{}, &types.Querier{}, types.GasMeter{}); err != nil {
+    // Instantiate – we can pass nil for optional Querier and GasMeter since the
+    // current wazero host implementation does not use them yet.
+    if err := cache.Instantiate(context.Background(), checksum, []byte("{}"), []byte("{}"), []byte("{}"), store, &types.GoAPI{}, (*types.Querier)(nil), types.GasMeter(nil)); err != nil {
         t.Fatalf("instantiate failed: %v", err)
     }
 
     // Execute
-    if err := cache.Execute(context.Background(), checksum, []byte("{}"), []byte("{}"), []byte("{}"), store, &types.GoAPI{}, &types.Querier{}, types.GasMeter{}); err != nil {
+    if err := cache.Execute(context.Background(), checksum, []byte("{}"), []byte("{}"), []byte("{}"), store, &types.GoAPI{}, (*types.Querier)(nil), types.GasMeter(nil)); err != nil {
         t.Fatalf("execute failed: %v", err)
     }
  }
