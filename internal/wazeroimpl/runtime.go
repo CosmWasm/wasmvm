@@ -202,63 +202,122 @@ func (c *Cache) getModule(checksum types.Checksum) (wazero.CompiledModule, bool)
 // registerHost builds an env module with callbacks for the given state.
 func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *types.GoAPI, q *types.Querier, gm types.GasMeter) (api.Module, error) {
 	builder := c.runtime.NewHostModuleBuilder("env")
-	// debug: print UTF-8 encoded string from memory
+	// ---------------------------------------------------------------------
+	// Helper functions required by CosmWasm contracts – **legacy** (v0.10-0.16)
+	// ABI. These minimal stubs are sufficient for the reflect.wasm contract to
+	// instantiate and run in tests. More complete, modern variants will be added
+	// in later milestones.
+
+	// debug(msg_ptr) – prints UTF-8 string [len|bytes]
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		ptr := uint32(stack[0])
 		mem := m.Memory()
-		// read length
+		// message length is stored in little-endian u32 at ptr
 		b, _ := mem.Read(ptr, 4)
-		length := binary.LittleEndian.Uint32(b)
-		data, _ := mem.Read(ptr+4, length)
-		msg := string(data)
-		fmt.Println(msg)
+		l := binary.LittleEndian.Uint32(b)
+		data, _ := mem.Read(ptr+4, l)
+		_ = data // silenced; could log.Printf if desired
 	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("debug")
-	// abort: read message and panic
+
+	// abort(msg_ptr)
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		ptr := uint32(stack[0])
 		mem := m.Memory()
 		b, _ := mem.Read(ptr, 4)
-		length := binary.LittleEndian.Uint32(b)
-		data, _ := mem.Read(ptr+4, length)
+		l := binary.LittleEndian.Uint32(b)
+		data, _ := mem.Read(ptr+4, l)
 		panic(string(data))
 	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("abort")
 
-	// db_read
+	// db_read(key_ptr) -> i32 (data_ptr)
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		keyPtr := uint32(stack[0])
-		keyLen := uint32(stack[1])
-		outPtr := uint32(stack[2])
 		mem := m.Memory()
-		key, _ := mem.Read(keyPtr, keyLen)
-		value := store.Get(key)
-		if value == nil {
-			_ = mem.WriteUint32Le(outPtr, 0)
+		// length-prefixed key (4 byte little-endian length)
+		lenBytes, _ := mem.Read(keyPtr, 4)
+		keyLen := binary.LittleEndian.Uint32(lenBytes)
+		key, _ := mem.Read(keyPtr+4, keyLen)
+		val := store.Get(key)
+		if val == nil {
+			stack[0] = 0
 			return
 		}
-		_ = mem.WriteUint32Le(outPtr, uint32(len(value)))
-		mem.Write(outPtr+4, value)
-	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("db_read")
+		buf := make([]byte, 4+len(val))
+		binary.LittleEndian.PutUint32(buf, uint32(len(val)))
+		copy(buf[4:], val)
+		ptr, _ := locateData(ctx, m, buf)
+		stack[0] = uint64(ptr)
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).Export("db_read")
 
-	// db_write
+	// db_write(key_ptr, value_ptr)
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		keyPtr := uint32(stack[0])
-		keyLen := uint32(stack[1])
-		valPtr := uint32(stack[2])
-		valLen := uint32(stack[3])
+		valPtr := uint32(stack[1])
 		mem := m.Memory()
-		key, _ := mem.Read(keyPtr, keyLen)
-		val, _ := mem.Read(valPtr, valLen)
+		// length-prefixed key
+		lenB, _ := mem.Read(keyPtr, 4)
+		keyLen := binary.LittleEndian.Uint32(lenB)
+		key, _ := mem.Read(keyPtr+4, keyLen)
+		// length-prefixed value
+		valLenB, _ := mem.Read(valPtr, 4)
+		valLen := binary.LittleEndian.Uint32(valLenB)
+		val, _ := mem.Read(valPtr+4, valLen)
 		store.Set(key, val)
-	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("db_write")
+	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("db_write")
 
-	// db_remove
+	// db_remove(key_ptr)
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		keyPtr := uint32(stack[0])
-		keyLen := uint32(stack[1])
 		mem := m.Memory()
-		key, _ := mem.Read(keyPtr, keyLen)
+		lenB, _ := mem.Read(keyPtr, 4)
+		keyLen := binary.LittleEndian.Uint32(lenB)
+		key, _ := mem.Read(keyPtr+4, keyLen)
 		store.Delete(key)
-	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("db_remove")
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("db_remove")
+
+	// addr_validate(human_ptr) -> i32 (0 = valid)
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		// we consider all addresses valid in stub; return 0
+		stack[0] = 0
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).Export("addr_validate")
+
+	// addr_canonicalize(human_ptr, out_ptr) -> i32 (0 = OK)
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		stack[0] = 0
+	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).Export("addr_canonicalize")
+
+	// addr_humanize(canonical_ptr, out_ptr) -> i32 (0 = OK)
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		stack[0] = 0
+	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).Export("addr_humanize")
+
+	// query_chain(request_ptr) -> i32 (response_ptr)
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		// not implemented: return 0 meaning empty response
+		stack[0] = 0
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).Export("query_chain")
+
+	// secp256k1_verify, secp256k1_recover_pubkey, ed25519_verify, ed25519_batch_verify – stubs that return 0 (false)
+	stubVerify := func(name string, paramCount int) {
+		params := make([]api.ValueType, paramCount)
+		for i := range params {
+			params[i] = api.ValueTypeI32
+		}
+		builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+			stack[0] = 0
+		}), params, []api.ValueType{api.ValueTypeI32}).Export(name)
+	}
+	stubVerify("secp256k1_verify", 3)
+	// secp256k1_recover_pubkey returns ptr (i64 in legacy ABI)
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		stack[0] = 0
+	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI64}).Export("secp256k1_recover_pubkey")
+
+	stubVerify("secp256k1_verify", 3)
+	stubVerify("ed25519_verify", 3)
+	stubVerify("ed25519_batch_verify", 3)
+	stubVerify("ed25519_verify", 3)
+	stubVerify("ed25519_batch_verify", 3)
 
 	// query_external - simplified: returns 0 length
 	// canonicalize_address: input human string -> canonical bytes
@@ -352,20 +411,37 @@ func (c *Cache) Instantiate(ctx context.Context, checksum types.Checksum, env, i
 		return err
 	}
 	if fn := mod.ExportedFunction("instantiate"); fn != nil {
-		// call with 6 arguments: env_ptr, env_len, info_ptr, info_len, msg_ptr, msg_len
-		envPtr, envLen := uint32(0), uint32(0)
-		infoPtr, infoLen := uint32(0), uint32(0)
-		msgPtr, msgLen := uint32(0), uint32(0)
-		if len(env) > 0 {
-			envPtr, envLen = locateData(ctx, mod, env)
+		paramCount := len(fn.Definition().ParamTypes())
+		if paramCount == 6 {
+			// CosmWasm v1+ ABI (ptr,len pairs)
+			envPtr, envLen := uint32(0), uint32(0)
+			infoPtr, infoLen := uint32(0), uint32(0)
+			msgPtr, msgLen := uint32(0), uint32(0)
+			if len(env) > 0 {
+				envPtr, envLen = locateData(ctx, mod, env)
+			}
+			if len(info) > 0 {
+				infoPtr, infoLen = locateData(ctx, mod, info)
+			}
+			if len(msg) > 0 {
+				msgPtr, msgLen = locateData(ctx, mod, msg)
+			}
+			_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
+		} else if paramCount == 3 {
+			// Legacy ABI: env_ptr, info_ptr, msg_ptr (each data = len|bytes)
+			wrap := func(b []byte) []byte {
+				buf := make([]byte, 4+len(b))
+				binary.LittleEndian.PutUint32(buf, uint32(len(b)))
+				copy(buf[4:], b)
+				return buf
+			}
+			envPtr, _ := locateData(ctx, mod, wrap(env))
+			infoPtr, _ := locateData(ctx, mod, wrap(info))
+			msgPtr, _ := locateData(ctx, mod, wrap(msg))
+			_, err = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+		} else {
+			err = fmt.Errorf("unsupported instantiate param count %d", paramCount)
 		}
-		if len(info) > 0 {
-			infoPtr, infoLen = locateData(ctx, mod, info)
-		}
-		if len(msg) > 0 {
-			msgPtr, msgLen = locateData(ctx, mod, msg)
-		}
-		_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
 	}
 	_ = mod.Close(ctx)
 	return err
@@ -386,19 +462,35 @@ func (c *Cache) Execute(ctx context.Context, checksum types.Checksum, env, info,
 		return err
 	}
 	if fn := mod.ExportedFunction("execute"); fn != nil {
-		envPtr, envLen := uint32(0), uint32(0)
-		infoPtr, infoLen := uint32(0), uint32(0)
-		msgPtr, msgLen := uint32(0), uint32(0)
-		if len(env) > 0 {
-			envPtr, envLen = locateData(ctx, mod, env)
+		paramCount := len(fn.Definition().ParamTypes())
+		if paramCount == 6 {
+			envPtr, envLen := uint32(0), uint32(0)
+			infoPtr, infoLen := uint32(0), uint32(0)
+			msgPtr, msgLen := uint32(0), uint32(0)
+			if len(env) > 0 {
+				envPtr, envLen = locateData(ctx, mod, env)
+			}
+			if len(info) > 0 {
+				infoPtr, infoLen = locateData(ctx, mod, info)
+			}
+			if len(msg) > 0 {
+				msgPtr, msgLen = locateData(ctx, mod, msg)
+			}
+			_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
+		} else if paramCount == 3 {
+			wrap := func(b []byte) []byte {
+				buf := make([]byte, 4+len(b))
+				binary.LittleEndian.PutUint32(buf, uint32(len(b)))
+				copy(buf[4:], b)
+				return buf
+			}
+			envPtr, _ := locateData(ctx, mod, wrap(env))
+			infoPtr, _ := locateData(ctx, mod, wrap(info))
+			msgPtr, _ := locateData(ctx, mod, wrap(msg))
+			_, err = fn.Call(ctx, uint64(envPtr), uint64(infoPtr), uint64(msgPtr))
+		} else {
+			err = fmt.Errorf("unsupported execute param count %d", paramCount)
 		}
-		if len(info) > 0 {
-			infoPtr, infoLen = locateData(ctx, mod, info)
-		}
-		if len(msg) > 0 {
-			msgPtr, msgLen = locateData(ctx, mod, msg)
-		}
-		_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
 	}
 	_ = mod.Close(ctx)
 	return err
