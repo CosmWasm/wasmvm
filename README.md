@@ -7,8 +7,8 @@ applications, in particular from
 [x/wasm](https://github.com/CosmWasm/wasmd/tree/master/x/wasm).
 
 More information on what is CosmWasm and how to use it can be found here:
-[CosmWasm Docs](https://docs.cosmwasm.com). To generate and show
-the Rust part documentation you can run `make doc-rust`.
+[CosmWasm Docs](https://docs.cosmwasm.com). To generate and show the Rust part
+documentation you can run `make doc-rust`.
 
 ## Structure
 
@@ -80,7 +80,9 @@ CGO_ENABLED=0 go build ./types
 
 This package contains the code binding the libwasmvm build to the Go code. All
 low level FFI handling code belongs there. This package can only be built using
-cgo. Using the `internal/` convention makes this package fully private.
+cgo. Using the `internal/` convention makes this package fully private. For an
+overview of the exported C functions and their Go wrappers see
+[docs/CGO_INTERFACE.md](docs/CGO_INTERFACE.md).
 
 #### Package github.com/CosmWasm/wasmvm
 
@@ -101,6 +103,17 @@ linking disabled an additional build tag is available.
 # Build with CGO, but with libwasmvm linking disabled
 go build -tags "nolink_libwasmvm"
 ```
+
+You can also build using the experimental
+[wazero](https://github.com/tetratelabs/wazero) runtime which removes the need
+for CGO:
+
+```sh
+CGO_ENABLED=0 go build -tags wazero .
+```
+
+Once wazero has feature parity with the Rust implementation, the Rust dependency
+will be removed.
 
 ## Supported Platforms
 
@@ -152,9 +165,9 @@ which for example excludes all 32 bit systems.
 
 ## Development
 
-There are two halves to this code - go and rust. The first step is to ensure that
-there is a proper dll built for your platform. This should be `api/libwasmvm.X`,
-where X is:
+There are two halves to this code - go and rust. The first step is to ensure
+that there is a proper dll built for your platform. This should be
+`api/libwasmvm.X`, where X is:
 
 - `so` for Linux systems
 - `dylib` for MacOS
