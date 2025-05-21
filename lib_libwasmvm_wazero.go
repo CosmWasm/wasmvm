@@ -4,6 +4,7 @@ package cosmwasm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/CosmWasm/wasmvm/v3/internal/wazeroimpl"
@@ -115,14 +116,30 @@ func (vm *VM) GetPinnedMetrics() (*types.PinnedMetrics, error) {
 }
 
 func (vm *VM) Instantiate(checksum Checksum, env types.Env, info types.MessageInfo, initMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter GasMeter, gasLimit uint64, deserCost types.UFraction) (*types.ContractResult, uint64, error) {
-	if err := vm.cache.Instantiate(context.Background(), checksum, nil, nil, nil, store, &goapi, &querier, gasMeter); err != nil {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	infoBin, err := json.Marshal(info)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := vm.cache.Instantiate(context.Background(), checksum, envBin, infoBin, initMsg, store, &goapi, &querier, gasMeter); err != nil {
 		return nil, 0, err
 	}
 	return &types.ContractResult{}, 0, nil
 }
 
 func (vm *VM) Execute(checksum Checksum, env types.Env, info types.MessageInfo, executeMsg []byte, store KVStore, goapi GoAPI, querier Querier, gasMeter GasMeter, gasLimit uint64, deserCost types.UFraction) (*types.ContractResult, uint64, error) {
-	if err := vm.cache.Execute(context.Background(), checksum, nil, nil, nil, store, &goapi, &querier, gasMeter); err != nil {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	infoBin, err := json.Marshal(info)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := vm.cache.Execute(context.Background(), checksum, envBin, infoBin, executeMsg, store, &goapi, &querier, gasMeter); err != nil {
 		return nil, 0, err
 	}
 	return &types.ContractResult{}, 0, nil

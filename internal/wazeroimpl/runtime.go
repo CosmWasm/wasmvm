@@ -30,6 +30,40 @@ type Cache struct {
 	baseDir string
 }
 
+// locateData allocates memory in the given module using its "allocate" export
+// and writes the provided data slice there. It returns the pointer and length
+// of the written data within the module's linear memory. Any allocation or
+// write failure results in a panic, as this indicates the guest module does
+// not follow the expected CosmWasm ABI.
+func locateData(ctx context.Context, mod api.Module, data []byte) (uint32, uint32) {
+	if len(data) == 0 {
+		return 0, 0
+	}
+
+	alloc := mod.ExportedFunction("allocate")
+	if alloc == nil {
+		panic("guest module does not export an 'allocate' function required by CosmWasm ABI")
+	}
+
+	// Call allocate with the size (i32). The function returns a pointer (i32).
+	res, err := alloc.Call(ctx, uint64(len(data)))
+	if err != nil {
+		panic(fmt.Sprintf("allocate() failed: %v", err))
+	}
+	if len(res) == 0 {
+		panic("allocate() returned no results")
+	}
+
+	ptr := uint32(res[0])
+
+	mem := mod.Memory()
+	if ok := mem.Write(ptr, data); !ok {
+		panic("failed to write data into guest memory")
+	}
+
+	return ptr, uint32(len(data))
+}
+
 // RemoveCode removes stored Wasm and compiled module for the given checksum.
 func (c *Cache) RemoveCode(checksum types.Checksum) error {
 	key := hex.EncodeToString(checksum)
@@ -168,6 +202,26 @@ func (c *Cache) getModule(checksum types.Checksum) (wazero.CompiledModule, bool)
 // registerHost builds an env module with callbacks for the given state.
 func (c *Cache) registerHost(ctx context.Context, store types.KVStore, apiImpl *types.GoAPI, q *types.Querier, gm types.GasMeter) (api.Module, error) {
 	builder := c.runtime.NewHostModuleBuilder("env")
+	// debug: print UTF-8 encoded string from memory
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		ptr := uint32(stack[0])
+		mem := m.Memory()
+		// read length
+		b, _ := mem.Read(ptr, 4)
+		length := binary.LittleEndian.Uint32(b)
+		data, _ := mem.Read(ptr+4, length)
+		msg := string(data)
+		fmt.Println(msg)
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("debug")
+	// abort: read message and panic
+	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+		ptr := uint32(stack[0])
+		mem := m.Memory()
+		b, _ := mem.Read(ptr, 4)
+		length := binary.LittleEndian.Uint32(b)
+		data, _ := mem.Read(ptr+4, length)
+		panic(string(data))
+	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("abort")
 
 	// db_read
 	builder.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
@@ -298,8 +352,22 @@ func (c *Cache) Instantiate(ctx context.Context, checksum types.Checksum, env, i
 		return err
 	}
 	if fn := mod.ExportedFunction("instantiate"); fn != nil {
-		_, err = fn.Call(ctx)
+		// call with 6 arguments: env_ptr, env_len, info_ptr, info_len, msg_ptr, msg_len
+		envPtr, envLen := uint32(0), uint32(0)
+		infoPtr, infoLen := uint32(0), uint32(0)
+		msgPtr, msgLen := uint32(0), uint32(0)
+		if len(env) > 0 {
+			envPtr, envLen = locateData(ctx, mod, env)
+		}
+		if len(info) > 0 {
+			infoPtr, infoLen = locateData(ctx, mod, info)
+		}
+		if len(msg) > 0 {
+			msgPtr, msgLen = locateData(ctx, mod, msg)
+		}
+		_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
 	}
+	_ = mod.Close(ctx)
 	return err
 }
 
@@ -318,7 +386,20 @@ func (c *Cache) Execute(ctx context.Context, checksum types.Checksum, env, info,
 		return err
 	}
 	if fn := mod.ExportedFunction("execute"); fn != nil {
-		_, err = fn.Call(ctx)
+		envPtr, envLen := uint32(0), uint32(0)
+		infoPtr, infoLen := uint32(0), uint32(0)
+		msgPtr, msgLen := uint32(0), uint32(0)
+		if len(env) > 0 {
+			envPtr, envLen = locateData(ctx, mod, env)
+		}
+		if len(info) > 0 {
+			infoPtr, infoLen = locateData(ctx, mod, info)
+		}
+		if len(msg) > 0 {
+			msgPtr, msgLen = locateData(ctx, mod, msg)
+		}
+		_, err = fn.Call(ctx, uint64(envPtr), uint64(envLen), uint64(infoPtr), uint64(infoLen), uint64(msgPtr), uint64(msgLen))
 	}
+	_ = mod.Close(ctx)
 	return err
 }
