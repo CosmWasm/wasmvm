@@ -2,7 +2,7 @@
 
 ## Formatting
 
-- Run `gofmt -w` and `gofumpt -w` on any modified Go files.
+- Run golangci-lint run ./... --fix on the whole repo whenever we change Go files.
 - Run `cargo fmt` on any modified Rust files.
 - Run `prettier -w` on any modified Markdown files.
 
