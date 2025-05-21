@@ -55,13 +55,18 @@ func (vm *VM) StoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error
 }
 
 // SimulateStoreCode behaves like StoreCode but does not persist anything.
+// It compiles the module to ensure validity, then removes it.
 func (vm *VM) SimulateStoreCode(code WasmCode, gasLimit uint64) (Checksum, uint64, error) {
 	checksum, err := CreateChecksum(code)
 	if err != nil {
 		return nil, 0, err
 	}
-	// Do not store the compiled module
-	if _, err := wazeroimpl.InitCache(types.VMConfig{}); err != nil {
+	// Compile to cache
+	if err := vm.cache.Compile(context.Background(), checksum, code); err != nil {
+		return nil, 0, err
+	}
+	// Remove to avoid persisting
+	if err := vm.cache.RemoveCode(checksum); err != nil {
 		return nil, 0, err
 	}
 	return checksum, 0, nil
@@ -79,12 +84,14 @@ func (vm *VM) StoreCodeUnchecked(code WasmCode) (Checksum, error) {
 	return checksum, nil
 }
 
+// RemoveCode deletes stored Wasm and compiled module for the given checksum.
 func (vm *VM) RemoveCode(checksum Checksum) error {
-	return fmt.Errorf("RemoveCode not supported in wazero VM")
+	return vm.cache.RemoveCode(checksum)
 }
 
+// GetCode returns the original Wasm bytes for the given checksum.
 func (vm *VM) GetCode(checksum Checksum) (WasmCode, error) {
-	return nil, fmt.Errorf("GetCode not supported in wazero VM")
+	return vm.cache.GetCode(checksum)
 }
 
 func (vm *VM) Pin(checksum Checksum) error {

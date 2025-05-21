@@ -10,6 +10,16 @@ import (
 	"github.com/CosmWasm/wasmvm/v3/types"
 )
 
+// Testing constants for wazero VM
+const (
+	TESTING_PRINT_DEBUG  = false
+	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
+	TESTING_MEMORY_LIMIT = 32                      // MiB
+	TESTING_CACHE_SIZE   = 100                     // MiB
+)
+
+var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator"}
+
 func TestWazeroInstantiateExecute(t *testing.T) {
 	vm, err := NewVM("", TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
 	if err != nil {
