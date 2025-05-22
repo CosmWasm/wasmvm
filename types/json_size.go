@@ -471,9 +471,30 @@ func (t IBCSourceCallbackMsg) ExpectedJSONSize() int {
 func (t IBCDestinationCallbackMsg) ExpectedJSONSize() int {
 	// Ack    IBCAcknowledgement `json:"ack"`
 	// Packet IBCPacket          `json:"packet"`
-	// Funds  Array[Coin]     	 `json:"funds"`
-	return brackets +
+	// Transfer *IBCTransfer     `json:"transfer,omitempty"`
+	out := brackets +
 		5 + colon + t.Ack.ExpectedJSONSize() + comma +
-		8 + colon + t.Packet.ExpectedJSONSize() + comma +
-		7 + colon + ExpectedJSONSizeArray(t.Funds)
+		8 + colon + t.Packet.ExpectedJSONSize()
+
+	if t.Transfer != nil {
+		out += comma + 10 + colon + t.Transfer.ExpectedJSONSize()
+	}
+
+	return out
+}
+
+// ExpectedJSONSize returns the expected JSON size in bytes when using
+// json.Marshal with the given value.
+// Since JSON marshalling does not have a guaranteed output format,
+// this should be understood as a best guess and correct in most cases.
+// Do not use it when a precise value is required.
+func (t IBCTransferCallback) ExpectedJSONSize() int {
+	// Funds Array[Coin] `json:"funds"`
+	// Receiver string `json:"receiver"`
+	// Sender string `json:"sender"`
+	return brackets +
+		7 + colon + ExpectedJSONSizeArray(t.Funds) + comma +
+		10 + colon + ExpectedJSONSizeString(t.Receiver) + comma +
+		8 + colon + ExpectedJSONSizeString(t.Sender)
+
 }
