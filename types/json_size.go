@@ -496,5 +496,4 @@ func (t IBCTransferCallback) ExpectedJSONSize() int {
 		7 + colon + ExpectedJSONSizeArray(t.Funds) + comma +
 		10 + colon + ExpectedJSONSizeString(t.Receiver) + comma +
 		8 + colon + ExpectedJSONSizeString(t.Sender)
-
 }
