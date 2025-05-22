@@ -187,6 +187,21 @@ type IBCTimeoutCallbackMsg struct {
 type IBCDestinationCallbackMsg struct {
 	Ack    IBCAcknowledgement `json:"ack"`
 	Packet IBCPacket          `json:"packet"`
+	// When the underlying packet is a successful transfer message, this field contains information about the transfer. Otherwise it is empty.
+	//
+	// This is always empty on chains using CosmWasm < 3.0
+	Transfer *IBCTransferCallback `json:"transfer,omitempty"`
+}
+
+type IBCTransferCallback struct {
+	// The funds that were transferred.
+	//
+	// When the callback is executed, the transfer is completed already and the coins are now owned by the receiver.
+	Funds Array[Coin] `json:"funds"`
+	// Address of the receiver of the transfer. Since this is on the destination chain, this is a valid address.
+	Receiver string `json:"receiver"`
+	// Address of the sender of the transfer. Note that this is *not* a valid address on the destination chain.
+	Sender string `json:"sender"`
 }
 
 // TODO: test what the sdk Order.String() represents and how to parse back
