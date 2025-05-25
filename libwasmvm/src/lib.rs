@@ -24,7 +24,11 @@ mod vtables;
 // We keep them here such that we can access them in the docs (`cargo doc`).
 pub use api::{GoApi, GoApiVtable};
 // FFI cache functions
-pub use cache::{cache_t, init_cache, store_code, load_wasm, remove_wasm, pin, unpin, analyze_code};
+pub use cache::{
+    analyze_code, cache_t, init_cache, load_wasm, pin, remove_wasm, store_code, unpin,
+};
+// FFI call functions
+pub use calls::{execute, instantiate, migrate, query, reply, sudo};
 pub use db::{db_t, Db, DbVtable};
 pub use error::GoError;
 pub use gas_report::GasReport;

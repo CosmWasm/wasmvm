@@ -4,6 +4,7 @@
 *.iml
 .idea
 .vscode
+rpc-server/target
 
 # no static libraries (35MB+)
 /internal/api/lib*.a

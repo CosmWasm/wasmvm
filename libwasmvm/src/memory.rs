@@ -19,7 +19,7 @@ impl ByteSliceView {
     /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
     /// when testing FFI calls from Rust. It must not be used in production code.
     #[cfg(test)]
-    pub fn new(source: &[u8]) -> Self {
+    pub fn from_slice(source: &[u8]) -> Self {
         Self {
             is_nil: false,
             ptr: source.as_ptr(),
@@ -61,9 +61,19 @@ impl ByteSliceView {
     pub fn to_owned(&self) -> Option<Vec<u8>> {
         self.read().map(|slice| slice.to_owned())
     }
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    pub fn new(source: &[u8]) -> Self {
+        Self {
+            is_nil: false,
+            ptr: source.as_ptr(),
+            len: source.len(),
+        }
+    }
+
     /// Constructs a ByteSliceView from an optional byte slice.
     /// `None` represents a nil view; `Some(&[])` represents an empty slice.
-    pub fn new(slice: Option<&[u8]>) -> Self {
+    pub fn from_option(slice: Option<&[u8]>) -> Self {
         match slice {
             Some(data) => {
                 let ptr = if data.is_empty() {
@@ -77,7 +87,11 @@ impl ByteSliceView {
                     len: data.len(),
                 }
             }
-            None => ByteSliceView { is_nil: true, ptr: std::ptr::null(), len: 0 },
+            None => ByteSliceView {
+                is_nil: true,
+                ptr: std::ptr::null(),
+                len: 0,
+            },
         }
     }
 }
