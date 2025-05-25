@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod simple_security_tests {
-    use super::*;
+    
     use crate::main_lib::cosmwasm::{wasm_vm_service_server::WasmVmService, Context};
     use crate::main_lib::{ExecuteRequest, InstantiateRequest, QueryRequest, WasmVmServiceImpl};
     use tonic::Request;

@@ -7,7 +7,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use wasmvm::{analyze_code as vm_analyze_code, cache_t, init_cache, store_code};
 use wasmvm::{
     execute as vm_execute, instantiate as vm_instantiate, pin, query as vm_query, remove_wasm,
-    unpin, ByteSliceView, Db, DbVtable, GasReport, GoApi, GoApiVtable, GoQuerier, QuerierVtable,
+    unpin, ByteSliceView, Db, GasReport, GoApi, GoQuerier,
     UnmanagedVector,
 };
 use wasmvm::{

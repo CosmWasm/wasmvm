@@ -3,9 +3,6 @@
 //! This module contains tests that document and verify security vulnerabilities
 //! in the underlying wasmvm implementation.
 
-use crate::main_lib::cosmwasm::{wasm_vm_service_server::WasmVmService, Context};
-use crate::main_lib::{ExecuteRequest, InstantiateRequest, QueryRequest, WasmVmServiceImpl};
-use tonic::Request;
 
 #[cfg(test)]
 mod vm_security_vulnerabilities {

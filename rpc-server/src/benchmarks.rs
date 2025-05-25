@@ -3,13 +3,6 @@
 //! This module contains comprehensive tests designed to validate the robustness
 //! of the RPC server against malicious, malformed, and edge-case inputs.
 
-use crate::main_lib::cosmwasm::{wasm_vm_service_server::WasmVmService, Context};
-use crate::main_lib::{
-    AnalyzeCodeRequest, ExecuteRequest, InstantiateRequest, LoadModuleRequest, QueryRequest,
-    WasmVmServiceImpl,
-};
-use std::sync::Arc;
-use tonic::Request;
 
 // Test data constants for various attack vectors
 const EXTREMELY_LARGE_WASM: usize = 100 * 1024 * 1024; // 100MB
