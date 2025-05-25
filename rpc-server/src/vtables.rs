@@ -18,6 +18,11 @@ static STORAGE: LazyLock<Mutex<InMemoryStorage>> = LazyLock::new(|| {
     })
 });
 
+/// Helper function to extract data from U8SliceView using its read() method.
+fn extract_u8_slice_data(view: U8SliceView) -> Option<Vec<u8>> {
+    view.read().map(|slice| slice.to_vec())
+}
+
 /// Gas costs for operations (simplified)
 const GAS_COST_READ: u64 = 1000;
 const GAS_COST_WRITE: u64 = 2000;
@@ -36,44 +41,30 @@ extern "C" fn impl_read_db(
     value_out: *mut UnmanagedVector,
     err_msg_out: *mut UnmanagedVector,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_read_db called");
     unsafe {
         *gas_used = GAS_COST_READ;
-        eprintln!("🔍 [DEBUG] Gas set to {}", GAS_COST_READ);
 
-        let key_bytes = match key.read() {
-            Some(k) => {
-                eprintln!("🔍 [DEBUG] Key read successfully: {} bytes", k.len());
-                k
-            }
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read key from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key for db_read".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        eprintln!("🔍 [DEBUG] Attempting to lock storage");
         match STORAGE.lock() {
             Ok(storage) => {
-                eprintln!(
-                    "🔍 [DEBUG] Storage locked successfully, {} items in storage",
-                    storage.data.len()
-                );
-                if let Some(value) = storage.data.get(key_bytes) {
-                    eprintln!("✅ [DEBUG] Key found, value size: {} bytes", value.len());
+                if let Some(value) = storage.data.get(&key_bytes) {
                     *value_out = UnmanagedVector::new(Some(value.clone()));
                 } else {
-                    eprintln!("🔍 [DEBUG] Key not found in storage");
                     *value_out = UnmanagedVector::new(None); // Key not found
                 }
-                eprintln!("✅ [DEBUG] impl_read_db returning success");
-                0 // Success
+                wasmvm::GoError::None as i32 // Success
             }
-            Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to lock storage: {:?}", e);
-                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
-                1 // Error
+            Err(_) => {
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Storage lock error for db_read".to_vec()));
+                wasmvm::GoError::Panic as i32 // Error
             }
         }
     }
@@ -87,50 +78,34 @@ extern "C" fn impl_write_db(
     value: U8SliceView,
     err_msg_out: *mut UnmanagedVector,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_write_db called");
     unsafe {
         *gas_used = GAS_COST_WRITE;
-        eprintln!("🔍 [DEBUG] Gas set to {}", GAS_COST_WRITE);
 
-        let key_bytes = match key.read() {
-            Some(k) => {
-                eprintln!("🔍 [DEBUG] Key read successfully: {} bytes", k.len());
-                k.to_vec()
-            }
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read key from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key for db_write".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        let value_bytes = match value.read() {
-            Some(v) => {
-                eprintln!("🔍 [DEBUG] Value read successfully: {} bytes", v.len());
-                v.to_vec()
-            }
+        let value_bytes = match extract_u8_slice_data(value) {
+            Some(v) => v,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read value from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid value".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid value for db_write".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        eprintln!("🔍 [DEBUG] Attempting to lock storage for write");
         match STORAGE.lock() {
             Ok(mut storage) => {
-                eprintln!("🔍 [DEBUG] Storage locked, inserting key-value pair");
                 storage.data.insert(key_bytes, value_bytes);
-                eprintln!(
-                    "✅ [DEBUG] impl_write_db returning success, storage now has {} items",
-                    storage.data.len()
-                );
-                0 // Success
+                wasmvm::GoError::None as i32 // Success
             }
-            Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to lock storage: {:?}", e);
-                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
-                1 // Error
+            Err(_) => {
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Storage lock error for db_write".to_vec()));
+                wasmvm::GoError::Panic as i32 // Error
             }
         }
     }
@@ -143,36 +118,26 @@ extern "C" fn impl_remove_db(
     key: U8SliceView,
     err_msg_out: *mut UnmanagedVector,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_remove_db called");
     unsafe {
         *gas_used = GAS_COST_REMOVE;
 
-        let key_bytes = match key.read() {
-            Some(k) => {
-                eprintln!("🔍 [DEBUG] Key read successfully: {} bytes", k.len());
-                k
-            }
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read key from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key for db_remove".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
         match STORAGE.lock() {
             Ok(mut storage) => {
-                let existed = storage.data.remove(key_bytes).is_some();
-                eprintln!(
-                    "🔍 [DEBUG] Key removal: existed={}, storage now has {} items",
-                    existed,
-                    storage.data.len()
-                );
-                0 // Success
+                storage.data.remove(&key_bytes);
+                wasmvm::GoError::None as i32 // Success
             }
-            Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to lock storage: {:?}", e);
-                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
-                1 // Error
+            Err(_) => {
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Storage lock error for db_remove".to_vec()));
+                wasmvm::GoError::Panic as i32 // Error
             }
         }
     }
@@ -188,11 +153,11 @@ extern "C" fn impl_scan_db(
     _iterator_out: *mut GoIter,
     err_msg_out: *mut UnmanagedVector,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_scan_db called (not implemented)");
     unsafe {
         *gas_used = GAS_COST_SCAN;
+        // For now, return an error as iterator implementation is complex
         *err_msg_out = UnmanagedVector::new(Some(b"Scan not implemented yet".to_vec()));
-        1 // Error
+        wasmvm::GoError::User as i32 // User error as it's a known unimplemented feature
     }
 }
 
@@ -205,29 +170,24 @@ extern "C" fn impl_humanize_address(
     err_msg_out: *mut UnmanagedVector,
     gas_used: *mut u64,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_humanize_address called");
     unsafe {
         *gas_used = GAS_COST_API_CALL;
 
-        let input_bytes = match input.read() {
-            Some(i) => {
-                eprintln!("🔍 [DEBUG] Input read successfully: {} bytes", i.len());
-                i
-            }
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read input from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
-                return 1;
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Invalid input for humanize_address".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        let human_address = format!(
-            "cosmos1{}",
-            hex::encode(&input_bytes[..std::cmp::min(20, input_bytes.len())])
-        );
-        eprintln!("🔍 [DEBUG] Generated human address: {}", human_address);
+        // Simple implementation: assume input is canonical (e.g. 20 bytes) and prefix with "cosmos1"
+        // In a real implementation, this would convert from canonical to human-readable format,
+        // potentially involving bech32 encoding.
+        let human_address = format!("cosmos1{}", hex::encode(&input_bytes));
         *humanized_address_out = UnmanagedVector::new(Some(human_address.into_bytes()));
-        0 // Success
+        wasmvm::GoError::None as i32 // Success
     }
 }
 
@@ -238,55 +198,49 @@ extern "C" fn impl_canonicalize_address(
     err_msg_out: *mut UnmanagedVector,
     gas_used: *mut u64,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_canonicalize_address called");
     unsafe {
         *gas_used = GAS_COST_API_CALL;
 
-        let input_bytes = match input.read() {
-            Some(i) => {
-                eprintln!("🔍 [DEBUG] Input read successfully: {} bytes", i.len());
-                i
-            }
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read input from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
-                return 1;
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Invalid input for canonicalize_address".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        let input_str = match std::str::from_utf8(input_bytes) {
-            Ok(s) => {
-                eprintln!("🔍 [DEBUG] Input string: {}", s);
-                s
-            }
+        // Simple implementation: convert human-readable address to canonical format
+        let input_str = match std::str::from_utf8(&input_bytes) {
+            Ok(s) => s,
             Err(_) => {
-                eprintln!("❌ [DEBUG] Invalid UTF-8 in input");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid UTF-8 address".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(
+                    b"Invalid UTF-8 address for canonicalize_address".to_vec(),
+                ));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
+        // Extract the hex part after "cosmos1" prefix
         if input_str.starts_with("cosmos1") && input_str.len() > 7 {
             let hex_part = &input_str[7..];
             match hex::decode(hex_part) {
                 Ok(canonical) => {
-                    eprintln!(
-                        "🔍 [DEBUG] Canonicalized address: {} bytes",
-                        canonical.len()
-                    );
                     *canonicalized_address_out = UnmanagedVector::new(Some(canonical));
-                    0 // Success
+                    wasmvm::GoError::None as i32 // Success
                 }
                 Err(_) => {
-                    eprintln!("❌ [DEBUG] Invalid hex in address");
-                    *err_msg_out = UnmanagedVector::new(Some(b"Invalid hex in address".to_vec()));
-                    1 // Error
+                    *err_msg_out = UnmanagedVector::new(Some(
+                        b"Invalid hex in address for canonicalize_address".to_vec(),
+                    ));
+                    wasmvm::GoError::User as i32 // User error for invalid format
                 }
             }
         } else {
-            eprintln!("❌ [DEBUG] Invalid address format");
-            *err_msg_out = UnmanagedVector::new(Some(b"Invalid address format".to_vec()));
-            1 // Error
+            *err_msg_out = UnmanagedVector::new(Some(
+                b"Invalid address format for canonicalize_address".to_vec(),
+            ));
+            wasmvm::GoError::User as i32 // User error for invalid format
         }
     }
 }
@@ -297,41 +251,36 @@ extern "C" fn impl_validate_address(
     err_msg_out: *mut UnmanagedVector,
     gas_used: *mut u64,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_validate_address called");
     unsafe {
         *gas_used = GAS_COST_API_CALL;
 
-        let input_bytes = match input.read() {
-            Some(i) => {
-                eprintln!("🔍 [DEBUG] Input read successfully: {} bytes", i.len());
-                i
-            }
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read input from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
-                return 1;
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Invalid input for validate_address".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
-        let input_str = match std::str::from_utf8(input_bytes) {
-            Ok(s) => {
-                eprintln!("🔍 [DEBUG] Validating address: {}", s);
-                s
-            }
+        let input_str = match std::str::from_utf8(&input_bytes) {
+            Ok(s) => s,
             Err(_) => {
-                eprintln!("❌ [DEBUG] Invalid UTF-8 in input");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid UTF-8 address".to_vec()));
-                return 1;
+                *err_msg_out = UnmanagedVector::new(Some(
+                    b"Invalid UTF-8 address for validate_address".to_vec(),
+                ));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
+        // Simple validation: check if it starts with "cosmos1" and has reasonable length
         if input_str.starts_with("cosmos1") && input_str.len() >= 39 && input_str.len() <= 45 {
-            eprintln!("✅ [DEBUG] Address validation passed");
-            0 // Valid
+            wasmvm::GoError::None as i32 // Valid
         } else {
-            eprintln!("❌ [DEBUG] Address validation failed");
-            *err_msg_out = UnmanagedVector::new(Some(b"Invalid address format".to_vec()));
-            1 // Invalid
+            *err_msg_out = UnmanagedVector::new(Some(
+                b"Invalid address format for validate_address".to_vec(),
+            ));
+            wasmvm::GoError::User as i32 // Invalid
         }
     }
 }
@@ -346,41 +295,35 @@ extern "C" fn impl_query_external(
     result_out: *mut UnmanagedVector,
     err_msg_out: *mut UnmanagedVector,
 ) -> i32 {
-    eprintln!("🔍 [DEBUG] impl_query_external called");
     unsafe {
         *gas_used = GAS_COST_QUERY;
 
-        let _request_bytes = match request.read() {
-            Some(r) => {
-                eprintln!("🔍 [DEBUG] Request read successfully: {} bytes", r.len());
-                r
-            }
+        let request_bytes = match extract_u8_slice_data(request) {
+            Some(r) => r,
             None => {
-                eprintln!("❌ [DEBUG] Failed to read request from U8SliceView");
-                *err_msg_out = UnmanagedVector::new(Some(b"Invalid request".to_vec()));
-                return 1;
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Invalid request for query_external".to_vec()));
+                return wasmvm::GoError::BadArgument as i32;
             }
         };
 
+        // Simple implementation: return empty result for any query (or a predefined mock)
+        // In a real implementation, this would handle bank queries, staking queries, etc.
         let empty_result = serde_json::json!({
             "Ok": {
-                "Ok": null
+                "Ok": serde_json::Value::Null // Result is null, but success
             }
         });
 
         match serde_json::to_vec(&empty_result) {
             Ok(result_bytes) => {
-                eprintln!(
-                    "🔍 [DEBUG] Query result serialized: {} bytes",
-                    result_bytes.len()
-                );
                 *result_out = UnmanagedVector::new(Some(result_bytes));
-                0 // Success
+                wasmvm::GoError::None as i32 // Success
             }
             Err(_) => {
-                eprintln!("❌ [DEBUG] Failed to serialize query result");
-                *err_msg_out = UnmanagedVector::new(Some(b"Failed to serialize result".to_vec()));
-                1 // Error
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Failed to serialize query result".to_vec()));
+                wasmvm::GoError::CannotSerialize as i32 // Error
             }
         }
     }
@@ -390,7 +333,6 @@ extern "C" fn impl_query_external(
 
 /// Create a DbVtable with working implementations that provide in-memory storage
 pub fn create_working_db_vtable() -> DbVtable {
-    eprintln!("🔧 [DEBUG] Creating working DB vtable");
     DbVtable {
         read_db: Some(impl_read_db),
         write_db: Some(impl_write_db),
@@ -401,7 +343,6 @@ pub fn create_working_db_vtable() -> DbVtable {
 
 /// Create a GoApiVtable with working implementations that provide basic address operations
 pub fn create_working_api_vtable() -> GoApiVtable {
-    eprintln!("🔧 [DEBUG] Creating working API vtable");
     GoApiVtable {
         humanize_address: Some(impl_humanize_address),
         canonicalize_address: Some(impl_canonicalize_address),
@@ -411,7 +352,6 @@ pub fn create_working_api_vtable() -> GoApiVtable {
 
 /// Create a QuerierVtable with working implementations that provide basic query functionality
 pub fn create_working_querier_vtable() -> QuerierVtable {
-    eprintln!("🔧 [DEBUG] Creating working Querier vtable");
     QuerierVtable {
         query_external: Some(impl_query_external),
     }
@@ -420,9 +360,7 @@ pub fn create_working_querier_vtable() -> QuerierVtable {
 /// Clear the in-memory storage (useful for testing)
 pub fn clear_storage() {
     if let Ok(mut storage) = STORAGE.lock() {
-        let count = storage.data.len();
         storage.data.clear();
-        eprintln!("🧹 [DEBUG] Cleared storage, removed {} items", count);
     }
 }
 
@@ -477,26 +415,5 @@ mod tests {
             assert!(addr.starts_with("cosmos1"));
             assert!(addr.len() >= 39 && addr.len() <= 45);
         }
-    }
-
-    #[test]
-    fn test_debug_vtable_creation() {
-        println!("Testing vtable creation with debug output...");
-
-        let _db_vtable = create_working_db_vtable();
-        let _api_vtable = create_working_api_vtable();
-        let _querier_vtable = create_working_querier_vtable();
-
-        println!("All vtables created successfully");
-    }
-
-    #[test]
-    fn test_storage_debug() {
-        println!("Testing storage operations with debug output...");
-
-        clear_storage();
-        assert_eq!(get_storage_size(), 0);
-
-        println!("Storage cleared and verified empty");
     }
 }

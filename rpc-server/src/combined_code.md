@@ -1,3 +1,44 @@
+# Combined Code Files
+
+## TOC
+- [`lib.rs`](#file-1)
+- [`main.rs`](#file-2)
+- [`main_lib.rs`](#file-3)
+- [`vtables.rs`](#file-4)
+
+---
+
+### `lib.rs`
+*2025-05-25 15:40:57 | 1 KB*
+```rust
+pub mod main_lib;
+pub mod vtables;
+
+pub use main_lib::*;
+
+```
+---
+### `main.rs`
+*2025-05-25 14:59:31 | 1 KB*
+```rust
+use wasmvm_rpc_server::run_server;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let addr_str = std::env::args()
+        .nth(1)
+        .or_else(|| std::env::var("WASMVM_GRPC_ADDR").ok())
+        .unwrap_or_else(|| "0.0.0.0:50051".to_string());
+    let addr = addr_str.parse()?;
+
+    run_server(addr).await
+}
+
+```
+---
+### `main_lib.rs`
+*2025-05-25 15:57:53 | 86 KB*
+```rust
 use crate::vtables::{
     create_working_api_vtable, create_working_db_vtable, create_working_querier_vtable,
 };
@@ -133,34 +174,18 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<InstantiateRequest>,
     ) -> Result<Response<InstantiateResponse>, Status> {
         let req = request.into_inner();
-        eprintln!(
-            "🚀 [DEBUG] Instantiate called with checksum: {}",
-            req.checksum
-        );
-        eprintln!("🚀 [DEBUG] Gas limit: {}", req.gas_limit);
-        eprintln!("🚀 [DEBUG] Init message size: {} bytes", req.init_msg.len());
-
         // Decode hex checksum
         let checksum = match hex::decode(&req.checksum) {
-            Ok(c) => {
-                eprintln!(
-                    "✅ [DEBUG] Checksum decoded successfully: {} bytes",
-                    c.len()
-                );
-                c
-            }
+            Ok(c) => c,
             Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to decode checksum: {}", e);
                 return Err(Status::invalid_argument(format!(
                     "invalid checksum hex: {}",
                     e
-                )));
+                )))
             }
         };
-
         // Prepare FFI views
         let checksum_view = ByteSliceView::new(&checksum);
-        eprintln!("🔧 [DEBUG] Created checksum ByteSliceView");
 
         // Create minimal but valid env and info structures
         let env = serde_json::json!({
@@ -180,17 +205,9 @@ impl WasmVmService for WasmVmServiceImpl {
 
         let env_bytes = serde_json::to_vec(&env).unwrap();
         let info_bytes = serde_json::to_vec(&info).unwrap();
-        eprintln!(
-            "🔧 [DEBUG] Created env ({} bytes) and info ({} bytes)",
-            env_bytes.len(),
-            info_bytes.len()
-        );
-
         let env_view = ByteSliceView::new(&env_bytes);
         let info_view = ByteSliceView::new(&info_bytes);
         let msg_view = ByteSliceView::new(&req.init_msg);
-        eprintln!("🔧 [DEBUG] Created all ByteSliceViews");
-
         // Prepare gas report and error buffer
         let mut gas_report = GasReport {
             limit: req.gas_limit,
@@ -199,7 +216,6 @@ impl WasmVmService for WasmVmServiceImpl {
             used_internally: 0,
         };
         let mut err = UnmanagedVector::default();
-        eprintln!("🔧 [DEBUG] Prepared gas report and error buffer");
 
         // DB, API, and Querier with stub implementations that return proper errors
         let db = Db {
@@ -215,10 +231,7 @@ impl WasmVmService for WasmVmServiceImpl {
             state: std::ptr::null(),
             vtable: create_working_querier_vtable(),
         };
-        eprintln!("🔧 [DEBUG] Created DB, API, and Querier with working vtables");
-
         // Call into WASM VM
-        eprintln!("🚀 [DEBUG] Calling vm_instantiate...");
         let result = vm_instantiate(
             self.cache,
             checksum_view,
@@ -233,8 +246,6 @@ impl WasmVmService for WasmVmServiceImpl {
             Some(&mut gas_report),
             Some(&mut err),
         );
-        eprintln!("✅ [DEBUG] vm_instantiate returned");
-
         // Build response
         let mut resp = InstantiateResponse {
             contract_id: req.request_id.clone(),
@@ -242,23 +253,12 @@ impl WasmVmService for WasmVmServiceImpl {
             gas_used: 0,
             error: String::new(),
         };
-
         if err.is_some() {
-            let error_msg =
-                String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
-            eprintln!("❌ [DEBUG] VM returned error: {}", error_msg);
-            resp.error = error_msg;
+            resp.error = String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
         } else {
-            let data = result.consume().unwrap_or_default();
-            eprintln!(
-                "✅ [DEBUG] VM returned success, data size: {} bytes",
-                data.len()
-            );
-            resp.data = data;
+            resp.data = result.consume().unwrap_or_default();
             resp.gas_used = gas_report.limit.saturating_sub(gas_report.remaining);
-            eprintln!("✅ [DEBUG] Gas used: {}", resp.gas_used);
         }
-
         Ok(Response::new(resp))
     }
 
@@ -355,51 +355,19 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
         let req = request.into_inner();
-        eprintln!(
-            "🔍 [DEBUG] Query called with contract_id: {}",
-            req.contract_id
-        );
-        eprintln!(
-            "🔍 [DEBUG] Query message size: {} bytes",
-            req.query_msg.len()
-        );
-
         // Decode checksum
         let checksum = match hex::decode(&req.contract_id) {
-            Ok(c) => {
-                eprintln!(
-                    "✅ [DEBUG] Checksum decoded successfully: {} bytes",
-                    c.len()
-                );
-                c
-            }
+            Ok(c) => c,
             Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to decode checksum: {}", e);
                 return Err(Status::invalid_argument(format!(
                     "invalid checksum hex: {}",
                     e
-                )));
+                )))
             }
         };
-
         let checksum_view = ByteSliceView::new(&checksum);
-
-        // Create minimal but valid env structure (like in instantiate/execute)
-        let env = serde_json::json!({
-            "block": {
-                "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
-                "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
-            },
-            "contract": {
-                "address": "cosmos1contract"
-            }
-        });
-        let env_bytes = serde_json::to_vec(&env).unwrap();
-        let env_view = ByteSliceView::new(&env_bytes);
+        let env_view = ByteSliceView::from_option(None);
         let msg_view = ByteSliceView::new(&req.query_msg);
-        eprintln!("🔧 [DEBUG] Created ByteSliceViews for query");
-
         let mut err = UnmanagedVector::default();
 
         // DB, API, and Querier with stub implementations that return proper errors
@@ -416,16 +384,12 @@ impl WasmVmService for WasmVmServiceImpl {
             state: std::ptr::null(),
             vtable: create_working_querier_vtable(),
         };
-        eprintln!("🔧 [DEBUG] Created DB, API, and Querier for query");
-
         let mut gas_report = GasReport {
-            limit: 50000000, // Increased gas limit for queries (same as instantiate/execute)
+            limit: 1000000, // Default gas limit for queries
             remaining: 0,
             used_externally: 0,
             used_internally: 0,
         };
-
-        eprintln!("🚀 [DEBUG] Calling vm_query...");
         let result = vm_query(
             self.cache,
             checksum_view,
@@ -434,32 +398,20 @@ impl WasmVmService for WasmVmServiceImpl {
             db,
             api,
             querier,
-            50000000, // gas_limit
-            false,    // print_debug
+            1000000, // gas_limit
+            false,   // print_debug
             Some(&mut gas_report),
             Some(&mut err),
         );
-        eprintln!("✅ [DEBUG] vm_query returned");
-
         let mut resp = QueryResponse {
             result: Vec::new(),
             error: String::new(),
         };
-
         if err.is_some() {
-            let error_msg =
-                String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
-            eprintln!("❌ [DEBUG] Query VM returned error: {}", error_msg);
-            resp.error = error_msg;
+            resp.error = String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
         } else {
-            let data = result.consume().unwrap_or_default();
-            eprintln!(
-                "✅ [DEBUG] Query VM returned success, result size: {} bytes",
-                data.len()
-            );
-            resp.result = data;
+            resp.result = result.consume().unwrap_or_default();
         }
-
         Ok(Response::new(resp))
     }
 
@@ -2424,170 +2376,439 @@ mod tests {
         println!("HYPOTHESIS: libwasmvm requires valid env and info parameters,");
         println!("but we're passing None/null, causing 'Null/Nil argument: arg1' error");
     }
+}
 
-    // === COMPREHENSIVE DEBUG TESTS ===
+```
+---
+### `vtables.rs`
+*2025-05-25 15:57:00 | 13 KB*
+```rust
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+use wasmvm::{
+    api_t, db_t, gas_meter_t, querier_t, DbVtable, GoApiVtable, GoIter, QuerierVtable, U8SliceView,
+    UnmanagedVector,
+};
 
-    #[tokio::test]
-    async fn debug_test_vtable_function_calls() {
-        println!("=== VTable Function Call Debug Test ===");
+/// In-memory storage for the RPC server
+#[derive(Debug, Default)]
+pub struct InMemoryStorage {
+    data: HashMap<Vec<u8>, Vec<u8>>,
+}
 
-        let (service, _temp_dir) = create_test_service();
+/// Global storage instance (thread-safe)
+static STORAGE: LazyLock<Mutex<InMemoryStorage>> = LazyLock::new(|| {
+    Mutex::new(InMemoryStorage {
+        data: HashMap::new(),
+    })
+});
 
-        // Test 1: Simple query that should trigger vtable calls
-        let fake_checksum = "a".repeat(64);
-        let query_request = Request::new(QueryRequest {
-            contract_id: fake_checksum,
-            context: Some(create_test_context()),
-            query_msg: b"{}".to_vec(),
-            request_id: "debug-query".to_string(),
-        });
+/// Helper function to extract data from U8SliceView
+/// Since U8SliceView doesn't have a read() method, we need to access its fields directly
+unsafe fn extract_u8_slice_data(view: U8SliceView) -> Option<&'static [u8]> {
+    // Access the fields directly since U8SliceView is #[repr(C)]
+    // We need to be very careful here as this is unsafe
+    let ptr = std::ptr::addr_of!(view) as *const u8;
+    let is_none = *(ptr as *const bool);
 
-        println!("Calling query with debug output...");
-        let response = service.query(query_request).await;
-        assert!(response.is_ok());
-
-        let response = response.unwrap().into_inner();
-        println!("Query response error: '{}'", response.error);
-
-        // The key insight: if we see vtable debug output, the FFI layer is working
-        // If we don't see vtable debug output, the issue is before vtable calls
+    if is_none {
+        return None;
     }
 
-    #[tokio::test]
-    async fn debug_test_bytesliceview_creation() {
-        println!("=== ByteSliceView Creation Debug Test ===");
+    let data_ptr = *(ptr.add(std::mem::size_of::<bool>()) as *const *const u8);
+    let len =
+        *(ptr.add(std::mem::size_of::<bool>() + std::mem::size_of::<*const u8>()) as *const usize);
 
-        // Test different ways of creating ByteSliceView
-        let test_data = b"test data";
-
-        println!("Testing ByteSliceView::new()...");
-        let view1 = ByteSliceView::new(test_data);
-        println!(
-            "  Created successfully, can read: {:?}",
-            view1.read().is_some()
-        );
-
-        println!("Testing ByteSliceView::from_option(Some())...");
-        let view2 = ByteSliceView::from_option(Some(test_data));
-        println!(
-            "  Created successfully, can read: {:?}",
-            view2.read().is_some()
-        );
-
-        println!("Testing ByteSliceView::from_option(None)...");
-        let view3 = ByteSliceView::from_option(None);
-        println!(
-            "  Created successfully, can read: {:?}",
-            view3.read().is_some()
-        );
-
-        // Test with empty data
-        println!("Testing with empty data...");
-        let empty_data = b"";
-        let view4 = ByteSliceView::new(empty_data);
-        println!("  Empty data view can read: {:?}", view4.read().is_some());
-    }
-
-    #[tokio::test]
-    async fn debug_test_cache_operations() {
-        println!("=== Cache Operations Debug Test ===");
-
-        let (service, temp_dir) = create_test_service();
-
-        println!("Cache directory: {:?}", temp_dir.path());
-        println!("Cache pointer: {:p}", service.cache);
-        println!("Cache is null: {}", service.cache.is_null());
-
-        // Test loading a simple contract
-        println!("Testing contract loading...");
-        let load_request = Request::new(LoadModuleRequest {
-            module_bytes: HACKATOM_WASM.to_vec(),
-        });
-
-        let load_response = service.load_module(load_request).await;
-        assert!(load_response.is_ok());
-        let load_response = load_response.unwrap().into_inner();
-
-        println!("Load response:");
-        println!("  Error: '{}'", load_response.error);
-        println!("  Checksum: '{}'", load_response.checksum);
-
-        if load_response.error.contains("Null/Nil argument") {
-            println!("  ❌ CRITICAL: Load operation also fails with Null/Nil argument");
-            println!("  This suggests the issue is in basic FFI parameter passing");
-        } else if !load_response.error.is_empty() {
-            println!("  ⚠️  Load failed with different error (may be expected)");
-        } else {
-            println!("  ✅ Load succeeded!");
-        }
-    }
-
-    #[tokio::test]
-    async fn debug_test_working_vs_default_vtables() {
-        println!("=== Working vs Default VTables Debug Test ===");
-
-        // Compare our working vtables with default ones
-        let working_db = create_working_db_vtable();
-        let working_api = create_working_api_vtable();
-        let working_querier = create_working_querier_vtable();
-
-        let default_db = DbVtable::default();
-        let default_api = GoApiVtable::default();
-        let default_querier = QuerierVtable::default();
-
-        println!("Working DB vtable:");
-        println!("  read_db: {:?}", working_db.read_db.is_some());
-        println!("  write_db: {:?}", working_db.write_db.is_some());
-        println!("  remove_db: {:?}", working_db.remove_db.is_some());
-        println!("  scan_db: {:?}", working_db.scan_db.is_some());
-
-        println!("Default DB vtable:");
-        println!("  read_db: {:?}", default_db.read_db.is_some());
-        println!("  write_db: {:?}", default_db.write_db.is_some());
-        println!("  remove_db: {:?}", default_db.remove_db.is_some());
-        println!("  scan_db: {:?}", default_db.scan_db.is_some());
-
-        println!("Working API vtable:");
-        println!(
-            "  humanize_address: {:?}",
-            working_api.humanize_address.is_some()
-        );
-        println!(
-            "  canonicalize_address: {:?}",
-            working_api.canonicalize_address.is_some()
-        );
-        println!(
-            "  validate_address: {:?}",
-            working_api.validate_address.is_some()
-        );
-
-        println!("Default API vtable:");
-        println!(
-            "  humanize_address: {:?}",
-            default_api.humanize_address.is_some()
-        );
-        println!(
-            "  canonicalize_address: {:?}",
-            default_api.canonicalize_address.is_some()
-        );
-        println!(
-            "  validate_address: {:?}",
-            default_api.validate_address.is_some()
-        );
-
-        println!("Working Querier vtable:");
-        println!(
-            "  query_external: {:?}",
-            working_querier.query_external.is_some()
-        );
-
-        println!("Default Querier vtable:");
-        println!(
-            "  query_external: {:?}",
-            default_querier.query_external.is_some()
-        );
-
-        // The hypothesis: default vtables have None for all functions,
-        // which causes libwasmvm to complain about "Null/Nil argument"
+    if data_ptr.is_null() || len == 0 {
+        Some(&[])
+    } else {
+        Some(std::slice::from_raw_parts(data_ptr, len))
     }
 }
+
+/// Gas costs for operations (simplified)
+const GAS_COST_READ: u64 = 1000;
+const GAS_COST_WRITE: u64 = 2000;
+const GAS_COST_REMOVE: u64 = 1500;
+const GAS_COST_SCAN: u64 = 3000;
+const GAS_COST_API_CALL: u64 = 500;
+const GAS_COST_QUERY: u64 = 1000;
+
+// === Database Vtable Implementation ===
+
+extern "C" fn impl_read_db(
+    _db: *mut db_t,
+    _gas_meter: *mut gas_meter_t,
+    gas_used: *mut u64,
+    key: U8SliceView,
+    value_out: *mut UnmanagedVector,
+    err_msg_out: *mut UnmanagedVector,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_READ;
+
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
+                return 1;
+            }
+        };
+
+        match STORAGE.lock() {
+            Ok(storage) => {
+                if let Some(value) = storage.data.get(key_bytes) {
+                    *value_out = UnmanagedVector::new(Some(value.clone()));
+                } else {
+                    *value_out = UnmanagedVector::new(None); // Key not found
+                }
+                0 // Success
+            }
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
+                1 // Error
+            }
+        }
+    }
+}
+
+extern "C" fn impl_write_db(
+    _db: *mut db_t,
+    _gas_meter: *mut gas_meter_t,
+    gas_used: *mut u64,
+    key: U8SliceView,
+    value: U8SliceView,
+    err_msg_out: *mut UnmanagedVector,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_WRITE;
+
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k.to_vec(),
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
+                return 1;
+            }
+        };
+
+        let value_bytes = match extract_u8_slice_data(value) {
+            Some(v) => v.to_vec(),
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid value".to_vec()));
+                return 1;
+            }
+        };
+
+        match STORAGE.lock() {
+            Ok(mut storage) => {
+                storage.data.insert(key_bytes, value_bytes);
+                0 // Success
+            }
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
+                1 // Error
+            }
+        }
+    }
+}
+
+extern "C" fn impl_remove_db(
+    _db: *mut db_t,
+    _gas_meter: *mut gas_meter_t,
+    gas_used: *mut u64,
+    key: U8SliceView,
+    err_msg_out: *mut UnmanagedVector,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_REMOVE;
+
+        let key_bytes = match extract_u8_slice_data(key) {
+            Some(k) => k,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid key".to_vec()));
+                return 1;
+            }
+        };
+
+        match STORAGE.lock() {
+            Ok(mut storage) => {
+                storage.data.remove(key_bytes);
+                0 // Success
+            }
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Storage lock error".to_vec()));
+                1 // Error
+            }
+        }
+    }
+}
+
+extern "C" fn impl_scan_db(
+    _db: *mut db_t,
+    _gas_meter: *mut gas_meter_t,
+    gas_used: *mut u64,
+    _start: U8SliceView,
+    _end: U8SliceView,
+    _order: i32,
+    _iterator_out: *mut GoIter,
+    err_msg_out: *mut UnmanagedVector,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_SCAN;
+        // For now, return an error as iterator implementation is complex
+        *err_msg_out = UnmanagedVector::new(Some(b"Scan not implemented yet".to_vec()));
+        1 // Error
+    }
+}
+
+// === API Vtable Implementation ===
+
+extern "C" fn impl_humanize_address(
+    _api: *const api_t,
+    input: U8SliceView,
+    humanized_address_out: *mut UnmanagedVector,
+    err_msg_out: *mut UnmanagedVector,
+    gas_used: *mut u64,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_API_CALL;
+
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
+                return 1;
+            }
+        };
+
+        // Simple implementation: assume input is already a valid address
+        // In a real implementation, this would convert from canonical to human-readable format
+        let human_address = format!(
+            "cosmos1{}",
+            hex::encode(&input_bytes[..std::cmp::min(20, input_bytes.len())])
+        );
+        *humanized_address_out = UnmanagedVector::new(Some(human_address.into_bytes()));
+        0 // Success
+    }
+}
+
+extern "C" fn impl_canonicalize_address(
+    _api: *const api_t,
+    input: U8SliceView,
+    canonicalized_address_out: *mut UnmanagedVector,
+    err_msg_out: *mut UnmanagedVector,
+    gas_used: *mut u64,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_API_CALL;
+
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
+                return 1;
+            }
+        };
+
+        // Simple implementation: convert human-readable address to canonical format
+        let input_str = match std::str::from_utf8(input_bytes) {
+            Ok(s) => s,
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid UTF-8 address".to_vec()));
+                return 1;
+            }
+        };
+
+        // Extract the hex part after "cosmos1" prefix
+        if input_str.starts_with("cosmos1") && input_str.len() > 7 {
+            let hex_part = &input_str[7..];
+            match hex::decode(hex_part) {
+                Ok(canonical) => {
+                    *canonicalized_address_out = UnmanagedVector::new(Some(canonical));
+                    0 // Success
+                }
+                Err(_) => {
+                    *err_msg_out = UnmanagedVector::new(Some(b"Invalid hex in address".to_vec()));
+                    1 // Error
+                }
+            }
+        } else {
+            *err_msg_out = UnmanagedVector::new(Some(b"Invalid address format".to_vec()));
+            1 // Error
+        }
+    }
+}
+
+extern "C" fn impl_validate_address(
+    _api: *const api_t,
+    input: U8SliceView,
+    err_msg_out: *mut UnmanagedVector,
+    gas_used: *mut u64,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_API_CALL;
+
+        let input_bytes = match extract_u8_slice_data(input) {
+            Some(i) => i,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid input".to_vec()));
+                return 1;
+            }
+        };
+
+        let input_str = match std::str::from_utf8(input_bytes) {
+            Ok(s) => s,
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid UTF-8 address".to_vec()));
+                return 1;
+            }
+        };
+
+        // Simple validation: check if it starts with "cosmos1" and has reasonable length
+        if input_str.starts_with("cosmos1") && input_str.len() >= 39 && input_str.len() <= 45 {
+            0 // Valid
+        } else {
+            *err_msg_out = UnmanagedVector::new(Some(b"Invalid address format".to_vec()));
+            1 // Invalid
+        }
+    }
+}
+
+// === Querier Vtable Implementation ===
+
+extern "C" fn impl_query_external(
+    _querier: *const querier_t,
+    _gas_limit: u64,
+    gas_used: *mut u64,
+    request: U8SliceView,
+    result_out: *mut UnmanagedVector,
+    err_msg_out: *mut UnmanagedVector,
+) -> i32 {
+    unsafe {
+        *gas_used = GAS_COST_QUERY;
+
+        let _request_bytes = match extract_u8_slice_data(request) {
+            Some(r) => r,
+            None => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Invalid request".to_vec()));
+                return 1;
+            }
+        };
+
+        // Simple implementation: return empty result for any query
+        // In a real implementation, this would handle bank queries, staking queries, etc.
+        let empty_result = serde_json::json!({
+            "Ok": {
+                "Ok": null
+            }
+        });
+
+        match serde_json::to_vec(&empty_result) {
+            Ok(result_bytes) => {
+                *result_out = UnmanagedVector::new(Some(result_bytes));
+                0 // Success
+            }
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Failed to serialize result".to_vec()));
+                1 // Error
+            }
+        }
+    }
+}
+
+// === Vtable Constructors ===
+
+/// Create a DbVtable with working implementations that provide in-memory storage
+pub fn create_working_db_vtable() -> DbVtable {
+    DbVtable {
+        read_db: Some(impl_read_db),
+        write_db: Some(impl_write_db),
+        remove_db: Some(impl_remove_db),
+        scan_db: Some(impl_scan_db),
+    }
+}
+
+/// Create a GoApiVtable with working implementations that provide basic address operations
+pub fn create_working_api_vtable() -> GoApiVtable {
+    GoApiVtable {
+        humanize_address: Some(impl_humanize_address),
+        canonicalize_address: Some(impl_canonicalize_address),
+        validate_address: Some(impl_validate_address),
+    }
+}
+
+/// Create a QuerierVtable with working implementations that provide basic query functionality
+pub fn create_working_querier_vtable() -> QuerierVtable {
+    QuerierVtable {
+        query_external: Some(impl_query_external),
+    }
+}
+
+/// Clear the in-memory storage (useful for testing)
+pub fn clear_storage() {
+    if let Ok(mut storage) = STORAGE.lock() {
+        storage.data.clear();
+    }
+}
+
+/// Get storage size (useful for debugging)
+pub fn get_storage_size() -> usize {
+    STORAGE.lock().map(|s| s.data.len()).unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_working_vtables_have_functions() {
+        let db_vtable = create_working_db_vtable();
+        assert!(db_vtable.read_db.is_some());
+        assert!(db_vtable.write_db.is_some());
+        assert!(db_vtable.remove_db.is_some());
+        assert!(db_vtable.scan_db.is_some());
+
+        let api_vtable = create_working_api_vtable();
+        assert!(api_vtable.humanize_address.is_some());
+        assert!(api_vtable.canonicalize_address.is_some());
+        assert!(api_vtable.validate_address.is_some());
+
+        let querier_vtable = create_working_querier_vtable();
+        assert!(querier_vtable.query_external.is_some());
+    }
+
+    #[test]
+    fn test_storage_operations() {
+        clear_storage();
+
+        // Test that storage starts empty
+        assert_eq!(get_storage_size(), 0);
+
+        // Note: We can't easily test the actual FFI functions here without
+        // setting up the full FFI environment, but we can test that the
+        // vtables are properly constructed.
+    }
+
+    #[test]
+    fn test_address_validation() {
+        // Test valid addresses
+        let valid_addresses = vec![
+            "cosmos1abc123def456ghi789jkl012mno345pqr678st",
+            "cosmos1qwertyuiopasdfghjklzxcvbnm1234567890",
+        ];
+
+        for addr in valid_addresses {
+            // In a real test, we'd call the FFI function, but for now just test the logic
+            assert!(addr.starts_with("cosmos1"));
+            assert!(addr.len() >= 39 && addr.len() <= 45);
+        }
+    }
+}
+
+```
+---
+
+## Summary
+Files: 4, Total: 101 KB
+Breakdown:
+- rs: 101 KB
