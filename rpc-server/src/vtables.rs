@@ -298,7 +298,7 @@ extern "C" fn impl_query_external(
     unsafe {
         *gas_used = GAS_COST_QUERY;
 
-        let request_bytes = match extract_u8_slice_data(request) {
+        let _request_bytes = match extract_u8_slice_data(request) {
             Some(r) => r,
             None => {
                 *err_msg_out =
