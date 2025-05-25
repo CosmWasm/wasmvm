@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package cosmwasm;
+
+option go_package = "github.com/CosmWasm/wasmvm/v3/proto";
+option rust_package = "cosmwasm_rpc";
+
+// Context message for blockchain-related information
+message Context {
+  uint64 block_height = 1;
+  string sender = 2;
+  // Add other fields as needed (e.g., chain_id, timestamp)
+}
+
+// WasmVMService: RPC interface for wasmvm
+service WasmVMService {
+  rpc LoadModule(LoadModuleRequest) returns (LoadModuleResponse);
+  rpc Instantiate(InstantiateRequest) returns (InstantiateResponse);
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+  rpc Query(QueryRequest) returns (QueryResponse);
+}
+
+message LoadModuleRequest {
+  bytes module_bytes = 1;
+}
+
+message LoadModuleResponse {
+  string module_id = 1;
+  string error = 2;
+}
+
+message InstantiateRequest {
+  string module_id = 1;
+  Context context = 2;
+  bytes init_msg = 3;
+  uint64 gas_limit = 4;
+}
+
+message InstantiateResponse {
+  string contract_id = 1;
+  bytes data = 2;
+  uint64 gas_used = 3;
+  string error = 4;
+}
+
+message ExecuteRequest {
+  string contract_id = 1;
+  Context context = 2;
+  bytes msg = 3;
+  uint64 gas_limit = 4;
+}
+
+message ExecuteResponse {
+  bytes data = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+message QueryRequest {
+  string contract_id = 1;
+  Context context = 2;
+  bytes query_msg = 3;
+}
+
+message QueryResponse {
+  bytes result = 1;
+  string error = 2;
+}
+
+// HostService: RPC interface for host function callbacks
+service HostService {
+  rpc CallHostFunction(CallHostFunctionRequest) returns (CallHostFunctionResponse);
+}
+
+message CallHostFunctionRequest {
+  string function_name = 1;
+  bytes args = 2;
+  Context context = 3;
+}
+
+message CallHostFunctionResponse {
+  bytes result = 1;
+  string error = 2;
+}

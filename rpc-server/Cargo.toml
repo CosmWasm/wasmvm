@@ -1,0 +1,14 @@
+[package]
+name = "wasmvm-rpc-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tonic = { version = "0.8", features = ["transport"] }
+prost = "0.11"
+prost-types = "0.11"
+tokio = { version = "1", features = ["full"] }
+wasmvm = { path = "../libwasmvm" }
+
+[build-dependencies]
+tonic-build = "0.8"
