@@ -126,6 +126,30 @@ impl U8SliceView {
             },
         }
     }
+
+    /// Provides a reference to the included data to be parsed or copied elsewhere
+    /// This is safe as long as the `U8SliceView` is constructed correctly.
+    pub fn read(&self) -> Option<&[u8]> {
+        if self.is_none {
+            None
+        } else {
+            Some(
+                // "`data` must be non-null and aligned even for zero-length slices"
+                if self.len == 0 {
+                    let dangling = std::ptr::NonNull::<u8>::dangling();
+                    unsafe { slice::from_raw_parts(dangling.as_ptr(), 0) }
+                } else {
+                    unsafe { slice::from_raw_parts(self.ptr, self.len) }
+                },
+            )
+        }
+    }
+
+    /// Creates an owned copy that can safely be stored and mutated.
+    #[allow(dead_code)]
+    pub fn to_owned(&self) -> Option<Vec<u8>> {
+        self.read().map(|slice| slice.to_owned())
+    }
 }
 
 /// An optional Vector type that requires explicit creation and destruction
