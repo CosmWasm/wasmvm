@@ -6,11 +6,12 @@ mod cosmwasm {
 
 use cosmwasm::host_service_server::{HostService, HostServiceServer};
 use cosmwasm::wasm_vm_service_server::{WasmVmService, WasmVmServiceServer};
-use cosmwasm::{CallHostFunctionRequest, CallHostFunctionResponse};
 use cosmwasm::{
-    ExecuteRequest, ExecuteResponse, InstantiateRequest, InstantiateResponse, LoadModuleRequest,
-    LoadModuleResponse, QueryRequest, QueryResponse,
+    AnalyzeCodeRequest, AnalyzeCodeResponse, ExecuteRequest, ExecuteResponse, InstantiateRequest,
+    InstantiateResponse, LoadModuleRequest, LoadModuleResponse, MigrateRequest, MigrateResponse,
+    QueryRequest, QueryResponse, ReplyRequest, ReplyResponse, SudoRequest, SudoResponse,
 };
+use cosmwasm::{CallHostFunctionRequest, CallHostFunctionResponse};
 
 #[derive(Debug, Default)]
 pub struct WasmVmServiceImpl;
@@ -43,6 +44,31 @@ impl WasmVmService for WasmVmServiceImpl {
         _request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
         Err(Status::unimplemented("query not implemented"))
+    }
+
+    async fn migrate(
+        &self,
+        _request: Request<MigrateRequest>,
+    ) -> Result<Response<MigrateResponse>, Status> {
+        Err(Status::unimplemented("migrate not implemented"))
+    }
+
+    async fn sudo(&self, _request: Request<SudoRequest>) -> Result<Response<SudoResponse>, Status> {
+        Err(Status::unimplemented("sudo not implemented"))
+    }
+
+    async fn reply(
+        &self,
+        _request: Request<ReplyRequest>,
+    ) -> Result<Response<ReplyResponse>, Status> {
+        Err(Status::unimplemented("reply not implemented"))
+    }
+
+    async fn analyze_code(
+        &self,
+        _request: Request<AnalyzeCodeRequest>,
+    ) -> Result<Response<AnalyzeCodeResponse>, Status> {
+        Err(Status::unimplemented("analyze_code not implemented"))
     }
 }
 

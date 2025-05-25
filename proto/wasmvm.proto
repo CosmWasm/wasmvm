@@ -8,7 +8,7 @@ option go_package = "github.com/CosmWasm/wasmvm/v3/proto";
 message Context {
   uint64 block_height = 1;
   string sender = 2;
-  // Add other fields as needed (e.g., chain_id, timestamp)
+  string chain_id = 3;
 }
 
 // WasmVMService: RPC interface for wasmvm
@@ -17,6 +17,10 @@ service WasmVMService {
   rpc Instantiate(InstantiateRequest) returns (InstantiateResponse);
   rpc Execute(ExecuteRequest) returns (ExecuteResponse);
   rpc Query(QueryRequest) returns (QueryResponse);
+  rpc Migrate(MigrateRequest) returns (MigrateResponse);
+  rpc Sudo(SudoRequest) returns (SudoResponse);
+  rpc Reply(ReplyRequest) returns (ReplyResponse);
+  rpc AnalyzeCode(AnalyzeCodeRequest) returns (AnalyzeCodeResponse);
 }
 
 message LoadModuleRequest {
@@ -24,15 +28,16 @@ message LoadModuleRequest {
 }
 
 message LoadModuleResponse {
-  string module_id = 1;
+  string checksum = 1; // SHA256 checksum of the module
   string error = 2;
 }
 
 message InstantiateRequest {
-  string module_id = 1;
+  string checksum = 1;
   Context context = 2;
   bytes init_msg = 3;
   uint64 gas_limit = 4;
+  string request_id = 5;
 }
 
 message InstantiateResponse {
@@ -47,6 +52,7 @@ message ExecuteRequest {
   Context context = 2;
   bytes msg = 3;
   uint64 gas_limit = 4;
+  string request_id = 5;
 }
 
 message ExecuteResponse {
@@ -59,11 +65,65 @@ message QueryRequest {
   string contract_id = 1;
   Context context = 2;
   bytes query_msg = 3;
+  string request_id = 4;
 }
 
 message QueryResponse {
   bytes result = 1;
   string error = 2;
+}
+ 
+message MigrateRequest {
+  string contract_id = 1;
+  string checksum = 2;
+  Context context = 3;
+  bytes migrate_msg = 4;
+  uint64 gas_limit = 5;
+  string request_id = 6;
+}
+
+message MigrateResponse {
+  bytes data = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+message SudoRequest {
+  string contract_id = 1;
+  Context context = 2;
+  bytes msg = 3;
+  uint64 gas_limit = 4;
+  string request_id = 5;
+}
+
+message SudoResponse {
+  bytes data = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+message ReplyRequest {
+  string contract_id = 1;
+  Context context = 2;
+  bytes reply_msg = 3;
+  uint64 gas_limit = 4;
+  string request_id = 5;
+}
+
+message ReplyResponse {
+  bytes data = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+message AnalyzeCodeRequest {
+  string checksum = 1;
+}
+
+message AnalyzeCodeResponse {
+  repeated string required_capabilities = 1;
+  bool has_ibc_entry_points = 2;
+  string error = 3;
 }
 
 // HostService: RPC interface for host function callbacks
@@ -75,6 +135,7 @@ message CallHostFunctionRequest {
   string function_name = 1;
   bytes args = 2;
   Context context = 3;
+  string request_id = 4;
 }
 
 message CallHostFunctionResponse {
