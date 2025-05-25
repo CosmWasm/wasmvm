@@ -7,8 +7,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use wasmvm::{analyze_code as vm_analyze_code, cache_t, init_cache, store_code};
 use wasmvm::{
     execute as vm_execute, instantiate as vm_instantiate, pin, query as vm_query, remove_wasm,
-    unpin, ByteSliceView, Db, GasReport, GoApi, GoQuerier,
-    UnmanagedVector,
+    unpin, ByteSliceView, Db, GasReport, GoApi, GoQuerier, UnmanagedVector,
 };
 use wasmvm::{
     get_metrics, get_pinned_metrics, ibc2_packet_ack, ibc2_packet_receive, ibc2_packet_send,
@@ -1789,6 +1788,7 @@ mod tests {
     use std::sync::Arc;
     use tempfile::TempDir;
     use tonic::Request;
+    use wasmvm::{DbVtable, GoApiVtable, QuerierVtable};
 
     // Load real WASM contracts from testdata
     const HACKATOM_WASM: &[u8] = include_bytes!("../../testdata/hackatom.wasm");

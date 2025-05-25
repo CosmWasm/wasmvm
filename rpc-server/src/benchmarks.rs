@@ -3,7 +3,6 @@
 //! This module contains comprehensive tests designed to validate the robustness
 //! of the RPC server against malicious, malformed, and edge-case inputs.
 
-
 // Test data constants for various attack vectors
 const EXTREMELY_LARGE_WASM: usize = 100 * 1024 * 1024; // 100MB
 const MAX_STRING_LENGTH: usize = 1024 * 1024; // 1MB string
@@ -11,7 +10,10 @@ const MAX_REASONABLE_GAS: u64 = 1_000_000_000; // 1B gas units
 
 #[cfg(test)]
 mod test_helpers {
-    use super::*;
+    use crate::main_lib::{
+        cosmwasm::Context,
+        WasmVmServiceImpl,
+    };
     use tempfile::TempDir;
 
     /// Helper to create test service
@@ -36,6 +38,11 @@ mod test_helpers {
 mod type_safety_and_authorization_tests {
     use super::test_helpers::*;
     use super::*;
+    use crate::main_lib::{
+        cosmwasm::{wasm_vm_service_server::WasmVmService, Context}, ExecuteRequest, InstantiateRequest, LoadModuleRequest, QueryRequest,
+    };
+    use std::sync::Arc;
+    use tonic::Request;
 
     // ==================== INVALID DATA TYPE ATTACKS ====================
 
@@ -134,7 +141,7 @@ mod type_safety_and_authorization_tests {
             "cosmos1UPPERCASE".to_string(), // bech32 should be lowercase
             "cosmos1invalid!@#$%".to_string(),
             // Binary data as address
-            format!("cosmos1{}", hex::encode(&[0x00, 0x01, 0x02, 0x03])),
+            format!("cosmos1{}", hex::encode([0x00, 0x01, 0x02, 0x03])),
             // Empty address
             "".to_string(),
             // Null bytes in address
@@ -200,7 +207,7 @@ mod type_safety_and_authorization_tests {
             // Path traversal
             "../../../etc/passwd".to_string(),
             // Binary data
-            format!("chain-{}", hex::encode(&[0xFF, 0xFE, 0xFD, 0xFC])),
+            format!("chain-{}", hex::encode([0xFF, 0xFE, 0xFD, 0xFC])),
             // Control characters
             "\x01\x02\x03\x04\x05".to_string(),
         ];
@@ -1223,6 +1230,12 @@ mod type_safety_and_authorization_tests {
 mod savage_input_validation_tests {
     use super::test_helpers::*;
     use super::*;
+    use crate::main_lib::{
+        cosmwasm::{wasm_vm_service_server::WasmVmService, Context},
+        AnalyzeCodeRequest, ExecuteRequest, InstantiateRequest, LoadModuleRequest, QueryRequest,
+    };
+    use std::sync::Arc;
+    use tonic::Request;
 
     // ==================== CHECKSUM VALIDATION ATTACKS ====================
 
@@ -1335,9 +1348,9 @@ mod savage_input_validation_tests {
             // Control characters
             (0..127u8).cycle().take(10000).collect(), // Fixed to use valid ASCII range
             // Invalid UTF-8 sequences
-            vec![0xC0, 0x80].repeat(1000), // Invalid UTF-8 overlong encoding
+            [0xC0, 0x80].repeat(1000), // Invalid UTF-8 overlong encoding
             // Null bytes
-            vec![0x00].repeat(10000),
+            [0x00].repeat(10000),
             // Script injection attempts
             r#"{"script":"<script>alert('xss')</script>"}"#.as_bytes().to_vec(),
             r#"{"eval":"eval('malicious code')"}"#.as_bytes().to_vec(),
@@ -1568,7 +1581,7 @@ mod savage_input_validation_tests {
             // Module with random bytes
             (0..10000).map(|i| (i % 256) as u8).collect(),
             // Module with repeating patterns that might cause issues
-            vec![0xDE, 0xAD, 0xBE, 0xEF].repeat(2500),
+            [0xDE, 0xAD, 0xBE, 0xEF].repeat(2500),
         ];
 
         for (i, module_bytes) in malicious_modules.iter().enumerate() {
@@ -1756,7 +1769,7 @@ mod savage_input_validation_tests {
             // 65 characters (too long)
             ("a".repeat(65), false),
             // Valid hex but with mixed case
-            ("AbCdEf".repeat(10) + &"abcd".repeat(1), true),
+            ("AbCdEf".repeat(10) + "abcd", true),
             // Invalid hex characters
             ("g".repeat(64), false),
             // Empty string
@@ -1847,8 +1860,14 @@ mod savage_input_validation_tests {
 #[cfg(test)]
 mod benchmarks {
     use super::test_helpers::*;
-    use super::*;
+    
+    use crate::main_lib::{
+        cosmwasm::wasm_vm_service_server::WasmVmService,
+        ExecuteRequest, LoadModuleRequest, QueryRequest,
+    };
+    use std::sync::Arc;
     use std::time::Instant;
+    use tonic::Request;
 
     #[tokio::test]
     async fn benchmark_load_module_throughput() {
