@@ -3453,8 +3453,11 @@ dependencies = [
 name = "wasmvm-rpc-server"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "prost",
  "prost-types",
+ "serde",
+ "serde_json",
  "tokio",
  "tonic",
  "tonic-build",

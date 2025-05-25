@@ -61,6 +61,25 @@ impl ByteSliceView {
     pub fn to_owned(&self) -> Option<Vec<u8>> {
         self.read().map(|slice| slice.to_owned())
     }
+    /// Constructs a ByteSliceView from an optional byte slice.
+    /// `None` represents a nil view; `Some(&[])` represents an empty slice.
+    pub fn new(slice: Option<&[u8]>) -> Self {
+        match slice {
+            Some(data) => {
+                let ptr = if data.is_empty() {
+                    std::ptr::NonNull::<u8>::dangling().as_ptr()
+                } else {
+                    data.as_ptr()
+                };
+                ByteSliceView {
+                    is_nil: false,
+                    ptr,
+                    len: data.len(),
+                }
+            }
+            None => ByteSliceView { is_nil: true, ptr: std::ptr::null(), len: 0 },
+        }
+    }
 }
 
 /// A view into a `Option<&[u8]>`, created and maintained by Rust.

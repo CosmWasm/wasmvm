@@ -180,6 +180,37 @@ We've provided a Rust-based gRPC server implementation in `rpc-server`. This ser
 uses the native Rust `wasmvm` library and exposes the `WasmVMService` and `HostService`
 over gRPC.
 
+### Prerequisites
+
+Ensure you have the Protocol Buffers compiler (`protoc`) installed:
+
+- On macOS:
+  ```bash
+  brew install protobuf
+  ```
+- On Ubuntu/Debian:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y protobuf-compiler
+  ```
+
+### Building with tonic
+
+The `rpc-server` crate uses `tonic-build` in its `build.rs` to generate Rust code
+from `proto/wasmvm.proto` automatically during compilation. To build the server:
+
+```bash
+cd rpc-server
+cargo build
+```
+
+Any changes to `proto/wasmvm.proto` will be picked up automatically on the next build. To force a full rebuild of generated code:
+
+```bash
+cargo clean
+cargo build
+```
+
 To build and run:
 
 ```bash
