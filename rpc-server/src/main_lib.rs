@@ -1078,7 +1078,7 @@ impl WasmVmService for WasmVmServiceImpl {
                         serde_json::from_str::<serde_json::Value>(&metrics_str)
                     {
                         // Create a PinnedMetrics structure
-                        let mut per_module = std::collections::HashMap::new();
+                        let per_module = std::collections::HashMap::new();
 
                         // For now, create an empty structure since we need to understand the exact format
                         response.pinned_metrics = Some(cosmwasm::PinnedMetrics { per_module });

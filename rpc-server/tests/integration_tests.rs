@@ -1,15 +1,13 @@
 // This file contains integration tests for the WasmVM service.
 // It requires access to types and functions from `main_lib` and `vtables`.
 
-use hex;
-use serde_json::json;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
 };
 use std::time::Instant;
 use tempfile::TempDir;
-use tonic::{Request, Status};
+use tonic::Request;
 use wasmvm_rpc_server::vtables::{
     create_working_api_vtable, create_working_db_vtable, create_working_querier_vtable,
 }; // Needed for diagnostic tests that check vtables
