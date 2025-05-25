@@ -3,7 +3,6 @@ syntax = "proto3";
 package cosmwasm;
 
 option go_package = "github.com/CosmWasm/wasmvm/v3/proto";
-option rust_package = "cosmwasm_rpc";
 
 // Context message for blockchain-related information
 message Context {
