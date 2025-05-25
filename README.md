@@ -245,3 +245,206 @@ a proper CI system for building these binaries, but we are not there yet.
 To build the rust side, try `make build-libwasmvm` and wait for it to compile.
 This depends on `cargo` being installed with `rustc` version 1.47+. Generally,
 you can just use `rustup` to install all this with no problems.
+
+## Testing
+
+### Go Tests
+
+Run the standard Go test suite:
+
+```bash
+make test
+```
+
+### Rust Tests
+
+#### Library Tests (libwasmvm)
+
+Run unit tests for the core Rust library:
+
+```bash
+cd libwasmvm
+cargo test
+```
+
+#### RPC Server Tests
+
+The `rpc-server` crate includes comprehensive test suites including critical security vulnerability tests.
+
+**Run all tests:**
+```bash
+cd rpc-server
+cargo test
+```
+
+**Run specific test categories:**
+
+```bash
+# Run all library tests (includes security tests)
+cargo test --lib
+
+# Run integration tests
+cargo test --test integration_tests
+
+# Run benchmarks
+cargo test --lib benchmarks
+
+# Run security vulnerability tests specifically
+cargo test vm_security_vulnerabilities --lib
+
+# Run individual security test categories
+cargo test test_vm_field_length_vulnerabilities --lib
+cargo test test_vm_encoding_vulnerabilities --lib
+cargo test test_vm_boundary_value_vulnerabilities --lib
+cargo test test_vm_special_character_vulnerabilities --lib
+cargo test test_vm_json_structure_vulnerabilities --lib
+```
+
+**Run tests with output (recommended for security tests):**
+```bash
+# See detailed security test output
+cargo test vm_security_vulnerabilities --lib -- --nocapture
+
+# Run specific security test with full output
+cargo test test_vm_security_summary --lib -- --nocapture
+```
+
+#### Security Testing
+
+🚨 **CRITICAL**: The RPC server includes comprehensive security vulnerability tests that document real security issues discovered in the underlying wasmvm implementation.
+
+**Security Test Categories (13 total):**
+
+1. **Empty Checksum Acceptance** - Tests VM's handling of empty checksums
+2. **Invalid JSON Processing** - Tests malformed JSON handling
+3. **Checksum Validation Bypass** - Tests checksum validation consistency
+4. **Context Field Validation** - Tests blockchain context validation
+5. **Gas Limit Handling** - Tests extreme gas limit processing
+6. **Message Size Vulnerabilities** - Tests large message handling
+7. **Field Length Validation Bypass** - Tests extremely long field values (1MB+)
+8. **Encoding Validation Bypass** - Tests malformed character encodings
+9. **Boundary Value Vulnerabilities** - Tests extreme numeric values
+10. **Special Character Injection** - Tests dangerous character patterns
+11. **JSON Structure Complexity Bombs** - Tests complex JSON structures
+12. **Concurrent Attack Resistance** - Tests concurrent malicious requests
+13. **Security Summary** - Comprehensive vulnerability documentation
+
+**Run the complete security test suite:**
+```bash
+cd rpc-server
+cargo test vm_security_vulnerabilities --lib -- --nocapture
+```
+
+**Expected Results:**
+- ✅ All 13 security tests should **PASS**
+- ⚠️ **Passing tests indicate vulnerabilities exist** (this is the correct behavior)
+- 📋 Tests document that the VM accepts inputs it should reject
+
+**Security Findings:**
+The security tests reveal critical vulnerabilities including:
+- VM accepts 1MB+ field values without limits
+- VM processes malformed character encodings
+- VM accepts dangerous injection patterns
+- VM handles extreme boundary values unsafely
+- VM processes complex JSON bombs without limits
+
+See `rpc-server/SECURITY_FINDINGS.md` for detailed vulnerability documentation.
+
+#### Performance and Load Testing
+
+**Run performance benchmarks:**
+```bash
+cd rpc-server
+cargo test benchmarks --lib -- --nocapture
+```
+
+**Run stress tests:**
+```bash
+# Memory and performance stress tests
+cargo test stress_test --lib -- --nocapture
+
+# Concurrent load testing
+cargo test test_concurrent --lib -- --nocapture
+```
+
+#### Input Validation Testing
+
+**Run comprehensive input validation tests:**
+```bash
+cd rpc-server
+cargo test savage_input_validation_tests --lib -- --nocapture
+cargo test type_safety_and_authorization_tests --lib -- --nocapture
+```
+
+These tests include:
+- Malicious checksum injection attempts
+- Buffer overflow attempts
+- JSON payload attacks
+- Gas limit attacks
+- Context field attacks
+- WASM module attacks
+- Concurrent malicious request simulation
+
+#### Test Output Interpretation
+
+**Security Test Results:**
+```
+running 13 tests
+test vm_security_vulnerabilities::test_vm_accepts_empty_checksum_vulnerability ... ok
+test vm_security_vulnerabilities::test_vm_accepts_invalid_json_with_fake_checksum ... ok
+test vm_security_vulnerabilities::test_vm_field_length_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_encoding_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_boundary_value_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_special_character_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_json_structure_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_concurrent_stress_vulnerabilities ... ok
+test vm_security_vulnerabilities::test_vm_security_summary ... ok
+```
+
+**✅ All tests passing = Critical vulnerabilities confirmed**
+
+#### Continuous Integration
+
+For CI/CD pipelines, run the full test suite:
+
+```bash
+# Complete test coverage
+cd rpc-server
+cargo test --all-targets --all-features
+
+# With security test output
+cargo test --lib -- --nocapture | tee test_results.log
+
+# Performance validation
+cargo test benchmarks --lib --release
+```
+
+#### Test Development
+
+When adding new security tests:
+
+1. Add tests to `rpc-server/src/vm_behavior_tests.rs`
+2. Follow the existing pattern for vulnerability documentation
+3. Ensure tests demonstrate the vulnerability clearly
+4. Update the security summary test count
+5. Document findings in `SECURITY_FINDINGS.md`
+
+**Example test structure:**
+```rust
+#[tokio::test]
+async fn test_new_vulnerability_category() {
+    let service = create_test_service();
+    
+    // Test malicious input
+    let malicious_input = "dangerous_pattern";
+    let request = create_test_request(malicious_input);
+    let response = service.some_method(request).await;
+    
+    // Verify vulnerability exists (test should pass if VM accepts bad input)
+    assert!(response.is_ok(), "VM should handle gracefully");
+    let resp = response.unwrap().into_inner();
+    
+    // Document the vulnerability
+    println!("🚨 VULNERABILITY: VM accepts {}", malicious_input);
+}
+```

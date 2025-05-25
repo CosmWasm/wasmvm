@@ -898,8 +898,11 @@ async fn test_migrate_stub() {
     assert!(response.is_ok());
 
     let response = response.unwrap().into_inner();
-    assert!(response.error.is_empty()); // Stub, so no error generated
-    assert_eq!(response.gas_used, 0);
+    // Now that we're calling the real FFI function, it should error for non-existent contracts
+    assert!(
+        !response.error.is_empty(),
+        "Expected error for non-existent contract"
+    );
     assert!(response.data.is_empty());
 }
 
@@ -919,8 +922,11 @@ async fn test_sudo_stub() {
     assert!(response.is_ok());
 
     let response = response.unwrap().into_inner();
-    assert!(response.error.is_empty()); // Stub, so no error generated
-    assert_eq!(response.gas_used, 0);
+    // Now that we're calling the real FFI function, it should error for non-existent contracts
+    assert!(
+        !response.error.is_empty(),
+        "Expected error for non-existent contract"
+    );
     assert!(response.data.is_empty());
 }
 
@@ -940,8 +946,11 @@ async fn test_reply_stub() {
     assert!(response.is_ok());
 
     let response = response.unwrap().into_inner();
-    assert!(response.error.is_empty()); // Stub, so no error generated
-    assert_eq!(response.gas_used, 0);
+    // Now that we're calling the real FFI function, it should error for non-existent contracts
+    assert!(
+        !response.error.is_empty(),
+        "Expected error for non-existent contract"
+    );
     assert!(response.data.is_empty());
 }
 
