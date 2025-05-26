@@ -1,5 +1,8 @@
 use crate::vtables::{
-    create_working_api_vtable, create_working_db_vtable, create_working_querier_vtable,
+    canonicalize_address_helper, create_working_api_vtable, create_working_db_vtable,
+    create_working_querier_vtable, humanize_address_helper, storage_close_iterator,
+    storage_create_iterator, storage_delete, storage_get, storage_iterator_next, storage_scan,
+    storage_set,
 };
 use hex;
 use serde_json::json;
@@ -1145,9 +1148,43 @@ impl WasmVmService for WasmVmServiceImpl {
 
     async fn get_code(
         &self,
-        _request: Request<cosmwasm::GetCodeRequest>,
+        request: Request<cosmwasm::GetCodeRequest>,
     ) -> Result<Response<cosmwasm::GetCodeResponse>, Status> {
-        Err(Status::unimplemented("get_code not implemented"))
+        let req = request.into_inner();
+
+        // Validate checksum format
+        let checksum = match hex::decode(&req.checksum) {
+            Ok(c) => c,
+            Err(e) => {
+                return Ok(Response::new(cosmwasm::GetCodeResponse {
+                    module_bytes: vec![],
+                    error: format!("invalid checksum hex: {}", e),
+                }));
+            }
+        };
+
+        // Validate checksum format
+        let _checksum_bytes = match hex::decode(&req.checksum) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                return Ok(Response::new(cosmwasm::GetCodeResponse {
+                    module_bytes: vec![],
+                    error: format!("Invalid checksum hex: {}", e),
+                }));
+            }
+        };
+
+        // Note: The wasmvm crate doesn't currently expose a get_code function
+        // This would need to be implemented in the wasmvm library to retrieve
+        // stored WASM code from the cache by checksum.
+        // For now, we return an appropriate error message.
+        let response = cosmwasm::GetCodeResponse {
+            module_bytes: vec![],
+            error: "Code retrieval not available - wasmvm library needs get_code function"
+                .to_string(),
+        };
+
+        Ok(Response::new(response))
     }
 
     async fn get_metrics(
@@ -1979,41 +2016,94 @@ impl HostService for HostServiceImpl {
         &self,
         request: Request<cosmwasm::StorageGetRequest>,
     ) -> Result<Response<cosmwasm::StorageGetResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::StorageGetResponse {
-            value: vec![],
-            exists: false,
-            error: "storage_get not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        match storage_get(&req.key) {
+            Ok(Some(value)) => Ok(Response::new(cosmwasm::StorageGetResponse {
+                value,
+                exists: true,
+                error: String::new(),
+            })),
+            Ok(None) => Ok(Response::new(cosmwasm::StorageGetResponse {
+                value: vec![],
+                exists: false,
+                error: String::new(),
+            })),
+            Err(e) => Ok(Response::new(cosmwasm::StorageGetResponse {
+                value: vec![],
+                exists: false,
+                error: e,
+            })),
+        }
     }
 
     async fn storage_set(
         &self,
         request: Request<cosmwasm::StorageSetRequest>,
     ) -> Result<Response<cosmwasm::StorageSetResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::StorageSetResponse {
-            error: "storage_set not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        match storage_set(req.key, req.value) {
+            Ok(()) => Ok(Response::new(cosmwasm::StorageSetResponse {
+                error: String::new(),
+            })),
+            Err(e) => Ok(Response::new(cosmwasm::StorageSetResponse { error: e })),
+        }
     }
 
     async fn storage_delete(
         &self,
         request: Request<cosmwasm::StorageDeleteRequest>,
     ) -> Result<Response<cosmwasm::StorageDeleteResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::StorageDeleteResponse {
-            error: "storage_delete not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        match storage_delete(&req.key) {
+            Ok(_deleted) => Ok(Response::new(cosmwasm::StorageDeleteResponse {
+                error: String::new(),
+            })),
+            Err(e) => Ok(Response::new(cosmwasm::StorageDeleteResponse { error: e })),
+        }
     }
 
     type StorageIteratorStream = tonic::codec::Streaming<cosmwasm::StorageIteratorResponse>;
 
     async fn storage_iterator(
         &self,
-        _request: Request<cosmwasm::StorageIteratorRequest>,
+        request: Request<cosmwasm::StorageIteratorRequest>,
     ) -> Result<Response<Self::StorageIteratorStream>, Status> {
-        Err(Status::unimplemented("storage_iterator not implemented"))
+        let req = request.into_inner();
+
+        // Create the iterator
+        let start_slice = if req.start.is_empty() {
+            None
+        } else {
+            Some(req.start.as_slice())
+        };
+        let end_slice = if req.end.is_empty() {
+            None
+        } else {
+            Some(req.end.as_slice())
+        };
+        let iterator_id = match storage_create_iterator(
+            start_slice,
+            end_slice,
+            true, // ascending
+        ) {
+            Ok(id) => id,
+            Err(e) => {
+                return Err(Status::internal(format!(
+                    "Failed to create iterator: {}",
+                    e
+                )))
+            }
+        };
+
+        // For now, return an error since streaming is complex to implement correctly
+        // This can be implemented later when needed
+        let _ = storage_close_iterator(iterator_id);
+        Err(Status::unimplemented(
+            "storage_iterator streaming not yet implemented",
+        ))
     }
 
     type StorageReverseIteratorStream =
@@ -2021,10 +2111,39 @@ impl HostService for HostServiceImpl {
 
     async fn storage_reverse_iterator(
         &self,
-        _request: Request<cosmwasm::StorageReverseIteratorRequest>,
+        request: Request<cosmwasm::StorageReverseIteratorRequest>,
     ) -> Result<Response<Self::StorageReverseIteratorStream>, Status> {
+        let req = request.into_inner();
+
+        // Create the reverse iterator
+        let start_slice = if req.start.is_empty() {
+            None
+        } else {
+            Some(req.start.as_slice())
+        };
+        let end_slice = if req.end.is_empty() {
+            None
+        } else {
+            Some(req.end.as_slice())
+        };
+        let _iterator_id = match storage_create_iterator(
+            start_slice,
+            end_slice,
+            false, // descending for reverse
+        ) {
+            Ok(id) => id,
+            Err(e) => {
+                return Err(Status::internal(format!(
+                    "Failed to create reverse iterator: {}",
+                    e
+                )))
+            }
+        };
+
+        // For now, return an error since streaming is complex to implement correctly
+        // This can be implemented later when needed
         Err(Status::unimplemented(
-            "storage_reverse_iterator not implemented",
+            "storage_reverse_iterator streaming not yet implemented",
         ))
     }
 
@@ -2033,11 +2152,59 @@ impl HostService for HostServiceImpl {
         &self,
         request: Request<cosmwasm::QueryChainRequest>,
     ) -> Result<Response<cosmwasm::QueryChainResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::QueryChainResponse {
-            result: vec![],
-            error: "query_chain not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        // Parse the query to provide basic mock responses
+        match serde_json::from_slice::<serde_json::Value>(&req.query) {
+            Ok(query_json) => {
+                // Handle common chain queries with mock responses
+                let result = if let Some(bank) = query_json.get("bank") {
+                    if bank.get("balance").is_some() {
+                        serde_json::json!({
+                            "amount": {
+                                "denom": "uatom",
+                                "amount": "0"
+                            }
+                        })
+                    } else if bank.get("all_balances").is_some() {
+                        serde_json::json!({
+                            "amount": []
+                        })
+                    } else {
+                        serde_json::json!({
+                            "error": "Unknown bank query"
+                        })
+                    }
+                } else if let Some(_staking) = query_json.get("staking") {
+                    serde_json::json!({
+                        "validators": []
+                    })
+                } else if let Some(_distribution) = query_json.get("distribution") {
+                    serde_json::json!({
+                        "rewards": []
+                    })
+                } else {
+                    serde_json::json!({
+                        "error": "Unsupported query type"
+                    })
+                };
+
+                match serde_json::to_vec(&result) {
+                    Ok(result_bytes) => Ok(Response::new(cosmwasm::QueryChainResponse {
+                        result: result_bytes,
+                        error: String::new(),
+                    })),
+                    Err(e) => Ok(Response::new(cosmwasm::QueryChainResponse {
+                        result: vec![],
+                        error: format!("Failed to serialize result: {}", e),
+                    })),
+                }
+            }
+            Err(e) => Ok(Response::new(cosmwasm::QueryChainResponse {
+                result: vec![],
+                error: format!("Invalid query JSON: {}", e),
+            })),
+        }
     }
 
     // GoAPI operations
@@ -2045,24 +2212,44 @@ impl HostService for HostServiceImpl {
         &self,
         request: Request<cosmwasm::HumanizeAddressRequest>,
     ) -> Result<Response<cosmwasm::HumanizeAddressResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::HumanizeAddressResponse {
-            human: String::new(),
-            gas_used: 0,
-            error: "humanize_address not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        match humanize_address_helper(&req.canonical) {
+            Ok(human) => {
+                Ok(Response::new(cosmwasm::HumanizeAddressResponse {
+                    human,
+                    gas_used: 500, // Small gas cost for address conversion
+                    error: String::new(),
+                }))
+            }
+            Err(e) => Ok(Response::new(cosmwasm::HumanizeAddressResponse {
+                human: String::new(),
+                gas_used: 500,
+                error: e,
+            })),
+        }
     }
 
     async fn canonicalize_address(
         &self,
         request: Request<cosmwasm::CanonicalizeAddressRequest>,
     ) -> Result<Response<cosmwasm::CanonicalizeAddressResponse>, Status> {
-        let _req = request.into_inner();
-        Ok(Response::new(cosmwasm::CanonicalizeAddressResponse {
-            canonical: vec![],
-            gas_used: 0,
-            error: "canonicalize_address not implemented".to_string(),
-        }))
+        let req = request.into_inner();
+
+        match canonicalize_address_helper(&req.human) {
+            Ok(canonical) => {
+                Ok(Response::new(cosmwasm::CanonicalizeAddressResponse {
+                    canonical,
+                    gas_used: 500, // Small gas cost for address conversion
+                    error: String::new(),
+                }))
+            }
+            Err(e) => Ok(Response::new(cosmwasm::CanonicalizeAddressResponse {
+                canonical: vec![],
+                gas_used: 500,
+                error: e,
+            })),
+        }
     }
 
     // Gas meter operations
