@@ -2,13 +2,19 @@ syntax = "proto3";
 
 package cosmwasm;
 
-option go_package = "github.com/CosmWasm/wasmvm/v3/proto";
+option go_package = "github.com/CosmWasm/wasmd/proto";
 
 // Context message for blockchain-related information
 message Context {
   uint64 block_height = 1;
   string sender = 2;
   string chain_id = 3;
+}
+
+// ExtendedContext includes callback service information for storage support
+message ExtendedContext {
+  Context context = 1;
+  string callback_service = 2; // Address of the HostService for callbacks
 }
 
 // WasmVMService: RPC interface for wasmvm
@@ -18,7 +24,8 @@ service WasmVMService {
   rpc RemoveModule(RemoveModuleRequest) returns (RemoveModuleResponse);
   rpc PinModule(PinModuleRequest) returns (PinModuleResponse);
   rpc UnpinModule(UnpinModuleRequest) returns (UnpinModuleResponse);
-  rpc GetCode(GetCodeRequest) returns (GetCodeResponse); // Retrieve raw WASM bytes
+  rpc GetCode(GetCodeRequest)
+      returns (GetCodeResponse); // Retrieve raw WASM bytes
 
   // Contract execution calls
   rpc Instantiate(InstantiateRequest) returns (InstantiateResponse);
@@ -28,12 +35,20 @@ service WasmVMService {
   rpc Sudo(SudoRequest) returns (SudoResponse);
   rpc Reply(ReplyRequest) returns (ReplyResponse);
 
+  // Storage-aware contract execution calls (enhanced versions)
+  rpc InstantiateWithStorage(ExtendedInstantiateRequest)
+      returns (InstantiateResponse);
+  rpc ExecuteWithStorage(ExtendedExecuteRequest) returns (ExecuteResponse);
+  rpc QueryWithStorage(ExtendedQueryRequest) returns (QueryResponse);
+  rpc MigrateWithStorage(ExtendedMigrateRequest) returns (MigrateResponse);
+
   // Code analysis
   rpc AnalyzeCode(AnalyzeCodeRequest) returns (AnalyzeCodeResponse);
 
   // Metrics
   rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
-  rpc GetPinnedMetrics(GetPinnedMetricsRequest) returns (GetPinnedMetricsResponse);
+  rpc GetPinnedMetrics(GetPinnedMetricsRequest)
+      returns (GetPinnedMetricsResponse);
 
   // IBC Entry Points
   // All IBC calls typically share a similar request/response structure
@@ -53,11 +68,39 @@ service WasmVMService {
   rpc Ibc2PacketSend(IbcMsgRequest) returns (IbcMsgResponse);
 }
 
+// HostService: Enhanced RPC interface for host function callbacks
+// This service is called by the VM to interact with storage, query chain state,
+// and use other host-provided functionality
+service HostService {
+  // Legacy generic host function call
+  rpc CallHostFunction(CallHostFunctionRequest)
+      returns (CallHostFunctionResponse);
+
+  // Storage operations
+  rpc StorageGet(StorageGetRequest) returns (StorageGetResponse);
+  rpc StorageSet(StorageSetRequest) returns (StorageSetResponse);
+  rpc StorageDelete(StorageDeleteRequest) returns (StorageDeleteResponse);
+  rpc StorageIterator(StorageIteratorRequest)
+      returns (stream StorageIteratorResponse);
+  rpc StorageReverseIterator(StorageReverseIteratorRequest)
+      returns (stream StorageReverseIteratorResponse);
+
+  // Query operations
+  rpc QueryChain(QueryChainRequest) returns (QueryChainResponse);
+
+  // GoAPI operations
+  rpc HumanizeAddress(HumanizeAddressRequest) returns (HumanizeAddressResponse);
+  rpc CanonicalizeAddress(CanonicalizeAddressRequest)
+      returns (CanonicalizeAddressResponse);
+
+  // Gas meter operations
+  rpc ConsumeGas(ConsumeGasRequest) returns (ConsumeGasResponse);
+  rpc GetGasRemaining(GetGasRemainingRequest) returns (GetGasRemainingResponse);
+}
+
 // --- Common Message Types ---
 
-message LoadModuleRequest {
-  bytes module_bytes = 1;
-}
+message LoadModuleRequest { bytes module_bytes = 1; }
 
 message LoadModuleResponse {
   string checksum = 1; // SHA256 checksum of the module (hex encoded)
@@ -72,9 +115,18 @@ message InstantiateRequest {
   string request_id = 5;
 }
 
+message ExtendedInstantiateRequest {
+  string checksum = 1;
+  ExtendedContext context = 2;
+  bytes init_msg = 3;
+  uint64 gas_limit = 4;
+  string request_id = 5;
+}
+
 message InstantiateResponse {
-  string contract_id = 1; // Identifier for the instantiated contract, typically derived from request_id or a unique hash
-  bytes data = 2; // Binary response data from the contract
+  string contract_id = 1; // Identifier for the instantiated contract, typically
+                          // derived from request_id or a unique hash
+  bytes data = 2;         // Binary response data from the contract
   uint64 gas_used = 3;
   string error = 4;
 }
@@ -82,6 +134,14 @@ message InstantiateResponse {
 message ExecuteRequest {
   string contract_id = 1; // Hex encoded checksum of the WASM module
   Context context = 2;
+  bytes msg = 3;
+  uint64 gas_limit = 4;
+  string request_id = 5;
+}
+
+message ExtendedExecuteRequest {
+  string contract_id = 1;
+  ExtendedContext context = 2;
   bytes msg = 3;
   uint64 gas_limit = 4;
   string request_id = 5;
@@ -100,15 +160,32 @@ message QueryRequest {
   string request_id = 4;
 }
 
+message ExtendedQueryRequest {
+  string contract_id = 1;
+  ExtendedContext context = 2;
+  bytes query_msg = 3;
+  string request_id = 4;
+}
+
 message QueryResponse {
   bytes result = 1; // Binary query response data
   string error = 2;
 }
- 
+
 message MigrateRequest {
   string contract_id = 1; // Hex encoded checksum of the existing contract
-  string checksum = 2; // Hex encoded checksum of the new WASM module for migration
+  string checksum =
+      2; // Hex encoded checksum of the new WASM module for migration
   Context context = 3;
+  bytes migrate_msg = 4;
+  uint64 gas_limit = 5;
+  string request_id = 6;
+}
+
+message ExtendedMigrateRequest {
+  string contract_id = 1;
+  string checksum = 2;
+  ExtendedContext context = 3;
   bytes migrate_msg = 4;
   uint64 gas_limit = 5;
   string request_id = 6;
@@ -153,15 +230,13 @@ message AnalyzeCodeRequest {
 }
 
 message AnalyzeCodeResponse {
-  repeated string required_capabilities = 1; // Comma-separated list of required capabilities
+  repeated string required_capabilities =
+      1; // Comma-separated list of required capabilities
   bool has_ibc_entry_points = 2; // True if IBC entry points are detected
   string error = 3;
 }
 
-// HostService: RPC interface for host function callbacks (used by the VM to call back into the host)
-service HostService {
-  rpc CallHostFunction(CallHostFunctionRequest) returns (CallHostFunctionResponse);
-}
+// --- Host Service Message Types ---
 
 message CallHostFunctionRequest {
   string function_name = 1;
@@ -175,7 +250,111 @@ message CallHostFunctionResponse {
   string error = 2;
 }
 
-// --- New Message Types for Extended Functionality ---
+// Storage messages
+message StorageGetRequest {
+  string request_id = 1;
+  bytes key = 2;
+}
+
+message StorageGetResponse {
+  bytes value = 1;
+  bool exists = 2;
+  string error = 3;
+}
+
+message StorageSetRequest {
+  string request_id = 1;
+  bytes key = 2;
+  bytes value = 3;
+}
+
+message StorageSetResponse { string error = 1; }
+
+message StorageDeleteRequest {
+  string request_id = 1;
+  bytes key = 2;
+}
+
+message StorageDeleteResponse { string error = 1; }
+
+message StorageIteratorRequest {
+  string request_id = 1;
+  bytes start = 2;
+  bytes end = 3;
+}
+
+message StorageIteratorResponse {
+  bytes key = 1;
+  bytes value = 2;
+  bool done = 3;
+  string error = 4;
+}
+
+message StorageReverseIteratorRequest {
+  string request_id = 1;
+  bytes start = 2;
+  bytes end = 3;
+}
+
+message StorageReverseIteratorResponse {
+  bytes key = 1;
+  bytes value = 2;
+  bool done = 3;
+  string error = 4;
+}
+
+// Query messages
+message QueryChainRequest {
+  string request_id = 1;
+  bytes query = 2; // Serialized QueryRequest
+  uint64 gas_limit = 3;
+}
+
+message QueryChainResponse {
+  bytes result = 1;
+  string error = 2;
+}
+
+// GoAPI messages
+message HumanizeAddressRequest {
+  string request_id = 1;
+  bytes canonical = 2;
+}
+
+message HumanizeAddressResponse {
+  string human = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+message CanonicalizeAddressRequest {
+  string request_id = 1;
+  string human = 2;
+}
+
+message CanonicalizeAddressResponse {
+  bytes canonical = 1;
+  uint64 gas_used = 2;
+  string error = 3;
+}
+
+// Gas meter messages
+message ConsumeGasRequest {
+  string request_id = 1;
+  uint64 amount = 2;
+  string descriptor = 3;
+}
+
+message ConsumeGasResponse { string error = 1; }
+
+message GetGasRemainingRequest { string request_id = 1; }
+
+message GetGasRemainingResponse {
+  uint64 gas_remaining = 1;
+  string error = 2;
+}
+
+// --- Extended Functionality Message Types ---
 
 message RemoveModuleRequest {
   string checksum = 1; // Hex encoded checksum of the WASM module to remove

@@ -6,6 +6,7 @@
 .vscode
 rpc-server/target
 rpc-server/wasm_cache
+**wasm-cache*/** 
 
 # no static libraries (35MB+)
 /internal/api/lib*.a

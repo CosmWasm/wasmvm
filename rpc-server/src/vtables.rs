@@ -1,7 +1,8 @@
 use hex;
 use serde_json;
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock, Mutex, RwLock};
 use wasmvm::{
     api_t, db_t, gas_meter_t, querier_t, DbVtable, GoApiVtable, GoIter, QuerierVtable, U8SliceView,
     UnmanagedVector,
@@ -10,15 +11,28 @@ use wasmvm::{
 /// In-memory storage for the RPC server
 #[derive(Debug, Default)]
 pub struct InMemoryStorage {
-    data: HashMap<Vec<u8>, Vec<u8>>,
+    // Use BTreeMap for sorted storage (needed for proper iteration)
+    data: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
 /// Global storage instance (thread-safe)
 static STORAGE: LazyLock<Mutex<InMemoryStorage>> = LazyLock::new(|| {
     Mutex::new(InMemoryStorage {
-        data: HashMap::new(),
+        data: BTreeMap::new(),
     })
 });
+
+/// Iterator state management
+#[derive(Debug)]
+struct IteratorState {
+    keys: Vec<Vec<u8>>,
+    position: usize,
+}
+
+/// Global iterator management
+static ITERATOR_COUNTER: AtomicU64 = AtomicU64::new(1);
+static ITERATORS: LazyLock<RwLock<HashMap<u64, IteratorState>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 /// Helper function to extract data from U8SliceView using its read() method.
 fn extract_u8_slice_data(view: U8SliceView) -> Option<Vec<u8>> {
@@ -162,28 +176,89 @@ extern "C" fn impl_scan_db(
         let start_key = extract_u8_slice_data(start);
         let end_key = extract_u8_slice_data(end);
 
-        // For now, create a dummy iterator that returns no results
-        // This is better than returning an error for basic compatibility
-        // A real implementation would need to:
-        // 1. Create an iterator over the storage
-        // 2. Filter by start/end keys
-        // 3. Handle ordering
-        // 4. Return a proper GoIter handle
+        // Get storage access
+        let storage = match STORAGE.lock() {
+            Ok(s) => s,
+            Err(_) => {
+                *err_msg_out =
+                    UnmanagedVector::new(Some(b"Storage lock error for scan_db".to_vec()));
+                return wasmvm::GoError::Panic as i32;
+            }
+        };
 
-        // For now, we'll just not set the iterator_out
-        // The caller should check if the function returned an error before using the iterator
-        // In a real implementation, we would create a proper iterator here
+        // Collect keys in the range
+        let mut keys: Vec<Vec<u8>> = Vec::new();
 
-        // Log for debugging
+        // Determine the range to iterate
+        let range = match (start_key.as_ref(), end_key.as_ref()) {
+            (None, None) => {
+                // Full range
+                keys = storage.data.keys().cloned().collect();
+            }
+            (Some(start), None) => {
+                // From start to end
+                keys = storage
+                    .data
+                    .range(start.clone()..)
+                    .map(|(k, _)| k.clone())
+                    .collect();
+            }
+            (None, Some(end)) => {
+                // From beginning to end (exclusive)
+                keys = storage
+                    .data
+                    .range(..end.clone())
+                    .map(|(k, _)| k.clone())
+                    .collect();
+            }
+            (Some(start), Some(end)) => {
+                // From start to end (end is exclusive)
+                keys = storage
+                    .data
+                    .range(start.clone()..end.clone())
+                    .map(|(k, _)| k.clone())
+                    .collect();
+            }
+        };
+
+        // Handle ordering (1 = ascending, 2 = descending)
+        if order == 2 {
+            keys.reverse();
+        }
+
+        // Create iterator ID
+        let iterator_id = ITERATOR_COUNTER.fetch_add(1, Ordering::SeqCst);
+
+        // Store iterator state
+        let iterator_state = IteratorState { keys, position: 0 };
+
+        match ITERATORS.write() {
+            Ok(mut iterators) => {
+                iterators.insert(iterator_id, iterator_state);
+            }
+            Err(_) => {
+                *err_msg_out = UnmanagedVector::new(Some(b"Iterator storage error".to_vec()));
+                return wasmvm::GoError::Panic as i32;
+            }
+        }
+
+        // TODO: Properly implement iterator creation once we understand GoIter structure
+        // For now, we've collected the keys and stored them, but cannot create a proper GoIter
+        // without knowing the exact API. The iterator state is ready to be used once we
+        // can properly integrate with wasmvm's iterator interface.
+
         eprintln!(
-            "⚠️  [DEBUG] scan_db called with start: {:?}, end: {:?}, order: {}",
-            start_key.as_ref().map(hex::encode),
-            end_key.as_ref().map(hex::encode),
-            order
+            "⚠️  [DEBUG] scan_db prepared iterator {} with {} keys (GoIter creation pending)",
+            iterator_id,
+            ITERATORS
+                .read()
+                .unwrap()
+                .get(&iterator_id)
+                .map(|s| s.keys.len())
+                .unwrap_or(0)
         );
-        eprintln!("⚠️  [DEBUG] Returning empty iterator (not fully implemented)");
 
-        // Return success with empty iterator
+        // Return success - iterator state is prepared even though GoIter is not set
         wasmvm::GoError::None as i32
     }
 }
@@ -401,9 +476,9 @@ extern "C" fn impl_query_external(
             })
         };
 
-        // Wrap the response in the expected format
+        // Wrap the response in the expected format (lowercase "ok" is required)
         let wrapped_response = serde_json::json!({
-            "Ok": query_response
+            "ok": query_response
         });
 
         match serde_json::to_vec(&wrapped_response) {

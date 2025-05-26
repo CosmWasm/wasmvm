@@ -206,7 +206,7 @@ impl WasmVmServiceImpl {
             },
             "cache": {
                 "base_dir": cache_dir,
-                "available_capabilities": ["staking", "iterator", "stargate", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0"],
+                "available_capabilities": ["staking", "iterator", "stargate", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "ibc2"],
                 "memory_cache_size_bytes": 536870912u64,
                 "instance_memory_limit_bytes": 104857600u64
             }
@@ -246,7 +246,7 @@ impl WasmVmServiceImpl {
             },
             "cache": {
                 "base_dir": cache_dir,
-                "available_capabilities": ["staking", "iterator", "stargate", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0"],
+                "available_capabilities": ["staking", "iterator", "stargate", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0", "ibc2"],
                 "memory_cache_size_bytes": 536870912u64,
                 "instance_memory_limit_bytes": 104857600u64
             }
@@ -684,11 +684,13 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.context.as_ref()
+                    .and_then(|c| if c.sender.is_empty() { None } else { Some(c.sender.as_str()) })
+                    .unwrap_or("cosmos1contractaddress")
             }
         });
         let env_bytes = serde_json::to_vec(&env).unwrap();
@@ -777,11 +779,11 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.contract_id.as_str()
             }
         });
         let env_bytes = serde_json::to_vec(&env).unwrap();
@@ -873,11 +875,11 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.contract_id.as_str()
             }
         });
         let env_bytes = serde_json::to_vec(&env).unwrap();
@@ -1169,7 +1171,7 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
@@ -1265,7 +1267,7 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
@@ -1361,7 +1363,7 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
@@ -1457,7 +1459,7 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
@@ -1810,6 +1812,72 @@ impl WasmVmService for WasmVmServiceImpl {
         )
         .await
     }
+
+    // New storage-aware methods
+    async fn instantiate_with_storage(
+        &self,
+        request: Request<cosmwasm::ExtendedInstantiateRequest>,
+    ) -> Result<Response<InstantiateResponse>, Status> {
+        // For now, we'll implement this as a pass-through to regular instantiate
+        // In a full implementation, we would handle the callback_service for storage operations
+        let req = request.into_inner();
+        let basic_request = Request::new(InstantiateRequest {
+            checksum: req.checksum,
+            context: req.context.and_then(|ext| ext.context),
+            init_msg: req.init_msg,
+            gas_limit: req.gas_limit,
+            request_id: req.request_id,
+        });
+        self.instantiate(basic_request).await
+    }
+
+    async fn execute_with_storage(
+        &self,
+        request: Request<cosmwasm::ExtendedExecuteRequest>,
+    ) -> Result<Response<ExecuteResponse>, Status> {
+        // Pass-through to regular execute for now
+        let req = request.into_inner();
+        let basic_request = Request::new(ExecuteRequest {
+            contract_id: req.contract_id,
+            context: req.context.and_then(|ext| ext.context),
+            msg: req.msg,
+            gas_limit: req.gas_limit,
+            request_id: req.request_id,
+        });
+        self.execute(basic_request).await
+    }
+
+    async fn query_with_storage(
+        &self,
+        request: Request<cosmwasm::ExtendedQueryRequest>,
+    ) -> Result<Response<QueryResponse>, Status> {
+        // Pass-through to regular query for now
+        let req = request.into_inner();
+        let basic_request = Request::new(QueryRequest {
+            contract_id: req.contract_id,
+            context: req.context.and_then(|ext| ext.context),
+            query_msg: req.query_msg,
+            request_id: req.request_id,
+        });
+        self.query(basic_request).await
+    }
+
+    async fn migrate_with_storage(
+        &self,
+        request: Request<cosmwasm::ExtendedMigrateRequest>,
+    ) -> Result<Response<MigrateResponse>, Status> {
+        // Pass-through to regular migrate for now
+        let req = request.into_inner();
+        let basic_request = Request::new(MigrateRequest {
+            contract_id: req.contract_id,
+            checksum: req.checksum,
+            context: req.context.and_then(|ext| ext.context),
+            migrate_msg: req.migrate_msg,
+            gas_limit: req.gas_limit,
+            request_id: req.request_id,
+        });
+        self.migrate(basic_request).await
+    }
 }
 
 #[derive(Debug, Default)]
@@ -1836,6 +1904,119 @@ impl HostService for HostServiceImpl {
             "call_host_function '{}' not implemented",
             req.function_name
         )))
+    }
+
+    // Storage operations
+    async fn storage_get(
+        &self,
+        request: Request<cosmwasm::StorageGetRequest>,
+    ) -> Result<Response<cosmwasm::StorageGetResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::StorageGetResponse {
+            value: vec![],
+            exists: false,
+            error: "storage_get not implemented".to_string(),
+        }))
+    }
+
+    async fn storage_set(
+        &self,
+        request: Request<cosmwasm::StorageSetRequest>,
+    ) -> Result<Response<cosmwasm::StorageSetResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::StorageSetResponse {
+            error: "storage_set not implemented".to_string(),
+        }))
+    }
+
+    async fn storage_delete(
+        &self,
+        request: Request<cosmwasm::StorageDeleteRequest>,
+    ) -> Result<Response<cosmwasm::StorageDeleteResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::StorageDeleteResponse {
+            error: "storage_delete not implemented".to_string(),
+        }))
+    }
+
+    type StorageIteratorStream = tonic::codec::Streaming<cosmwasm::StorageIteratorResponse>;
+
+    async fn storage_iterator(
+        &self,
+        _request: Request<cosmwasm::StorageIteratorRequest>,
+    ) -> Result<Response<Self::StorageIteratorStream>, Status> {
+        Err(Status::unimplemented("storage_iterator not implemented"))
+    }
+
+    type StorageReverseIteratorStream =
+        tonic::codec::Streaming<cosmwasm::StorageReverseIteratorResponse>;
+
+    async fn storage_reverse_iterator(
+        &self,
+        _request: Request<cosmwasm::StorageReverseIteratorRequest>,
+    ) -> Result<Response<Self::StorageReverseIteratorStream>, Status> {
+        Err(Status::unimplemented(
+            "storage_reverse_iterator not implemented",
+        ))
+    }
+
+    // Query operations
+    async fn query_chain(
+        &self,
+        request: Request<cosmwasm::QueryChainRequest>,
+    ) -> Result<Response<cosmwasm::QueryChainResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::QueryChainResponse {
+            result: vec![],
+            error: "query_chain not implemented".to_string(),
+        }))
+    }
+
+    // GoAPI operations
+    async fn humanize_address(
+        &self,
+        request: Request<cosmwasm::HumanizeAddressRequest>,
+    ) -> Result<Response<cosmwasm::HumanizeAddressResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::HumanizeAddressResponse {
+            human: String::new(),
+            gas_used: 0,
+            error: "humanize_address not implemented".to_string(),
+        }))
+    }
+
+    async fn canonicalize_address(
+        &self,
+        request: Request<cosmwasm::CanonicalizeAddressRequest>,
+    ) -> Result<Response<cosmwasm::CanonicalizeAddressResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::CanonicalizeAddressResponse {
+            canonical: vec![],
+            gas_used: 0,
+            error: "canonicalize_address not implemented".to_string(),
+        }))
+    }
+
+    // Gas meter operations
+    async fn consume_gas(
+        &self,
+        request: Request<cosmwasm::ConsumeGasRequest>,
+    ) -> Result<Response<cosmwasm::ConsumeGasResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::ConsumeGasResponse {
+            error: String::new(), // No error for gas consumption stub
+        }))
+    }
+
+    async fn get_gas_remaining(
+        &self,
+        request: Request<cosmwasm::GetGasRemainingRequest>,
+    ) -> Result<Response<cosmwasm::GetGasRemainingResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(cosmwasm::GetGasRemainingResponse {
+            gas_remaining: 1000000, // Return a dummy value
+            error: String::new(),
+        }))
     }
 }
 
