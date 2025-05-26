@@ -166,6 +166,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 
 	res := types.AnalysisReport{
 		HasIBCEntryPoints:      bool(report.has_ibc_entry_points),
+		HasIBC2EntryPoints:     bool(report.has_ibc2_entry_points),
 		RequiredCapabilities:   requiredCapabilities,
 		Entrypoints:            entrypoints_array,
 		ContractMigrateVersion: optionalU64ToPtr(report.contract_migrate_version),

@@ -227,6 +227,23 @@ export WASMVM_GRPC_ADDR="127.0.0.1:50052"
 cargo run --release
 ```
 
+### Persistent Cache
+
+The RPC server uses a persistent cache directory (`~/.wasmvm/cache` by default) that is shared across all instances. This design allows multiple chain daemons to benefit from the same compiled WASM modules:
+
+- **Shared Cache**: Multiple chain daemons can use the same VM instance and benefit from cached compiled modules
+- **Persistence**: Compiled WASM modules survive server restarts
+- **Reduced Memory**: Only one copy of each compiled module in memory
+- **Faster Loading**: Pre-compiled modules load instantly
+
+Configure the cache location with the `WASMVM_CACHE_DIR` environment variable:
+
+```bash
+export WASMVM_CACHE_DIR=/path/to/custom/cache
+```
+
+See [rpc-server/CACHE_CONFIG.md](rpc-server/CACHE_CONFIG.md) for detailed configuration options.
+
 ## Development
 
 There are two halves to this code - go and rust. The first step is to ensure that

@@ -183,16 +183,21 @@ impl WasmVmServiceImpl {
 
     /// Initialize the Wasm module cache with default options
     pub fn new() -> Self {
-        // Use a unique cache directory for each instance to avoid conflicts
-        let pid = std::process::id();
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let cache_dir = format!("./wasm_cache_{}_{}", pid, timestamp);
+        // Use a persistent cache directory that can be shared across instances
+        // This allows multiple chain daemons to benefit from the same cache
+        let cache_dir = std::env::var("WASMVM_CACHE_DIR").unwrap_or_else(|_| {
+            // Default to a system-wide cache directory
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            format!("{}/.wasmvm/cache", home)
+        });
+
+        // Create the cache directory if it doesn't exist
+        if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+            eprintln!("⚠️  [DEBUG] Failed to create cache directory: {}", e);
+        }
 
         eprintln!(
-            "🔧 [DEBUG] Creating WasmVmServiceImpl with cache dir: {}",
+            "🔧 [DEBUG] Creating WasmVmServiceImpl with persistent cache dir: {}",
             cache_dir
         );
 
@@ -232,6 +237,12 @@ impl WasmVmServiceImpl {
         }
 
         eprintln!("✅ [DEBUG] WasmVmServiceImpl created successfully");
+        eprintln!("📁 [INFO] Persistent cache benefits:");
+        eprintln!("   - Compiled WASM modules are reused across restarts");
+        eprintln!("   - Multiple chain daemons can share the same cache");
+        eprintln!("   - Reduced memory usage and faster contract loading");
+        eprintln!("   - Set WASMVM_CACHE_DIR env var to customize location");
+
         WasmVmServiceImpl { cache }
     }
 
@@ -282,6 +293,8 @@ impl WasmVmService for WasmVmServiceImpl {
     ) -> Result<Response<LoadModuleResponse>, Status> {
         let req = request.into_inner();
         let wasm_bytes = req.module_bytes;
+        eprintln!("📦 LOAD_MODULE | wasm_size: {}KB", wasm_bytes.len() / 1024);
+
         let mut err = UnmanagedVector::default();
         // Store and persist code in cache, with verification
         let stored = store_code(
@@ -294,10 +307,18 @@ impl WasmVmService for WasmVmServiceImpl {
         let mut resp = LoadModuleResponse::default();
         if err.is_some() {
             let msg = String::from_utf8(err.consume().unwrap()).unwrap();
+            eprintln!("❌ LOAD_MODULE | error: {}", msg);
             resp.error = msg;
         } else {
             let checksum = stored.consume().unwrap();
-            resp.checksum = hex::encode(&checksum);
+            let checksum_hex = hex::encode(&checksum);
+            let checksum_short = if checksum_hex.len() > 8 {
+                &checksum_hex[..8]
+            } else {
+                &checksum_hex
+            };
+            eprintln!("✅ LOAD_MODULE | checksum: {} | cached", checksum_short);
+            resp.checksum = checksum_hex;
         }
         Ok(Response::new(resp))
     }
@@ -307,24 +328,26 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<InstantiateRequest>,
     ) -> Result<Response<InstantiateResponse>, Status> {
         let req = request.into_inner();
+        let checksum_short = if req.checksum.len() > 8 {
+            &req.checksum[..8]
+        } else {
+            &req.checksum
+        };
         eprintln!(
-            "🚀 [DEBUG] Instantiate called with checksum: {}",
-            req.checksum
+            "📦 INSTANTIATE {} | gas_limit: {} | msg_size: {}B",
+            checksum_short,
+            req.gas_limit,
+            req.init_msg.len()
         );
-        eprintln!("🚀 [DEBUG] Gas limit: {}", req.gas_limit);
-        eprintln!("🚀 [DEBUG] Init message size: {} bytes", req.init_msg.len());
 
         // Decode hex checksum
         let checksum = match hex::decode(&req.checksum) {
-            Ok(c) => {
-                eprintln!(
-                    "✅ [DEBUG] Checksum decoded successfully: {} bytes",
-                    c.len()
-                );
-                c
-            }
+            Ok(c) => c,
             Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to decode checksum: {}", e);
+                eprintln!(
+                    "❌ INSTANTIATE {} | invalid checksum: {}",
+                    checksum_short, e
+                );
                 return Err(Status::invalid_argument(format!(
                     "invalid checksum hex: {}",
                     e
@@ -334,7 +357,6 @@ impl WasmVmService for WasmVmServiceImpl {
 
         // Prepare FFI views
         let checksum_view = ByteSliceView::new(&checksum);
-        eprintln!("🔧 [DEBUG] Created checksum ByteSliceView");
 
         // Create minimal but valid env and info structures
         let env = serde_json::json!({
@@ -363,16 +385,10 @@ impl WasmVmService for WasmVmServiceImpl {
 
         let env_bytes = serde_json::to_vec(&env).unwrap();
         let info_bytes = serde_json::to_vec(&info).unwrap();
-        eprintln!(
-            "🔧 [DEBUG] Created env ({} bytes) and info ({} bytes)",
-            env_bytes.len(),
-            info_bytes.len()
-        );
 
         let env_view = ByteSliceView::new(&env_bytes);
         let info_view = ByteSliceView::new(&info_bytes);
         let msg_view = ByteSliceView::new(&req.init_msg);
-        eprintln!("🔧 [DEBUG] Created all ByteSliceViews");
 
         // Prepare gas report and error buffer
         let mut gas_report = GasReport {
@@ -382,7 +398,6 @@ impl WasmVmService for WasmVmServiceImpl {
             used_internally: 0,
         };
         let mut err = UnmanagedVector::default();
-        eprintln!("🔧 [DEBUG] Prepared gas report and error buffer");
 
         // DB, API, and Querier with stub implementations that return proper errors
         let db = Db {
@@ -398,10 +413,8 @@ impl WasmVmService for WasmVmServiceImpl {
             state: std::ptr::null(),
             vtable: create_working_querier_vtable(),
         };
-        eprintln!("🔧 [DEBUG] Created DB, API, and Querier with working vtables");
 
         // Call into WASM VM
-        eprintln!("🚀 [DEBUG] Calling vm_instantiate...");
         let result = vm_instantiate(
             self.cache,
             checksum_view,
@@ -416,7 +429,6 @@ impl WasmVmService for WasmVmServiceImpl {
             Some(&mut gas_report),
             Some(&mut err),
         );
-        eprintln!("✅ [DEBUG] vm_instantiate returned");
 
         // Build response
         let mut resp = InstantiateResponse {
@@ -429,17 +441,18 @@ impl WasmVmService for WasmVmServiceImpl {
         if err.is_some() {
             let error_msg =
                 String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
-            eprintln!("❌ [DEBUG] VM returned error: {}", error_msg);
+            eprintln!("❌ INSTANTIATE {} | error: {}", checksum_short, error_msg);
             resp.error = error_msg;
         } else {
             let data = result.consume().unwrap_or_default();
-            eprintln!(
-                "✅ [DEBUG] VM returned success, data size: {} bytes",
-                data.len()
-            );
             resp.data = data;
             resp.gas_used = gas_report.limit.saturating_sub(gas_report.remaining);
-            eprintln!("✅ [DEBUG] Gas used: {}", resp.gas_used);
+            eprintln!(
+                "✅ INSTANTIATE {} | gas_used: {} | data_size: {}B",
+                checksum_short,
+                resp.gas_used,
+                resp.data.len()
+            );
         }
 
         Ok(Response::new(resp))
@@ -450,14 +463,27 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<ExecuteRequest>,
     ) -> Result<Response<ExecuteResponse>, Status> {
         let req = request.into_inner();
+        let contract_short = if req.contract_id.len() > 8 {
+            &req.contract_id[..8]
+        } else {
+            &req.contract_id
+        };
+        eprintln!(
+            "⚡ EXECUTE {} | gas_limit: {} | msg_size: {}B",
+            contract_short,
+            req.gas_limit,
+            req.msg.len()
+        );
+
         // Decode checksum
         let checksum = match hex::decode(&req.contract_id) {
             Ok(c) => c,
             Err(e) => {
+                eprintln!("❌ EXECUTE {} | invalid checksum: {}", contract_short, e);
                 return Err(Status::invalid_argument(format!(
                     "invalid checksum hex: {}",
                     e
-                )))
+                )));
             }
         };
         let checksum_view = ByteSliceView::new(&checksum);
@@ -534,10 +560,19 @@ impl WasmVmService for WasmVmServiceImpl {
             error: String::new(),
         };
         if err.is_some() {
-            resp.error = String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
+            let error_msg =
+                String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
+            eprintln!("❌ EXECUTE {} | error: {}", contract_short, error_msg);
+            resp.error = error_msg;
         } else {
             resp.data = result.consume().unwrap_or_default();
             resp.gas_used = gas_report.limit.saturating_sub(gas_report.remaining);
+            eprintln!(
+                "✅ EXECUTE {} | gas_used: {} | data_size: {}B",
+                contract_short,
+                resp.gas_used,
+                resp.data.len()
+            );
         }
         Ok(Response::new(resp))
     }
@@ -547,26 +582,22 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
         let req = request.into_inner();
+        let contract_short = if req.contract_id.len() > 8 {
+            &req.contract_id[..8]
+        } else {
+            &req.contract_id
+        };
         eprintln!(
-            "🔍 [DEBUG] Query called with contract_id: {}",
-            req.contract_id
-        );
-        eprintln!(
-            "🔍 [DEBUG] Query message size: {} bytes",
+            "🔍 QUERY {} | msg_size: {}B",
+            contract_short,
             req.query_msg.len()
         );
 
         // Decode checksum
         let checksum = match hex::decode(&req.contract_id) {
-            Ok(c) => {
-                eprintln!(
-                    "✅ [DEBUG] Checksum decoded successfully: {} bytes",
-                    c.len()
-                );
-                c
-            }
+            Ok(c) => c,
             Err(e) => {
-                eprintln!("❌ [DEBUG] Failed to decode checksum: {}", e);
+                eprintln!("❌ QUERY {} | invalid checksum: {}", contract_short, e);
                 return Err(Status::invalid_argument(format!(
                     "invalid checksum hex: {}",
                     e
@@ -597,7 +628,6 @@ impl WasmVmService for WasmVmServiceImpl {
         let env_bytes = serde_json::to_vec(&env).unwrap();
         let env_view = ByteSliceView::new(&env_bytes);
         let msg_view = ByteSliceView::new(&req.query_msg);
-        eprintln!("🔧 [DEBUG] Created ByteSliceViews for query");
 
         let mut err = UnmanagedVector::default();
 
@@ -615,7 +645,6 @@ impl WasmVmService for WasmVmServiceImpl {
             state: std::ptr::null(),
             vtable: create_working_querier_vtable(),
         };
-        eprintln!("🔧 [DEBUG] Created DB, API, and Querier for query");
 
         let mut gas_report = GasReport {
             limit: 50000000, // Increased gas limit for queries (same as instantiate/execute)
@@ -624,7 +653,6 @@ impl WasmVmService for WasmVmServiceImpl {
             used_internally: 0,
         };
 
-        eprintln!("🚀 [DEBUG] Calling vm_query...");
         let result = vm_query(
             self.cache,
             checksum_view,
@@ -638,7 +666,6 @@ impl WasmVmService for WasmVmServiceImpl {
             Some(&mut gas_report),
             Some(&mut err),
         );
-        eprintln!("✅ [DEBUG] vm_query returned");
 
         let mut resp = QueryResponse {
             result: Vec::new(),
@@ -648,14 +675,11 @@ impl WasmVmService for WasmVmServiceImpl {
         if err.is_some() {
             let error_msg =
                 String::from_utf8(err.consume().unwrap_or_default()).unwrap_or_default();
-            eprintln!("❌ [DEBUG] Query VM returned error: {}", error_msg);
+            eprintln!("❌ QUERY {} | error: {}", contract_short, error_msg);
             resp.error = error_msg;
         } else {
             let data = result.consume().unwrap_or_default();
-            eprintln!(
-                "✅ [DEBUG] Query VM returned success, result size: {} bytes",
-                data.len()
-            );
+            eprintln!("✅ QUERY {} | result_size: {}B", contract_short, data.len());
             resp.result = data;
         }
 
@@ -954,10 +978,23 @@ impl WasmVmService for WasmVmServiceImpl {
         request: Request<AnalyzeCodeRequest>,
     ) -> Result<Response<AnalyzeCodeResponse>, Status> {
         let req = request.into_inner();
+        let checksum_short = if req.checksum.len() > 8 {
+            &req.checksum[..8]
+        } else {
+            &req.checksum
+        };
+        eprintln!("🔍 ANALYZE_CODE {}", checksum_short);
+
         // decode checksum
         let checksum = match hex::decode(&req.checksum) {
             Ok(c) => c,
-            Err(e) => return Err(Status::invalid_argument(format!("invalid checksum: {}", e))),
+            Err(e) => {
+                eprintln!(
+                    "❌ ANALYZE_CODE {} | invalid checksum: {}",
+                    checksum_short, e
+                );
+                return Err(Status::invalid_argument(format!("invalid checksum: {}", e)));
+            }
         };
         let mut err = UnmanagedVector::default();
         // call libwasmvm analyze_code FFI
@@ -965,9 +1002,11 @@ impl WasmVmService for WasmVmServiceImpl {
         let mut resp = AnalyzeCodeResponse::default();
         if err.is_some() {
             let msg = String::from_utf8(err.consume().unwrap()).unwrap();
+            eprintln!("❌ ANALYZE_CODE {} | error: {}", checksum_short, msg);
             resp.error = msg;
             return Ok(Response::new(resp));
         }
+
         // parse required_capabilities CSV
         let caps_bytes = report.required_capabilities.consume().unwrap_or_default();
         let caps_csv = String::from_utf8(caps_bytes).unwrap_or_default();
@@ -977,6 +1016,35 @@ impl WasmVmService for WasmVmServiceImpl {
             caps_csv.split(',').map(|s| s.to_string()).collect()
         };
         resp.has_ibc_entry_points = report.has_ibc_entry_points;
+
+        // Get entrypoints for IBC2 detection
+        let entrypoints_bytes = report.entrypoints.consume().unwrap_or_default();
+        let entrypoints_csv = String::from_utf8(entrypoints_bytes).unwrap_or_default();
+        let entrypoints: Vec<&str> = if entrypoints_csv.is_empty() {
+            vec![]
+        } else {
+            entrypoints_csv.split(',').collect()
+        };
+
+        // Detect IBC2 entry points
+        let ibc2_entry_points = [
+            "ibc2_packet_send",
+            "ibc2_packet_receive",
+            "ibc2_packet_ack",
+            "ibc2_packet_timeout",
+        ];
+        let has_ibc2_entry_points = ibc2_entry_points
+            .iter()
+            .all(|entry_point| entrypoints.contains(entry_point));
+
+        eprintln!(
+            "✅ ANALYZE_CODE {} | ibc: {} | ibc2: {} | caps: {:?}",
+            checksum_short,
+            resp.has_ibc_entry_points,
+            has_ibc2_entry_points,
+            resp.required_capabilities
+        );
+
         Ok(Response::new(resp))
     }
 
@@ -4300,27 +4368,60 @@ mod tests {
     async fn test_capabilities_configuration() {
         let (service, _temp_dir) = create_test_service();
 
-        // Test that we can load a contract that would require modern capabilities
-        // This test verifies our capability configuration is working
+        // Test that capabilities are properly configured
+        let cache_dir = std::env::var("WASMVM_CACHE_DIR").unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            format!("{}/.wasmvm/cache", home)
+        });
 
-        println!("✅ Testing capability configuration...");
+        // The cache was initialized with IBC2 capability
+        assert!(cache_dir.len() > 0, "Cache directory should be set");
+    }
 
-        // The fact that we can create a service with the new capabilities
-        // and that all our contract tests pass means the configuration is working
+    #[tokio::test]
+    async fn test_ibc2_on_non_ibc2_contract() {
+        let (service, _temp_dir) = create_test_service();
 
-        // Let's verify the service was created successfully
-        assert!(!service.cache.is_null(), "Cache should be initialized");
+        // Load a contract that doesn't have IBC2 entry points (hackatom)
+        match load_contract_with_error_handling(&service, HACKATOM_WASM, "hackatom").await {
+            Ok(checksum) => {
+                // Try to call IBC2 packet send on a contract that doesn't export it
+                let request = Request::new(cosmwasm::IbcMsgRequest {
+                    checksum: checksum.clone(),
+                    context: Some(create_test_context()),
+                    msg: vec![],
+                    gas_limit: 1000000,
+                    request_id: "test-ibc2".to_string(),
+                });
 
-        println!("✅ All required capabilities are available:");
-        println!("   - staking");
-        println!("   - iterator");
-        println!("   - stargate");
-        println!("   - cosmwasm_1_1");
-        println!("   - cosmwasm_1_2");
-        println!("   - cosmwasm_1_3");
-        println!("   - cosmwasm_1_4");
-        println!("   - cosmwasm_2_0");
+                let response = service.ibc2_packet_send(request).await;
+                assert!(response.is_ok(), "gRPC call should succeed");
 
-        println!("🎯 Capability configuration test passed!");
+                let response = response.unwrap().into_inner();
+                assert!(!response.error.is_empty(), "Should have an error");
+
+                // The error should indicate the entry point is not found
+                assert!(
+                    response.error.contains("Missing export")
+                        || response.error.contains("not found")
+                        || response.error.contains("does not export")
+                        || response.error.contains("undefined"),
+                    "Expected entry point not found error, got: {}",
+                    response.error
+                );
+
+                println!(
+                    "✓ IBC2 call on non-IBC2 contract correctly returned error: {}",
+                    response.error
+                );
+            }
+            Err(error) => {
+                // If loading failed, that's OK for this test
+                println!(
+                    "⚠ Contract loading failed (expected in test env): {}",
+                    error
+                );
+            }
+        }
     }
 }

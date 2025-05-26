@@ -209,6 +209,9 @@ pub struct AnalysisReport {
     /// `true` if and only if all required ibc exports exist as exported functions.
     /// This does not guarantee they are functional or even have the correct signatures.
     pub has_ibc_entry_points: bool,
+    /// `true` if and only if all required ibc2 exports exist as exported functions.
+    /// This does not guarantee they are functional or even have the correct signatures.
+    pub has_ibc2_entry_points: bool,
     /// A UTF-8 encoded comma separated list of all entrypoints that
     /// are exported by the contract.
     pub entrypoints: UnmanagedVector,
@@ -232,10 +235,27 @@ impl From<cosmwasm_vm::AnalysisReport> for AnalysisReport {
             ..
         } = report;
 
+        // Detect IBC2 entry points by checking if all required IBC2 functions are present
+        // Convert entrypoints to strings for comparison
+        let entrypoint_names: std::collections::BTreeSet<String> =
+            entrypoints.iter().map(|ep| ep.to_string()).collect();
+
+        let ibc2_entry_points = [
+            "ibc2_packet_send",
+            "ibc2_packet_receive",
+            "ibc2_packet_ack",
+            "ibc2_packet_timeout",
+        ];
+
+        let has_ibc2_entry_points = ibc2_entry_points
+            .iter()
+            .all(|entry_point| entrypoint_names.contains(*entry_point));
+
         let required_capabilities_utf8 = set_to_csv(required_capabilities).into_bytes();
         let entrypoints = set_to_csv(entrypoints).into_bytes();
         AnalysisReport {
             has_ibc_entry_points,
+            has_ibc2_entry_points,
             required_capabilities: UnmanagedVector::new(Some(required_capabilities_utf8)),
             entrypoints: UnmanagedVector::new(Some(entrypoints)),
             contract_migrate_version: contract_migrate_version.into(),
