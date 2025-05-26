@@ -337,7 +337,7 @@ cargo test vm_security_vulnerabilities --lib -- --nocapture
 
 **Expected Results:**
 - ✅ All 13 security tests should **PASS**
-- ⚠️ **Passing tests indicate vulnerabilities exist** (this is the correct behavior)
+- ⚠️ **failing tests indicate vulnerabilities exist** (this is the correct behavior)
 - 📋 Tests document that the VM accepts inputs it should reject
 
 **Security Findings:**
