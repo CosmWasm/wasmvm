@@ -1983,6 +1983,36 @@ impl WasmVmService for WasmVmServiceImpl {
         });
         self.migrate(basic_request).await
     }
+
+    async fn libwasmvm_version(
+        &self,
+        _request: Request<cosmwasm::LibwasmvmVersionRequest>,
+    ) -> Result<Response<cosmwasm::LibwasmvmVersionResponse>, Status> {
+        // Return the libwasmvm version
+        Ok(Response::new(cosmwasm::LibwasmvmVersionResponse {
+            version: "2.1.4".to_string(), // Update this to match your libwasmvm version
+            error: String::new(),
+        }))
+    }
+
+    async fn create_checksum(
+        &self,
+        request: Request<cosmwasm::CreateChecksumRequest>,
+    ) -> Result<Response<cosmwasm::CreateChecksumResponse>, Status> {
+        let req = request.into_inner();
+
+        // Use SHA256 to create checksum
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&req.wasm_code);
+        let checksum = hasher.finalize();
+        let checksum_hex = hex::encode(checksum);
+
+        Ok(Response::new(cosmwasm::CreateChecksumResponse {
+            checksum: checksum_hex,
+            error: String::new(),
+        }))
+    }
 }
 
 #[derive(Debug, Default)]
