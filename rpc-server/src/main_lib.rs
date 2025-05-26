@@ -101,11 +101,17 @@ impl WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": request.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+                    .to_string(),
                 "chain_id": request.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": request.context.as_ref()
+                    .and_then(|c| if c.sender.is_empty() { None } else { Some(c.sender.as_str()) })
+                    .unwrap_or("cosmos1contractaddress")
             }
         });
         let env_bytes = serde_json::to_vec(&env).unwrap();
@@ -177,6 +183,19 @@ impl WasmVmServiceImpl {
 
     /// Initialize the Wasm module cache with default options
     pub fn new() -> Self {
+        // Use a unique cache directory for each instance to avoid conflicts
+        let pid = std::process::id();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let cache_dir = format!("./wasm_cache_{}_{}", pid, timestamp);
+
+        eprintln!(
+            "🔧 [DEBUG] Creating WasmVmServiceImpl with cache dir: {}",
+            cache_dir
+        );
+
         // Configure cache: directory, capabilities, sizes
         let config = json!({
             "wasm_limits": {
@@ -186,7 +205,7 @@ impl WasmVmServiceImpl {
                 "max_function_params": 128
             },
             "cache": {
-                "base_dir": "./wasm_cache",
+                "base_dir": cache_dir,
                 "available_capabilities": ["staking", "iterator", "stargate", "cosmwasm_1_1", "cosmwasm_1_2", "cosmwasm_1_3", "cosmwasm_1_4", "cosmwasm_2_0"],
                 "memory_cache_size_bytes": 536870912u64,
                 "instance_memory_limit_bytes": 104857600u64
@@ -194,14 +213,25 @@ impl WasmVmServiceImpl {
         });
         let config_bytes = serde_json::to_vec(&config).unwrap();
         let mut err = UnmanagedVector::default();
+
+        eprintln!("🔧 [DEBUG] Calling init_cache...");
+        let start = std::time::Instant::now();
+
         let cache = init_cache(
             ByteSliceView::from_option(Some(&config_bytes)),
             Some(&mut err),
         );
+
+        let duration = start.elapsed();
+        eprintln!("🔧 [DEBUG] init_cache took {:?}", duration);
+
         if cache.is_null() {
             let msg = String::from_utf8(err.consume().unwrap()).unwrap();
+            eprintln!("❌ [DEBUG] init_cache failed: {}", msg);
             panic!("init_cache failed: {}", msg);
         }
+
+        eprintln!("✅ [DEBUG] WasmVmServiceImpl created successfully");
         WasmVmServiceImpl { cache }
     }
 
@@ -237,7 +267,10 @@ impl WasmVmServiceImpl {
 
 impl Default for WasmVmServiceImpl {
     fn default() -> Self {
-        Self::new()
+        eprintln!("🔧 [DEBUG] Creating default WasmVmServiceImpl...");
+        let instance = Self::new();
+        eprintln!("✅ [DEBUG] Default WasmVmServiceImpl created");
+        instance
     }
 }
 
@@ -307,11 +340,20 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+                    .to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.context.as_ref()
+                    .and_then(|c| if c.sender.is_empty() { None } else { Some(c.sender.as_str()) })
+                    .unwrap_or("cosmos1contractaddress")
+            },
+            "transaction": {
+                "index": 0
             }
         });
         let info = serde_json::json!({
@@ -424,11 +466,20 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+                    .to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.context.as_ref()
+                    .and_then(|c| if c.sender.is_empty() { None } else { Some(c.sender.as_str()) })
+                    .unwrap_or("cosmos1contractaddress")
+            },
+            "transaction": {
+                "index": 0
             }
         });
         let info = serde_json::json!({
@@ -529,11 +580,18 @@ impl WasmVmService for WasmVmServiceImpl {
         let env = serde_json::json!({
             "block": {
                 "height": req.context.as_ref().map(|c| c.block_height).unwrap_or(12345),
-                "time": "1234567890000000000",
+                "time": std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+                    .to_string(),
                 "chain_id": req.context.as_ref().map(|c| c.chain_id.as_str()).unwrap_or("test-chain")
             },
             "contract": {
-                "address": "cosmos1contract"
+                "address": req.contract_id.as_str()
+            },
+            "transaction": {
+                "index": 0
             }
         });
         let env_bytes = serde_json::to_vec(&env).unwrap();
@@ -1761,9 +1819,23 @@ pub struct HostServiceImpl;
 impl HostService for HostServiceImpl {
     async fn call_host_function(
         &self,
-        _request: Request<CallHostFunctionRequest>,
+        request: Request<CallHostFunctionRequest>,
     ) -> Result<Response<CallHostFunctionResponse>, Status> {
-        Err(Status::unimplemented("call_host_function not implemented"))
+        let req = request.into_inner();
+
+        // Special case: health check
+        if req.function_name == "health_check" {
+            eprintln!("🏥 [DEBUG] Health check requested");
+            return Ok(Response::new(CallHostFunctionResponse {
+                result: b"OK".to_vec(),
+                error: String::new(),
+            }));
+        }
+
+        Err(Status::unimplemented(format!(
+            "call_host_function '{}' not implemented",
+            req.function_name
+        )))
     }
 }
 
@@ -1771,13 +1843,24 @@ pub async fn run_server(addr: std::net::SocketAddr) -> Result<(), Box<dyn std::e
     let wasm_service = WasmVmServiceImpl::default();
     let host_service = HostServiceImpl;
 
-    println!("WasmVM gRPC server listening on {}", addr);
+    println!("WasmVM gRPC server starting...");
+    println!("Listening on {}", addr);
+    println!("Services available:");
+    println!("  - WasmVmService (cosmwasm.WasmVmService)");
+    println!("  - HostService (cosmwasm.HostService)");
 
-    Server::builder()
+    // Configure server with better timeouts and connection handling
+    let server = Server::builder()
+        .timeout(std::time::Duration::from_secs(30)) // 30 second timeout
+        .tcp_keepalive(Some(std::time::Duration::from_secs(60))) // Keep connections alive
+        .tcp_nodelay(true) // Disable Nagle's algorithm for lower latency
         .add_service(WasmVmServiceServer::new(wasm_service))
-        .add_service(HostServiceServer::new(host_service))
-        .serve(addr)
-        .await?;
+        .add_service(HostServiceServer::new(host_service));
+
+    println!("✅ WasmVM gRPC server ready and listening on {}", addr);
+
+    // Start the server
+    server.serve(addr).await?;
 
     Ok(())
 }
