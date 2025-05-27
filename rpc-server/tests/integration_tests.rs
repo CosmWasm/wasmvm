@@ -74,7 +74,7 @@ async fn load_contract_with_error_handling(
 
     let response = response.unwrap().into_inner();
     if response.error.is_empty() {
-        Ok(response.checksum)
+        Ok(hex::encode(&response.checksum))
     } else {
         Err(response.error)
     }
@@ -1256,8 +1256,14 @@ async fn test_checksum_consistency() {
             response1.error, response2.error,
             "Same WASM should produce same error message"
         );
-        assert_eq!(response1.checksum, "", "Checksum should be empty on error");
-        assert_eq!(response2.checksum, "", "Checksum should be empty on error");
+        assert!(
+            response1.checksum.is_empty(),
+            "Checksum should be empty on error"
+        );
+        assert!(
+            response2.checksum.is_empty(),
+            "Checksum should be empty on error"
+        );
     }
 }
 
@@ -2085,7 +2091,10 @@ async fn diagnostic_cache_state_investigation() {
     let load_response = load_response.unwrap().into_inner();
 
     println!("Load response error: '{}'", load_response.error);
-    println!("Load response checksum: '{}'", load_response.checksum);
+    println!(
+        "Load response checksum: '{}'",
+        hex::encode(&load_response.checksum)
+    );
 
     if !load_response.error.is_empty() {
         println!("Load failed, investigating error pattern:");
@@ -2412,7 +2421,7 @@ async fn debug_test_cache_operations() {
 
     println!("Load response:");
     println!("  Error: '{}'", load_response.error);
-    println!("  Checksum: '{}'", load_response.checksum);
+    println!("  Checksum: '{}'", hex::encode(&load_response.checksum));
 
     if load_response.error.contains("Null/Nil argument") {
         println!("  ❌ CRITICAL: Load operation also fails with Null/Nil argument");

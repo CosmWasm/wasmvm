@@ -181,7 +181,7 @@ func (x *LoadModuleRequest) GetModuleBytes() []byte {
 
 type LoadModuleResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Checksum      string                 `protobuf:"bytes,1,opt,name=checksum,proto3" json:"checksum,omitempty"` // SHA256 checksum of the module (hex encoded)
+	Checksum      []byte                 `protobuf:"bytes,1,opt,name=checksum,proto3" json:"checksum,omitempty"` // SHA256 checksum of the module (32 bytes)
 	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -217,11 +217,11 @@ func (*LoadModuleResponse) Descriptor() ([]byte, []int) {
 	return file_wasmvm_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *LoadModuleResponse) GetChecksum() string {
+func (x *LoadModuleResponse) GetChecksum() []byte {
 	if x != nil {
 		return x.Checksum
 	}
-	return ""
+	return nil
 }
 
 func (x *LoadModuleResponse) GetError() string {
@@ -3555,6 +3555,191 @@ func (x *IbcMsgResponse) GetError() string {
 	return ""
 }
 
+// Utility message types
+type LibwasmvmVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LibwasmvmVersionRequest) Reset() {
+	*x = LibwasmvmVersionRequest{}
+	mi := &file_wasmvm_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LibwasmvmVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LibwasmvmVersionRequest) ProtoMessage() {}
+
+func (x *LibwasmvmVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wasmvm_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LibwasmvmVersionRequest.ProtoReflect.Descriptor instead.
+func (*LibwasmvmVersionRequest) Descriptor() ([]byte, []int) {
+	return file_wasmvm_proto_rawDescGZIP(), []int{61}
+}
+
+type LibwasmvmVersionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LibwasmvmVersionResponse) Reset() {
+	*x = LibwasmvmVersionResponse{}
+	mi := &file_wasmvm_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LibwasmvmVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LibwasmvmVersionResponse) ProtoMessage() {}
+
+func (x *LibwasmvmVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wasmvm_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LibwasmvmVersionResponse.ProtoReflect.Descriptor instead.
+func (*LibwasmvmVersionResponse) Descriptor() ([]byte, []int) {
+	return file_wasmvm_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *LibwasmvmVersionResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *LibwasmvmVersionResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type CreateChecksumRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WasmCode      []byte                 `protobuf:"bytes,1,opt,name=wasm_code,json=wasmCode,proto3" json:"wasm_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateChecksumRequest) Reset() {
+	*x = CreateChecksumRequest{}
+	mi := &file_wasmvm_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateChecksumRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateChecksumRequest) ProtoMessage() {}
+
+func (x *CreateChecksumRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_wasmvm_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateChecksumRequest.ProtoReflect.Descriptor instead.
+func (*CreateChecksumRequest) Descriptor() ([]byte, []int) {
+	return file_wasmvm_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *CreateChecksumRequest) GetWasmCode() []byte {
+	if x != nil {
+		return x.WasmCode
+	}
+	return nil
+}
+
+type CreateChecksumResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Checksum      []byte                 `protobuf:"bytes,1,opt,name=checksum,proto3" json:"checksum,omitempty"` // SHA256 checksum (32 bytes)
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateChecksumResponse) Reset() {
+	*x = CreateChecksumResponse{}
+	mi := &file_wasmvm_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateChecksumResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateChecksumResponse) ProtoMessage() {}
+
+func (x *CreateChecksumResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_wasmvm_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateChecksumResponse.ProtoReflect.Descriptor instead.
+func (*CreateChecksumResponse) Descriptor() ([]byte, []int) {
+	return file_wasmvm_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *CreateChecksumResponse) GetChecksum() []byte {
+	if x != nil {
+		return x.Checksum
+	}
+	return nil
+}
+
+func (x *CreateChecksumResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_wasmvm_proto protoreflect.FileDescriptor
 
 const file_wasmvm_proto_rawDesc = "" +
@@ -3570,7 +3755,7 @@ const file_wasmvm_proto_rawDesc = "" +
 	"\x11LoadModuleRequest\x12!\n" +
 	"\fmodule_bytes\x18\x01 \x01(\fR\vmoduleBytes\"F\n" +
 	"\x12LoadModuleResponse\x12\x1a\n" +
-	"\bchecksum\x18\x01 \x01(\tR\bchecksum\x12\x14\n" +
+	"\bchecksum\x18\x01 \x01(\fR\bchecksum\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\"\xb4\x01\n" +
 	"\x12InstantiateRequest\x12\x1a\n" +
 	"\bchecksum\x18\x01 \x01(\tR\bchecksum\x12+\n" +
@@ -3825,7 +4010,16 @@ const file_wasmvm_proto_rawDesc = "" +
 	"\x0eIbcMsgResponse\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data\x12\x19\n" +
 	"\bgas_used\x18\x02 \x01(\x04R\agasUsed\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error2\x84\x11\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x19\n" +
+	"\x17LibwasmvmVersionRequest\"J\n" +
+	"\x18LibwasmvmVersionResponse\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"4\n" +
+	"\x15CreateChecksumRequest\x12\x1b\n" +
+	"\twasm_code\x18\x01 \x01(\fR\bwasmCode\"J\n" +
+	"\x16CreateChecksumResponse\x12\x1a\n" +
+	"\bchecksum\x18\x01 \x01(\fR\bchecksum\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error2\xb4\x12\n" +
 	"\rWasmVMService\x12G\n" +
 	"\n" +
 	"LoadModule\x12\x1b.cosmwasm.LoadModuleRequest\x1a\x1c.cosmwasm.LoadModuleResponse\x12M\n" +
@@ -3846,7 +4040,9 @@ const file_wasmvm_proto_rawDesc = "" +
 	"\vAnalyzeCode\x12\x1c.cosmwasm.AnalyzeCodeRequest\x1a\x1d.cosmwasm.AnalyzeCodeResponse\x12G\n" +
 	"\n" +
 	"GetMetrics\x12\x1b.cosmwasm.GetMetricsRequest\x1a\x1c.cosmwasm.GetMetricsResponse\x12Y\n" +
-	"\x10GetPinnedMetrics\x12!.cosmwasm.GetPinnedMetricsRequest\x1a\".cosmwasm.GetPinnedMetricsResponse\x12C\n" +
+	"\x10GetPinnedMetrics\x12!.cosmwasm.GetPinnedMetricsRequest\x1a\".cosmwasm.GetPinnedMetricsResponse\x12Y\n" +
+	"\x10LibwasmvmVersion\x12!.cosmwasm.LibwasmvmVersionRequest\x1a\".cosmwasm.LibwasmvmVersionResponse\x12S\n" +
+	"\x0eCreateChecksum\x12\x1f.cosmwasm.CreateChecksumRequest\x1a .cosmwasm.CreateChecksumResponse\x12C\n" +
 	"\x0eIbcChannelOpen\x12\x17.cosmwasm.IbcMsgRequest\x1a\x18.cosmwasm.IbcMsgResponse\x12F\n" +
 	"\x11IbcChannelConnect\x12\x17.cosmwasm.IbcMsgRequest\x1a\x18.cosmwasm.IbcMsgResponse\x12D\n" +
 	"\x0fIbcChannelClose\x12\x17.cosmwasm.IbcMsgRequest\x1a\x18.cosmwasm.IbcMsgResponse\x12E\n" +
@@ -3888,7 +4084,7 @@ func file_wasmvm_proto_rawDescGZIP() []byte {
 	return file_wasmvm_proto_rawDescData
 }
 
-var file_wasmvm_proto_msgTypes = make([]protoimpl.MessageInfo, 62)
+var file_wasmvm_proto_msgTypes = make([]protoimpl.MessageInfo, 66)
 var file_wasmvm_proto_goTypes = []any{
 	(*Context)(nil),                        // 0: cosmwasm.Context
 	(*ExtendedContext)(nil),                // 1: cosmwasm.ExtendedContext
@@ -3951,7 +4147,11 @@ var file_wasmvm_proto_goTypes = []any{
 	(*GetPinnedMetricsResponse)(nil),       // 58: cosmwasm.GetPinnedMetricsResponse
 	(*IbcMsgRequest)(nil),                  // 59: cosmwasm.IbcMsgRequest
 	(*IbcMsgResponse)(nil),                 // 60: cosmwasm.IbcMsgResponse
-	nil,                                    // 61: cosmwasm.PinnedMetrics.PerModuleEntry
+	(*LibwasmvmVersionRequest)(nil),        // 61: cosmwasm.LibwasmvmVersionRequest
+	(*LibwasmvmVersionResponse)(nil),       // 62: cosmwasm.LibwasmvmVersionResponse
+	(*CreateChecksumRequest)(nil),          // 63: cosmwasm.CreateChecksumRequest
+	(*CreateChecksumResponse)(nil),         // 64: cosmwasm.CreateChecksumResponse
+	nil,                                    // 65: cosmwasm.PinnedMetrics.PerModuleEntry
 }
 var file_wasmvm_proto_depIdxs = []int32{
 	0,  // 0: cosmwasm.ExtendedContext.context:type_name -> cosmwasm.Context
@@ -3967,7 +4167,7 @@ var file_wasmvm_proto_depIdxs = []int32{
 	0,  // 10: cosmwasm.ReplyRequest.context:type_name -> cosmwasm.Context
 	0,  // 11: cosmwasm.CallHostFunctionRequest.context:type_name -> cosmwasm.Context
 	52, // 12: cosmwasm.GetMetricsResponse.metrics:type_name -> cosmwasm.Metrics
-	61, // 13: cosmwasm.PinnedMetrics.per_module:type_name -> cosmwasm.PinnedMetrics.PerModuleEntry
+	65, // 13: cosmwasm.PinnedMetrics.per_module:type_name -> cosmwasm.PinnedMetrics.PerModuleEntry
 	56, // 14: cosmwasm.GetPinnedMetricsResponse.pinned_metrics:type_name -> cosmwasm.PinnedMetrics
 	0,  // 15: cosmwasm.IbcMsgRequest.context:type_name -> cosmwasm.Context
 	55, // 16: cosmwasm.PinnedMetrics.PerModuleEntry.value:type_name -> cosmwasm.PerModuleMetrics
@@ -3989,72 +4189,76 @@ var file_wasmvm_proto_depIdxs = []int32{
 	20, // 32: cosmwasm.WasmVMService.AnalyzeCode:input_type -> cosmwasm.AnalyzeCodeRequest
 	53, // 33: cosmwasm.WasmVMService.GetMetrics:input_type -> cosmwasm.GetMetricsRequest
 	57, // 34: cosmwasm.WasmVMService.GetPinnedMetrics:input_type -> cosmwasm.GetPinnedMetricsRequest
-	59, // 35: cosmwasm.WasmVMService.IbcChannelOpen:input_type -> cosmwasm.IbcMsgRequest
-	59, // 36: cosmwasm.WasmVMService.IbcChannelConnect:input_type -> cosmwasm.IbcMsgRequest
-	59, // 37: cosmwasm.WasmVMService.IbcChannelClose:input_type -> cosmwasm.IbcMsgRequest
-	59, // 38: cosmwasm.WasmVMService.IbcPacketReceive:input_type -> cosmwasm.IbcMsgRequest
-	59, // 39: cosmwasm.WasmVMService.IbcPacketAck:input_type -> cosmwasm.IbcMsgRequest
-	59, // 40: cosmwasm.WasmVMService.IbcPacketTimeout:input_type -> cosmwasm.IbcMsgRequest
-	59, // 41: cosmwasm.WasmVMService.IbcSourceCallback:input_type -> cosmwasm.IbcMsgRequest
-	59, // 42: cosmwasm.WasmVMService.IbcDestinationCallback:input_type -> cosmwasm.IbcMsgRequest
-	59, // 43: cosmwasm.WasmVMService.Ibc2PacketReceive:input_type -> cosmwasm.IbcMsgRequest
-	59, // 44: cosmwasm.WasmVMService.Ibc2PacketAck:input_type -> cosmwasm.IbcMsgRequest
-	59, // 45: cosmwasm.WasmVMService.Ibc2PacketTimeout:input_type -> cosmwasm.IbcMsgRequest
-	59, // 46: cosmwasm.WasmVMService.Ibc2PacketSend:input_type -> cosmwasm.IbcMsgRequest
-	22, // 47: cosmwasm.HostService.CallHostFunction:input_type -> cosmwasm.CallHostFunctionRequest
-	24, // 48: cosmwasm.HostService.StorageGet:input_type -> cosmwasm.StorageGetRequest
-	26, // 49: cosmwasm.HostService.StorageSet:input_type -> cosmwasm.StorageSetRequest
-	28, // 50: cosmwasm.HostService.StorageDelete:input_type -> cosmwasm.StorageDeleteRequest
-	30, // 51: cosmwasm.HostService.StorageIterator:input_type -> cosmwasm.StorageIteratorRequest
-	32, // 52: cosmwasm.HostService.StorageReverseIterator:input_type -> cosmwasm.StorageReverseIteratorRequest
-	34, // 53: cosmwasm.HostService.QueryChain:input_type -> cosmwasm.QueryChainRequest
-	36, // 54: cosmwasm.HostService.HumanizeAddress:input_type -> cosmwasm.HumanizeAddressRequest
-	38, // 55: cosmwasm.HostService.CanonicalizeAddress:input_type -> cosmwasm.CanonicalizeAddressRequest
-	40, // 56: cosmwasm.HostService.ConsumeGas:input_type -> cosmwasm.ConsumeGasRequest
-	42, // 57: cosmwasm.HostService.GetGasRemaining:input_type -> cosmwasm.GetGasRemainingRequest
-	3,  // 58: cosmwasm.WasmVMService.LoadModule:output_type -> cosmwasm.LoadModuleResponse
-	45, // 59: cosmwasm.WasmVMService.RemoveModule:output_type -> cosmwasm.RemoveModuleResponse
-	47, // 60: cosmwasm.WasmVMService.PinModule:output_type -> cosmwasm.PinModuleResponse
-	49, // 61: cosmwasm.WasmVMService.UnpinModule:output_type -> cosmwasm.UnpinModuleResponse
-	51, // 62: cosmwasm.WasmVMService.GetCode:output_type -> cosmwasm.GetCodeResponse
-	6,  // 63: cosmwasm.WasmVMService.Instantiate:output_type -> cosmwasm.InstantiateResponse
-	9,  // 64: cosmwasm.WasmVMService.Execute:output_type -> cosmwasm.ExecuteResponse
-	12, // 65: cosmwasm.WasmVMService.Query:output_type -> cosmwasm.QueryResponse
-	15, // 66: cosmwasm.WasmVMService.Migrate:output_type -> cosmwasm.MigrateResponse
-	17, // 67: cosmwasm.WasmVMService.Sudo:output_type -> cosmwasm.SudoResponse
-	19, // 68: cosmwasm.WasmVMService.Reply:output_type -> cosmwasm.ReplyResponse
-	6,  // 69: cosmwasm.WasmVMService.InstantiateWithStorage:output_type -> cosmwasm.InstantiateResponse
-	9,  // 70: cosmwasm.WasmVMService.ExecuteWithStorage:output_type -> cosmwasm.ExecuteResponse
-	12, // 71: cosmwasm.WasmVMService.QueryWithStorage:output_type -> cosmwasm.QueryResponse
-	15, // 72: cosmwasm.WasmVMService.MigrateWithStorage:output_type -> cosmwasm.MigrateResponse
-	21, // 73: cosmwasm.WasmVMService.AnalyzeCode:output_type -> cosmwasm.AnalyzeCodeResponse
-	54, // 74: cosmwasm.WasmVMService.GetMetrics:output_type -> cosmwasm.GetMetricsResponse
-	58, // 75: cosmwasm.WasmVMService.GetPinnedMetrics:output_type -> cosmwasm.GetPinnedMetricsResponse
-	60, // 76: cosmwasm.WasmVMService.IbcChannelOpen:output_type -> cosmwasm.IbcMsgResponse
-	60, // 77: cosmwasm.WasmVMService.IbcChannelConnect:output_type -> cosmwasm.IbcMsgResponse
-	60, // 78: cosmwasm.WasmVMService.IbcChannelClose:output_type -> cosmwasm.IbcMsgResponse
-	60, // 79: cosmwasm.WasmVMService.IbcPacketReceive:output_type -> cosmwasm.IbcMsgResponse
-	60, // 80: cosmwasm.WasmVMService.IbcPacketAck:output_type -> cosmwasm.IbcMsgResponse
-	60, // 81: cosmwasm.WasmVMService.IbcPacketTimeout:output_type -> cosmwasm.IbcMsgResponse
-	60, // 82: cosmwasm.WasmVMService.IbcSourceCallback:output_type -> cosmwasm.IbcMsgResponse
-	60, // 83: cosmwasm.WasmVMService.IbcDestinationCallback:output_type -> cosmwasm.IbcMsgResponse
-	60, // 84: cosmwasm.WasmVMService.Ibc2PacketReceive:output_type -> cosmwasm.IbcMsgResponse
-	60, // 85: cosmwasm.WasmVMService.Ibc2PacketAck:output_type -> cosmwasm.IbcMsgResponse
-	60, // 86: cosmwasm.WasmVMService.Ibc2PacketTimeout:output_type -> cosmwasm.IbcMsgResponse
-	60, // 87: cosmwasm.WasmVMService.Ibc2PacketSend:output_type -> cosmwasm.IbcMsgResponse
-	23, // 88: cosmwasm.HostService.CallHostFunction:output_type -> cosmwasm.CallHostFunctionResponse
-	25, // 89: cosmwasm.HostService.StorageGet:output_type -> cosmwasm.StorageGetResponse
-	27, // 90: cosmwasm.HostService.StorageSet:output_type -> cosmwasm.StorageSetResponse
-	29, // 91: cosmwasm.HostService.StorageDelete:output_type -> cosmwasm.StorageDeleteResponse
-	31, // 92: cosmwasm.HostService.StorageIterator:output_type -> cosmwasm.StorageIteratorResponse
-	33, // 93: cosmwasm.HostService.StorageReverseIterator:output_type -> cosmwasm.StorageReverseIteratorResponse
-	35, // 94: cosmwasm.HostService.QueryChain:output_type -> cosmwasm.QueryChainResponse
-	37, // 95: cosmwasm.HostService.HumanizeAddress:output_type -> cosmwasm.HumanizeAddressResponse
-	39, // 96: cosmwasm.HostService.CanonicalizeAddress:output_type -> cosmwasm.CanonicalizeAddressResponse
-	41, // 97: cosmwasm.HostService.ConsumeGas:output_type -> cosmwasm.ConsumeGasResponse
-	43, // 98: cosmwasm.HostService.GetGasRemaining:output_type -> cosmwasm.GetGasRemainingResponse
-	58, // [58:99] is the sub-list for method output_type
-	17, // [17:58] is the sub-list for method input_type
+	61, // 35: cosmwasm.WasmVMService.LibwasmvmVersion:input_type -> cosmwasm.LibwasmvmVersionRequest
+	63, // 36: cosmwasm.WasmVMService.CreateChecksum:input_type -> cosmwasm.CreateChecksumRequest
+	59, // 37: cosmwasm.WasmVMService.IbcChannelOpen:input_type -> cosmwasm.IbcMsgRequest
+	59, // 38: cosmwasm.WasmVMService.IbcChannelConnect:input_type -> cosmwasm.IbcMsgRequest
+	59, // 39: cosmwasm.WasmVMService.IbcChannelClose:input_type -> cosmwasm.IbcMsgRequest
+	59, // 40: cosmwasm.WasmVMService.IbcPacketReceive:input_type -> cosmwasm.IbcMsgRequest
+	59, // 41: cosmwasm.WasmVMService.IbcPacketAck:input_type -> cosmwasm.IbcMsgRequest
+	59, // 42: cosmwasm.WasmVMService.IbcPacketTimeout:input_type -> cosmwasm.IbcMsgRequest
+	59, // 43: cosmwasm.WasmVMService.IbcSourceCallback:input_type -> cosmwasm.IbcMsgRequest
+	59, // 44: cosmwasm.WasmVMService.IbcDestinationCallback:input_type -> cosmwasm.IbcMsgRequest
+	59, // 45: cosmwasm.WasmVMService.Ibc2PacketReceive:input_type -> cosmwasm.IbcMsgRequest
+	59, // 46: cosmwasm.WasmVMService.Ibc2PacketAck:input_type -> cosmwasm.IbcMsgRequest
+	59, // 47: cosmwasm.WasmVMService.Ibc2PacketTimeout:input_type -> cosmwasm.IbcMsgRequest
+	59, // 48: cosmwasm.WasmVMService.Ibc2PacketSend:input_type -> cosmwasm.IbcMsgRequest
+	22, // 49: cosmwasm.HostService.CallHostFunction:input_type -> cosmwasm.CallHostFunctionRequest
+	24, // 50: cosmwasm.HostService.StorageGet:input_type -> cosmwasm.StorageGetRequest
+	26, // 51: cosmwasm.HostService.StorageSet:input_type -> cosmwasm.StorageSetRequest
+	28, // 52: cosmwasm.HostService.StorageDelete:input_type -> cosmwasm.StorageDeleteRequest
+	30, // 53: cosmwasm.HostService.StorageIterator:input_type -> cosmwasm.StorageIteratorRequest
+	32, // 54: cosmwasm.HostService.StorageReverseIterator:input_type -> cosmwasm.StorageReverseIteratorRequest
+	34, // 55: cosmwasm.HostService.QueryChain:input_type -> cosmwasm.QueryChainRequest
+	36, // 56: cosmwasm.HostService.HumanizeAddress:input_type -> cosmwasm.HumanizeAddressRequest
+	38, // 57: cosmwasm.HostService.CanonicalizeAddress:input_type -> cosmwasm.CanonicalizeAddressRequest
+	40, // 58: cosmwasm.HostService.ConsumeGas:input_type -> cosmwasm.ConsumeGasRequest
+	42, // 59: cosmwasm.HostService.GetGasRemaining:input_type -> cosmwasm.GetGasRemainingRequest
+	3,  // 60: cosmwasm.WasmVMService.LoadModule:output_type -> cosmwasm.LoadModuleResponse
+	45, // 61: cosmwasm.WasmVMService.RemoveModule:output_type -> cosmwasm.RemoveModuleResponse
+	47, // 62: cosmwasm.WasmVMService.PinModule:output_type -> cosmwasm.PinModuleResponse
+	49, // 63: cosmwasm.WasmVMService.UnpinModule:output_type -> cosmwasm.UnpinModuleResponse
+	51, // 64: cosmwasm.WasmVMService.GetCode:output_type -> cosmwasm.GetCodeResponse
+	6,  // 65: cosmwasm.WasmVMService.Instantiate:output_type -> cosmwasm.InstantiateResponse
+	9,  // 66: cosmwasm.WasmVMService.Execute:output_type -> cosmwasm.ExecuteResponse
+	12, // 67: cosmwasm.WasmVMService.Query:output_type -> cosmwasm.QueryResponse
+	15, // 68: cosmwasm.WasmVMService.Migrate:output_type -> cosmwasm.MigrateResponse
+	17, // 69: cosmwasm.WasmVMService.Sudo:output_type -> cosmwasm.SudoResponse
+	19, // 70: cosmwasm.WasmVMService.Reply:output_type -> cosmwasm.ReplyResponse
+	6,  // 71: cosmwasm.WasmVMService.InstantiateWithStorage:output_type -> cosmwasm.InstantiateResponse
+	9,  // 72: cosmwasm.WasmVMService.ExecuteWithStorage:output_type -> cosmwasm.ExecuteResponse
+	12, // 73: cosmwasm.WasmVMService.QueryWithStorage:output_type -> cosmwasm.QueryResponse
+	15, // 74: cosmwasm.WasmVMService.MigrateWithStorage:output_type -> cosmwasm.MigrateResponse
+	21, // 75: cosmwasm.WasmVMService.AnalyzeCode:output_type -> cosmwasm.AnalyzeCodeResponse
+	54, // 76: cosmwasm.WasmVMService.GetMetrics:output_type -> cosmwasm.GetMetricsResponse
+	58, // 77: cosmwasm.WasmVMService.GetPinnedMetrics:output_type -> cosmwasm.GetPinnedMetricsResponse
+	62, // 78: cosmwasm.WasmVMService.LibwasmvmVersion:output_type -> cosmwasm.LibwasmvmVersionResponse
+	64, // 79: cosmwasm.WasmVMService.CreateChecksum:output_type -> cosmwasm.CreateChecksumResponse
+	60, // 80: cosmwasm.WasmVMService.IbcChannelOpen:output_type -> cosmwasm.IbcMsgResponse
+	60, // 81: cosmwasm.WasmVMService.IbcChannelConnect:output_type -> cosmwasm.IbcMsgResponse
+	60, // 82: cosmwasm.WasmVMService.IbcChannelClose:output_type -> cosmwasm.IbcMsgResponse
+	60, // 83: cosmwasm.WasmVMService.IbcPacketReceive:output_type -> cosmwasm.IbcMsgResponse
+	60, // 84: cosmwasm.WasmVMService.IbcPacketAck:output_type -> cosmwasm.IbcMsgResponse
+	60, // 85: cosmwasm.WasmVMService.IbcPacketTimeout:output_type -> cosmwasm.IbcMsgResponse
+	60, // 86: cosmwasm.WasmVMService.IbcSourceCallback:output_type -> cosmwasm.IbcMsgResponse
+	60, // 87: cosmwasm.WasmVMService.IbcDestinationCallback:output_type -> cosmwasm.IbcMsgResponse
+	60, // 88: cosmwasm.WasmVMService.Ibc2PacketReceive:output_type -> cosmwasm.IbcMsgResponse
+	60, // 89: cosmwasm.WasmVMService.Ibc2PacketAck:output_type -> cosmwasm.IbcMsgResponse
+	60, // 90: cosmwasm.WasmVMService.Ibc2PacketTimeout:output_type -> cosmwasm.IbcMsgResponse
+	60, // 91: cosmwasm.WasmVMService.Ibc2PacketSend:output_type -> cosmwasm.IbcMsgResponse
+	23, // 92: cosmwasm.HostService.CallHostFunction:output_type -> cosmwasm.CallHostFunctionResponse
+	25, // 93: cosmwasm.HostService.StorageGet:output_type -> cosmwasm.StorageGetResponse
+	27, // 94: cosmwasm.HostService.StorageSet:output_type -> cosmwasm.StorageSetResponse
+	29, // 95: cosmwasm.HostService.StorageDelete:output_type -> cosmwasm.StorageDeleteResponse
+	31, // 96: cosmwasm.HostService.StorageIterator:output_type -> cosmwasm.StorageIteratorResponse
+	33, // 97: cosmwasm.HostService.StorageReverseIterator:output_type -> cosmwasm.StorageReverseIteratorResponse
+	35, // 98: cosmwasm.HostService.QueryChain:output_type -> cosmwasm.QueryChainResponse
+	37, // 99: cosmwasm.HostService.HumanizeAddress:output_type -> cosmwasm.HumanizeAddressResponse
+	39, // 100: cosmwasm.HostService.CanonicalizeAddress:output_type -> cosmwasm.CanonicalizeAddressResponse
+	41, // 101: cosmwasm.HostService.ConsumeGas:output_type -> cosmwasm.ConsumeGasResponse
+	43, // 102: cosmwasm.HostService.GetGasRemaining:output_type -> cosmwasm.GetGasRemainingResponse
+	60, // [60:103] is the sub-list for method output_type
+	17, // [17:60] is the sub-list for method input_type
 	17, // [17:17] is the sub-list for extension type_name
 	17, // [17:17] is the sub-list for extension extendee
 	0,  // [0:17] is the sub-list for field type_name
@@ -4071,7 +4275,7 @@ func file_wasmvm_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wasmvm_proto_rawDesc), len(file_wasmvm_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   62,
+			NumMessages:   66,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

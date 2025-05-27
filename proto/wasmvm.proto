@@ -102,7 +102,7 @@ service HostService {
 message LoadModuleRequest { bytes module_bytes = 1; }
 
 message LoadModuleResponse {
-  string checksum = 1; // SHA256 checksum of the module (hex encoded)
+  bytes checksum = 1; // SHA256 checksum of the module (32 bytes)
   string error = 2;
 }
 
@@ -460,6 +460,6 @@ message CreateChecksumRequest {
 }
 
 message CreateChecksumResponse {
-  string checksum = 1; // Hex encoded checksum
+  bytes checksum = 1; // SHA256 checksum (32 bytes)
   string error = 2;
 }

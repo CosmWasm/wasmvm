@@ -37,6 +37,8 @@ const (
 	WasmVMService_AnalyzeCode_FullMethodName            = "/cosmwasm.WasmVMService/AnalyzeCode"
 	WasmVMService_GetMetrics_FullMethodName             = "/cosmwasm.WasmVMService/GetMetrics"
 	WasmVMService_GetPinnedMetrics_FullMethodName       = "/cosmwasm.WasmVMService/GetPinnedMetrics"
+	WasmVMService_LibwasmvmVersion_FullMethodName       = "/cosmwasm.WasmVMService/LibwasmvmVersion"
+	WasmVMService_CreateChecksum_FullMethodName         = "/cosmwasm.WasmVMService/CreateChecksum"
 	WasmVMService_IbcChannelOpen_FullMethodName         = "/cosmwasm.WasmVMService/IbcChannelOpen"
 	WasmVMService_IbcChannelConnect_FullMethodName      = "/cosmwasm.WasmVMService/IbcChannelConnect"
 	WasmVMService_IbcChannelClose_FullMethodName        = "/cosmwasm.WasmVMService/IbcChannelClose"
@@ -80,6 +82,9 @@ type WasmVMServiceClient interface {
 	// Metrics
 	GetMetrics(ctx context.Context, in *GetMetricsRequest, opts ...grpc.CallOption) (*GetMetricsResponse, error)
 	GetPinnedMetrics(ctx context.Context, in *GetPinnedMetricsRequest, opts ...grpc.CallOption) (*GetPinnedMetricsResponse, error)
+	// Utility functions
+	LibwasmvmVersion(ctx context.Context, in *LibwasmvmVersionRequest, opts ...grpc.CallOption) (*LibwasmvmVersionResponse, error)
+	CreateChecksum(ctx context.Context, in *CreateChecksumRequest, opts ...grpc.CallOption) (*CreateChecksumResponse, error)
 	// IBC Entry Points
 	// All IBC calls typically share a similar request/response structure
 	// with checksum, context, message, gas limit, and request ID.
@@ -286,6 +291,26 @@ func (c *wasmVMServiceClient) GetPinnedMetrics(ctx context.Context, in *GetPinne
 	return out, nil
 }
 
+func (c *wasmVMServiceClient) LibwasmvmVersion(ctx context.Context, in *LibwasmvmVersionRequest, opts ...grpc.CallOption) (*LibwasmvmVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LibwasmvmVersionResponse)
+	err := c.cc.Invoke(ctx, WasmVMService_LibwasmvmVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *wasmVMServiceClient) CreateChecksum(ctx context.Context, in *CreateChecksumRequest, opts ...grpc.CallOption) (*CreateChecksumResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateChecksumResponse)
+	err := c.cc.Invoke(ctx, WasmVMService_CreateChecksum_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *wasmVMServiceClient) IbcChannelOpen(ctx context.Context, in *IbcMsgRequest, opts ...grpc.CallOption) (*IbcMsgResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IbcMsgResponse)
@@ -435,6 +460,9 @@ type WasmVMServiceServer interface {
 	// Metrics
 	GetMetrics(context.Context, *GetMetricsRequest) (*GetMetricsResponse, error)
 	GetPinnedMetrics(context.Context, *GetPinnedMetricsRequest) (*GetPinnedMetricsResponse, error)
+	// Utility functions
+	LibwasmvmVersion(context.Context, *LibwasmvmVersionRequest) (*LibwasmvmVersionResponse, error)
+	CreateChecksum(context.Context, *CreateChecksumRequest) (*CreateChecksumResponse, error)
 	// IBC Entry Points
 	// All IBC calls typically share a similar request/response structure
 	// with checksum, context, message, gas limit, and request ID.
@@ -514,6 +542,12 @@ func (UnimplementedWasmVMServiceServer) GetMetrics(context.Context, *GetMetricsR
 }
 func (UnimplementedWasmVMServiceServer) GetPinnedMetrics(context.Context, *GetPinnedMetricsRequest) (*GetPinnedMetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPinnedMetrics not implemented")
+}
+func (UnimplementedWasmVMServiceServer) LibwasmvmVersion(context.Context, *LibwasmvmVersionRequest) (*LibwasmvmVersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LibwasmvmVersion not implemented")
+}
+func (UnimplementedWasmVMServiceServer) CreateChecksum(context.Context, *CreateChecksumRequest) (*CreateChecksumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateChecksum not implemented")
 }
 func (UnimplementedWasmVMServiceServer) IbcChannelOpen(context.Context, *IbcMsgRequest) (*IbcMsgResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IbcChannelOpen not implemented")
@@ -896,6 +930,42 @@ func _WasmVMService_GetPinnedMetrics_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WasmVMService_LibwasmvmVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LibwasmvmVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WasmVMServiceServer).LibwasmvmVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WasmVMService_LibwasmvmVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WasmVMServiceServer).LibwasmvmVersion(ctx, req.(*LibwasmvmVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WasmVMService_CreateChecksum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateChecksumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WasmVMServiceServer).CreateChecksum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WasmVMService_CreateChecksum_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WasmVMServiceServer).CreateChecksum(ctx, req.(*CreateChecksumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WasmVMService_IbcChannelOpen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IbcMsgRequest)
 	if err := dec(in); err != nil {
@@ -1190,6 +1260,14 @@ var WasmVMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPinnedMetrics",
 			Handler:    _WasmVMService_GetPinnedMetrics_Handler,
+		},
+		{
+			MethodName: "LibwasmvmVersion",
+			Handler:    _WasmVMService_LibwasmvmVersion_Handler,
+		},
+		{
+			MethodName: "CreateChecksum",
+			Handler:    _WasmVMService_CreateChecksum_Handler,
 		},
 		{
 			MethodName: "IbcChannelOpen",

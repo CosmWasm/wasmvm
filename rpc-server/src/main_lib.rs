@@ -1,9 +1,9 @@
 use crate::vtables::{
     canonicalize_address_helper, create_working_api_vtable, create_working_db_vtable,
     create_working_querier_vtable, humanize_address_helper, storage_close_iterator,
-    storage_create_iterator, storage_delete, storage_get, storage_iterator_next, storage_scan,
-    storage_set,
+    storage_create_iterator, storage_delete, storage_get, storage_set,
 };
+use base64::Engine;
 use hex;
 use serde_json::json;
 use tonic::{transport::Server, Request, Response, Status};
@@ -92,8 +92,12 @@ impl WasmVmServiceImpl {
         let checksum = match hex::decode(&request.checksum) {
             Ok(c) => c,
             Err(e) => {
+                // Return properly formatted error acknowledgement
+                let error_ack = serde_json::json!({
+                    "error": format!("invalid checksum hex: {}", e)
+                });
                 return Ok(Response::new(cosmwasm::IbcMsgResponse {
-                    data: vec![],
+                    data: serde_json::to_vec(&error_ack).unwrap_or_default(),
                     gas_used: 0,
                     error: format!("invalid checksum hex: {}", e),
                 }));
@@ -175,10 +179,32 @@ impl WasmVmServiceImpl {
         };
 
         if err.is_some() {
-            response.error = String::from_utf8(err.consume().unwrap())
+            let error_msg = String::from_utf8(err.consume().unwrap())
                 .unwrap_or_else(|_| "UTF-8 error".to_string());
+
+            // Return properly formatted error acknowledgement following ICS-04 standard
+            let error_ack = serde_json::json!({
+                "error": error_msg
+            });
+            response.data = serde_json::to_vec(&error_ack).unwrap_or_default();
+            response.error = error_msg;
         } else {
-            response.data = result.consume().unwrap_or_default();
+            let contract_data = result.consume().unwrap_or_default();
+
+            // Return properly formatted success acknowledgement following ICS-04 standard
+            if contract_data.is_empty() {
+                // For empty responses, return a minimal success acknowledgement
+                let success_ack = serde_json::json!({
+                    "result": base64::prelude::BASE64_STANDARD.encode(b"")
+                });
+                response.data = serde_json::to_vec(&success_ack).unwrap_or_default();
+            } else {
+                // For non-empty responses, base64 encode the contract data
+                let success_ack = serde_json::json!({
+                    "result": base64::prelude::BASE64_STANDARD.encode(&contract_data)
+                });
+                response.data = serde_json::to_vec(&success_ack).unwrap_or_default();
+            }
         }
 
         Ok(Response::new(response))
@@ -321,7 +347,8 @@ impl WasmVmService for WasmVmServiceImpl {
                 &checksum_hex
             };
             eprintln!("✅ LOAD_MODULE | checksum: {} | cached", checksum_short);
-            resp.checksum = checksum_hex;
+            // Return raw binary checksum (32 bytes)
+            resp.checksum = checksum;
         }
         Ok(Response::new(resp))
     }
@@ -2006,10 +2033,9 @@ impl WasmVmService for WasmVmServiceImpl {
         let mut hasher = Sha256::new();
         hasher.update(&req.wasm_code);
         let checksum = hasher.finalize();
-        let checksum_hex = hex::encode(checksum);
 
         Ok(Response::new(cosmwasm::CreateChecksumResponse {
-            checksum: checksum_hex,
+            checksum: checksum.to_vec(),
             error: String::new(),
         }))
     }
@@ -2188,7 +2214,7 @@ impl HostService for HostServiceImpl {
         match serde_json::from_slice::<serde_json::Value>(&req.query) {
             Ok(query_json) => {
                 // Handle common chain queries with mock responses
-                let result = if let Some(bank) = query_json.get("bank") {
+                let query_response = if let Some(bank) = query_json.get("bank") {
                     if bank.get("balance").is_some() {
                         serde_json::json!({
                             "amount": {
@@ -2219,7 +2245,12 @@ impl HostService for HostServiceImpl {
                     })
                 };
 
-                match serde_json::to_vec(&result) {
+                // Wrap the response in the expected format (lowercase "ok" is required)
+                let wrapped_response = serde_json::json!({
+                    "ok": query_response
+                });
+
+                match serde_json::to_vec(&wrapped_response) {
                     Ok(result_bytes) => Ok(Response::new(cosmwasm::QueryChainResponse {
                         result: result_bytes,
                         error: String::new(),
@@ -2392,7 +2423,8 @@ mod tests {
 
         let response = response.unwrap().into_inner();
         if response.error.is_empty() {
-            Ok(response.checksum)
+            // Convert bytes checksum to hex string for the tests
+            Ok(hex::encode(&response.checksum))
         } else {
             Err(response.error)
         }
@@ -2945,7 +2977,7 @@ mod tests {
         // Basic WASM module is too simple and will likely fail validation by `wasmvm`
         if response.error.is_empty() {
             assert!(!response.checksum.is_empty(), "Expected non-empty checksum");
-            assert_eq!(response.checksum.len(), 64, "Expected 32-byte hex checksum");
+            assert_eq!(response.checksum.len(), 32, "Expected 32-byte checksum");
             println!("✓ Basic WASM loaded successfully");
         } else {
             // Expected: WASM validation errors for minimal module, e.g., missing memory section
@@ -3552,8 +3584,14 @@ mod tests {
                 response1.error, response2.error,
                 "Same WASM should produce same error message"
             );
-            assert_eq!(response1.checksum, "", "Checksum should be empty on error");
-            assert_eq!(response2.checksum, "", "Checksum should be empty on error");
+            assert!(
+                response1.checksum.is_empty(),
+                "Checksum should be empty on error"
+            );
+            assert!(
+                response2.checksum.is_empty(),
+                "Checksum should be empty on error"
+            );
         }
     }
 
@@ -3858,7 +3896,10 @@ mod tests {
         let load_response = load_response.unwrap().into_inner();
 
         println!("Load response error: '{}'", load_response.error);
-        println!("Load response checksum: '{}'", load_response.checksum);
+        println!(
+            "Load response checksum: '{}'",
+            hex::encode(&load_response.checksum)
+        );
 
         if !load_response.error.is_empty() {
             println!("Load failed, investigating error pattern:");
@@ -4185,7 +4226,7 @@ mod tests {
 
         println!("Load response:");
         println!("  Error: '{}'", load_response.error);
-        println!("  Checksum: '{}'", load_response.checksum);
+        println!("  Checksum: '{}'", hex::encode(&load_response.checksum));
 
         if load_response.error.contains("Null/Nil argument") {
             println!("  ❌ CRITICAL: Load operation also fails with Null/Nil argument");
@@ -4592,7 +4633,7 @@ mod tests {
         });
 
         // The cache was initialized with IBC2 capability
-        assert!(cache_dir.len() > 0, "Cache directory should be set");
+        assert!(!cache_dir.is_empty(), "Cache directory should be set");
     }
 
     #[tokio::test]
@@ -4640,5 +4681,107 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_ibc2_success_indicators() {
+        let (service, _temp_dir) = create_test_service();
+
+        // Test with a non-existent contract (should return failure indicator)
+        let fake_checksum = "a".repeat(64);
+
+        // Helper function to create request
+        let create_request = || {
+            Request::new(cosmwasm::IbcMsgRequest {
+                checksum: fake_checksum.clone(),
+                context: Some(create_test_context()),
+                msg: vec![],
+                gas_limit: 1000000,
+                request_id: "test-ibc2-indicators".to_string(),
+            })
+        };
+
+        // Test ibc2_packet_send
+        let response = service.ibc2_packet_send(create_request()).await;
+        assert!(response.is_ok(), "gRPC call should succeed");
+        let response = response.unwrap().into_inner();
+
+        // Should return properly formatted error acknowledgement
+        let ack_data: serde_json::Value =
+            serde_json::from_slice(&response.data).expect("Response should be valid JSON");
+        assert!(
+            ack_data.get("error").is_some(),
+            "Should have error field in acknowledgement"
+        );
+        assert!(!response.error.is_empty(), "Should have an error message");
+
+        // Test ibc2_packet_ack
+        let response = service.ibc2_packet_ack(create_request()).await;
+        assert!(response.is_ok(), "gRPC call should succeed");
+        let response = response.unwrap().into_inner();
+        let ack_data: serde_json::Value =
+            serde_json::from_slice(&response.data).expect("Response should be valid JSON");
+        assert!(
+            ack_data.get("error").is_some(),
+            "Should have error field in acknowledgement"
+        );
+
+        // Test ibc2_packet_timeout
+        let response = service.ibc2_packet_timeout(create_request()).await;
+        assert!(response.is_ok(), "gRPC call should succeed");
+        let response = response.unwrap().into_inner();
+        let ack_data: serde_json::Value =
+            serde_json::from_slice(&response.data).expect("Response should be valid JSON");
+        assert!(
+            ack_data.get("error").is_some(),
+            "Should have error field in acknowledgement"
+        );
+
+        // Test ibc2_packet_receive
+        let response = service.ibc2_packet_receive(create_request()).await;
+        assert!(response.is_ok(), "gRPC call should succeed");
+        let response = response.unwrap().into_inner();
+        let ack_data: serde_json::Value =
+            serde_json::from_slice(&response.data).expect("Response should be valid JSON");
+        assert!(
+            ack_data.get("error").is_some(),
+            "Should have error field in acknowledgement"
+        );
+
+        println!(
+            "✅ All IBC2 functions correctly return error acknowledgements for non-existent contracts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_ibc2_invalid_checksum_indicators() {
+        let (service, _temp_dir) = create_test_service();
+
+        // Test with invalid checksum (should return failure indicator)
+        let request = Request::new(cosmwasm::IbcMsgRequest {
+            checksum: "invalid_hex".to_string(),
+            context: Some(create_test_context()),
+            msg: vec![],
+            gas_limit: 1000000,
+            request_id: "test-invalid-checksum".to_string(),
+        });
+
+        let response = service.ibc2_packet_send(request).await;
+        assert!(response.is_ok(), "gRPC call should succeed");
+        let response = response.unwrap().into_inner();
+
+        // Should return properly formatted error acknowledgement for invalid checksum
+        let ack_data: serde_json::Value =
+            serde_json::from_slice(&response.data).expect("Response should be valid JSON");
+        assert!(
+            ack_data.get("error").is_some(),
+            "Should have error field in acknowledgement"
+        );
+        assert!(
+            response.error.contains("invalid checksum hex"),
+            "Should have checksum error message"
+        );
+
+        println!("✅ IBC2 functions correctly return error acknowledgements for invalid checksums");
     }
 }

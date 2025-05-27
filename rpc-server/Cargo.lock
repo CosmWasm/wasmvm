@@ -348,6 +348,12 @@ checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
 
 [[package]]
 name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
+name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -601,12 +607,12 @@ dependencies = [
 [[package]]
 name = "cosmwasm-core"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 
 [[package]]
 name = "cosmwasm-crypto"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -629,7 +635,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-derive"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -639,15 +645,15 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bech32",
  "bnum",
  "cosmwasm-core",
  "cosmwasm-crypto",
  "cosmwasm-derive",
- "derive_more 1.0.0-beta.6",
+ "derive_more 2.0.1",
  "hex",
  "rand_core",
  "rmp-serde",
@@ -662,7 +668,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 dependencies = [
  "bech32",
  "blake2",
@@ -690,7 +696,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-vm-derive"
 version = "3.0.0-ibc2.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#7a44b1ef276b898cc7ea0171edf8b077627fc721"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#20ef2edbe85c5ac5d47d66a4a03c55f8d2bf512c"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -883,7 +889,16 @@ version = "1.0.0-beta.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7abbfc297053be59290e3152f8cbcd52c8642e0728b69ee187d991d4c1af08d"
 dependencies = [
- "derive_more-impl",
+ "derive_more-impl 1.0.0-beta.6",
+]
+
+[[package]]
+name = "derive_more"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
+dependencies = [
+ "derive_more-impl 2.0.1",
 ]
 
 [[package]]
@@ -891,6 +906,18 @@ name = "derive_more-impl"
 version = "1.0.0-beta.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bba3e9872d7c58ce7ef0fcf1844fcc3e23ef2a58377b50df35dd98e42a5726e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+ "unicode-xid",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1643,9 +1670,9 @@ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 
 [[package]]
 name = "libloading"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a793df0d7afeac54f95b471d3af7f0d4fb975699f972341a4b76988d49cdf0c"
+checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
 dependencies = [
  "cfg-if",
  "windows-targets 0.53.0",
@@ -2647,9 +2674,9 @@ checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
 
 [[package]]
 name = "socket2"
-version = "0.5.9"
+version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f5fd57c80058a56cf5c777ab8a126398ece8e442983605d280a44ce79d0edef"
+checksum = "e22376abed350d73dd1cd119b57ffccad95b4e585a7cda43e286245ce23c0678"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -2961,7 +2988,7 @@ checksum = "7e581ba15a835f4d9ea06c55ab1bd4dce26fc53752c69a04aac00703bfb49ba9"
 dependencies = [
  "async-trait",
  "axum",
- "base64",
+ "base64 0.22.1",
  "bytes",
  "h2",
  "http",
@@ -3104,7 +3131,7 @@ version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "flate2",
  "log",
  "once_cell",
@@ -3416,6 +3443,7 @@ dependencies = [
 name = "wasmvm-rpc-server"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.7",
  "hex",
  "hyper",
  "prost",
