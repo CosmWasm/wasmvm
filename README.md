@@ -66,7 +66,7 @@ make test
 
 #### Package github.com/CosmWasm/wasmvm/types
 
-This packages contains types used by the two other packages. It can be compiled
+This package contains types used by the two other packages. It can be compiled
 without cgo.
 
 ```sh
