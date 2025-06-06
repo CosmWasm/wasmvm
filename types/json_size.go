@@ -121,7 +121,7 @@ func (c Coin) ExpectedJSONSize() int {
 		8 + colon + ExpectedJSONSizeString(c.Amount)
 }
 
-// ExpectedJSONSize returns the expected JSON size in bytes when using
+// ExpectedJSONSizeArray returns the expected JSON size in bytes when using
 // json.Marshal with the given value.
 // Since JSON marshalling does not have a guaranteed output format,
 // this should be understood as a best guess and correct in most cases.
