@@ -1,0 +1,26 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "docker-in-docker": {},
+    "node": {
+      "version": "lts"
+    },
+    "python": {
+      "version": "3.10"
+    },
+    "git": {}
+  },
+  "postCreateCommand": "npm install && pip install -r requirements.txt",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-azuretools.vscode-docker",
+    "ms-python.python",
+    "esbenp.prettier-vscode"
+  ]
+}
+}
+}
