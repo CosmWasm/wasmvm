@@ -1,0 +1,26 @@
+name: autofix.ci # needed to securely identify the workflow
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "oldstable"
+
+      - name: Install shfmt
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.11.0
+
+      - name: Format shell
+        run: shfmt --write .
+
+      # See https://autofix.ci/
+      - uses: autofix-ci/action@v1
