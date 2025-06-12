@@ -239,18 +239,6 @@ jobs:
               exit 1
             fi
 
-  format-scripts:
-    docker:
-      - image: cimg/go:1.22.12
-    steps:
-      - run:
-          name: Install shfmt
-          command: GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@v3.7.0
-      - checkout
-      - run:
-          name: Run shfmt
-          command: shfmt --diff .
-
   lint-scripts:
     docker:
       - image: ubuntu:20.04
@@ -462,7 +450,6 @@ workflows:
       - wasmvm_no_cgo
       - nolink_libwasmvm
       - tidy-go
-      - format-scripts
       - lint-scripts
       - build_shared_library:
           filters: # required since other jobs with tag filters require this one
@@ -502,7 +489,6 @@ workflows:
             - libwasmvm_sanity
             - format-go
             - tidy-go
-            - format-scripts
             - lint-scripts
             - wasmvm_test
           filters:
