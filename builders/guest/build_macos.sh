@@ -12,7 +12,7 @@ export LIBZ_SYS_STATIC=1
 
 echo "Starting aarch64-apple-darwin build"
 export CC=aarch64-apple-darwin20.4-clang
-export CXX=aarch64-apple-darwin20.4-clang++
+export CXX=aarch64-apple-darwin20.4-clang++  
 cargo build --release --target-dir="$TARGET_DIR" --target aarch64-apple-darwin
 
 echo "Starting x86_64-apple-darwin build"
