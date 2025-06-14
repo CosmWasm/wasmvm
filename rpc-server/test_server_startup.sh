@@ -13,18 +13,18 @@ START_TIME=$(date +%s)
 
 # Wait for server to be ready (look for the ready message)
 while ! grep -q "WasmVM gRPC server ready and listening" server.log 2>/dev/null; do
-    CURRENT_TIME=$(date +%s)
-    ELAPSED=$((CURRENT_TIME - START_TIME))
-    
-    if [ $ELAPSED -gt 10 ]; then
-        echo "❌ Server failed to start within 10 seconds"
-        kill $SERVER_PID 2>/dev/null
-        cat server.log
-        exit 1
-    fi
-    
-    echo "⏳ Waiting for server... ($ELAPSED seconds)"
-    sleep 0.5
+  CURRENT_TIME=$(date +%s)
+  ELAPSED=$((CURRENT_TIME - START_TIME))
+
+  if [ $ELAPSED -gt 10 ]; then
+    echo "❌ Server failed to start within 10 seconds"
+    kill $SERVER_PID 2>/dev/null
+    cat server.log
+    exit 1
+  fi
+
+  echo "⏳ Waiting for server... ($ELAPSED seconds)"
+  sleep 0.5
 done
 
 END_TIME=$(date +%s)
@@ -36,9 +36,9 @@ echo "✅ Server started successfully in $STARTUP_TIME seconds"
 echo "Testing connection..."
 nc -z localhost 50051
 if [ $? -eq 0 ]; then
-    echo "✅ Port 50051 is open and accepting connections"
+  echo "✅ Port 50051 is open and accepting connections"
 else
-    echo "❌ Port 50051 is not accessible"
+  echo "❌ Port 50051 is not accessible"
 fi
 
 # Check for cache initialization timing
@@ -55,4 +55,4 @@ wait $SERVER_PID 2>/dev/null
 echo "✅ Test complete"
 echo ""
 echo "📋 Server startup log:"
-cat server.log 
+cat server.log

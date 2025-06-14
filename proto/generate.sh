@@ -20,4 +20,4 @@ protoc \
   --go-grpc_opt=paths=source_relative \
   wasmvm.proto
 
-echo "Go protobuf files generated successfully in ../rpc/" 
+echo "Go protobuf files generated successfully in ../rpc/"
