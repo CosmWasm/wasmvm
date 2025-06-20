@@ -44,7 +44,7 @@ func removeFrame(callID uint64) frame {
 	return remove
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item from the iteratorFrames
 func endCall(callID uint64) {
 	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
 	remove := removeFrame(callID)
