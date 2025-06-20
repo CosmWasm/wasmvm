@@ -32,7 +32,7 @@ func startCall() uint64 {
 	return latestCallID
 }
 
-// removeFrame removes the frame with for the given call ID.
+// removeFrame removes the frame for the given call ID.
 // The result can be nil when the frame is not initialized,
 // i.e. when startCall() is called but no iterator is stored.
 func removeFrame(callID uint64) frame {
