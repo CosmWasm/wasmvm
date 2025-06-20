@@ -510,13 +510,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -528,6 +528,7 @@ dependencies = [
  "ecdsa",
  "ed25519-zebra",
  "k256",
+ "num-bigint",
  "num-traits",
  "p256",
  "rand_core",
@@ -538,8 +539,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -548,8 +549,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 dependencies = [
  "base64",
  "bech32",
@@ -557,11 +558,12 @@ dependencies = [
  "cosmwasm-core",
  "cosmwasm-crypto",
  "cosmwasm-derive",
- "derive_more 1.0.0-beta.6",
+ "cw-schema",
+ "derive_more 2.0.1",
  "hex",
  "rand_core",
  "rmp-serde",
- "schemars",
+ "schemars 0.8.21",
  "serde",
  "serde_json",
  "sha2",
@@ -571,8 +573,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 dependencies = [
  "bech32",
  "blake2",
@@ -599,8 +601,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "2.2.0-rc.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?branch=main#8b05ab2376a1d194a95971a73790c8ca593169fa"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -710,6 +712,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-schema"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
+dependencies = [
+ "cw-schema-derive",
+ "indexmap",
+ "schemars 1.0.0-rc.2",
+ "serde",
+ "serde_with",
+ "siphasher",
+ "typeid",
+]
+
+[[package]]
+name = "cw-schema-derive"
+version = "3.0.0-rc.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0-rc.1#ec030e03b7e947c6e4d142371257859b92089f3b"
+dependencies = [
+ "heck 0.5.0",
+ "itertools",
+ "owo-colors",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -729,6 +758,7 @@ dependencies = [
  "ident_case",
  "proc-macro2",
  "quote",
+ "strsim",
  "syn 2.0.98",
 ]
 
@@ -793,7 +823,16 @@ version = "1.0.0-beta.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7abbfc297053be59290e3152f8cbcd52c8642e0728b69ee187d991d4c1af08d"
 dependencies = [
- "derive_more-impl",
+ "derive_more-impl 1.0.0-beta.6",
+]
+
+[[package]]
+name = "derive_more"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
+dependencies = [
+ "derive_more-impl 2.0.1",
 ]
 
 [[package]]
@@ -801,6 +840,18 @@ name = "derive_more-impl"
 version = "1.0.0-beta.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bba3e9872d7c58ce7ef0fcf1844fcc3e23ef2a58377b50df35dd98e42a5726e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+ "unicode-xid",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1180,6 +1231,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
+name = "hermit-abi"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
+
+[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1348,6 +1405,23 @@ dependencies = [
  "equivalent",
  "hashbrown 0.15.2",
 ]
+
+[[package]]
+name = "is-terminal"
+version = "0.4.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
+dependencies = [
+ "hermit-abi",
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "is_ci"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7655c9839580ee829dfacba1d1278c2b7883e50a277ff7541299489d6bdfdc45"
 
 [[package]]
 name = "is_terminal_polyfill"
@@ -1616,6 +1690,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "945462a4b81e43c4e3ba96bd7b49d834c6f61198356aa858733bc4acf3cbe62e"
 
 [[package]]
+name = "owo-colors"
+version = "4.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26995317201fa17f3656c36716aed4a7c81743a9634ac4c99c0eeda495db0cec"
+dependencies = [
+ "supports-color 2.1.0",
+ "supports-color 3.0.2",
+]
+
+[[package]]
 name = "p256"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1864,6 +1948,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ref-cast"
+version = "1.0.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a0ae411dbe946a674d89546582cea4ba2bb8defac896622d6496f14c23ba5cf"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1165225c21bff1f3bbce98f5a1f889949bc902d3575308cc7b0de30b4f6d27c7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "regex"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2085,7 +2189,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09c024468a378b7e36765cd36702b7a90cc3cba11654f6685c8f233408e89e92"
 dependencies = [
  "dyn-clone",
- "schemars_derive",
+ "schemars_derive 0.8.21",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "schemars"
+version = "1.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "284cf8058b5165c2e1aedb8f56f4b09a838a764d1c110178e1747d1f77a01ceb"
+dependencies = [
+ "dyn-clone",
+ "ref-cast",
+ "schemars_derive 1.0.0-rc.2",
  "serde",
  "serde_json",
 ]
@@ -2095,6 +2212,18 @@ name = "schemars_derive"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1eee588578aff73f856ab961cd2f79e36bc45d7ded33a7562adba4667aecc0e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals",
+ "syn 2.0.98",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "1.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ce51e6bea03670e88edba2d724eed817b97f4ab017a1001bae5da325ce93fe7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2197,6 +2326,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_with"
+version = "3.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf65a400f8f66fb7b0552869ad70157166676db75ed8181f8104ea91cf9d0b42"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_with_macros",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "3.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81679d9ed988d5e9a5e6531dc3f2c28efbd639cbd1dfb628df08edea6004da77"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "sha2"
 version = "0.10.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2238,6 +2390,12 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+
+[[package]]
+name = "siphasher"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
 name = "smallvec"
@@ -2290,6 +2448,25 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+
+[[package]]
+name = "supports-color"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6398cde53adc3c4557306a96ce67b302968513830a77a95b2b17305d9719a89"
+dependencies = [
+ "is-terminal",
+ "is_ci",
+]
+
+[[package]]
+name = "supports-color"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c64fc7232dd8d2e4ac5ce4ef302b1d81e0b80d055b9d77c7c4f51f6aa4c867d6"
+dependencies = [
+ "is_ci",
+]
 
 [[package]]
 name = "syn"
@@ -2505,6 +2682,12 @@ dependencies = [
  "cfg-if",
  "static_assertions",
 ]
+
+[[package]]
+name = "typeid"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
 
 [[package]]
 name = "typenum"
@@ -2823,7 +3006,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "3.0.0-ibc2.1"
+version = "3.0.0-rc.0"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",

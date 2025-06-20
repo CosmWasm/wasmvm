@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "3.0.0-ibc2.1"
+version = "3.0.0-rc.0"
 publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
@@ -26,27 +26,13 @@ default = []
 backtraces = []
 
 [dependencies]
-# cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.2.0", features = [
-#   "staking",
-#   "stargate",
-#   "iterator",
-# ] }
-# cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v2.2.0", features = [
-#   "staking",
-#   "stargate",
-#   "iterator",
-# ] }
-# Temporarily using CosmWasm's `main` branch until the next release.
-# This allows us to build WasmVM with the latest CosmWasm changes to develop IBC2 support more easily.
-# You can also use a different branch or a local path in your branches and change it back to `main`
-# when the CosmWasm PR gets merged.
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
+cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v3.0.0-rc.1", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", branch = "main", features = [
+cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v3.0.0-rc.1", features = [
   "staking",
   "stargate",
   "iterator",
