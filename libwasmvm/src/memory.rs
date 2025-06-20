@@ -19,7 +19,7 @@ impl ByteSliceView {
     /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
     /// when testing FFI calls from Rust. It must not be used in production code.
     #[cfg(test)]
-    pub fn new(source: &[u8]) -> Self {
+    pub fn from_slice(source: &[u8]) -> Self {
         Self {
             is_nil: false,
             ptr: source.as_ptr(),
@@ -61,6 +61,39 @@ impl ByteSliceView {
     pub fn to_owned(&self) -> Option<Vec<u8>> {
         self.read().map(|slice| slice.to_owned())
     }
+    /// ByteSliceViews are only constructed in Go. This constructor is a way to mimic the behaviour
+    /// when testing FFI calls from Rust. It must not be used in production code.
+    pub fn new(source: &[u8]) -> Self {
+        Self {
+            is_nil: false,
+            ptr: source.as_ptr(),
+            len: source.len(),
+        }
+    }
+
+    /// Constructs a ByteSliceView from an optional byte slice.
+    /// `None` represents a nil view; `Some(&[])` represents an empty slice.
+    pub fn from_option(slice: Option<&[u8]>) -> Self {
+        match slice {
+            Some(data) => {
+                let ptr = if data.is_empty() {
+                    std::ptr::NonNull::<u8>::dangling().as_ptr()
+                } else {
+                    data.as_ptr()
+                };
+                ByteSliceView {
+                    is_nil: false,
+                    ptr,
+                    len: data.len(),
+                }
+            }
+            None => ByteSliceView {
+                is_nil: true,
+                ptr: std::ptr::null(),
+                len: 0,
+            },
+        }
+    }
 }
 
 /// A view into a `Option<&[u8]>`, created and maintained by Rust.
@@ -92,6 +125,30 @@ impl U8SliceView {
                 len: 0,
             },
         }
+    }
+
+    /// Provides a reference to the included data to be parsed or copied elsewhere
+    /// This is safe as long as the `U8SliceView` is constructed correctly.
+    pub fn read(&self) -> Option<&[u8]> {
+        if self.is_none {
+            None
+        } else {
+            Some(
+                // "`data` must be non-null and aligned even for zero-length slices"
+                if self.len == 0 {
+                    let dangling = std::ptr::NonNull::<u8>::dangling();
+                    unsafe { slice::from_raw_parts(dangling.as_ptr(), 0) }
+                } else {
+                    unsafe { slice::from_raw_parts(self.ptr, self.len) }
+                },
+            )
+        }
+    }
+
+    /// Creates an owned copy that can safely be stored and mutated.
+    #[allow(dead_code)]
+    pub fn to_owned(&self) -> Option<Vec<u8>> {
+        self.read().map(|slice| slice.to_owned())
     }
 }
 
