@@ -132,7 +132,7 @@ func (db *MemDB) DeleteSync(key []byte) error {
 func (db *MemDB) Close() error {
 	// Close is a noop since for an in-memory database, we don't have a destination to flush
 	// contents to nor do we want any data loss on invoking Close().
-	// See the discussion in https://github.com/tendermint/tendermint/libs/pull/56
+	// See: https://github.com/tendermint/tm-db/blob/master/memdb.go
 	return nil
 }
 
