@@ -128,8 +128,14 @@ type IBCMsg struct {
 	SendPacket           *SendPacketMsg           `json:"send_packet,omitempty"`
 	WriteAcknowledgement *WriteAcknowledgementMsg `json:"write_acknowledgement,omitempty"`
 	CloseChannel         *CloseChannelMsg         `json:"close_channel,omitempty"`
-	PayPacketFee         *PayPacketFeeMsg         `json:"pay_packet_fee,omitempty"`
-	PayPacketFeeAsync    *PayPacketFeeAsyncMsg    `json:"pay_packet_fee_async,omitempty"`
+
+	// Deprecated: PayPacketFee is not supported since wasmd 0.54 and should not be used.
+	// The structure is kept for deserialization purposes.
+	PayPacketFee *PayPacketFeeMsg `json:"pay_packet_fee,omitempty"`
+
+	// Deprecated: PayPacketFeeAsync is not supported since wasmd 0.54 and should not be used.
+	// The structure is kept for deserialization purposes.
+	PayPacketFeeAsync *PayPacketFeeAsyncMsg `json:"pay_packet_fee_async,omitempty"`
 }
 
 type GovMsg struct {
@@ -260,6 +266,8 @@ type CloseChannelMsg struct {
 	ChannelID string `json:"channel_id"`
 }
 
+// Deprecated: PayPacketFeeMsg is not supported since wasmd 0.54 and should not be used.
+// The structure is kept for deserialization purposes.
 type PayPacketFeeMsg struct {
 	// The channel id on the chain where the packet is sent from (this chain).
 	ChannelID string `json:"channel_id"`
@@ -270,6 +278,8 @@ type PayPacketFeeMsg struct {
 	Relayers Array[string] `json:"relayers"`
 }
 
+// Deprecated: PayPacketFeeAsyncMsg is not supported since wasmd 0.54 and should not be used.
+// The structure is kept for deserialization purposes.
 type PayPacketFeeAsyncMsg struct {
 	// The channel id on the chain where the packet is sent from (this chain).
 	ChannelID string `json:"channel_id"`
@@ -282,6 +292,8 @@ type PayPacketFeeAsyncMsg struct {
 	Sequence uint64 `json:"sequence"`
 }
 
+// Deprecated: IBCFee is not supported since wasmd 0.54 and should not be used.
+// The structure is kept for deserialization purposes.
 type IBCFee struct {
 	AckFee     Array[Coin] `json:"ack_fee"`
 	ReceiveFee Array[Coin] `json:"receive_fee"`

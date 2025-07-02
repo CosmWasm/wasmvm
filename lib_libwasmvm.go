@@ -60,7 +60,7 @@ func (vm *VM) Cleanup() {
 // StoreCode will compile the Wasm code, and store the resulting compiled module
 // as well as the original code. Both can be referenced later via Checksum.
 // This must be done one time for given code, after which it can be
-// instatitated many times, and each instance called many times.
+// instantiated many times, and each instance called many times.
 //
 // For example, the code for all ERC-20 contracts should be the same.
 // This function stores the code for that contract only once, but it can
@@ -296,7 +296,7 @@ func (vm *VM) Migrate(
 //
 // MigrateMsg has some data on how to perform the migration.
 //
-// MigrateWithInfo takes one more argument - `migateInfo`. It consist of an additional data
+// MigrateWithInfo takes one more argument - `migrateInfo`. It consist of an additional data
 // related to the on-chain current contract's state version.
 func (vm *VM) MigrateWithInfo(
 	checksum Checksum,
@@ -678,6 +678,38 @@ func (vm *VM) IBCDestinationCallback(
 	return &result, gasReport.UsedInternally, nil
 }
 
+func (vm *VM) IBC2PacketAck(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2AcknowledgeMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCBasicResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketAck(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
 // IBC2PacketReceive is available on IBC-enabled contracts and is called when an incoming
 // packet is received on a channel belonging to this contract
 func (vm *VM) IBC2PacketReceive(
@@ -735,6 +767,40 @@ func (vm *VM) IBC2PacketTimeout(
 		return nil, 0, err
 	}
 	data, gasReport, err := api.IBC2PacketTimeout(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+
+	var result types.IBCBasicResult
+	err = DeserializeResponse(gasLimit, deserCost, &gasReport, data, &result)
+	if err != nil {
+		return nil, gasReport.UsedInternally, err
+	}
+	return &result, gasReport.UsedInternally, nil
+}
+
+// IBC2PacketSend is available on IBCv2-enabled contracts and is called to verify an
+// outgoing packet before it is sent to another blockchain.
+func (vm *VM) IBC2PacketSend(
+	checksum Checksum,
+	env types.Env,
+	msg types.IBC2PacketSendMsg,
+	store KVStore,
+	goapi GoAPI,
+	querier Querier,
+	gasMeter GasMeter,
+	gasLimit uint64,
+	deserCost types.UFraction,
+) (*types.IBCBasicResult, uint64, error) {
+	envBin, err := json.Marshal(env)
+	if err != nil {
+		return nil, 0, err
+	}
+	msgBin, err := json.Marshal(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, gasReport, err := api.IBC2PacketSend(vm.cache, checksum, envBin, msgBin, &gasMeter, store, &goapi, &querier, gasLimit, vm.printDebug)
 	if err != nil {
 		return nil, gasReport.UsedInternally, err
 	}

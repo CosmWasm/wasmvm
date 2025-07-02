@@ -33,6 +33,9 @@ type TransactionInfo struct {
 	// Along with BlockInfo.Height, this allows you to get a unique
 	// transaction identifier for the chain for future queries
 	Index uint32 `json:"index"`
+
+	// Hash of the transaction.
+	Hash []byte `json:"hash,omitempty"`
 }
 
 type MessageInfo struct {

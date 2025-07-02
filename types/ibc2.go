@@ -46,3 +46,31 @@ type IBC2PacketTimeoutMsg struct {
 	// The address of the relayer responsible for the packet.
 	Relayer string `json:"relayer"`
 }
+
+type IBC2AcknowledgeMsg struct {
+	SourceClient      string      `json:"source_client"`
+	DestinationClient string      `json:"destination_client"`
+	Data              IBC2Payload `json:"data"`
+	Acknowledgement   []byte      `json:"acknowledgement"`
+	Relayer           string      `json:"relayer"`
+}
+
+// IBC2PacketSendMsg represents a payload sent event in the IBC2 protocol.
+// Since sending IBCv2 packet is permissionless, the IBC protocol indtroduces
+// an extra entry point, in which the application can verify the message sent from
+// a port ID belonging to the contract.
+//
+// It includes details about the source and destination clients, the sequence
+// number of the packet and the signer that sent the message.
+type IBC2PacketSendMsg struct {
+	// The payload to be sent.
+	Payload IBC2Payload `json:"payload"`
+	// The identifier of the client that originally sent the packet.
+	SourceClient string `json:"source_client"`
+	// The identifier of the client that was the intended recipient.
+	DestinationClient string `json:"destination_client"`
+	// The sequence number of the sent packet.
+	PacketSequence uint64 `json:"packet_sequence"`
+	// The address of the signer that sent the packet.
+	Signer string `json:"signer"`
+}

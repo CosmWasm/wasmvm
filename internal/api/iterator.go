@@ -32,7 +32,7 @@ func startCall() uint64 {
 	return latestCallID
 }
 
-// removeFrame removes the frame with for the given call ID.
+// removeFrame removes the frame for the given call ID.
 // The result can be nil when the frame is not initialized,
 // i.e. when startCall() is called but no iterator is stored.
 func removeFrame(callID uint64) frame {
@@ -44,7 +44,7 @@ func removeFrame(callID uint64) frame {
 	return remove
 }
 
-// endCall is called at the end of a contract call to remove one item the iteratorFrames
+// endCall is called at the end of a contract call to remove one item from the iteratorFrames
 func endCall(callID uint64) {
 	// we pull removeFrame in another function so we don't hold the mutex while cleaning up the removed frame
 	remove := removeFrame(callID)

@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 //-------- Queries --------
@@ -171,19 +172,9 @@ type AllDenomMetadataResponse struct {
 // IBCQuery defines a query request from the contract into the chain.
 // This is the counterpart of [IbcQuery](https://github.com/CosmWasm/cosmwasm/blob/v0.14.0-beta1/packages/std/src/ibc.rs#L61-L83).
 type IBCQuery struct {
-	PortID            *PortIDQuery            `json:"port_id,omitempty"`
-	ListChannels      *ListChannelsQuery      `json:"list_channels,omitempty"`
-	Channel           *ChannelQuery           `json:"channel,omitempty"`
-	FeeEnabledChannel *FeeEnabledChannelQuery `json:"fee_enabled_channel,omitempty"`
-}
-
-type FeeEnabledChannelQuery struct {
-	ChannelID string `json:"channel_id"`
-	PortID    string `json:"port_id,omitempty"`
-}
-
-type FeeEnabledChannelResponse struct {
-	FeeEnabled bool `json:"fee_enabled"`
+	PortID       *PortIDQuery       `json:"port_id,omitempty"`
+	ListChannels *ListChannelsQuery `json:"list_channels,omitempty"`
+	Channel      *ChannelQuery      `json:"channel,omitempty"`
 }
 
 type PortIDQuery struct{}
@@ -373,6 +364,7 @@ type WasmQuery struct {
 	Raw          *RawQuery          `json:"raw,omitempty"`
 	ContractInfo *ContractInfoQuery `json:"contract_info,omitempty"`
 	CodeInfo     *CodeInfoQuery     `json:"code_info,omitempty"`
+	RawRange     *RawRangeQuery     `json:"raw_range,omitempty"`
 }
 
 // SmartQuery response is raw bytes ([]byte)
@@ -387,6 +379,54 @@ type RawQuery struct {
 	// Bech32 encoded sdk.AccAddress of the contract
 	ContractAddr string `json:"contract_addr"`
 	Key          []byte `json:"key"`
+}
+
+type RawRangeQuery struct {
+	// The address of the contract to query
+	ContractAddr string `json:"contract_addr"`
+	// Inclusive start bound. This is the first key you would like to get data for.
+	//
+	// If `start` is lexicographically greater than or equal to `end`, an empty range is described, mo matter of the order.
+	Start []byte `json:"start,omitempty"`
+	// Exclusive end bound. This is the key after the last key you would like to get data for.
+	End []byte `json:"end,omitempty"`
+	// Maximum number of elements to return.
+	//
+	// Make sure to set a reasonable limit to avoid running out of memory or into the deserialization limits of the VM. Also keep in mind that these limitations depend on the full JSON size of the response type.
+	Limit uint16 `json:"limit"`
+	// The order in which you want to receive the key-value pairs.
+	Order string `json:"order"`
+}
+
+type RawRangeResponse struct {
+	// The key-value pairs
+	Data Array[RawRangeEntry] `json:"data"`
+	// `None` if there are no more key-value pairs within the given key range.
+	NextKey []byte `json:"next_key"`
+}
+
+type RawRangeEntry struct {
+	Key   []byte
+	Value []byte
+}
+
+func (r RawRangeEntry) MarshalJSON() ([]byte, error) {
+	// marshal as [][]byte with two elements to match cosmwasm-std's RawRangeEntry
+	return json.Marshal([][]byte{r.Key, r.Value})
+}
+
+func (r *RawRangeEntry) UnmarshalJSON(data []byte) error {
+	// unmarshal as [][]byte with two elements
+	var arr [][]byte
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	if len(arr) != 2 {
+		return fmt.Errorf("invalid RawRange entry: expected array of length 2, got %d", len(arr))
+	}
+	r.Key = arr[0]
+	r.Value = arr[1]
+	return nil
 }
 
 type ContractInfoQuery struct {
