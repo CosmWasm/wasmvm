@@ -71,4 +71,4 @@ where the old name was deprecated.
 | `QueryResponse`                   | `QueryResult`                         | Brings consistency with the naming of the other results      |
 | `VoteMsg.Vote`                    | `VoteMsg.Option`                      | Brings consistency with Cosmos SDK naming                    |
 
-[ft]: https://stackoverflow.com/a/60073310
+[ft]: https://go.dev/doc/effective_go#mixed-caps
