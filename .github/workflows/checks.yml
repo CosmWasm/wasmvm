@@ -142,3 +142,25 @@ jobs:
       - name: Check Go formatting with gofumpt
         run: |
           [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
+
+  wasmvm_no_cgo:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22.12
+
+    - name: Build package "types" without cgo
+      run: CGO_ENABLED=0 go build ./types
+
+    - name: Build package "cosmwasm" without cgo
+      run: CGO_ENABLED=0 go build .
+
+    - name: Test package "types" without cgo
+      run: CGO_ENABLED=0 go test ./types
+
+    - name: Test package "cosmwasm" without cgo
+      run: CGO_ENABLED=0 go test .
