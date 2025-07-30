@@ -144,79 +144,79 @@ jobs:
           [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
 
   wasmvm_no_cgo:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.22.12
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
 
-    - name: Build package "types" without cgo
-      run: CGO_ENABLED=0 go build ./types
+      - name: Build package "types" without cgo
+        run: CGO_ENABLED=0 go build ./types
 
-    - name: Build package "cosmwasm" without cgo
-      run: CGO_ENABLED=0 go build .
+      - name: Build package "cosmwasm" without cgo
+        run: CGO_ENABLED=0 go build .
 
-    - name: Test package "types" without cgo
-      run: CGO_ENABLED=0 go test ./types
+      - name: Test package "types" without cgo
+        run: CGO_ENABLED=0 go test ./types
 
-    - name: Test package "cosmwasm" without cgo
-      run: CGO_ENABLED=0 go test .
+      - name: Test package "cosmwasm" without cgo
+        run: CGO_ENABLED=0 go test .
 
   nolink_libwasmvm:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.22.12
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
 
-    - name: Build package "types" with nolink_libwasmvm
-      run: go build -tags "nolink_libwasmvm" ./types
+      - name: Build package "types" with nolink_libwasmvm
+        run: go build -tags "nolink_libwasmvm" ./types
 
-    - name: Build package "cosmwasm" with nolink_libwasmvm
-      run: go build -tags "nolink_libwasmvm" .
+      - name: Build package "cosmwasm" with nolink_libwasmvm
+        run: go build -tags "nolink_libwasmvm" .
 
-    - name: Test package "types" with nolink_libwasmvm
-      run: go test -tags "nolink_libwasmvm" ./types
+      - name: Test package "types" with nolink_libwasmvm
+        run: go test -tags "nolink_libwasmvm" ./types
 
-    - name: Test package "cosmwasm" with nolink_libwasmvm
-      run: go test -tags "nolink_libwasmvm" .
+      - name: Test package "cosmwasm" with nolink_libwasmvm
+        run: go test -tags "nolink_libwasmvm" .
 
   tidy-go:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.22.12
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
 
-    - name: Check go mod tidy
-      run: |
-        go mod tidy
-        CHANGES_IN_REPO=$(git status --porcelain)
-        if [[ -n "$CHANGES_IN_REPO" ]]; then
-          echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
-          git status && git --no-pager diff
-          exit 1
-        fi
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          CHANGES_IN_REPO=$(git status --porcelain)
+          if [[ -n "$CHANGES_IN_REPO" ]]; then
+            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+            git status && git --no-pager diff
+            exit 1
+          fi
 
   lint-scripts:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Install shellcheck
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y git shellcheck
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git shellcheck
 
-    - name: Run shellcheck
-      run: |
-        find . -name "*.sh" -exec shellcheck {} +
+      - name: Run shellcheck
+        run: |
+          find . -name "*.sh" -exec shellcheck {} +
