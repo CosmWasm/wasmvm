@@ -8,16 +8,12 @@ on:
 jobs:
   libwasmvm_sanity:
     runs-on: ubuntu-latest
-    container: cimg/rust:1.82.0
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Show Rust version information
-        run: rustc --version; cargo --version; rustup --version
-
-      - name: Add Rust components
-        run: rustup component add rustfmt
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+          components: rustfmt
 
       - name: Cargo cache
         uses: actions/cache@v4
