@@ -1,0 +1,68 @@
+name: checks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  libwasmvm_sanity:
+    runs-on: ubuntu-latest
+    container: cimg/rust:1.82.0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show Rust version information
+        run: rustc --version; cargo --version; rustup --version
+
+      - name: Add Rust components
+        run: rustup component add rustfmt
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            libwasmvm/target/debug/.fingerprint
+            libwasmvm/target/debug/build
+            libwasmvm/target/debug/deps
+            libwasmvm/target/release/.fingerprint
+            libwasmvm/target/release/build
+            libwasmvm/target/release/deps
+          key: cargocache-v3-libwasmvm_sanity-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          restore-keys: |
+            cargocache-v3-libwasmvm_sanity-rust-1.82.0-
+
+      - name: Ensure libwasmvm/bindings.h is up-to-date
+        working-directory: libwasmvm
+        run: |
+          cargo check
+          CHANGES_IN_REPO=$(git status --porcelain bindings.h)
+          if [[ -n "$CHANGES_IN_REPO" ]]; then
+            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+            git status && git --no-pager diff
+            exit 1
+          fi
+
+      - name: Ensure internal/api/bindings.h is up to date
+        run: diff libwasmvm/bindings.h internal/api/bindings.h
+
+      - name: Check Rust formatting
+        working-directory: libwasmvm
+        run: cargo fmt -- --check
+
+      - name: Run unit tests
+        working-directory: libwasmvm
+        run: cargo test
+
+      - name: Build docs
+        working-directory: libwasmvm
+        run: cargo doc --no-deps
+
+      - name: Test docs
+        working-directory: libwasmvm
+        run: |
+          sed -i '/^crate-type = \["cdylib"\]/d' Cargo.toml
+          cargo test --doc
