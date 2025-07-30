@@ -121,3 +121,24 @@ jobs:
       - name: Run cargo-audit
         working-directory: libwasmvm
         run: cargo audit
+
+  format-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Install gofumpt
+        run: go install mvdan.cc/gofumpt@v0.4.0
+
+      - name: Check Go formatting with gofmt
+        run: |
+          [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
+
+      - name: Check Go formatting with gofumpt
+        run: |
+          [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
