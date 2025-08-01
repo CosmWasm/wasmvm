@@ -126,9 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
 
@@ -147,9 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
 
@@ -169,9 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
 
@@ -283,3 +277,15 @@ jobs:
 
       - name: Go benchmarks
         run: make bench
+
+  test_alpine_build:
+    runs-on:  ubuntu-latest
+    if: github.ref_type == 'branch' && github.ref_name == 'main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test Alpine build
+        run: make test-alpine
+
+      - name: Debug build results
+        run: ls -l ./internal/api
