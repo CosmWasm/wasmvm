@@ -278,6 +278,74 @@ jobs:
       - name: Go benchmarks
         run: make bench
 
+  build_static_lib:
+    runs-on: ubuntu-latest
+    needs: build_shared_library
+    if: |
+      (github.ref_type == 'branch' && github.ref_name == 'main') ||
+      (github.ref_type == 'tag' && github.ref_name =~ '^v[0-9]+\.[0-9]+\.[0-9]+.*')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Install ghr
+        run: |
+          go install github.com/tcnksm/ghr@v0.16.0
+          echo "${HOME}/go/bin" >> $GITHUB_PATH
+          ghr --version
+
+      - name: Build static library for Alpine
+        run: make release-build-alpine
+
+      - name: Build static library for MacOS
+        run: make release-build-macos-static
+
+      - name: Debug build results
+        run: ls -l ./internal/api
+
+      - name: Collect artifacts (tag builds only)
+        if: github.ref_type == 'tag'
+        run: |
+          mkdir artifacts
+
+          # Static (from build)
+          cp ./internal/api/libwasmvm_muslc.x86_64.a artifacts/
+          cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/
+          cp ./internal/api/libwasmvmstatic_darwin.a artifacts/
+
+          # Shared (from git)
+          cp ./internal/api/libwasmvm.aarch64.so artifacts/
+          cp ./internal/api/libwasmvm.x86_64.so artifacts/
+          cp ./internal/api/libwasmvm.dylib artifacts/
+
+      - name: Create checksums
+        if: github.ref_type == 'tag'
+        working-directory: artifacts
+        run: sha256sum * > checksums.txt && cat checksums.txt
+
+      - name: Publish artifacts on GitHub
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          TITLE="$TAG"
+          BODY="Build artifacts generated at this tag."
+
+          # Check if tag is a version without suffix (e.g. -rc or -beta)
+          # and set prerelease flag accordingly
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || PRERELEASE="--prerelease"
+
+          ghr -t "$GITHUB_TOKEN" \
+            -u "${GITHUB_REPOSITORY_OWNER}" -r "$(basename $GITHUB_REPOSITORY)" \
+            -c "$GITHUB_SHA" \
+            -n "$TITLE" -b "$BODY" \
+            -delete \
+            $PRERELEASE \
+            "$TAG" ./artifacts/
+
   test_alpine_build:
     runs-on:  ubuntu-latest
     if: github.ref_type == 'branch' && github.ref_name == 'main'
@@ -289,3 +357,33 @@ jobs:
 
       - name: Debug build results
         run: ls -l ./internal/api
+
+  deploy_to_git:
+    runs-on: ubuntu-latest
+    needs:
+      - libwasmvm_sanity
+      - format-go
+      - tidy-go
+      - lint-scripts
+      - wasmvm_test
+    if: github.ref_type == 'branch' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Build shared library for Linux
+        run: make release-build-linux
+
+      - name: Build shared library for macOS
+        run: make release-build-macos
+
+      - name: Debug build results
+        run: ls -l ./internal/api
+
+      - name: Commit and push new libraries
+        run: |
+          git status
+          git add ./internal/api
+          git commit --allow-empty -m '[skip ci] Built release libraries'
+          git push
