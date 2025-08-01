@@ -220,3 +220,31 @@ jobs:
       - name: Run shellcheck
         run: |
           find . -name "*.sh" -exec shellcheck {} +
+
+  build_shared_library:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.82.0
+    - name: Cargo cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          libwasmvm/target/debug/.fingerprint
+          libwasmvm/target/debug/build
+          libwasmvm/target/debug/deps
+          libwasmvm/target/release/.fingerprint
+          libwasmvm/target/release/build
+          libwasmvm/target/release/deps
+        key: cargocache-v3-build_shared_library-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+        restore-keys: |
+          cargocache-v3-build_shared_library-rust-1.82.0-
+    - name: Build shared library
+      run: make build-libwasmvm
+    - uses: actions/upload-artifact@v4
+      with:
+        name: libwasmvm
+        path: internal/api/libwasmvm.x86_64.so
