@@ -379,9 +379,14 @@ jobs:
       - name: Debug build results
         run: ls -l ./internal/api
 
+      - name: Configure git user
+        run: |
+          git config user.email "wasmvm@circleci.confio.example.com"
+          git config user.name "Deployer"
+
       - name: Commit and push new libraries
         run: |
           git status
           git add ./internal/api
-          git commit --allow-empty -m '[skip ci] Built release libraries'
-          git push
+          git commit --allow-empty -m "[skip ci] Built release libraries"
+          git push origin "${{ github.ref_name }}"
