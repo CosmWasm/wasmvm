@@ -575,7 +575,7 @@ func (vm *VM) IBCPacketAck(
 }
 
 // IBCPacketTimeout is available on IBC-enabled contracts and is called when an
-// outgoing packet (previously sent by this contract) will provably never be executed.
+// outgoing packet (previously sent by this contract) will probably never be executed.
 // Usually handled like ack returning an error
 func (vm *VM) IBCPacketTimeout(
 	checksum Checksum,
