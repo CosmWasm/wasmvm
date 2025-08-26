@@ -510,13 +510,13 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -539,8 +539,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -549,8 +549,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "base64",
  "bech32",
@@ -573,8 +573,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "bech32",
  "blake2",
@@ -601,8 +601,8 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -713,8 +713,8 @@ dependencies = [
 
 [[package]]
 name = "cw-schema"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "cw-schema-derive",
  "indexmap",
@@ -727,8 +727,8 @@ dependencies = [
 
 [[package]]
 name = "cw-schema-derive"
-version = "3.0.0"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.0#7504832e2f94f483ab7aeecfa08e085e61b41b6c"
+version = "3.0.1"
+source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
 dependencies = [
  "heck 0.5.0",
  "itertools",
@@ -3002,7 +3002,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
