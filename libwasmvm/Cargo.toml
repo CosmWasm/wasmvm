@@ -1,6 +1,6 @@
 [package]
 name = "wasmvm"
-version = "3.0.1"
+version = "3.0.2"
 publish = false
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
@@ -8,7 +8,7 @@ description = "Go bindings for cosmwasm contracts"
 repository = "https://github.com/CosmWasm/wasmvm"
 license = "Apache-2.0"
 readme = "README.md"
-exclude = [".circleci/*", ".gitignore"]
+exclude = [".gitignore"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -26,13 +26,13 @@ default = []
 backtraces = []
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v3.0.1", features = [
+cosmwasm-std = { version = "3.0.2", features = [
   "staking",
   "stargate",
   "iterator",
   "ibc2",
 ] }
-cosmwasm-vm = { git = "https://github.com/CosmWasm/cosmwasm.git", rev = "v3.0.1", features = [
+cosmwasm-vm = { version = "3.0.2", features = [
   "staking",
   "stargate",
   "iterator",

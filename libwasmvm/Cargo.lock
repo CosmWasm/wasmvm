@@ -510,13 +510,15 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b0a718b13ffe224e32a8c1f68527354868f47d6cc84afe8c66cb05fbb3ced6e"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c08dd7585b5c48fbcb947ada7a3fb49465fb735481ed295b54ca98add6dc17f"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -539,8 +541,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5677eed823a61eeb615b1ad4915a42336b70b0fe3f87bf3da4b59f3dcf9034af"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -549,8 +552,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4881104f54871bcea6f30757bee13b7f09c0998d1b0de133cce5a52336a2ada"
 dependencies = [
  "base64",
  "bech32",
@@ -573,8 +577,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ced97366b6c990cbf2b74228986dd7d6527cc7b1fd5208cfc48979e71b3470fc"
 dependencies = [
  "bech32",
  "blake2",
@@ -601,8 +606,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65cf70ac14d642a243473a11f05966c9204d99e675420c96f8c6f3ace135e144"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -713,12 +719,13 @@ dependencies = [
 
 [[package]]
 name = "cw-schema"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8f335d3f51e10260f4dfb0840f0526c1d25c6b42a9489c04ce41ed9aa54dd6d"
 dependencies = [
  "cw-schema-derive",
  "indexmap",
- "schemars 1.0.0-rc.2",
+ "schemars 1.0.4",
  "serde",
  "serde_with",
  "siphasher",
@@ -727,8 +734,9 @@ dependencies = [
 
 [[package]]
 name = "cw-schema-derive"
-version = "3.0.1"
-source = "git+https://github.com/CosmWasm/cosmwasm.git?rev=v3.0.1#74a568d3851e959eb0e0cc6d377ee8a232ef745f"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aba2eb93f854caeacc5eda13d15663b7605395514fd378bfba8e7532f1fc5865"
 dependencies = [
  "heck 0.5.0",
  "itertools",
@@ -2188,13 +2196,13 @@ dependencies = [
 
 [[package]]
 name = "schemars"
-version = "1.0.0-rc.2"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284cf8058b5165c2e1aedb8f56f4b09a838a764d1c110178e1747d1f77a01ceb"
+checksum = "82d20c4491bc164fa2f6c5d44565947a52ad80b9505d8e36f8d54c27c739fcd0"
 dependencies = [
  "dyn-clone",
  "ref-cast",
- "schemars_derive 1.0.0-rc.2",
+ "schemars_derive 1.0.4",
  "serde",
  "serde_json",
 ]
@@ -2213,9 +2221,9 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "1.0.0-rc.2"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ce51e6bea03670e88edba2d724eed817b97f4ab017a1001bae5da325ce93fe7"
+checksum = "33d020396d1d138dc19f1165df7545479dcd58d93810dc5d646a16e55abefa80"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3002,7 +3010,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
