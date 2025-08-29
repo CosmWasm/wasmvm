@@ -261,3 +261,10 @@ func (a *Array[C]) UnmarshalJSON(data []byte) error {
 	*a = raw
 	return nil
 }
+
+// InfoLogger is a simple interface for logging information
+type InfoLogger interface {
+	Info(msg string, keyvals ...interface{})
+	Debug(msg string, keyvals ...interface{})
+	Error(msg string, keyvals ...interface{})
+}
