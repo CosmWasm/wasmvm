@@ -2,14 +2,18 @@ name: checks
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+      - release/**
+    tags:
+      - 'v*.*.*'
   pull_request:
 
 jobs:
   libwasmvm_sanity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -68,7 +72,7 @@ jobs:
       matrix:
         rust-version: ["1.82.0", "1.87.0"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust-version }}
@@ -96,7 +100,7 @@ jobs:
   libwasmvm_audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -125,7 +129,7 @@ jobs:
   format-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
@@ -144,7 +148,7 @@ jobs:
   wasmvm_no_cgo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
@@ -164,7 +168,7 @@ jobs:
   nolink_libwasmvm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
@@ -184,7 +188,7 @@ jobs:
   tidy-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -204,7 +208,7 @@ jobs:
   lint-scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install shellcheck
         run: |
@@ -218,7 +222,7 @@ jobs:
   build_shared_library:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -249,7 +253,7 @@ jobs:
     env:
       GORACE: "halt_on_error=1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
@@ -283,7 +287,7 @@ jobs:
     needs: build_shared_library
     if: (github.ref_type == 'branch' && github.ref_name == 'main') || github.ref_type == 'tag'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.12
@@ -348,7 +352,7 @@ jobs:
     runs-on:  ubuntu-latest
     if: github.ref_type == 'branch' && github.ref_name == 'main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Test Alpine build
         run: make test-alpine
@@ -366,7 +370,7 @@ jobs:
       - wasmvm_test
     if: github.ref_type == 'branch' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: true
 
@@ -379,9 +383,14 @@ jobs:
       - name: Debug build results
         run: ls -l ./internal/api
 
+      - name: Configure git user
+        run: |
+          git config user.email "wasmvm@circleci.confio.example.com"
+          git config user.name "Deployer"
+
       - name: Commit and push new libraries
         run: |
           git status
           git add ./internal/api
-          git commit --allow-empty -m '[skip ci] Built release libraries'
-          git push
+          git commit --allow-empty -m "[skip ci] Built release libraries"
+          git push origin "${{ github.ref_name }}"
