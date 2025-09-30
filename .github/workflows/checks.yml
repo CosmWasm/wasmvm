@@ -1,0 +1,396 @@
+name: checks
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+    tags:
+      - 'v*.*.*'
+  pull_request:
+
+jobs:
+  libwasmvm_sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+          components: rustfmt
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            libwasmvm/target/debug/.fingerprint
+            libwasmvm/target/debug/build
+            libwasmvm/target/debug/deps
+            libwasmvm/target/release/.fingerprint
+            libwasmvm/target/release/build
+            libwasmvm/target/release/deps
+          key: cargocache-v3-libwasmvm_sanity-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          restore-keys: |
+            cargocache-v3-libwasmvm_sanity-rust-1.82.0-
+
+      - name: Ensure libwasmvm/bindings.h is up-to-date
+        working-directory: libwasmvm
+        run: |
+          cargo check
+          CHANGES_IN_REPO=$(git status --porcelain bindings.h)
+          if [[ -n "$CHANGES_IN_REPO" ]]; then
+            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+            git status && git --no-pager diff
+            exit 1
+          fi
+
+      - name: Ensure internal/api/bindings.h is up to date
+        run: diff libwasmvm/bindings.h internal/api/bindings.h
+
+      - name: Check Rust formatting
+        working-directory: libwasmvm
+        run: cargo fmt -- --check
+
+      - name: Run unit tests
+        working-directory: libwasmvm
+        run: cargo test
+
+      - name: Build docs
+        working-directory: libwasmvm
+        run: cargo doc --no-deps
+
+      - name: Test docs
+        working-directory: libwasmvm
+        run: |
+          sed -i '/^crate-type = \["cdylib"\]/d' Cargo.toml
+          cargo test --doc
+
+  libwasmvm_clippy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust-version: ["1.82.0", "1.87.0"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust-version }}
+          components: clippy
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            libwasmvm/target/debug/.fingerprint
+            libwasmvm/target/debug/build
+            libwasmvm/target/debug/deps
+            libwasmvm/target/release/.fingerprint
+            libwasmvm/target/release/build
+            libwasmvm/target/release/deps
+          key: v3-libwasmvm_clippy-rust-${{ matrix.rust-version }}-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          restore-keys: |
+            v3-libwasmvm_clippy-rust-${{ matrix.rust-version }}-
+
+      - name: Run clippy
+        working-directory: libwasmvm
+        run: cargo clippy --all-targets -- -D warnings
+
+  libwasmvm_audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - name: Install OpenSSL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+          key: v3-libwasmvm_audit-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          restore-keys: |
+            v3-libwasmvm_audit-rust-1.82.0-
+
+      - name: Install cargo-audit
+        run: cargo install --debug cargo-audit --version 0.21.0 --locked
+
+      - name: Run cargo-audit
+        working-directory: libwasmvm
+        run: cargo audit
+
+  format-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Install gofumpt
+        run: go install mvdan.cc/gofumpt@v0.4.0
+
+      - name: Check Go formatting with gofmt
+        run: |
+          [ "$(gofmt -l .)" = "" ] || (gofmt -d . && exit 1)
+
+      - name: Check Go formatting with gofumpt
+        run: |
+          [ "$(gofumpt -l .)" = "" ] || (gofumpt -d . && exit 1)
+
+  wasmvm_no_cgo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Build package "types" without cgo
+        run: CGO_ENABLED=0 go build ./types
+
+      - name: Build package "cosmwasm" without cgo
+        run: CGO_ENABLED=0 go build .
+
+      - name: Test package "types" without cgo
+        run: CGO_ENABLED=0 go test ./types
+
+      - name: Test package "cosmwasm" without cgo
+        run: CGO_ENABLED=0 go test .
+
+  nolink_libwasmvm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Build package "types" with nolink_libwasmvm
+        run: go build -tags "nolink_libwasmvm" ./types
+
+      - name: Build package "cosmwasm" with nolink_libwasmvm
+        run: go build -tags "nolink_libwasmvm" .
+
+      - name: Test package "types" with nolink_libwasmvm
+        run: go test -tags "nolink_libwasmvm" ./types
+
+      - name: Test package "cosmwasm" with nolink_libwasmvm
+        run: go test -tags "nolink_libwasmvm" .
+
+  tidy-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          CHANGES_IN_REPO=$(git status --porcelain)
+          if [[ -n "$CHANGES_IN_REPO" ]]; then
+            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+            git status && git --no-pager diff
+            exit 1
+          fi
+
+  lint-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git shellcheck
+
+      - name: Run shellcheck
+        run: |
+          find . -name "*.sh" -exec shellcheck {} +
+
+  build_shared_library:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            libwasmvm/target/debug/.fingerprint
+            libwasmvm/target/debug/build
+            libwasmvm/target/debug/deps
+            libwasmvm/target/release/.fingerprint
+            libwasmvm/target/release/build
+            libwasmvm/target/release/deps
+          key: cargocache-v3-build_shared_library-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          restore-keys: |
+            cargocache-v3-build_shared_library-rust-1.82.0-
+      - name: Build shared library
+        run: make build-libwasmvm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libwasmvm
+          path: internal/api/libwasmvm.x86_64.so
+
+  wasmvm_test:
+    runs-on: ubuntu-latest
+    needs: build_shared_library
+    env:
+      GORACE: "halt_on_error=1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Download libwasmvm artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: libwasmvm
+          path: ./internal/api
+
+      - name: Check .so files
+        run: |
+          ls -lA ./internal/api/libwasmvm.*.so
+          sha256sum ./internal/api/libwasmvm.*.so
+          ldd ./internal/api/libwasmvm.x86_64.so
+
+      - name: Build Go project
+        run: make build-go
+
+      - name: Go integration tests
+        run: make test
+
+      - name: Go tests with cgo and race condition safety checks
+        run: make test-safety
+
+      - name: Go benchmarks
+        run: make bench
+
+  build_static_lib:
+    runs-on: ubuntu-latest
+    needs: build_shared_library
+    if: (github.ref_type == 'branch' && github.ref_name == 'main') || github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.12
+
+      - name: Install ghr
+        run: |
+          go install github.com/tcnksm/ghr@v0.16.0
+          echo "${HOME}/go/bin" >> $GITHUB_PATH
+          ghr --version
+
+      - name: Build static library for Alpine
+        run: make release-build-alpine
+
+      - name: Build static library for MacOS
+        run: make release-build-macos-static
+
+      - name: Debug build results
+        run: ls -l ./internal/api
+
+      - name: Collect artifacts (tag builds only)
+        if: github.ref_type == 'tag'
+        run: |
+          mkdir artifacts
+
+          # Static (from build)
+          cp ./internal/api/libwasmvm_muslc.x86_64.a artifacts/
+          cp ./internal/api/libwasmvm_muslc.aarch64.a artifacts/
+          cp ./internal/api/libwasmvmstatic_darwin.a artifacts/
+
+          # Shared (from git)
+          cp ./internal/api/libwasmvm.aarch64.so artifacts/
+          cp ./internal/api/libwasmvm.x86_64.so artifacts/
+          cp ./internal/api/libwasmvm.dylib artifacts/
+
+      - name: Create checksums
+        if: github.ref_type == 'tag'
+        working-directory: artifacts
+        run: sha256sum * > checksums.txt && cat checksums.txt
+
+      - name: Publish artifacts on GitHub
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          TITLE="$TAG"
+          BODY="Build artifacts generated at this tag."
+
+          # Check if tag is a version without suffix (e.g. -rc or -beta)
+          # and set prerelease flag accordingly
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || PRERELEASE="--prerelease"
+
+          ghr -t "$GITHUB_TOKEN" \
+            -u "${GITHUB_REPOSITORY_OWNER}" -r "$(basename $GITHUB_REPOSITORY)" \
+            -c "$GITHUB_SHA" \
+            -n "$TITLE" -b "$BODY" \
+            -delete \
+            $PRERELEASE \
+            "$TAG" ./artifacts/
+
+  test_alpine_build:
+    runs-on:  ubuntu-latest
+    if: github.ref_type == 'branch' && github.ref_name == 'main'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Test Alpine build
+        run: make test-alpine
+
+      - name: Debug build results
+        run: ls -l ./internal/api
+
+  deploy_to_git:
+    runs-on: ubuntu-latest
+    needs:
+      - libwasmvm_sanity
+      - format-go
+      - tidy-go
+      - lint-scripts
+      - wasmvm_test
+    if: github.ref_type == 'branch' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+
+      - name: Build shared library for Linux
+        run: make release-build-linux
+
+      - name: Build shared library for macOS
+        run: make release-build-macos
+
+      - name: Debug build results
+        run: ls -l ./internal/api
+
+      - name: Configure git user
+        run: |
+          git config user.email "wasmvm@circleci.confio.example.com"
+          git config user.name "Deployer"
+
+      - name: Commit and push new libraries
+        run: |
+          git status
+          git add ./internal/api
+          git commit --allow-empty -m "[skip ci] Built release libraries"
+          git push origin "${{ github.ref_name }}"
