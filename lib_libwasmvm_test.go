@@ -18,23 +18,23 @@ import (
 )
 
 const (
-	TESTING_PRINT_DEBUG  = false
-	TESTING_GAS_LIMIT    = uint64(500_000_000_000) // ~0.5ms
-	TESTING_MEMORY_LIMIT = 32                      // MiB
-	TESTING_CACHE_SIZE   = 100                     // MiB
+	testingPrintDebug  = false
+	testingGasLimit    = uint64(500_000_000_000) // ~0.5ms
+	testingMemoryLimit = 32                      // MiB
+	testingCacheSize   = 100                     // MiB
 )
 
-var TESTING_CAPABILITIES = []string{"staking", "stargate", "iterator"}
+var testingCapabilities = []string{"staking", "stargate", "iterator"}
 
 const (
-	CYBERPUNK_TEST_CONTRACT = "./testdata/cyberpunk.wasm"
-	HACKATOM_TEST_CONTRACT  = "./testdata/hackatom.wasm"
+	cyberpunkTestContract = "./testdata/cyberpunk.wasm"
+	hackatomTestContract  = "./testdata/hackatom.wasm"
 )
 
 func withVM(t *testing.T) *VM {
 	t.Helper()
 	tmpdir := t.TempDir()
-	vm, err := NewVM(tmpdir, TESTING_CAPABILITIES, TESTING_MEMORY_LIMIT, TESTING_PRINT_DEBUG, TESTING_CACHE_SIZE)
+	vm, err := NewVM(tmpdir, testingCapabilities, testingMemoryLimit, testingPrintDebug, testingCacheSize)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -47,7 +47,7 @@ func createTestContract(t *testing.T, vm *VM, path string) Checksum {
 	t.Helper()
 	wasm, err := os.ReadFile(path)
 	require.NoError(t, err)
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	checksum, _, err := vm.StoreCode(wasm, testingGasLimit)
 	require.NoError(t, err)
 	return checksum
 }
@@ -57,17 +57,17 @@ func TestStoreCode(t *testing.T) {
 
 	// Valid hackatom contract
 	{
-		wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+		wasm, err := os.ReadFile(hackatomTestContract)
 		require.NoError(t, err)
-		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err = vm.StoreCode(wasm, testingGasLimit)
 		require.NoError(t, err)
 	}
 
 	// Valid cyberpunk contract
 	{
-		wasm, err := os.ReadFile(CYBERPUNK_TEST_CONTRACT)
+		wasm, err := os.ReadFile(cyberpunkTestContract)
 		require.NoError(t, err)
-		_, _, err = vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err = vm.StoreCode(wasm, testingGasLimit)
 		require.NoError(t, err)
 	}
 
@@ -77,28 +77,28 @@ func TestStoreCode(t *testing.T) {
 		// hexdump -C < empty.wasm
 
 		wasm := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
 		require.ErrorContains(t, err, "Error during static Wasm validation: Wasm contract must contain exactly one memory")
 	}
 
 	// No Wasm
 	{
 		wasm := []byte("foobar")
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
 		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
 	}
 
 	// Empty
 	{
 		wasm := []byte("")
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
 		require.ErrorContains(t, err, "Wasm bytecode could not be deserialized")
 	}
 
 	// Nil
 	{
 		var wasm []byte = nil
-		_, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+		_, _, err := vm.StoreCode(wasm, testingGasLimit)
 		require.ErrorContains(t, err, "Null/Nil argument: wasm")
 	}
 }
@@ -106,7 +106,7 @@ func TestStoreCode(t *testing.T) {
 func TestSimulateStoreCode(t *testing.T) {
 	vm := withVM(t)
 
-	hackatom, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	hackatom, err := os.ReadFile(hackatomTestContract)
 	require.NoError(t, err)
 
 	specs := map[string]struct {
@@ -124,7 +124,7 @@ func TestSimulateStoreCode(t *testing.T) {
 
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			checksum, _, err := vm.SimulateStoreCode(spec.wasm, TESTING_GAS_LIMIT)
+			checksum, _, err := vm.SimulateStoreCode(spec.wasm, testingGasLimit)
 
 			if spec.err != "" {
 				assert.ErrorContains(t, err, spec.err)
@@ -140,10 +140,10 @@ func TestSimulateStoreCode(t *testing.T) {
 func TestStoreCodeAndGet(t *testing.T) {
 	vm := withVM(t)
 
-	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	wasm, err := os.ReadFile(hackatomTestContract)
 	require.NoError(t, err)
 
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	checksum, _, err := vm.StoreCode(wasm, testingGasLimit)
 	require.NoError(t, err)
 
 	code, err := vm.GetCode(checksum)
@@ -154,10 +154,10 @@ func TestStoreCodeAndGet(t *testing.T) {
 func TestRemoveCode(t *testing.T) {
 	vm := withVM(t)
 
-	wasm, err := os.ReadFile(HACKATOM_TEST_CONTRACT)
+	wasm, err := os.ReadFile(hackatomTestContract)
 	require.NoError(t, err)
 
-	checksum, _, err := vm.StoreCode(wasm, TESTING_GAS_LIMIT)
+	checksum, _, err := vm.StoreCode(wasm, testingGasLimit)
 	require.NoError(t, err)
 
 	err = vm.RemoveCode(checksum)
@@ -169,10 +169,10 @@ func TestRemoveCode(t *testing.T) {
 
 func TestHappyPath(t *testing.T) {
 	vm := withVM(t)
-	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
+	checksum := createTestContract(t, vm, hackatomTestContract)
 
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter1 := api.NewMockGasMeter(testingGasLimit)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -183,18 +183,18 @@ func TestHappyPath(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	i, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err := vm.Instantiate(checksum, env, info, msg, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
 	require.Empty(t, ires.Messages)
 
 	// execute
-	gasMeter2 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter2 := api.NewMockGasMeter(testingGasLimit)
 	store.SetGasMeter(gasMeter2)
 	env = api.MockEnv()
 	info = api.MockInfo("fred", nil)
-	h, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, TESTING_GAS_LIMIT, deserCost)
+	h, _, err := vm.Execute(checksum, env, info, []byte(`{"release":{}}`), store, *goapi, querier, gasMeter2, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, h.Ok)
 	hres := h.Ok
@@ -214,10 +214,10 @@ func TestHappyPath(t *testing.T) {
 
 func TestEnv(t *testing.T) {
 	vm := withVM(t)
-	checksum := createTestContract(t, vm, CYBERPUNK_TEST_CONTRACT)
+	checksum := createTestContract(t, vm, cyberpunkTestContract)
 
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter1 := api.NewMockGasMeter(testingGasLimit)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -227,7 +227,7 @@ func TestEnv(t *testing.T) {
 	// instantiate
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
-	i, _, err := vm.Instantiate(checksum, env, info, []byte(`{}`), store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err := vm.Instantiate(checksum, env, info, []byte(`{}`), store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
@@ -247,7 +247,7 @@ func TestEnv(t *testing.T) {
 	}
 	info = api.MockInfo("creator", nil)
 	msg := []byte(`{"mirror_env": {}}`)
-	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
@@ -273,7 +273,7 @@ func TestEnv(t *testing.T) {
 	}
 	info = api.MockInfo("creator", nil)
 	msg = []byte(`{"mirror_env": {}}`)
-	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err = vm.Execute(checksum, env, info, msg, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
@@ -290,7 +290,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{}, metrics)
 
 	// Create contract
-	checksum := createTestContract(t, vm, HACKATOM_TEST_CONTRACT)
+	checksum := createTestContract(t, vm, hackatomTestContract)
 
 	deserCost := types.UFraction{Numerator: 1, Denominator: 1}
 
@@ -300,7 +300,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{}, metrics)
 
 	// Instantiate 1
-	gasMeter1 := api.NewMockGasMeter(TESTING_GAS_LIMIT)
+	gasMeter1 := api.NewMockGasMeter(testingGasLimit)
 	// instantiate it with this store
 	store := api.NewLookup(gasMeter1)
 	goapi := api.NewMockAPI()
@@ -310,7 +310,7 @@ func TestGetMetrics(t *testing.T) {
 	env := api.MockEnv()
 	info := api.MockInfo("creator", nil)
 	msg1 := []byte(`{"verifier": "fred", "beneficiary": "bob"}`)
-	i, _, err := vm.Instantiate(checksum, env, info, msg1, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err := vm.Instantiate(checksum, env, info, msg1, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires := i.Ok
@@ -321,13 +321,14 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
+	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	t.Log(metrics.SizeMemoryCache)
+	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 2
 	msg2 := []byte(`{"verifier": "fred", "beneficiary": "susi"}`)
-	i, _, err = vm.Instantiate(checksum, env, info, msg2, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err = vm.Instantiate(checksum, env, info, msg2, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
@@ -338,7 +339,9 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
+	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
+	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Pin
@@ -357,7 +360,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 3
 	msg3 := []byte(`{"verifier": "fred", "beneficiary": "bert"}`)
-	i, _, err = vm.Instantiate(checksum, env, info, msg3, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err = vm.Instantiate(checksum, env, info, msg3, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
@@ -391,7 +394,7 @@ func TestGetMetrics(t *testing.T) {
 
 	// Instantiate 4
 	msg4 := []byte(`{"verifier": "fred", "beneficiary": "jeff"}`)
-	i, _, err = vm.Instantiate(checksum, env, info, msg4, store, *goapi, querier, gasMeter1, TESTING_GAS_LIMIT, deserCost)
+	i, _, err = vm.Instantiate(checksum, env, info, msg4, store, *goapi, querier, gasMeter1, testingGasLimit, deserCost)
 	require.NoError(t, err)
 	require.NotNil(t, i.Ok)
 	ires = i.Ok
@@ -447,4 +450,120 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	err = DeserializeResponse(math.MaxUint64, deserCost, &gasReport, resultJson, &ibcReceiveResult)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "payload")
+}
+
+func TestPinUnpin(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: []types.PerModuleEntry{}}, pinnedMetrics)
+
+	// Create contract 1
+	checksumHackatom := createTestContract(t, vm, hackatomTestContract)
+
+	// Pin contract 1
+	err = vm.Pin(checksumHackatom)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+
+	// Create contract 2
+	checksumCyberpunk := createTestContract(t, vm, cyberpunkTestContract)
+
+	// Pin contract 2
+	err = vm.Pin(checksumCyberpunk)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 2)
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[1].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[1].Metrics.Size, 0.25)
+
+	// Unpin contract 1
+	err = vm.Unpin(checksumHackatom)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+
+	// Unpin contract 2
+	err = vm.Unpin(checksumCyberpunk)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Empty(t, pinnedMetrics.PerModule)
+}
+
+func TestPinNotExisting(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Empty(t, pinnedMetrics.PerModule)
+
+	// Create contract 1, get correct checksum
+	checksum := createTestContract(t, vm, hackatomTestContract)
+	// Malform the checksum
+	checksum[0] = checksum[0] + 1
+
+	// Try to pin not existing contract
+	err = vm.Pin(checksum)
+	require.ErrorContains(t, err, "Error opening Wasm file for reading")
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Empty(t, pinnedMetrics.PerModule)
+}
+
+func TestUnpinNotExisting(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Empty(t, pinnedMetrics.PerModule)
+
+	// Create contract 1, get correct checksum
+	checksum := createTestContract(t, vm, hackatomTestContract)
+
+	// Pin contract 1
+	err = vm.Pin(checksum)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
+
+	// Malform the checksum
+	checksum[0] = checksum[0] + 1
+
+	// Try to unpin not existing contract
+	err = vm.Unpin(checksum)
+	// Unpin just ignores unpinning non-existing codes
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
 }
