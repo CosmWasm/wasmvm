@@ -517,7 +517,7 @@ func TestPinNotExisting(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err := vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Len(t, pinnedMetrics.PerModule, 0)
+	require.Empty(t, pinnedMetrics.PerModule)
 
 	// Create contract 1, get correct checksum
 	checksum := createTestContract(t, vm, hackatomTestContract)
@@ -531,7 +531,7 @@ func TestPinNotExisting(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Len(t, pinnedMetrics.PerModule, 0)
+	require.Empty(t, pinnedMetrics.PerModule)
 }
 
 func TestUnpinNotExisting(t *testing.T) {
@@ -540,7 +540,7 @@ func TestUnpinNotExisting(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err := vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Len(t, pinnedMetrics.PerModule, 0)
+	require.Empty(t, pinnedMetrics.PerModule)
 
 	// Create contract 1, get correct checksum
 	checksum := createTestContract(t, vm, hackatomTestContract)
