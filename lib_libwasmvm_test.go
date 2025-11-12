@@ -451,3 +451,62 @@ func TestLongPayloadDeserialization(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "payload")
 }
+
+func TestPinUnpin(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: []types.PerModuleEntry{}}, pinnedMetrics)
+
+	// Create contract 1
+	checksumHackatom := createTestContract(t, vm, hackatomTestContract)
+
+	// Pin contract 1
+	err = vm.Pin(checksumHackatom)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pinnedMetrics.PerModule))
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+
+	// Create contract 2
+	checksumCyberpunk := createTestContract(t, vm, cyberpunkTestContract)
+
+	// Pin contract 2
+	err = vm.Pin(checksumCyberpunk)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Equal(t, 2, len(pinnedMetrics.PerModule))
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[1].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[1].Metrics.Size, 0.25)
+
+	// Unpin contract 1
+	err = vm.Unpin(checksumHackatom)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pinnedMetrics.PerModule))
+	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
+	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+
+	// Unpin contract 2
+	err = vm.Unpin(checksumCyberpunk)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	assert.Equal(t, &types.PinnedMetrics{PerModule: []types.PerModuleEntry{}}, pinnedMetrics)
+}
