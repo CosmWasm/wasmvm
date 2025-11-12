@@ -510,3 +510,60 @@ func TestPinUnpin(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, pinnedMetrics.PerModule)
 }
+
+func TestPinNotExisting(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 0)
+
+	// Create contract 1, get correct checksum
+	checksum := createTestContract(t, vm, hackatomTestContract)
+	// Malform the checksum
+	checksum[0] = checksum[0] + 1
+
+	// Try to pin not existing contract
+	err = vm.Pin(checksum)
+	require.ErrorContains(t, err, "Error opening Wasm file for reading")
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 0)
+}
+
+func TestUnpinNotExisting(t *testing.T) {
+	vm := withVM(t)
+
+	// Get pinned metrics
+	pinnedMetrics, err := vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 0)
+
+	// Create contract 1, get correct checksum
+	checksum := createTestContract(t, vm, hackatomTestContract)
+
+	// Pin contract 1
+	err = vm.Pin(checksum)
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
+
+	// Malform the checksum
+	checksum[0] = checksum[0] + 1
+
+	// Try to unpin not existing contract
+	err = vm.Unpin(checksum)
+	// Unpin just ignores unpinning non-existing codes
+	require.NoError(t, err)
+
+	// Get pinned metrics
+	pinnedMetrics, err = vm.GetPinnedMetrics()
+	require.NoError(t, err)
+	require.Len(t, pinnedMetrics.PerModule, 1)
+}
