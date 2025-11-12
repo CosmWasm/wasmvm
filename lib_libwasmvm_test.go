@@ -508,5 +508,5 @@ func TestPinUnpin(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Len(t, pinnedMetrics.PerModule, 0)
+	require.Empty(t, pinnedMetrics.PerModule)
 }
