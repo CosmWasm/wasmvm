@@ -321,8 +321,9 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint32(0), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
+	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
-	t.Log(metrics.SizeMemoryCache)
+	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Instantiate 2
@@ -338,7 +339,9 @@ func TestGetMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint32(1), metrics.HitsMemoryCache)
 	require.Equal(t, uint32(1), metrics.HitsFsCache)
+	require.Equal(t, uint64(0), metrics.ElementsPinnedMemoryCache)
 	require.Equal(t, uint64(1), metrics.ElementsMemoryCache)
+	require.Equal(t, uint64(0), metrics.SizePinnedMemoryCache)
 	require.InEpsilon(t, 3700000, metrics.SizeMemoryCache, 0.25)
 
 	// Pin
