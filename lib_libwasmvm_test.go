@@ -470,7 +470,7 @@ func TestPinUnpin(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(pinnedMetrics.PerModule))
+	require.Len(t, pinnedMetrics.PerModule, 1)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
 	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 
@@ -484,7 +484,7 @@ func TestPinUnpin(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Equal(t, 2, len(pinnedMetrics.PerModule))
+	require.Len(t, pinnedMetrics.PerModule, 2)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
 	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[1].Metrics.Hits)
@@ -497,7 +497,7 @@ func TestPinUnpin(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(pinnedMetrics.PerModule))
+	require.Len(t, pinnedMetrics.PerModule, 1)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
 	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 
@@ -508,5 +508,5 @@ func TestPinUnpin(t *testing.T) {
 	// Get pinned metrics
 	pinnedMetrics, err = vm.GetPinnedMetrics()
 	require.NoError(t, err)
-	assert.Equal(t, &types.PinnedMetrics{PerModule: []types.PerModuleEntry{}}, pinnedMetrics)
+	require.Len(t, pinnedMetrics.PerModule, 0)
 }
