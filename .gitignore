@@ -19,3 +19,4 @@ a.out
 
 # direnv Nix stuff
 .direnv/
+reference-code/
