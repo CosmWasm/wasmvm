@@ -13,7 +13,7 @@ jobs:
   libwasmvm_sanity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -72,7 +72,7 @@ jobs:
       matrix:
         rust-version: ["1.82.0", "1.87.0"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust-version }}
@@ -100,7 +100,7 @@ jobs:
   libwasmvm_audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -129,7 +129,7 @@ jobs:
   format-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
@@ -148,7 +148,7 @@ jobs:
   wasmvm_no_cgo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
@@ -168,7 +168,7 @@ jobs:
   nolink_libwasmvm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
@@ -188,7 +188,7 @@ jobs:
   tidy-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -208,7 +208,7 @@ jobs:
   lint-scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install shellcheck
         run: |
@@ -222,7 +222,7 @@ jobs:
   build_shared_library:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.82.0
@@ -253,7 +253,7 @@ jobs:
     env:
       GORACE: "halt_on_error=1"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
@@ -287,7 +287,7 @@ jobs:
     needs: build_shared_library
     if: (github.ref_type == 'branch' && github.ref_name == 'main') || github.ref_type == 'tag'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
@@ -352,7 +352,7 @@ jobs:
     runs-on:  ubuntu-latest
     if: github.ref_type == 'branch' && github.ref_name == 'main'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Test Alpine build
         run: make test-alpine
@@ -370,7 +370,7 @@ jobs:
       - wasmvm_test
     if: github.ref_type == 'branch' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: true
 
