@@ -6,7 +6,7 @@ no clean way to add a `libwasmvm.{so,dll,dylib}`. It needs to be committed with
 the tagged (go) release in order to be easily usable.
 
 The solution is to precompile the rust code into libraries for the major
-platforms (Linux, Windows, MacOS) and commit them to the repository at each
+platforms (Linux, Windows, macOS) and commit them to the repository at each
 tagged release. This should be doable from one host machine, but is a bit
 tricky. This folder contains build scripts and a Docker image to create all
 dynamic libraries from one host. In general this is set up for a Linux host, but
@@ -134,7 +134,7 @@ See those DockerHub repos for all available versions of the builder images.
 
 **Version 0003:**
 
-- Avoid pre-fetching of dependences to decouple builders from source code.
+- Avoid pre-fetching of dependencies to decouple builders from source code.
 - Bump `OSX_VERSION_MIN` to 10.10.
 - Use `rust:1.47.0-buster` as base image for cross compilation to macOS
 
@@ -149,8 +149,8 @@ See those DockerHub repos for all available versions of the builder images.
 
 ## Usage
 
-Create the Docker images, capable of cross-compiling Linux and MacOS dynamic
-libs. As the builder images are all x86_64, it can be slow and memory intense to
+Create the Docker images, capable of cross-compiling Linux and macOS dynamic
+libs. As the builder images are all x86_64, it can be slow and memory-intensive to
 do this on a different architecture:
 
 ```sh
