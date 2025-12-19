@@ -16,3 +16,5 @@ a.out
 
 # macOS
 .DS_Store
+
+/vendor
