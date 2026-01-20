@@ -69,7 +69,8 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ## [2.3.1] - 2025-12-10
 
 > [!NOTE]
-> This release fixes broken release [2.3.0].
+> This release fixes broken _release process_ of version [2.3.0].
+> No changes in the code of version [2.3.0].
 
 - Prepare release v2.3.1 ([#705])
 
