@@ -9,12 +9,14 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Improved tests ([#699])
 - Update setup-go to v6 ([#697])
 - Unified security policy ([#693])
+- Updated year in NOTICE file. ([0xf2566c3])
 
 [#708]: https://github.com/CosmWasm/wasmvm/issues/708
 [#703]: https://github.com/CosmWasm/wasmvm/pull/703
 [#699]: https://github.com/CosmWasm/wasmvm/pull/699
 [#697]: https://github.com/CosmWasm/wasmvm/pull/697
 [#693]: https://github.com/CosmWasm/wasmvm/pull/693
+[0xf2566c3]: https://github.com/CosmWasm/wasmvm/commit/f2566c3ef91848d3bc29f184514797d43901c8c6
 
 ## [3.0.2] - 2025-08-26
 
