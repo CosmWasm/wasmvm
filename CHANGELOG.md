@@ -105,6 +105,20 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#695]: https://github.com/CosmWasm/wasmvm/pull/695
 
 ## [2.2.4] - 2025-04-30
+
+### Added
+
+- Add ExpectedJSONSize (backport #635) ([#660])
+-
+### Changed
+
+- Bump min Go version to 1.22 (backport #637) ([#661])
+- Backport 2.2: improve panic messages when vm panicks ([#650])
+
+[#661]: https://github.com/CosmWasm/wasmvm/pull/661
+[#660]: https://github.com/CosmWasm/wasmvm/pull/660
+[#650]: https://github.com/CosmWasm/wasmvm/pull/650
+
 ## [2.2.3] - 2025-03-05
 ## [2.2.2] - 2025-02-04
 ## [2.2.1] - 2024-12-19
