@@ -20,7 +20,9 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ### Changed
 
-- Upgraded CosmWasm dependencies to version **3.0.2**.
+- Prepare for release v3.0.2 ([0x4da6e4d])
+
+[0x4da6e4d]: https://github.com/CosmWasm/wasmvm/commit/4da6e4d9ea35fc5d6725dd2c076c6a87fb32ee0b
 
 ## [3.0.1] - 2025-08-26
 
