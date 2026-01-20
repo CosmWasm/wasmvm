@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [3.0.2] - 2025-08-26
 
+- Upgraded CosmWasm dependencies to version **3.0.2**.
 
 [Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...HEAD
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
