@@ -27,7 +27,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Changed
 
 - ci: bump actions/checkout to v5 ([#691])
-- Migrate from CircleCi to GH actions ([#689])
+- Migrate from CircleCI to GH Actions ([#689])
 
 ### Fixed
 
