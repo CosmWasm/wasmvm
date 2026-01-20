@@ -67,6 +67,14 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#587]: https://github.com/CosmWasm/wasmvm/pull/587
 
 ## [2.3.1] - 2025-12-10
+
+> [!NOTE]
+> This release fixes broken release [2.3.0].
+
+- Prepare release v2.3.1 ([#705])
+
+[#705]: https://github.com/CosmWasm/wasmvm/pull/705
+
 ## [2.3.0] - 2025-12-10
 ## [2.2.5] - 2025-12-19
 ## [2.2.4] - 2025-04-30
