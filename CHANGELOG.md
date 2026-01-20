@@ -77,6 +77,23 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#705]: https://github.com/CosmWasm/wasmvm/pull/705
 
 ## [2.3.0] - 2025-12-10
+
+### Added
+
+- Add workflow dispatch ([#704])
+
+### Changed
+
+- Bump cosmwasm 2.3.0 ([#701])
+
+### Fixed
+
+- Minor fix in Cargo.toml ([#702])
+
+[#704]: https://github.com/CosmWasm/wasmvm/pull/704
+[#702]: https://github.com/CosmWasm/wasmvm/pull/702
+[#701]: https://github.com/CosmWasm/wasmvm/pull/701
+
 ## [2.2.5] - 2025-12-19
 ## [2.2.4] - 2025-04-30
 ## [2.2.3] - 2025-03-05
