@@ -44,6 +44,28 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#685]: https://github.com/CosmWasm/wasmvm/pull/685
 
 ## [3.0.0] - 2025-06-23
+
+### Changed
+
+- Use cosmwasm `main` branch ([#621])
+- Add new EurekaMsg ([#617])
+- Lock cargo-audit CI job ([#604])
+- Update Go and golangci-lint version in CI ([#590])
+- Linter pr 1: testifylint  ([#587])
+
+### Fixed
+
+- Docs fix spelling issues ([#618])
+- Fix unchecked flag ([#612])
+
+[#621]: https://github.com/CosmWasm/wasmvm/pull/621
+[#618]: https://github.com/CosmWasm/wasmvm/pull/618
+[#617]: https://github.com/CosmWasm/wasmvm/pull/617
+[#612]: https://github.com/CosmWasm/wasmvm/pull/612
+[#604]: https://github.com/CosmWasm/wasmvm/pull/604
+[#590]: https://github.com/CosmWasm/wasmvm/pull/590
+[#587]: https://github.com/CosmWasm/wasmvm/pull/587
+
 ## [2.3.1] - 2025-12-10
 ## [2.3.0] - 2025-12-10
 ## [2.2.5] - 2025-12-19
