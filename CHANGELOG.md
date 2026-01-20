@@ -135,6 +135,23 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xdf886d2]: https://github.com/CosmWasm/wasmvm/commit/df886d2568e841c4a2ab3bcc96ee0a2460d4ee33
 
 ## [2.2.2] - 2025-02-04
+
+### Added
+
+- Add typo check ([#581])
+
+### Changed
+
+- Lock cargo-audit CI job (backport #604) ([#608])
+
+### Fixed
+
+- Fix unchecked flag (backport #612) ([#613])
+
+[#613]: https://github.com/CosmWasm/wasmvm/pull/613
+[#608]: https://github.com/CosmWasm/wasmvm/pull/608
+[#581]: https://github.com/CosmWasm/wasmvm/pull/581
+
 ## [2.2.1] - 2024-12-19
 ## [2.2.0] - 2024-12-17
 ## [2.1.6] - 2025-03-05
