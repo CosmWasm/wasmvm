@@ -24,6 +24,25 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [3.0.1] - 2025-08-26
 
+### Changed
+
+- ci: bump actions/checkout to v5 ([#691])
+- Migrate from CircleCi to GH actions ([#689])
+
+### Fixed
+
+- Fix deploy to git step in CI ([#692])
+- chore: fix minor typo in comment ([#690])
+- fix link memdb.go ([#686])
+- Update outdated Tendermint PR link in memdb.go Close() comment ([#685])
+
+[#692]: https://github.com/CosmWasm/wasmvm/pull/692
+[#691]: https://github.com/CosmWasm/wasmvm/pull/691
+[#690]: https://github.com/CosmWasm/wasmvm/pull/690
+[#689]: https://github.com/CosmWasm/wasmvm/pull/689
+[#686]: https://github.com/CosmWasm/wasmvm/pull/686
+[#685]: https://github.com/CosmWasm/wasmvm/pull/685
+
 [Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...HEAD
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/CosmWasm/wasmvm/compare/v3.0.0...v3.0.1
