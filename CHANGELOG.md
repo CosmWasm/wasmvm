@@ -153,6 +153,13 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#581]: https://github.com/CosmWasm/wasmvm/pull/581
 
 ## [2.2.1] - 2024-12-19
+
+### Added
+
+- Add SimulateStoreCode function on main ([#580])
+
+[#580]: https://github.com/CosmWasm/wasmvm/pull/580
+
 ## [2.2.0] - 2024-12-17
 ## [2.1.6] - 2025-03-05
 ## [2.1.5] - 2025-02-04
