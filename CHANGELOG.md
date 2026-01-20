@@ -120,6 +120,20 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#650]: https://github.com/CosmWasm/wasmvm/pull/650
 
 ## [2.2.3] - 2025-03-05
+
+### Changed
+
+- Bump cosmwasm ([0x985914])
+- Set libwasmvm version to 2.2.3 ([0xdf886d])
+
+### Fixed
+
+- Fixed tests ([0x4115e4])
+
+[0x4115e4]: https://github.com/CosmWasm/wasmvm/commit/4115e4b37ac54744f49091b8d20c506c28d1a038
+[0x985914]: https://github.com/CosmWasm/wasmvm/commit/9859140917ff9d7f02b1453ca356b320bdfd5b29
+[0xdf886d]: https://github.com/CosmWasm/wasmvm/commit/df886d2568e841c4a2ab3bcc96ee0a2460d4ee33
+
 ## [2.2.2] - 2025-02-04
 ## [2.2.1] - 2024-12-19
 ## [2.2.0] - 2024-12-17
