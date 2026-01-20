@@ -70,7 +70,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 > [!NOTE]
 > This release fixes broken _release process_ of version [2.3.0].
-> No changes in the code of version [2.3.0].
+> No changes in code of version [2.3.0].
 
 - Prepare release v2.3.1 ([#705])
 
