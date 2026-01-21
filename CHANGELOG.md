@@ -23,8 +23,10 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Changed
 
 - Prepare for release v3.0.2 ([0x4da6e4d])
+- trigger gh actions on tag ([0x96dbd73])
 
 [0x4da6e4d]: https://github.com/CosmWasm/wasmvm/commit/4da6e4d9ea35fc5d6725dd2c076c6a87fb32ee0b
+[0x96dbd73]: https://github.com/CosmWasm/wasmvm/commit/96dbd737cb9ac2bf9d617ce9b8f2a05b2db90bbc
 
 ## [3.0.1] - 2025-08-26
 
