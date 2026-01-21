@@ -442,6 +442,26 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ## [1.1.1] - 2022-09-19
 ## [1.1.0] - 2022-09-06
 ## [1.0.1] - 2023-04-18
+
+### Added
+
+- Add libwasmvm check to demo binary (1.0) ([#424])
+
+### Changed
+
+- Upgrade tempfile (1.0) ([#423])
+- Set libwasmvm version to 1.0.1 ([0xa410575])
+- Upgrade cosmwasm to 1.0.1 ([0x75d2c3a])
+- Build shared libraries on release branches ([0x84529d1])
+- Upgrade go and pin version of ghr ([0x02e4020])
+
+[#424]: https://github.com/CosmWasm/wasmvm/pull/424
+[#423]: https://github.com/CosmWasm/wasmvm/pull/423
+[0xa410575]: https://github.com/CosmWasm/wasmvm/commit/a4105758289dd15c30d8a54ffe99619a62c328b0
+[0x75d2c3a]: https://github.com/CosmWasm/wasmvm/commit/75d2c3a0dad2e1fae0b6af7b8dce0fd601ea1bc5
+[0x84529d1]: https://github.com/CosmWasm/wasmvm/commit/84529d1bceadc08fc0f3d21b1360a8f1c54a0f53
+[0x02e4020]: https://github.com/CosmWasm/wasmvm/commit/02e4020feccd1abc2fef42dfec61628eb8c8dc40
+
 ## [1.0.0] - 2022-05-16
 
 ### Added
