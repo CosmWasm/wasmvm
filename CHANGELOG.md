@@ -132,10 +132,12 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 - Bump min Go version to 1.22 (backport #637) ([#661])
 - Backport 2.2: improve panic messages when vm panicks ([#650])
+- Set libwasmvm version to 2.2.4 ([0x67b6dc7])
 
 [#661]: https://github.com/CosmWasm/wasmvm/pull/661
 [#660]: https://github.com/CosmWasm/wasmvm/pull/660
 [#650]: https://github.com/CosmWasm/wasmvm/pull/650
+[0x67b6dc7]: https://github.com/CosmWasm/wasmvm/commit/67b6dc70f9d7364be3bd27de1bc0ece05263ef24
 
 ## [2.2.3] - 2025-03-05
 
