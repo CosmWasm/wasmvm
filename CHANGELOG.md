@@ -113,7 +113,7 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Added
 
 - Add ExpectedJSONSize (backport #635) ([#660])
--
+
 ### Changed
 
 - Bump min Go version to 1.22 (backport #637) ([#661])
