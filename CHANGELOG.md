@@ -34,6 +34,8 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 - ci: bump actions/checkout to v5 ([#691])
 - Migrate from CircleCI to GH Actions ([#689])
+- Prepared version for v3.0.1 release ([0x99c5859])
+- Add tag to ci flow ([0x53d26d4])
 
 ### Fixed
 
@@ -41,8 +43,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - chore: fix minor typo in comment ([#690])
 - fix link memdb.go ([#686])
 - Update outdated Tendermint PR link in memdb.go Close() comment ([#685])
-- Prepared version for v3.0.1 release ([0x99c5859])
-- Add tag to ci flow ([0x53d26d4])
 - fix ci ([0x06738d6])
 
 [#692]: https://github.com/CosmWasm/wasmvm/pull/692
