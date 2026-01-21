@@ -441,6 +441,63 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ## [1.1.2] - 2023-04-18
 ## [1.1.1] - 2022-09-19
 ## [1.1.0] - 2022-09-06
+
+### Added
+
+- Add query for the total supply of a coin ([#337])
+- Add libwasmvm check to demo binary ([0x828d1a2])
+
+### Changed
+
+- Upgrade to cosmwasm 1.1 ([#346])
+- Rename `features` to `capabilities` ([#339])
+- Make "api" package internal ([#333])
+- Make memory size tests less strict ([#351])
+- Create builders version 0013 ([#350])
+- Upgrade cbindgen to 0.24.3 ([#348])
+- Upgrade to CosmWasm to 1.1 ([#347])
+- Check and polish bindings.h ([#344])
+- Upgrade cargo-audit ([#343])
+- Move api to internal ([#342])
+- support linking against wasmvm library in system path ([#335])
+- Upgrade tempfile ([0x93f8bf5])
+- Upgrade go and pin version of ghr ([0x02e4020])
+- Merge pull request #424 from CosmWasm/demo-version-1.0 ([0xe8607ce])
+- Upgrade cosmwasm to 1.0.1 ([0x75d2c3a])
+- Set libwasmvm version to 1.0.1 ([0xa410575])
+- Build shared libraries on release branches ([0x84529d1])
+- Bump libwasmvm version to 1.1.0 ([0x3c8c6f6])
+- Merge pull request #423 from CosmWasm/upgrade-tempfile-1.0 ([0xb9b7163])
+
+### Fixed
+
+- Fix JSON serialization of Transaction in  Env ([#345])
+- Fix JSON serialization of Env.block.transaction ([#341])
+
+[#346]: https://github.com/CosmWasm/wasmvm/issues/346
+[#341]: https://github.com/CosmWasm/wasmvm/issues/341
+[#339]: https://github.com/CosmWasm/wasmvm/issues/339
+[#333]: https://github.com/CosmWasm/wasmvm/issues/333
+[#351]: https://github.com/CosmWasm/wasmvm/pull/351
+[#350]: https://github.com/CosmWasm/wasmvm/pull/350
+[#348]: https://github.com/CosmWasm/wasmvm/pull/348
+[#347]: https://github.com/CosmWasm/wasmvm/pull/347
+[#345]: https://github.com/CosmWasm/wasmvm/pull/345
+[#344]: https://github.com/CosmWasm/wasmvm/pull/344
+[#343]: https://github.com/CosmWasm/wasmvm/pull/343
+[#342]: https://github.com/CosmWasm/wasmvm/pull/342
+[#337]: https://github.com/CosmWasm/wasmvm/pull/337
+[#335]: https://github.com/CosmWasm/wasmvm/pull/335
+[0x93f8bf5]: https://github.com/CosmWasm/wasmvm/commit/93f8bf5c6af549bbdddb191c49991647fbc9bfc5
+[0x828d1a2]: https://github.com/CosmWasm/wasmvm/commit/828d1a2d00fd7a1714c401a7d365629e5e71926b
+[0x02e4020]: https://github.com/CosmWasm/wasmvm/commit/02e4020feccd1abc2fef42dfec61628eb8c8dc40
+[0xe8607ce]: https://github.com/CosmWasm/wasmvm/commit/e8607ce40054eeb1a1299f3e5ec319c9d2eae16f
+[0x75d2c3a]: https://github.com/CosmWasm/wasmvm/commit/75d2c3a0dad2e1fae0b6af7b8dce0fd601ea1bc5
+[0xa410575]: https://github.com/CosmWasm/wasmvm/commit/a4105758289dd15c30d8a54ffe99619a62c328b0
+[0x84529d1]: https://github.com/CosmWasm/wasmvm/commit/84529d1bceadc08fc0f3d21b1360a8f1c54a0f53
+[0x3c8c6f6]: https://github.com/CosmWasm/wasmvm/commit/3c8c6f621ca8847305a251b57934ca96d51213ac
+[0xb9b7163]: https://github.com/CosmWasm/wasmvm/commit/b9b7163a6c22266038f501a0625eda6cacd96f32
+
 ## [1.0.1] - 2023-04-18
 
 ### Added
