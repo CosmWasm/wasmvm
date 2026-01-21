@@ -186,7 +186,12 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 - Add SimulateStoreCode function on main ([#580])
 
+### Changed
+
+- Set libwasmvm version to 2.2.1 ([0xaf3791a])
+
 [#580]: https://github.com/CosmWasm/wasmvm/pull/580
+[0xaf3791a]: https://github.com/CosmWasm/wasmvm/commit/af3791a232a3bb3ccbe8d15830dd39f5637aef24
 
 ## [2.2.0] - 2024-12-17
 ## [2.1.6] - 2025-03-05
