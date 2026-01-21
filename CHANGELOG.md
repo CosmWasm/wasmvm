@@ -444,6 +444,160 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ## [1.0.1] - 2023-04-18
 ## [1.0.0] - 2022-05-16
 
+### Added
+
+- Pass complete errors through FFI ([#73])
+- Improve Go to Rust memory ownership transfer ([#66])
+- Build system support for .so on GNU Linux for both x86_64 and aarch64 ([#303])
+- Push GasMultiplier into cosmos-sdk ([#122])
+- Add ibc v3 support ([#332])
+- Add build system for musl Linux static libraries for aarch64 ([#305])
+- Add folder libwasmvm/artifacts/ ([0x9a10c3c])
+- Add Vec::into_raw_parts explanation ([0x5ad99f8])
+- Add test unmanaged_vector_new_works ([0xf6b35a1])
+
+### Changed
+
+- Various cleanup items ([#130])
+- Final touches for 1.0.0 ([#334])
+- Create ARM build for glibc Linux ([#330])
+- Consume outputs early to ensure destruction of the UnmanagedVector's ([#327])
+- Unconditionally destruct value's UnmanagedVector ([#326])
+- Improve clarity on GoResult (now GoError) ([#325])
+- Run linter on all targets ([#324])
+- Format codebase using gofumpt ([#321])
+- Create frame limit for iterator frames ([#320])
+- Upgrade testify to 1.7.1 ([#319])
+- Refactor iterator stack code ([#315])
+- Expose libwasmvm version number at runtime ([#314])
+- Upgrade CosmWasm to 1.0.0-beta8 ([#311])
+- Upgrade to CosmWasm to 0.16.7 ([#310])
+- Upgrade builders and upgrade cosmwasm to 0.16.6 ([#309])
+- Update Rust to 1.59.0 ([#307])
+- Upgrade cosmwasm to 1.0.0-beta7 ([#304])
+- Bump Rust and cargo-audit in libwasmvm_audit CI job (0.16) ([#300])
+- bump tm-db for rocksdb support ([#297])
+- Upgrade Wasmer to 2.2 (CosmWasm v1.0.0-beta6) ([#296])
+- Bump Rust and cargo-audit in libwasmvm_audit CI job ([#295])
+- Let human_address/canonical_address return correct error type to report back to contracts ([#124])
+- Create universal library with for ARM and Intel ([#294])
+- Prepare ~~0.16.4~~ 0.16.5 release ([#292])
+- Upgrade cosmwasm to 1.0.0 rc.0 ([#329])
+- Debug demo binary ([#291])
+- Update cosmwasm to v1.0.0-beta5 ([#290])
+- Upgrade wasmvm 0.16 to Go 1.17 ([#287])
+- Add tidy-go CI job (0.16) ([#286])
+- Rename SubcallResponse/SubcallResult to SubMsgResponse/SubMsgResult ([#301])
+- Run test job in Go 1.17 ([#285])
+- Set libwasmvm version to 1.0.0-rc.0 ([#331])
+- Use stronger machines for long running CI jobs (0.16) ([#284])
+- Use stronger machines for long running jobs ([#283])
+- Upgrade to cosmwasm 1.0.0-beta3 ([#279])
+- Upgrade builders and build setup ([#278])
+- Return full result on IBCPacketRecv ([#276])
+- Update CI images to Go 1.17 ([#274])
+- Check tidyness in CI ([#273])
+- tm-db version bump ([#272])
+- Go 1.17 ([#271])
+- Upgrade shfmt and pin version (backport to 0.16 branch) ([#267])
+- Upgrade cosmwasm to 1.0.0-beta ([#263])
+- Upgrade shfmt and pin version ([#262])
+- Upgrade to CosmWasm to 1.0.0-soon2 ([#261])
+- Update to CosmWasm 1.0.0-soon ([#260])
+- Bump CosmWasm to 1.0.0-beta2 ([0xda602fa])
+- Run deploy_to_git on 0.16 branch ([0xbcb820c])
+- Update gas values in tests ([0x712cc31])
+- Upgrade const-oid, crossbeam-utils and sha2 ([0x30b07b4])
+- Simplify UnmanagedVector::default implementation ([0x39f915d])
+- Use handle_c_error_default/handle_c_error_ptr consistently ([0x16e8e0a])
+
+### Removed
+
+- Remove unused type StargateResponse ([#316])
+- Remove stacktrace from runtime error (1.0) ([#281])
+- Remove stacktrace from runtime error (0.16) ([#280])
+- Remove StargateResponse and rename to SubMsgResponse/SubMsgResult ([#317])
+
+### Fixed
+- Fix go test commands ([0x4ff2a3c])
+- Fix none handling in copyAndDestroyUnmanagedVector ([0xceaebca])
+- Fix go test commands ([0x18fea2a])
+- Fix none handling in copyAndDestroyUnmanagedVector ([0x790cafa])
+- Fix omitempty spelling ([#275])
+- Fix cosmwasm beta4 upgrade ([#289])
+
+[#73]: https://github.com/CosmWasm/wasmvm/issues/73
+[#66]: https://github.com/CosmWasm/wasmvm/issues/66
+[#316]: https://github.com/CosmWasm/wasmvm/issues/316
+[#303]: https://github.com/CosmWasm/wasmvm/issues/303
+[#301]: https://github.com/CosmWasm/wasmvm/issues/301
+[#130]: https://github.com/CosmWasm/wasmvm/issues/130
+[#124]: https://github.com/CosmWasm/wasmvm/issues/124
+[#122]: https://github.com/CosmWasm/wasmvm/issues/122
+[#334]: https://github.com/CosmWasm/wasmvm/pull/334
+[#332]: https://github.com/CosmWasm/wasmvm/pull/332
+[#331]: https://github.com/CosmWasm/wasmvm/pull/331
+[#330]: https://github.com/CosmWasm/wasmvm/pull/330
+[#329]: https://github.com/CosmWasm/wasmvm/pull/329
+[#327]: https://github.com/CosmWasm/wasmvm/pull/327
+[#326]: https://github.com/CosmWasm/wasmvm/pull/326
+[#325]: https://github.com/CosmWasm/wasmvm/pull/325
+[#324]: https://github.com/CosmWasm/wasmvm/pull/324
+[#321]: https://github.com/CosmWasm/wasmvm/pull/321
+[#320]: https://github.com/CosmWasm/wasmvm/pull/320
+[#319]: https://github.com/CosmWasm/wasmvm/pull/319
+[#317]: https://github.com/CosmWasm/wasmvm/pull/317
+[#315]: https://github.com/CosmWasm/wasmvm/pull/315
+[#314]: https://github.com/CosmWasm/wasmvm/pull/314
+[#311]: https://github.com/CosmWasm/wasmvm/pull/311
+[#310]: https://github.com/CosmWasm/wasmvm/pull/310
+[#309]: https://github.com/CosmWasm/wasmvm/pull/309
+[#307]: https://github.com/CosmWasm/wasmvm/pull/307
+[#305]: https://github.com/CosmWasm/wasmvm/pull/305
+[#304]: https://github.com/CosmWasm/wasmvm/pull/304
+[#300]: https://github.com/CosmWasm/wasmvm/pull/300
+[#297]: https://github.com/CosmWasm/wasmvm/pull/297
+[#296]: https://github.com/CosmWasm/wasmvm/pull/296
+[#295]: https://github.com/CosmWasm/wasmvm/pull/295
+[#294]: https://github.com/CosmWasm/wasmvm/pull/294
+[#292]: https://github.com/CosmWasm/wasmvm/pull/292
+[#291]: https://github.com/CosmWasm/wasmvm/pull/291
+[#290]: https://github.com/CosmWasm/wasmvm/pull/290
+[#289]: https://github.com/CosmWasm/wasmvm/pull/289
+[#287]: https://github.com/CosmWasm/wasmvm/pull/287
+[#286]: https://github.com/CosmWasm/wasmvm/pull/286
+[#285]: https://github.com/CosmWasm/wasmvm/pull/285
+[#284]: https://github.com/CosmWasm/wasmvm/pull/284
+[#283]: https://github.com/CosmWasm/wasmvm/pull/283
+[#281]: https://github.com/CosmWasm/wasmvm/pull/281
+[#280]: https://github.com/CosmWasm/wasmvm/pull/280
+[#279]: https://github.com/CosmWasm/wasmvm/pull/279
+[#278]: https://github.com/CosmWasm/wasmvm/pull/278
+[#276]: https://github.com/CosmWasm/wasmvm/pull/276
+[#275]: https://github.com/CosmWasm/wasmvm/pull/275
+[#274]: https://github.com/CosmWasm/wasmvm/pull/274
+[#273]: https://github.com/CosmWasm/wasmvm/pull/273
+[#272]: https://github.com/CosmWasm/wasmvm/pull/272
+[#271]: https://github.com/CosmWasm/wasmvm/pull/271
+[#267]: https://github.com/CosmWasm/wasmvm/pull/267
+[#263]: https://github.com/CosmWasm/wasmvm/pull/263
+[#262]: https://github.com/CosmWasm/wasmvm/pull/262
+[#261]: https://github.com/CosmWasm/wasmvm/pull/261
+[#260]: https://github.com/CosmWasm/wasmvm/pull/260
+[0xda602fa]: https://github.com/CosmWasm/wasmvm/commit/da602fad79ed534318444bfd54383d0b3ccb3c84
+[0x790cafa]: https://github.com/CosmWasm/wasmvm/commit/790cafa0e1625d0d232472de41c1341967e3ba2a
+[0xbcb820c]: https://github.com/CosmWasm/wasmvm/commit/bcb820c081054f9ac54d7963f93cc060fb2766b8
+[0x712cc31]: https://github.com/CosmWasm/wasmvm/commit/712cc31e4f42adb72f0e899342532a20bb933239
+[0x30b07b4]: https://github.com/CosmWasm/wasmvm/commit/30b07b4492852a6aadf72159d99ba7d2529e982d
+[0x9a10c3c]: https://github.com/CosmWasm/wasmvm/commit/9a10c3c28aa6ab5fbdd471369659519522d571f4
+[0x18fea2a]: https://github.com/CosmWasm/wasmvm/commit/18fea2a2158b766aafa336ac046bc75e97606f59
+[0x39f915d]: https://github.com/CosmWasm/wasmvm/commit/39f915d3b7268c2be4c9727a843613aadd0827a9
+[0x5ad99f8]: https://github.com/CosmWasm/wasmvm/commit/5ad99f8173f23457fd9e20cdf2e96c5755f430eb
+[0xf6b35a1]: https://github.com/CosmWasm/wasmvm/commit/f6b35a12e4f6c8fa7f832ce2b3cb6c0d7369289f
+[0xceaebca]: https://github.com/CosmWasm/wasmvm/commit/ceaebca68ca2ddbda8cff6bcf2b89316e90121b1
+[0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
+[0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
+
 [Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...HEAD
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/CosmWasm/wasmvm/compare/v3.0.0...v3.0.1
