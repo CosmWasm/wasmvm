@@ -353,6 +353,26 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x0e23081]: https://github.com/CosmWasm/wasmvm/commit/0e230813db97422546ff3d8232293aec8b10a947
 
 ## [2.1.5] - 2025-02-04
+
+### Changed
+
+- Lock cargo-audit CI job (backport #604) ([#607])
+- Bump cosmwasm ([0x888a468])
+- Set libwasmvm version to 2.1.5 ([0x0c208b3])
+
+### Fixed
+
+- Fix unchecked flag (backport #612) ([#616])
+- Fix ([0x8d44a28])
+- Fix tests ([0x58424a5])
+
+[#616]: https://github.com/CosmWasm/wasmvm/pull/616
+[#607]: https://github.com/CosmWasm/wasmvm/pull/607
+[0x8d44a28]: https://github.com/CosmWasm/wasmvm/commit/8d44a286fabc793a2fba93752e58cd0fd5b88a2d
+[0x58424a5]: https://github.com/CosmWasm/wasmvm/commit/58424a517e62bdb14c6c058f9e677ac77eedf8b3
+[0x888a468]: https://github.com/CosmWasm/wasmvm/commit/888a468dcf28f05e4d26cfd227cc09935127747b
+[0x0c208b3]: https://github.com/CosmWasm/wasmvm/commit/0c208b39afa10146e519d2452f267d39fd249110
+
 ## [2.1.4] - 2024-12-10
 ## [2.1.3] - 2024-09-23
 ## [2.1.2] - 2024-08-08
