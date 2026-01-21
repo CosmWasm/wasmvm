@@ -194,6 +194,149 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xaf3791a]: https://github.com/CosmWasm/wasmvm/commit/af3791a232a3bb3ccbe8d15830dd39f5637aef24
 
 ## [2.2.0] - 2024-12-17
+
+### Added
+
+- Conditional migrate calling ([#556])
+- IBC Fees ([#545])
+- Add SimulateStoreCode function ([0x319a1be])
+- Add test for StoreCodeUnchecked ([0xb3c1e13])
+- Add cosmwasm-vm config ([0xbc859c9])
+- Add panic handler function ([0x7dd9fa5])
+- Add comments ([0xca5f3d3])
+- Add comments ([0xdec4c2b])
+
+### Changed
+
+- Finalize, push and use builders version 0101 ([#551])
+- Update CosmWasm to 2.2.0 ([#549])
+- Builders: bump debian image from Bullseye to Bookworm ([#533])
+- Rename builders image go-ext-builder ([#364])
+- Future of glibc support (aka. migrate from CentOS to Debian builders) ([#293])
+- Bump to 2.2.0-rc.2 ([#562])
+- Update to cosmwasm 2.2-rc.1 ([#561])
+- Upgrade bytes to 1.7.1 ([#557])
+- Merge updates from 2.1 branch into main ([#555])
+- Bump to Rust 1.80 and other build system cleanups ([#552])
+- Cleanup build commands in Makefile ([#550])
+- Upgrade cbindgen to 0.27.0 ([#548])
+- Bump CI Rust version ([0x11b5867])
+- Bump cosmwasm ([0x888a468])
+- Bump cosmwasm ([0x186d1df])
+- Set builders version 0101 ([0x87b5cdf])
+- Update builder to Rust 1.81 ([0xb7c1cbf])
+- Improve Size type ([0x740a8c0])
+- Bump cosmwasm rc ([0x010196c])
+- Expose VMConfig constructor ([0xec3a0a7])
+- Rename config fields ([0x8d3938d])
+- Set libwasmvm version to 2.1.3 ([0xcd297b3])
+- Set libwasmvm version to 2.1.4 ([0x19f01b5])
+- Set libwasmvm version to 2.1.5 ([0x0c208b3])
+- Set libwasmvm version to 2.1.6 ([0xba537a6])
+- Set libwasmvm version to 2.2.0-rc.1 ([0x6fced70])
+- Set libwasmvm version to 2.2.0-rc.2 ([0x0a2eab2])
+- Set libwasmvm version to 2.2.0-rc.3 ([0x03abf89])
+- Set libwasmvm version to 2.2.0 ([0x2fa12a9])
+- Update cargo-audit ([0xf7f283e])
+- Update to cosmwasm 2.1.2 ([0x1343023])
+- Update cosmwasm to 2.1.3 ([0x5a99735])
+- Update to cosmwasm 2.1.5 ([0x095b849])
+- Update to cosmwasm 2.2 ([0x1ea7305])
+- docs: Move `spec` to cosmwasm documentation ([0x0661bee])
+- Update naming ([0x5510ac3])
+- Bump wasmvm version ([0x7180b79])
+- Set builder version to 0102 ([0x5bd7543])
+- Update builder rust version to 1.82 ([0x484d39b])
+- Bump cosmwasm ([0x43ebaaa])
+- Bump wasmvm version ([0x539d83a])
+- Remove unused import ([0xda987f6])
+- Use locked dependencies for cargo-audit install ([0x755c1f3])
+- Simplify NewVM ([0x7b88fd4])
+- Move called function and error into handle_vm_panic ([0xb785826])
+- Update CI libwasmvm_audit Rust version ([0xa5c3a79])
+- Update test names ([0x48d8494])
+- Improve docs ([0xd455a68])
+- Use JSON for VMConfig ([0xbdc225e])
+- Use JSON for VMConfig ([0x9846576])
+
+### Fixed
+
+- Fix ([0x8d44a28])
+- Fix ([0x10f9281])
+- Fix ([0x4c0d2ea])
+- Fix unchecked flag ([0x577076b])
+- Fix pinned metrics ([0x7250c10])
+- Fix tests ([0x0e23081])
+- Fix lints ([0xf5160b2])
+- Fix tests ([0x58424a5])
+
+[#551]: https://github.com/CosmWasm/wasmvm/issues/551
+[#549]: https://github.com/CosmWasm/wasmvm/issues/549
+[#533]: https://github.com/CosmWasm/wasmvm/issues/533
+[#364]: https://github.com/CosmWasm/wasmvm/issues/364
+[#293]: https://github.com/CosmWasm/wasmvm/issues/293
+[#562]: https://github.com/CosmWasm/wasmvm/pull/562
+[#561]: https://github.com/CosmWasm/wasmvm/pull/561
+[#557]: https://github.com/CosmWasm/wasmvm/pull/557
+[#556]: https://github.com/CosmWasm/wasmvm/pull/556
+[#555]: https://github.com/CosmWasm/wasmvm/pull/555
+[#552]: https://github.com/CosmWasm/wasmvm/pull/552
+[#550]: https://github.com/CosmWasm/wasmvm/pull/550
+[#548]: https://github.com/CosmWasm/wasmvm/pull/548
+[#545]: https://github.com/CosmWasm/wasmvm/pull/545
+[0x11b5867]: https://github.com/CosmWasm/wasmvm/commit/11b5867b1cc123a77656cbe0dfde3af2bcc28482
+[0x888a468]: https://github.com/CosmWasm/wasmvm/commit/888a468dcf28f05e4d26cfd227cc09935127747b
+[0x87b5cdf]: https://github.com/CosmWasm/wasmvm/commit/87b5cdf8c2297c8e03014baef9d6abf3b51d1d5f
+[0x8d44a28]: https://github.com/CosmWasm/wasmvm/commit/8d44a286fabc793a2fba93752e58cd0fd5b88a2d
+[0xb7c1cbf]: https://github.com/CosmWasm/wasmvm/commit/b7c1cbfb13e52a38e330cb186727d51a38077e23
+[0x740a8c0]: https://github.com/CosmWasm/wasmvm/commit/740a8c079f48326007a090512c05275b43f9c76f
+[0x319a1be]: https://github.com/CosmWasm/wasmvm/commit/319a1be2c6f67a97311523708f57216ee0fa63b3
+[0x010196c]: https://github.com/CosmWasm/wasmvm/commit/010196c770bbebeceee15b0de09a109481a289ab
+[0xec3a0a7]: https://github.com/CosmWasm/wasmvm/commit/ec3a0a79b4ab3709721fadb8f069b8e5094c6616
+[0x10f9281]: https://github.com/CosmWasm/wasmvm/commit/10f9281db93f00eb3a0ca1de4013562979fe26f2
+[0xb3c1e13]: https://github.com/CosmWasm/wasmvm/commit/b3c1e13c4c7a095e86094d2717364d571c1f8cc0
+[0x8d3938d]: https://github.com/CosmWasm/wasmvm/commit/8d3938daeb45ffbadda30c35b1881123dbca8aae
+[0x0c208b3]: https://github.com/CosmWasm/wasmvm/commit/0c208b39afa10146e519d2452f267d39fd249110
+[0xf7f283e]: https://github.com/CosmWasm/wasmvm/commit/f7f283e073d467eb19044cf6b75b37ea69febffb
+[0x6fced70]: https://github.com/CosmWasm/wasmvm/commit/6fced70305e07133bf3c49d32398d897273d27fc
+[0x0a2eab2]: https://github.com/CosmWasm/wasmvm/commit/0a2eab23b6718c52f48514864f9450109ffa454b
+[0x4c0d2ea]: https://github.com/CosmWasm/wasmvm/commit/4c0d2eab981c13a3cdb2489bca4b806947709012
+[0xbc859c9]: https://github.com/CosmWasm/wasmvm/commit/bc859c9bff3be0073ac6014d52e900a8015f6cfa
+[0x7dd9fa5]: https://github.com/CosmWasm/wasmvm/commit/7dd9fa5413eac6fdf7c545e3003b2426d0da9262
+[0x19f01b5]: https://github.com/CosmWasm/wasmvm/commit/19f01b50424fb5bf763cc60f482ba8a8fca518b6
+[0x186d1df]: https://github.com/CosmWasm/wasmvm/commit/186d1df83584d3c4262a9a0a67ca6dc562e05e39
+[0x577076b]: https://github.com/CosmWasm/wasmvm/commit/577076b41e488b12f64a512d2badd5c0254142b1
+[0x095b849]: https://github.com/CosmWasm/wasmvm/commit/095b849b4fd5098d43888647819c977ae3e48b79
+[0xca5f3d3]: https://github.com/CosmWasm/wasmvm/commit/ca5f3d35a5543ed5ee83d8574dc5340c59f0413d
+[0xba537a6]: https://github.com/CosmWasm/wasmvm/commit/ba537a6675377c0e0aa40b8957fc50f6edff97d8
+[0x0661bee]: https://github.com/CosmWasm/wasmvm/commit/0661beec783268a7afe6cd1b8f7180a86e3426c1
+[0x7250c10]: https://github.com/CosmWasm/wasmvm/commit/7250c10d739a42da0952d4af0cdaefdc8c66609d
+[0x1ea7305]: https://github.com/CosmWasm/wasmvm/commit/1ea73050837f3fefa0f840e45e4fd2a7a7ad379c
+[0x5510ac3]: https://github.com/CosmWasm/wasmvm/commit/5510ac3667814b2aa13d7c9657fe86dc89659d0b
+[0xdec4c2b]: https://github.com/CosmWasm/wasmvm/commit/dec4c2bc6c2c765170d0c407af44bda23230d2d8
+[0x03abf89]: https://github.com/CosmWasm/wasmvm/commit/03abf893710c2825d64325b9722cb0677fa1c6f2
+[0x7180b79]: https://github.com/CosmWasm/wasmvm/commit/7180b79dfee9fb8f7ac32a1ea46555504f0ef823
+[0x5bd7543]: https://github.com/CosmWasm/wasmvm/commit/5bd75430ec62baa2646224af61d24ba81d9c7340
+[0x484d39b]: https://github.com/CosmWasm/wasmvm/commit/484d39b1193113c6b85db76169db6e7437e08a91
+[0x43ebaaa]: https://github.com/CosmWasm/wasmvm/commit/43ebaaaa0e3d7b1c603a97d24ed1275030119ad9
+[0x2fa12a9]: https://github.com/CosmWasm/wasmvm/commit/2fa12a984e8350e6c6a3612d44150b904a5926f0
+[0x539d83a]: https://github.com/CosmWasm/wasmvm/commit/539d83a0261c46c3936652a27f838a8bb66c5315
+[0xda987f6]: https://github.com/CosmWasm/wasmvm/commit/da987f606d38fbea4fdd508de884354e55e33198
+[0x5a99735]: https://github.com/CosmWasm/wasmvm/commit/5a997355a42bbb24c85f7e9f8c117b40cc26f382
+[0x755c1f3]: https://github.com/CosmWasm/wasmvm/commit/755c1f35b43fe189548f685a61bff08747d7aca3
+[0xcd297b3]: https://github.com/CosmWasm/wasmvm/commit/cd297b3f70a57649bdbbc6a152a3f102ec93d48b
+[0x0e23081]: https://github.com/CosmWasm/wasmvm/commit/0e230813db97422546ff3d8232293aec8b10a947
+[0x7b88fd4]: https://github.com/CosmWasm/wasmvm/commit/7b88fd40101c4a78d52b8183aadf7b7bc38407fa
+[0xb785826]: https://github.com/CosmWasm/wasmvm/commit/b785826785433c3d1537851b4e66996fa40915c3
+[0xa5c3a79]: https://github.com/CosmWasm/wasmvm/commit/a5c3a795158daad6d015b5cb1fa6f473f1ac4ead
+[0xf5160b2]: https://github.com/CosmWasm/wasmvm/commit/f5160b2884f306fb7263b7ff15a7b59168fd6c46
+[0x48d8494]: https://github.com/CosmWasm/wasmvm/commit/48d849416e70f3c5f8df8691a845eb0999ff05b1
+[0xd455a68]: https://github.com/CosmWasm/wasmvm/commit/d455a683c0619c170f35a3a020b3edfdc1710907
+[0xbdc225e]: https://github.com/CosmWasm/wasmvm/commit/bdc225e1d3810aa6d4f3805838aaa29dd49de6c3
+[0x58424a5]: https://github.com/CosmWasm/wasmvm/commit/58424a517e62bdb14c6c058f9e677ac77eedf8b3
+[0x1343023]: https://github.com/CosmWasm/wasmvm/commit/1343023b07f3b502d1e249dc4fbc9808e8b4183d
+[0x9846576]: https://github.com/CosmWasm/wasmvm/commit/9846576d00ad9d5168cf956a9fec887d7ad89788
+
 ## [2.1.6] - 2025-03-05
 ## [2.1.5] - 2025-02-04
 ## [2.1.4] - 2024-12-10
