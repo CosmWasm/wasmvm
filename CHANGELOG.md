@@ -163,14 +163,22 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Changed
 
 - Lock cargo-audit CI job (backport #604) ([#608])
+- Bump cosmwasm ([0x9b7e998])
+- Set libwasmvm version to 2.2.2 ([0x6b8f8f4])
 
 ### Fixed
 
 - Fix unchecked flag (backport #612) ([#613])
+- Fix ([0x0aefa4c])
+- Fix tests ([0x4fe4ee6])
 
 [#613]: https://github.com/CosmWasm/wasmvm/pull/613
 [#608]: https://github.com/CosmWasm/wasmvm/pull/608
 [#581]: https://github.com/CosmWasm/wasmvm/pull/581
+[0x9b7e998]: https://github.com/CosmWasm/wasmvm/commit/9b7e9983797d22219ed0ca1adfb37ace060b8e93
+[0x0aefa4c]: https://github.com/CosmWasm/wasmvm/commit/0aefa4c378457aeb3c07e7975b875be38872c56d
+[0x4fe4ee6]: https://github.com/CosmWasm/wasmvm/commit/4fe4ee62c7dcbe1ea8b668a12bae69dcbea929d6
+[0x6b8f8f4]: https://github.com/CosmWasm/wasmvm/commit/6b8f8f43ea7d6b438ce5c904e7483c17c888f84f
 
 ## [2.2.1] - 2024-12-19
 
