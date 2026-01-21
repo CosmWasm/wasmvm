@@ -112,9 +112,15 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 - Bump CW v2.2.3 ([#707])
 - Backport "Replace circleci with gh actions" ([#695])
+- Publish wasmvm v2.2.5-rc.1 ([0x52a38ad])
+- Publish wasmvm v2.2.5-rc.2 ([0xc8f3ae1])
+- Publish wasmvm v2.2.5 ([0xe5fc4d9])
 
 [#707]: https://github.com/CosmWasm/wasmvm/pull/707
 [#695]: https://github.com/CosmWasm/wasmvm/pull/695
+[0xe5fc4d9]: https://github.com/CosmWasm/wasmvm/commit/e5fc4d9d957eebe021c53a9d1ac556ced9b22d5a
+[0x52a38ad]: https://github.com/CosmWasm/wasmvm/commit/52a38ad99824953c6f27e0e07722353df349963b
+[0xc8f3ae1]: https://github.com/CosmWasm/wasmvm/commit/c8f3ae1f2d7f7dcd675c08f79ee5165a6267ff82
 
 ## [2.2.4] - 2025-04-30
 
