@@ -41,6 +41,9 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - chore: fix minor typo in comment ([#690])
 - fix link memdb.go ([#686])
 - Update outdated Tendermint PR link in memdb.go Close() comment ([#685])
+- Prepared version for v3.0.1 release ([0x99c5859])
+- Add tag to ci flow ([0x53d26d4])
+- fix ci ([0x06738d6])
 
 [#692]: https://github.com/CosmWasm/wasmvm/pull/692
 [#691]: https://github.com/CosmWasm/wasmvm/pull/691
@@ -48,6 +51,9 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#689]: https://github.com/CosmWasm/wasmvm/pull/689
 [#686]: https://github.com/CosmWasm/wasmvm/pull/686
 [#685]: https://github.com/CosmWasm/wasmvm/pull/685
+[0x99c5859]: https://github.com/CosmWasm/wasmvm/commit/99c5859d9ddff5487b18ac3b3b4a1846f3fa17b7
+[0x53d26d4]: https://github.com/CosmWasm/wasmvm/commit/53d26d43c566121205094497a4c67afe998ebded
+[0x06738d6]: https://github.com/CosmWasm/wasmvm/commit/06738d68e3cd6a9c5dfc28da68ae03516af801b4
 
 ## [3.0.0] - 2025-06-23
 
