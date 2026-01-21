@@ -374,6 +374,27 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x0c208b3]: https://github.com/CosmWasm/wasmvm/commit/0c208b39afa10146e519d2452f267d39fd249110
 
 ## [2.1.4] - 2024-12-10
+
+### Added
+
+- Add SimulateStoreCode function ([0x319a1be])
+
+### Changed
+
+- Update to cosmwasm 2.1.5 ([0x095b849])
+- Bump CI Rust version ([0x11b5867])
+- Set libwasmvm version to 2.1.4 ([0x19f01b5])
+
+### Fixed
+
+- Fix pointer problem in UnmanagedVector (backport #571) ([#574])
+
+[#574]: https://github.com/CosmWasm/wasmvm/pull/574
+[0x095b849]: https://github.com/CosmWasm/wasmvm/commit/095b849b4fd5098d43888647819c977ae3e48b79
+[0x319a1be]: https://github.com/CosmWasm/wasmvm/commit/319a1be2c6f67a97311523708f57216ee0fa63b3
+[0x11b5867]: https://github.com/CosmWasm/wasmvm/commit/11b5867b1cc123a77656cbe0dfde3af2bcc28482
+[0x19f01b5]: https://github.com/CosmWasm/wasmvm/commit/19f01b50424fb5bf763cc60f482ba8a8fca518b6
+
 ## [2.1.3] - 2024-09-23
 ## [2.1.2] - 2024-08-08
 ## [2.1.1] - 2024-08-08
