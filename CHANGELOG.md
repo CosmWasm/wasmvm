@@ -415,6 +415,36 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x7180b79]: https://github.com/CosmWasm/wasmvm/commit/7180b79dfee9fb8f7ac32a1ea46555504f0ef823
 
 ## [2.1.1] - 2024-08-08
+
+### Added
+
+- Create Debian builder image and use for GNU linux .so files ([#439])
+
+### Changed
+
+- Upgrade clippy to 1.80.0 ([#547])
+- Update comments on stripping ([#546])
+- Update to cosmwasm 2.1.2 ([0x1343023])
+- Bump wasmvm version ([0x539d83a])
+- Update calling convention of builders to 0100 ([0xf3df522])
+
+### Removed
+
+- Remove unused Dockerfile.centos7 ([0xb9a3dd9])
+
+### Fixed
+
+- Fixup builders 0100 ([0x23be57a])
+
+[#547]: https://github.com/CosmWasm/wasmvm/pull/547
+[#546]: https://github.com/CosmWasm/wasmvm/pull/546
+[#439]: https://github.com/CosmWasm/wasmvm/pull/439
+[0xb9a3dd9]: https://github.com/CosmWasm/wasmvm/commit/b9a3dd9c1c225c487ee2c18e14f8e540db5f3b55
+[0x1343023]: https://github.com/CosmWasm/wasmvm/commit/1343023b07f3b502d1e249dc4fbc9808e8b4183d
+[0x539d83a]: https://github.com/CosmWasm/wasmvm/commit/539d83a0261c46c3936652a27f838a8bb66c5315
+[0xf3df522]: https://github.com/CosmWasm/wasmvm/commit/f3df522ea6d0d04252668ac0926e8bd3b6e645cf
+[0x23be57a]: https://github.com/CosmWasm/wasmvm/commit/23be57a0fc19beb528b2320c8fc50b49af6b1e53
+
 ## [2.1.0] - 2024-07-11
 ## [2.0.6] - 2025-02-04
 ## [2.0.5] - 2024-12-10
