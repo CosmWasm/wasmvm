@@ -104,7 +104,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.85.0
 
       - name: Install OpenSSL
         run: |
@@ -121,7 +121,7 @@ jobs:
             v3-libwasmvm_audit-rust-1.82.0-
 
       - name: Install cargo-audit
-        run: cargo install --debug cargo-audit --version 0.21.2 --locked
+        run: cargo install --debug cargo-audit --version 0.22 --locked
 
       - name: Run cargo-audit
         working-directory: libwasmvm
