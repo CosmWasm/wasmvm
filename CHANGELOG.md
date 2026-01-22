@@ -1426,6 +1426,18 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x82ec548]: https://github.com/CosmWasm/wasmvm/commit/82ec5485b463fa38ac1bf7910cd9ab3bb897c485
 
 ## [1.1.1] - 2022-09-19
+
+### Added
+
+- `assert_approx_eq` macro for nicer testing ([#352])
+
+### Changed
+
+- Prepare wasmvm 1.1.1 (Upgrade cosmwasm to 1.1.2) ([#354])
+
+[#354]: https://github.com/CosmWasm/wasmvm/pull/354
+[#352]: https://github.com/CosmWasm/wasmvm/pull/352
+
 ## [1.1.0] - 2022-09-06
 
 ### Added
