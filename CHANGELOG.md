@@ -1260,6 +1260,24 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#432]: https://github.com/CosmWasm/wasmvm/pull/432
 
 ## [1.2.3] - 2023-04-18
+
+### Added
+
+- Add libwasmvm check to demo binary ([#418])
+
+### Changed
+
+- Set libwasmvm version to 1.2.3 ([0xaafd5c7])
+- Build shared libraries on release branches ([0xa9484be])
+- Temporarily disabled libwasmvm_sanity_windows for 1.2 builds ([0x4514698])
+- Update cosmwasm to 1.2.4 ([0xdb9d4a6])
+
+[#418]: https://github.com/CosmWasm/wasmvm/pull/418
+[0xaafd5c7]: https://github.com/CosmWasm/wasmvm/commit/aafd5c7b5e4eb78c37b2d14ea13b0512ee56789d
+[0xa9484be]: https://github.com/CosmWasm/wasmvm/commit/a9484bebd931f9c7240bbb72ff3254aa8a22600c
+[0x4514698]: https://github.com/CosmWasm/wasmvm/commit/4514698761ef1591612fe0cb164a1fd7e3e58d58
+[0xdb9d4a6]: https://github.com/CosmWasm/wasmvm/commit/db9d4a68612b6adaa8ae393f2f52586342b8ab23
+
 ## [1.2.2] - 2023-04-06
 ## [1.2.1] - 2023-03-08
 ## [1.2.0] - 2023-01-24
