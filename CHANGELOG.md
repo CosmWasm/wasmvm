@@ -1293,6 +1293,29 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#411]: https://github.com/CosmWasm/wasmvm/pull/411
 
 ## [1.2.1] - 2023-03-08
+
+### Added
+
+- Add static build for macos ([#387])
+
+### Changed
+
+- Update cosmwasm and tempfile ([#406])
+- Use alias cu64 consistently ([#397])
+- Print panic information to STDERR for panic in libwasmvm Rust code ([#396])
+- Set libwasmvm version to 1.2.1 ([0xe7b68fc])
+
+### Removed
+
+- Remove tendermint-db dependency ([#405])
+
+[#406]: https://github.com/CosmWasm/wasmvm/pull/406
+[#405]: https://github.com/CosmWasm/wasmvm/pull/405
+[#397]: https://github.com/CosmWasm/wasmvm/pull/397
+[#396]: https://github.com/CosmWasm/wasmvm/pull/396
+[#387]: https://github.com/CosmWasm/wasmvm/pull/387
+[0xe7b68fc]: https://github.com/CosmWasm/wasmvm/commit/e7b68fc15bff8d585dc33b53545f866462fb884b
+
 ## [1.2.0] - 2023-01-24
 ## [1.1.2] - 2023-04-18
 ## [1.1.1] - 2022-09-19
