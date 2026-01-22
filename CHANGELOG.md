@@ -640,6 +640,17 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x0cb1ef2]: https://github.com/CosmWasm/wasmvm/commit/0cb1ef22129cbd95478ca1df43ea4fa722b560e9
 
 ## [2.0.2] - 2024-08-08
+
+### Changed
+
+- Update time crate ([0xd7cb567])
+- Update to cosmwasm 2.0.5 ([0xe4d9884])
+- Bump wasmvm version ([0x98ba855])
+
+[0xd7cb567]: https://github.com/CosmWasm/wasmvm/commit/d7cb567a498e0ee438a04beeb5bfff64d493deea
+[0x98ba855]: https://github.com/CosmWasm/wasmvm/commit/98ba855efe8d59c08b1d5b0f5b09fd5bc6e221fc
+[0xe4d9884]: https://github.com/CosmWasm/wasmvm/commit/e4d9884a12dc68ac96c0a5c6ff0f580ed4fe6b2f
+
 ## [2.0.1] - 2024-04-04
 ## [2.0.0] - 2024-03-12
 ## [1.5.9] - 2025-03-05
