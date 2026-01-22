@@ -1571,7 +1571,7 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 - Upgrade builders and build setup ([#278])
 - Return full result on IBCPacketRecv ([#276])
 - Update CI images to Go 1.17 ([#274])
-- Check tidyness in CI ([#273])
+- Check tidiness in CI ([#273])
 - tm-db version bump ([#272])
 - Go 1.17 ([#271])
 - Upgrade shfmt and pin version (backport to 0.16 branch) ([#267])
