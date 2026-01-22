@@ -121,7 +121,7 @@ jobs:
             v3-libwasmvm_audit-rust-1.82.0-
 
       - name: Install cargo-audit
-        run: cargo install --debug cargo-audit --version 0.22.0 --locked
+        run: cargo install --debug cargo-audit --version 0.21.2 --locked
 
       - name: Run cargo-audit
         working-directory: libwasmvm
