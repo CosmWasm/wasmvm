@@ -1193,7 +1193,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 - Upgrade cosmwasm to release/1.3 ([#440])
 - Use wasmvmstatic example and create builders version 0016 ([#438])
 - Update dependencies in Cargo.lock and cargo-audit ([#435])
-- Release wasmvm 1.2.4 ([#432])
 - Lint repo (simon) ([#429])
 - Merge branch 'release/1.2.x ([0x1c6f404])
 - Let test_alpine_build use xlarge machine ([0x84b10c9])
@@ -1217,7 +1216,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#438]: https://github.com/CosmWasm/wasmvm/pull/438
 [#435]: https://github.com/CosmWasm/wasmvm/pull/435
 [#433]: https://github.com/CosmWasm/wasmvm/pull/433
-[#432]: https://github.com/CosmWasm/wasmvm/pull/432
 [#430]: https://github.com/CosmWasm/wasmvm/pull/430
 [#429]: https://github.com/CosmWasm/wasmvm/pull/429
 [#410]: https://github.com/CosmWasm/wasmvm/pull/410
@@ -1256,6 +1254,11 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x8c0a066]: https://github.com/CosmWasm/wasmvm/commit/8c0a066b3d6f828b3c268d0f366571f563608ac3
 
 ## [1.2.4] - 2023-06-05
+
+- Release wasmvm 1.2.4 ([#432])
+
+[#432]: https://github.com/CosmWasm/wasmvm/pull/432
+
 ## [1.2.3] - 2023-04-18
 ## [1.2.2] - 2023-04-06
 ## [1.2.1] - 2023-03-08
