@@ -1317,6 +1317,93 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xe7b68fc]: https://github.com/CosmWasm/wasmvm/commit/e7b68fc15bff8d585dc33b53545f866462fb884b
 
 ## [1.2.0] - 2023-01-24
+
+### Added
+
+- Add method do delete wasm code(s) ([#353])
+- Add libwasmvm check to demo binary (1.1) ([#420])
+- Add UnmanagedVector::some and UnmanagedVector::none ([#384])
+- Add no-cgo support ([#377])
+- Add devtools/set_version.sh ([0xb859b72])
+- New CosmWasm 1.2 types ([#381])
+
+### Changed
+
+- Bump min Rust version to 1.60.0 ([#366])
+- Upgrade tempfile (1.1) ([#421])
+- Bump wasmvm to 1.2.0 ([#394])
+- Upgrade to CosmWasm 1.2.0 ([#393])
+- Change default value for replyOn and voteOption ([#392])
+- Avoid FFI calls for creating errmsg vectors that are not used ([#391])
+- Deactivate .dll build ([#390])
+- Bump bumpalo from 3.8.0 to 3.12.0 in /libwasmvm ([#388])
+- Bump ubuntu-2004 version and debug go version ([#385])
+- Better testing ([#383])
+- Test directory creation behavior in InitCache ([#382])
+- Upgrade to CosmWasm 1.2 ([#380])
+- Bump min Rust to 1.60.0 and Tooling Rust to 1.65.0; Update cargo-audit ([#378])
+- Run gofumpt in CI ([#375])
+- Formatting ([#374])
+- Rename Create to StoreCode and improve test coverage ([#370])
+- Update wasmvm.dll docs ([#368])
+- Bump Go and testify ([#365])
+- Update builders to version 0014 ([#363])
+- Document Go and Rust compiler versions ([#361])
+- gofumpt ([#357])
+- Next try to find the regex ([0x82ec548])
+- Upgrade cosmwasm to v1.1.10 ([0x11dc91e])
+- Try regex instead of glob ([0xe6774a0])
+- Upgrade go and pin version of ghr ([0x63381ec])
+- Set libwasmvm version: 1.2.0-rc.1 ([0xd2c9360])
+- Set libwasmvm version to 1.1.2 ([0xed2f501])
+- Build wasmvm.dll in CI ([0xb372ac9])
+- Fotmat set_version.sh, move waiting statement, fix TAG variable ([0xa2a2615])
+- Build libs on release branches ([0x740d948])
+
+### Fixed
+
+- Fix ByteSliceView::read for zero length slices ([#369])
+- Fix ghr installation ([0xcd8425c])
+
+[#381]: https://github.com/CosmWasm/wasmvm/issues/381
+[#366]: https://github.com/CosmWasm/wasmvm/issues/366
+[#353]: https://github.com/CosmWasm/wasmvm/issues/353
+[#421]: https://github.com/CosmWasm/wasmvm/pull/421
+[#420]: https://github.com/CosmWasm/wasmvm/pull/420
+[#394]: https://github.com/CosmWasm/wasmvm/pull/394
+[#393]: https://github.com/CosmWasm/wasmvm/pull/393
+[#392]: https://github.com/CosmWasm/wasmvm/pull/392
+[#391]: https://github.com/CosmWasm/wasmvm/pull/391
+[#390]: https://github.com/CosmWasm/wasmvm/pull/390
+[#388]: https://github.com/CosmWasm/wasmvm/pull/388
+[#385]: https://github.com/CosmWasm/wasmvm/pull/385
+[#384]: https://github.com/CosmWasm/wasmvm/pull/384
+[#383]: https://github.com/CosmWasm/wasmvm/pull/383
+[#382]: https://github.com/CosmWasm/wasmvm/pull/382
+[#380]: https://github.com/CosmWasm/wasmvm/pull/380
+[#378]: https://github.com/CosmWasm/wasmvm/pull/378
+[#377]: https://github.com/CosmWasm/wasmvm/pull/377
+[#375]: https://github.com/CosmWasm/wasmvm/pull/375
+[#374]: https://github.com/CosmWasm/wasmvm/pull/374
+[#370]: https://github.com/CosmWasm/wasmvm/pull/370
+[#369]: https://github.com/CosmWasm/wasmvm/pull/369
+[#368]: https://github.com/CosmWasm/wasmvm/pull/368
+[#365]: https://github.com/CosmWasm/wasmvm/pull/365
+[#363]: https://github.com/CosmWasm/wasmvm/pull/363
+[#361]: https://github.com/CosmWasm/wasmvm/pull/361
+[#357]: https://github.com/CosmWasm/wasmvm/pull/357
+[0x82ec548]: https://github.com/CosmWasm/wasmvm/commit/82ec5485b463fa38ac1bf7910cd9ab3bb897c485
+[0x11dc91e]: https://github.com/CosmWasm/wasmvm/commit/11dc91e079c5519649592fafa6b20c739b4d08d0
+[0xe6774a0]: https://github.com/CosmWasm/wasmvm/commit/e6774a07172912019ef2ff89ee9f8eb6ce09e584
+[0x63381ec]: https://github.com/CosmWasm/wasmvm/commit/63381ec7830a5e004533c1b2be6fd40079e808b1
+[0xd2c9360]: https://github.com/CosmWasm/wasmvm/commit/d2c9360df531d35807cfebde3bd9d6715c84db84
+[0xed2f501]: https://github.com/CosmWasm/wasmvm/commit/ed2f50104b42877ff26895eb66ef8b6e3874da8d
+[0xb372ac9]: https://github.com/CosmWasm/wasmvm/commit/b372ac985aef8606e8cb883bdd5ff02260fbe866
+[0xa2a2615]: https://github.com/CosmWasm/wasmvm/commit/a2a2615b487ed0d7e09aed1428587ea0e85242ad
+[0xcd8425c]: https://github.com/CosmWasm/wasmvm/commit/cd8425cefeecb8a278d9816cea13bef4c0e4a972
+[0x740d948]: https://github.com/CosmWasm/wasmvm/commit/740d948c8369f26ff2008e55eccef20699f977a6
+[0xb859b72]: https://github.com/CosmWasm/wasmvm/commit/b859b7272dc5f669bd95e22a6eddcfa8e2a9858d
+
 ## [1.1.2] - 2023-04-18
 ## [1.1.1] - 2022-09-19
 ## [1.1.0] - 2022-09-06
