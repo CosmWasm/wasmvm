@@ -1,6 +1,6 @@
 # CHANGELOG
 
-This format is based on [Keep a Changelog], and this project adheres to [Semantic Versioning].
+This format is based on [Keep a Changelog], and the project adheres to [Semantic Versioning].
 
 ## [Unreleased]
 
