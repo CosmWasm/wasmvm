@@ -1098,6 +1098,22 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x1661ca4]: https://github.com/CosmWasm/wasmvm/commit/1661ca43435b619cd72a8270842b94a9fa117fe1
 
 ## [1.4.1] - 2023-10-09
+
+### Changed
+
+- Upgrade CosmWasm ([#460])
+- Bump cosmwasm ([0xb75a7ec])
+
+### Removed
+
+- Retract wasmvm 1.4.0 ([#459])
+- Retract 1.4.0 release ([0xf8b6b84])
+
+[#460]: https://github.com/CosmWasm/wasmvm/issues/460
+[#459]: https://github.com/CosmWasm/wasmvm/issues/459
+[0xb75a7ec]: https://github.com/CosmWasm/wasmvm/commit/b75a7ecb6a3569bd134f05123e3bfa8e00d60b76
+[0xf8b6b84]: https://github.com/CosmWasm/wasmvm/commit/f8b6b8407aca445f2304164cae603a2fb9eb9da8
+
 ## [1.4.0] - 2023-09-04
 ## [1.3.1] - 2024-01-10
 ## [1.3.0] - 2023-07-17
