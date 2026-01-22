@@ -1015,6 +1015,20 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x04c9a4f]: https://github.com/CosmWasm/wasmvm/commit/04c9a4f4283f53247db4523f9a7103dfeede58cd
 
 ## [1.5.2] - 2024-01-18
+
+### Changed
+
+- Set libwasmvm version to 1.5.2-rc.0 ([0xb5abee6])
+- Set libwasmvm version to 1.5.2 ([0xb6e68e7])
+
+### Removed
+
+- Retract 1.2.5 ([0x4a00a59])
+
+[0xb6e68e7]: https://github.com/CosmWasm/wasmvm/commit/b6e68e7b1f1c4b1fd8118d73c490743dcb092925
+[0x4a00a59]: https://github.com/CosmWasm/wasmvm/commit/4a00a593acfac6e3ac9cd426ae3419ecb4a3885a
+[0xb5abee6]: https://github.com/CosmWasm/wasmvm/commit/b5abee611838cb98d4f23031f6491c07fc611009
+
 ## [1.5.1] - 2024-01-10
 ## [1.5.0] - 2023-10-31
 ## [1.4.3] - 2024-01-18
