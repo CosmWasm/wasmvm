@@ -921,6 +921,31 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x1f4db20]: https://github.com/CosmWasm/wasmvm/commit/1f4db20199b8fba3cdc2b8f1f3cd2300e337d2c7
 
 ## [1.5.7] - 2025-01-07
+
+### Changed
+
+- Merge pull request #605 from CosmWasm/mergify/bp/release/1.5/pr-604 ([0xb7f7d62])
+- Merge pull request #602 from CosmWasm/co/remove-gaslimit ([0x6a3d790])
+- Update cargo-audit ([0x78d03a8])
+- Use locked dependencies for cargo-audit install ([0xff0e4f0])
+- Set libwasmvm version to 1.5.7 ([0x9012951])
+
+### Removed
+
+- Remove unused gasLimit param of SimulateStoreCode function ([0xfdd5ccc])
+
+### Fixed
+
+- Fix lockfile version ([0x57d872e])
+
+[0xb7f7d62]: https://github.com/CosmWasm/wasmvm/commit/b7f7d628ef8115a07831e0a1e0b6e0c9b98f2a28
+[0x6a3d790]: https://github.com/CosmWasm/wasmvm/commit/6a3d790ddfdb3728eb9785f0240d2bfa6d0bba55
+[0x78d03a8]: https://github.com/CosmWasm/wasmvm/commit/78d03a8ba557416fcd58a1efc6b7050de90279b3
+[0xff0e4f0]: https://github.com/CosmWasm/wasmvm/commit/ff0e4f064a58d9f87d4cc1bad25c115a4282d3f7
+[0xfdd5ccc]: https://github.com/CosmWasm/wasmvm/commit/fdd5ccc5eee4f1c1cdd8feee88e6231561032202
+[0x57d872e]: https://github.com/CosmWasm/wasmvm/commit/57d872efc497d3568d63e5fc709f611c0e21d9fe
+[0x9012951]: https://github.com/CosmWasm/wasmvm/commit/90129512646fdfba38f9cb00347a08957fed38e5
+
 ## [1.5.6] - 2024-12-10
 ## [1.5.5] - 2024-09-23
 ## [1.5.4] - 2024-08-08
