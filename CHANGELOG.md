@@ -557,6 +557,39 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x54521e5]: https://github.com/CosmWasm/wasmvm/commit/54521e52855db832f188b52f9ddc0f7681862354
 
 ## [2.0.6] - 2025-02-04
+
+### Added
+
+- Add test for StoreCodeUnchecked ([0x16a4a03])
+- Use locked dependencies for cargo-audit install ([0xad91cb6])
+
+### Changed
+
+- Merge pull request #615 from CosmWasm/mergify/bp/release/2.0/pr-612 ([0x2d8c291])
+- Merge pull request #606 from CosmWasm/mergify/bp/release/2.0/pr-604 ([0x8f8edd9])
+- Update cargo-audit ([0xe20fc50])
+- Bump cosmwasm ([0xd62c3b8])
+- Set libwasmvm version to 2.0.6 ([0x54521e5])
+
+### Fixed
+
+- Fix unchecked flag ([0x0caab74])
+- Fix import ([0xc6985ed])
+- Fix tests ([0x22e6892])
+- Fix ([0xd4ff2ad])
+
+[0x2d8c291]: https://github.com/CosmWasm/wasmvm/commit/2d8c29175686a389bd6801ba945583cabc7360ec
+[0x16a4a03]: https://github.com/CosmWasm/wasmvm/commit/16a4a03d42b5361f72a0702bbbb0d9a66d03df18
+[0x0caab74]: https://github.com/CosmWasm/wasmvm/commit/0caab74f6ad21b3c5c77453046d116a315e01234
+[0xe20fc50]: https://github.com/CosmWasm/wasmvm/commit/e20fc505d699ea878286b952c5e9b5110958d103
+[0xad91cb6]: https://github.com/CosmWasm/wasmvm/commit/ad91cb66623d80bd8803437412f3ed3877b1005a
+[0x8f8edd9]: https://github.com/CosmWasm/wasmvm/commit/8f8edd9e3afd691abca8c37feeb83c7a3b595812
+[0xc6985ed]: https://github.com/CosmWasm/wasmvm/commit/c6985ed2b3b63c50fd3182b80ad42635c74393fa
+[0x54521e5]: https://github.com/CosmWasm/wasmvm/commit/54521e52855db832f188b52f9ddc0f7681862354
+[0x22e6892]: https://github.com/CosmWasm/wasmvm/commit/22e689281084876bf6f7e12ea55e9f6c80391e9d
+[0xd62c3b8]: https://github.com/CosmWasm/wasmvm/commit/d62c3b826a9d5a279149951b20f9ee9b5c8550a6
+[0xd4ff2ad]: https://github.com/CosmWasm/wasmvm/commit/d4ff2adee44e6b9f7415a5dfbb3de745ab9b7678
+
 ## [2.0.5] - 2024-12-10
 ## [2.0.4] - 2024-09-23
 ## [2.0.3] - 2024-08-08
