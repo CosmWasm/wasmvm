@@ -884,6 +884,42 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x237dd8a]: https://github.com/CosmWasm/wasmvm/commit/237dd8a9090a3518b228961271b249d061c7d871
 
 ## [1.5.8] - 2025-02-04
+
+### Added
+
+- Add test for StoreCodeUnchecked ([0xd07faad])
+
+### Changed
+
+- Merge pull request #603 from CosmWasm/co/retract-1.5.6 ([0x43b12d1])
+- Merge pull request #614 from CosmWasm/mergify/bp/release/1.5/pr-612 ([0x41fd6d6])
+- Bump cosmwasm version ([0x1f4db20])
+- Set libwasmvm version to 1.5.8 ([0xc4dcda4])
+
+### Removed
+
+- Retract 1.5.6 ([0xfa50ee0])
+
+### Fixed
+
+- Fix ([0x1151bc6])
+- Fix lockfile version ([0x9ac78db])
+- Fix import ([0x23df6a3])
+- Fix unchecked flag ([0x803a935])
+- Fix tests ([0x98a52f6])
+
+[0x1151bc6]: https://github.com/CosmWasm/wasmvm/commit/1151bc6df7d02d1889b8da37cf8510eaf4198eea
+[0xc4dcda4]: https://github.com/CosmWasm/wasmvm/commit/c4dcda406a8d43a5cd66f88dfafedf107b59b619
+[0x41fd6d6]: https://github.com/CosmWasm/wasmvm/commit/41fd6d64706d2a1c4d03f1c0579b835778af3d20
+[0x9ac78db]: https://github.com/CosmWasm/wasmvm/commit/9ac78db954db2e0ec871f2f1dd57fd64bbf645f1
+[0xfa50ee0]: https://github.com/CosmWasm/wasmvm/commit/fa50ee0164c6ea7987c6d855e722f578cc00672d
+[0x23df6a3]: https://github.com/CosmWasm/wasmvm/commit/23df6a3a9edd391396308a4257f62d36ad1864d0
+[0x43b12d1]: https://github.com/CosmWasm/wasmvm/commit/43b12d19542de2fb247344bf829c9e5f508418b6
+[0x803a935]: https://github.com/CosmWasm/wasmvm/commit/803a9355b7ba81b2e3c1228f8ef106e969cd2342
+[0x98a52f6]: https://github.com/CosmWasm/wasmvm/commit/98a52f6a59cc9f0ff5d0f1d9da3c64efe2e40a08
+[0xd07faad]: https://github.com/CosmWasm/wasmvm/commit/d07faadc2c3082e0e8e4af3a772053293f57d48f
+[0x1f4db20]: https://github.com/CosmWasm/wasmvm/commit/1f4db20199b8fba3cdc2b8f1f3cd2300e337d2c7
+
 ## [1.5.7] - 2025-01-07
 ## [1.5.6] - 2024-12-10
 ## [1.5.5] - 2024-09-23
