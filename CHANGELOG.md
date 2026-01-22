@@ -998,6 +998,22 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x7d38121]: https://github.com/CosmWasm/wasmvm/commit/7d3812134ed07ac988eaa7eb7e7ea4fd5e5a0df2
 
 ## [1.5.3] - 2024-08-08
+
+### Changed
+
+- Update time crate ([0xcf3b1f0])
+- Update to cosmwasm 1.5.6 and update once_cell and elliptic-curve ([0x04c9a4f])
+- Bump wasmvm version ([0xcb00566])
+
+### Fixed
+
+- Fix tests ([0x6d4e359])
+
+[0xcb00566]: https://github.com/CosmWasm/wasmvm/commit/cb00566fba83ad976317cca9ac7540ec2721ec97
+[0xcf3b1f0]: https://github.com/CosmWasm/wasmvm/commit/cf3b1f0d8f6b4aa6a6d1337e3a15ba799e4864a6
+[0x6d4e359]: https://github.com/CosmWasm/wasmvm/commit/6d4e35986e75a274c9a3f8d84a9cddeec79dcc6c
+[0x04c9a4f]: https://github.com/CosmWasm/wasmvm/commit/04c9a4f4283f53247db4523f9a7103dfeede58cd
+
 ## [1.5.2] - 2024-01-18
 ## [1.5.1] - 2024-01-10
 ## [1.5.0] - 2023-10-31
