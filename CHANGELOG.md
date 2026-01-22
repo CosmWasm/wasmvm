@@ -1087,7 +1087,15 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [1.4.2] - 2024-01-10
 
+### Changed
 
+- Let test_alpine_build use xlarge machine ([0x075d0b6])
+- Bump Rust for libwasmvm_audit to 1.75.0 ([0x1661ca4])
+- Set libwasmvm version to 1.4.2 ([0x85e10fa])
+
+[0x075d0b6]: https://github.com/CosmWasm/wasmvm/commit/075d0b64052fd3682d443335757980087c89beb7
+[0x85e10fa]: https://github.com/CosmWasm/wasmvm/commit/85e10fa7cddaeb50eb4715ba8f94f8840227f410
+[0x1661ca4]: https://github.com/CosmWasm/wasmvm/commit/1661ca43435b619cd72a8270842b94a9fa117fe1
 
 ## [1.4.1] - 2023-10-09
 ## [1.4.0] - 2023-09-04
