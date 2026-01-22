@@ -446,6 +446,116 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x23be57a]: https://github.com/CosmWasm/wasmvm/commit/23be57a0fc19beb528b2320c8fc50b49af6b1e53
 
 ## [2.1.0] - 2024-07-11
+
+### Added
+
+- Add bindings for migrate version ([#539])
+- Add compile time type assertions for `hasSubMessages` interface ([#537])
+- Add bindings for the pinned metrics ([#526])
+- Add migrating entry for static linking ([#522])
+- IBC Callbacks ([#520])
+- Add SimulateStoreCode function ([0xde68126])
+
+### Changed
+
+- Merge 2.0.1 ([#535])
+- Migrate to Rust 1.74.0+ in cross compiler ([#513])
+- Make test-alpine work on ARM as well ([#483])
+- Lock cargo-audit CI job (backport #604) ([#606])
+- Expose pinned metrics through vm ([#544])
+- Async Ack message type ([#542])
+- Avoid checking `errOut.is_none` for unused errOut ([#541])
+- Contract Migrate Version ([#540])
+- Increase min rust version to 1.74.0 ([#538])
+- Bump OSX_VERSION_MIN to 10.15 and Rust to 1.77.0 (builders 0019) ([#529])
+- Document ​libwasmvmstatic_darwin.a support ([#528])
+- imp: allow cgo while disabling libwasmvm linking ([#527])
+- Merge 2.0 ([#525])
+- Check goimports in golangci-lint ([#521])
+- Updated README link ([#518])
+- Refactor IteratorReference ([#501])
+- Bump cosmwasm ([0xd62c3b8])
+- Set libwasmvm version to 2.1.0-rc.1 ([0x6f5c9c9])
+- Bump cosmwasm ([0xf092b7c])
+- Set libwasmvm version to 2.0.5 ([0xc6dad83])
+- Set libwasmvm version to 2.0.6 ([0x54521e5])
+- Set libwasmvm version to 2.1.0-rc.2 ([0xe1c2e4e])
+- Set libwasmvm version to 2.1.0 ([0xccf6865])
+- Update time crate ([0xd7cb567])
+- Bump wasmvm version ([0xdebc2dd])
+- Ignore .DS_Store ([0x57bba20])
+- Update to cosmwasm 2.0.5 ([0xe4d9884])
+- Update cosmwasm to 2.0.6 ([0x0cb1ef2])
+- Update to cosmwasm 2.0.8 ([0x68f94f2])
+- Bump wasmvm version ([0x98ba855])
+- Set libwasmvm version to 2.0.4 ([0xff1eb7c])
+- Merge branch 'release/2.0 ([0x4094e65])
+
+### Removed
+
+- Remove x86 requirement for test-alpine job ([0x0a69b95])
+
+### Fixed
+
+- Broken optimised wasmd build ([#536])
+- Crash "SIGABRT: abort"/"signal arrived during cgo execution" during store code on Alpine 3.19 ([#523])
+- Fix unchecked flag (backport #612) ([#615])
+- chore: fix duplicate word repetition in CreateChecksum error return ([#531])
+- Fix `errorWithMessage` ([#543])
+- Fix tests ([0x22e6892])
+- Fix pointer problem in UnmanagedVector (backport #571) ([#573])
+- Fix ([0xd4ff2ad])
+- Fix tests ([0x956daaa])
+
+[#539]: https://github.com/CosmWasm/wasmvm/issues/539
+[#536]: https://github.com/CosmWasm/wasmvm/issues/536
+[#523]: https://github.com/CosmWasm/wasmvm/issues/523
+[#513]: https://github.com/CosmWasm/wasmvm/issues/513
+[#483]: https://github.com/CosmWasm/wasmvm/issues/483
+[#615]: https://github.com/CosmWasm/wasmvm/pull/615
+[#606]: https://github.com/CosmWasm/wasmvm/pull/606
+[#573]: https://github.com/CosmWasm/wasmvm/pull/573
+[#544]: https://github.com/CosmWasm/wasmvm/pull/544
+[#543]: https://github.com/CosmWasm/wasmvm/pull/543
+[#542]: https://github.com/CosmWasm/wasmvm/pull/542
+[#541]: https://github.com/CosmWasm/wasmvm/pull/541
+[#540]: https://github.com/CosmWasm/wasmvm/pull/540
+[#538]: https://github.com/CosmWasm/wasmvm/pull/538
+[#537]: https://github.com/CosmWasm/wasmvm/pull/537
+[#535]: https://github.com/CosmWasm/wasmvm/pull/535
+[#531]: https://github.com/CosmWasm/wasmvm/pull/531
+[#529]: https://github.com/CosmWasm/wasmvm/pull/529
+[#528]: https://github.com/CosmWasm/wasmvm/pull/528
+[#527]: https://github.com/CosmWasm/wasmvm/pull/527
+[#526]: https://github.com/CosmWasm/wasmvm/pull/526
+[#525]: https://github.com/CosmWasm/wasmvm/pull/525
+[#522]: https://github.com/CosmWasm/wasmvm/pull/522
+[#521]: https://github.com/CosmWasm/wasmvm/pull/521
+[#520]: https://github.com/CosmWasm/wasmvm/pull/520
+[#518]: https://github.com/CosmWasm/wasmvm/pull/518
+[#501]: https://github.com/CosmWasm/wasmvm/pull/501
+[0xd62c3b8]: https://github.com/CosmWasm/wasmvm/commit/d62c3b826a9d5a279149951b20f9ee9b5c8550a6
+[0x22e6892]: https://github.com/CosmWasm/wasmvm/commit/22e689281084876bf6f7e12ea55e9f6c80391e9d
+[0x6f5c9c9]: https://github.com/CosmWasm/wasmvm/commit/6f5c9c9f920c726853da5d1692bbfa6f4a9e0778
+[0xf092b7c]: https://github.com/CosmWasm/wasmvm/commit/f092b7c336979972f5fe2f27a50750a974eeccc7
+[0xde68126]: https://github.com/CosmWasm/wasmvm/commit/de68126114c2511c6b55b1030153cc95f10a146a
+[0xd4ff2ad]: https://github.com/CosmWasm/wasmvm/commit/d4ff2adee44e6b9f7415a5dfbb3de745ab9b7678
+[0x68f94f2]: https://github.com/CosmWasm/wasmvm/commit/68f94f25e6ddee2f11784332a2a24f2713ceeda2
+[0xc6dad83]: https://github.com/CosmWasm/wasmvm/commit/c6dad83162c367366a3b23cc6371a944b1abc9e2
+[0xccf6865]: https://github.com/CosmWasm/wasmvm/commit/ccf6865975db35ee5fc4c90380c39a5cfc4ba338
+[0xd7cb567]: https://github.com/CosmWasm/wasmvm/commit/d7cb567a498e0ee438a04beeb5bfff64d493deea
+[0xdebc2dd]: https://github.com/CosmWasm/wasmvm/commit/debc2ddb675e689fe1277ab533ba2c2b1016bbe6
+[0x57bba20]: https://github.com/CosmWasm/wasmvm/commit/57bba20d18ac88424294c166ddde1b1025de514f
+[0x0a69b95]: https://github.com/CosmWasm/wasmvm/commit/0a69b9511bcf21c901acbd5e81feeb5bbcf24b0c
+[0x0cb1ef2]: https://github.com/CosmWasm/wasmvm/commit/0cb1ef22129cbd95478ca1df43ea4fa722b560e9
+[0xe1c2e4e]: https://github.com/CosmWasm/wasmvm/commit/e1c2e4e0ae23adc6f36958834751fabdb6587eef
+[0x98ba855]: https://github.com/CosmWasm/wasmvm/commit/98ba855efe8d59c08b1d5b0f5b09fd5bc6e221fc
+[0x4094e65]: https://github.com/CosmWasm/wasmvm/commit/4094e656b0b7fdb6125824825347d5278f097cba
+[0x956daaa]: https://github.com/CosmWasm/wasmvm/commit/956daaa918b54028f538e2c1f67b8ebdaf322acf
+[0xff1eb7c]: https://github.com/CosmWasm/wasmvm/commit/ff1eb7c15196e0ade223081d92d883d2add131ec
+[0xe4d9884]: https://github.com/CosmWasm/wasmvm/commit/e4d9884a12dc68ac96c0a5c6ff0f580ed4fe6b2f
+[0x54521e5]: https://github.com/CosmWasm/wasmvm/commit/54521e52855db832f188b52f9ddc0f7681862354
+
 ## [2.0.6] - 2025-02-04
 ## [2.0.5] - 2024-12-10
 ## [2.0.4] - 2024-09-23
