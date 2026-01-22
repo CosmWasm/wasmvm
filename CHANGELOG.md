@@ -1230,6 +1230,19 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x74f2ee3]: https://github.com/CosmWasm/wasmvm/commit/74f2ee39ed64212e17559f26f86e06079a1af329
 
 ## [1.2.6] - 2024-01-10
+
+### Changed
+
+- Bump libwasmvm version ([0xcdd219e])
+
+### Removed
+
+- Retract 1.2.5 ([0x6676312])
+
+
+[0xcdd219e]: https://github.com/CosmWasm/wasmvm/commit/cdd219e11914f1f3434f4ed8caaee6978fa1a6a6
+[0x6676312]: https://github.com/CosmWasm/wasmvm/commit/66763124d7dd49b775cb86b637376eecb1e3f56a
+
 ## [1.2.5] - 2024-01-10
 ## [1.2.4] - 2023-06-05
 ## [1.2.3] - 2023-04-18
