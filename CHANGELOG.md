@@ -1172,6 +1172,63 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x6999eaf]: https://github.com/CosmWasm/wasmvm/commit/6999eaf0bb34adffa7841bb300a0a29894636760
 
 ## [1.3.0] - 2023-07-17
+
+### Added
+
+- Add DistributionQuery::DelegatorWithdrawAddress types ([#436])
+- Add Go linter to CI and fix JSON tag of DistributionMsg.FundCommunityPool ([#444])
+- Add `DistributionQuery::DelegatorWithdrawAddress` ([#442])
+- Add StoreCodeUnchecked ([#441])
+- Add `MsgFundCommunityPool` to the Distribution Msgs ([#433])
+- Add AllDenomMetadata BankQuery ([#430])
+- Add CreateChecksum ([#410])
+- types: Add AllDenomMetadata BankQuery ([#409])
+
+### Changed
+
+- Make Cache::save_wasm_unchecked available in Go ([#434])
+- Public method to build checksum for wasm code ([#359])
+- Release 1.3 ([#445])
+- \[rebased\] Add MsgFundCommunityPool to the Distribution Msgs ([#443])
+- Upgrade cosmwasm to release/1.3 ([#440])
+- Use wasmvmstatic example and create builders version 0016 ([#438])
+- Update dependencies in Cargo.lock and cargo-audit ([#435])
+- Release wasmvm 1.2.4 ([#432])
+- Lint repo (simon) ([#429])
+- Merge branch 'release/1.2.x ([0x1c6f404])
+- Let test_alpine_build use xlarge machine ([0x84b10c9])
+- Set libwasmvm version to 1.2.5 ([0x8c0a066])
+- Bump libwasmvm version ([0xcdd219e])
+- Bump Rust for libwasmvm_audit to 1.75.0 ([0x74f2ee3])
+
+### Removed
+
+- Retract 1.2.5 ([0x6676312])
+
+[#436]: https://github.com/CosmWasm/wasmvm/issues/436
+[#434]: https://github.com/CosmWasm/wasmvm/issues/434
+[#359]: https://github.com/CosmWasm/wasmvm/issues/359
+[#445]: https://github.com/CosmWasm/wasmvm/pull/445
+[#444]: https://github.com/CosmWasm/wasmvm/pull/444
+[#443]: https://github.com/CosmWasm/wasmvm/pull/443
+[#442]: https://github.com/CosmWasm/wasmvm/pull/442
+[#441]: https://github.com/CosmWasm/wasmvm/pull/441
+[#440]: https://github.com/CosmWasm/wasmvm/pull/440
+[#438]: https://github.com/CosmWasm/wasmvm/pull/438
+[#435]: https://github.com/CosmWasm/wasmvm/pull/435
+[#433]: https://github.com/CosmWasm/wasmvm/pull/433
+[#432]: https://github.com/CosmWasm/wasmvm/pull/432
+[#430]: https://github.com/CosmWasm/wasmvm/pull/430
+[#429]: https://github.com/CosmWasm/wasmvm/pull/429
+[#410]: https://github.com/CosmWasm/wasmvm/pull/410
+[#409]: https://github.com/CosmWasm/wasmvm/pull/409
+[0x6676312]: https://github.com/CosmWasm/wasmvm/commit/66763124d7dd49b775cb86b637376eecb1e3f56a
+[0x1c6f404]: https://github.com/CosmWasm/wasmvm/commit/1c6f4040c5b1e3c9249cd9d83b95083823c3d15d
+[0x84b10c9]: https://github.com/CosmWasm/wasmvm/commit/84b10c9df3d6e63196c85a29a693ce8b3157d02f
+[0x8c0a066]: https://github.com/CosmWasm/wasmvm/commit/8c0a066b3d6f828b3c268d0f366571f563608ac3
+[0xcdd219e]: https://github.com/CosmWasm/wasmvm/commit/cdd219e11914f1f3434f4ed8caaee6978fa1a6a6
+[0x74f2ee3]: https://github.com/CosmWasm/wasmvm/commit/74f2ee39ed64212e17559f26f86e06079a1af329
+
 ## [1.2.6] - 2024-01-10
 ## [1.2.5] - 2024-01-10
 ## [1.2.4] - 2023-06-05
