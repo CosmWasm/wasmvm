@@ -1030,6 +1030,19 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xb5abee6]: https://github.com/CosmWasm/wasmvm/commit/b5abee611838cb98d4f23031f6491c07fc611009
 
 ## [1.5.1] - 2024-01-10
+
+### Changed
+
+- Bump Rust for libwasmvm_audit to 1.75.0 ([0xec031cd])
+- Let test_alpine_build use xlarge machine ([0xe94b26e])
+- Bump self_cell to 1.0.3 (Backport wasmvm 1.5) ([0x936bb74])
+- Set libwasmvm version to 1.5.1 ([0x5883584])
+
+[0xec031cd]: https://github.com/CosmWasm/wasmvm/commit/ec031cd0f39f0fdcd10d3f24d06dc17f8a54c9f5
+[0xe94b26e]: https://github.com/CosmWasm/wasmvm/commit/e94b26efb0622e2f26dbacc7a3240fec6dee61f6
+[0x5883584]: https://github.com/CosmWasm/wasmvm/commit/5883584f34c59b3f04df823f5b7f2a831cfb5faf
+[0x936bb74]: https://github.com/CosmWasm/wasmvm/commit/936bb74b1ade5e766abc8ed269be7ae01d3452dc
+
 ## [1.5.0] - 2023-10-31
 ## [1.4.3] - 2024-01-18
 ## [1.4.2] - 2024-01-10
