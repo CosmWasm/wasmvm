@@ -1044,6 +1044,39 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x936bb74]: https://github.com/CosmWasm/wasmvm/commit/936bb74b1ade5e766abc8ed269be7ae01d3452dc
 
 ## [1.5.0] - 2023-10-31
+
+### Changed
+
+- Bump shfmt to version 3.7.0 ([#466])
+- Create separate libwasmvm_clippy CI job and test more recent clippy versions ([#463])
+- Update builders to version 0017 (Rust 1.73.0) ([#462])
+- Float test ([#457])
+- Set libwasmvm version to 1.5.0 ([0xfb751f3])
+- Let test_alpine_build use xlarge machine ([0x075d0b6])
+- Revert "Update cosmwasm version" ([0x518e0a7])
+- Update cosmwasm version ([0xaa687a0])
+- Bump Rust for libwasmvm_audit to 1.75.0 ([0x1661ca4])
+- Revert "Set libwasmvm version to 1.5.0-rc.0" ([0xdac7e42])
+- Release 1.5.0-rc.0 ([#461])
+- Set libwasmvm version to 1.4.2 ([0x85e10fa])
+- Set libwasmvm version to 1.4.3 ([0xbb5ebdf])
+- Set libwasmvm version to 1.5.0-rc.0 ([0x513a32f])
+
+[#466]: https://github.com/CosmWasm/wasmvm/pull/466
+[#463]: https://github.com/CosmWasm/wasmvm/pull/463
+[#462]: https://github.com/CosmWasm/wasmvm/pull/462
+[#461]: https://github.com/CosmWasm/wasmvm/pull/461
+[#457]: https://github.com/CosmWasm/wasmvm/pull/457
+[0xaa687a0]: https://github.com/CosmWasm/wasmvm/commit/aa687a0f9303e3a28ac03d07aa8b5362139a2f64
+[0xfb751f3]: https://github.com/CosmWasm/wasmvm/commit/fb751f31828dff3c83a2bb6623cc08112f472e72
+[0x075d0b6]: https://github.com/CosmWasm/wasmvm/commit/075d0b64052fd3682d443335757980087c89beb7
+[0x518e0a7]: https://github.com/CosmWasm/wasmvm/commit/518e0a768dbd8bf87711073388b05bfa453fd037
+[0x1661ca4]: https://github.com/CosmWasm/wasmvm/commit/1661ca43435b619cd72a8270842b94a9fa117fe1
+[0x85e10fa]: https://github.com/CosmWasm/wasmvm/commit/85e10fa7cddaeb50eb4715ba8f94f8840227f410
+[0xdac7e42]: https://github.com/CosmWasm/wasmvm/commit/dac7e42e5b1c13f6da342e0209f64e827be92d77
+[0xbb5ebdf]: https://github.com/CosmWasm/wasmvm/commit/bb5ebdff01072f7cc1cfb6f631ae0f24b7e5cc13
+[0x513a32f]: https://github.com/CosmWasm/wasmvm/commit/513a32f6e5970090287735ea7988f9492f92844c
+
 ## [1.4.3] - 2024-01-18
 ## [1.4.2] - 2024-01-10
 ## [1.4.1] - 2023-10-09
