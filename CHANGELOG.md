@@ -1321,7 +1321,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Added
 
 - Add method do delete wasm code(s) ([#353])
-- Add libwasmvm check to demo binary (1.1) ([#420])
 - Add UnmanagedVector::some and UnmanagedVector::none ([#384])
 - Add no-cgo support ([#377])
 - Add devtools/set_version.sh ([0xb859b72])
@@ -1330,7 +1329,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 ### Changed
 
 - Bump min Rust version to 1.60.0 ([#366])
-- Upgrade tempfile (1.1) ([#421])
 - Bump wasmvm to 1.2.0 ([#394])
 - Upgrade to CosmWasm 1.2.0 ([#393])
 - Change default value for replyOn and voteOption ([#392])
@@ -1368,8 +1366,6 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [#381]: https://github.com/CosmWasm/wasmvm/issues/381
 [#366]: https://github.com/CosmWasm/wasmvm/issues/366
 [#353]: https://github.com/CosmWasm/wasmvm/issues/353
-[#421]: https://github.com/CosmWasm/wasmvm/pull/421
-[#420]: https://github.com/CosmWasm/wasmvm/pull/420
 [#394]: https://github.com/CosmWasm/wasmvm/pull/394
 [#393]: https://github.com/CosmWasm/wasmvm/pull/393
 [#392]: https://github.com/CosmWasm/wasmvm/pull/392
@@ -1405,6 +1401,9 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xb859b72]: https://github.com/CosmWasm/wasmvm/commit/b859b7272dc5f669bd95e22a6eddcfa8e2a9858d
 
 ## [1.1.2] - 2023-04-18
+
+
+
 ## [1.1.1] - 2022-09-19
 ## [1.1.0] - 2022-09-06
 
