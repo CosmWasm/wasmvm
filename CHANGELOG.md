@@ -1078,7 +1078,17 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x513a32f]: https://github.com/CosmWasm/wasmvm/commit/513a32f6e5970090287735ea7988f9492f92844c
 
 ## [1.4.3] - 2024-01-18
+
+### Changed
+
+- Set libwasmvm version to 1.4.3 ([0xbb5ebdf])
+
+[0xbb5ebdf]: https://github.com/CosmWasm/wasmvm/commit/bb5ebdff01072f7cc1cfb6f631ae0f24b7e5cc13
+
 ## [1.4.2] - 2024-01-10
+
+
+
 ## [1.4.1] - 2023-10-09
 ## [1.4.0] - 2023-09-04
 ## [1.3.1] - 2024-01-10
