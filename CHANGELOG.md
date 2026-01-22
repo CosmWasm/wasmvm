@@ -652,6 +652,17 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xe4d9884]: https://github.com/CosmWasm/wasmvm/commit/e4d9884a12dc68ac96c0a5c6ff0f580ed4fe6b2f
 
 ## [2.0.1] - 2024-04-04
+
+### Changed
+
+- imp: allow cgo while disabling libwasmvm linking (backport #527) ([#530])
+- Bump cosmwasm to 2.0.1 ([#532])
+- Set libwasmvm version to 2.0.1 ([0xdb9253b])
+
+[#532]: https://github.com/CosmWasm/wasmvm/issues/532
+[#530]: https://github.com/CosmWasm/wasmvm/pull/530
+[0xdb9253b]: https://github.com/CosmWasm/wasmvm/commit/db9253b40f1801d63c857037ddf93ed2b3764e33
+
 ## [2.0.0] - 2024-03-12
 ## [1.5.9] - 2025-03-05
 ## [1.5.8] - 2025-02-04
