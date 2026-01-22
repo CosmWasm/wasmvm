@@ -1279,6 +1279,19 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0xdb9d4a6]: https://github.com/CosmWasm/wasmvm/commit/db9d4a68612b6adaa8ae393f2f52586342b8ab23
 
 ## [1.2.2] - 2023-04-06
+
+### Changed
+
+- Copy shared libs to artifacts folder ([#415])
+- Rename features to capabilities ([#414])
+- Create builders 0015 ([#411])
+- Make wasmvm 1.2.2 ([#412])
+
+[#415]: https://github.com/CosmWasm/wasmvm/pull/415
+[#414]: https://github.com/CosmWasm/wasmvm/pull/414
+[#412]: https://github.com/CosmWasm/wasmvm/pull/412
+[#411]: https://github.com/CosmWasm/wasmvm/pull/411
+
 ## [1.2.1] - 2023-03-08
 ## [1.2.0] - 2023-01-24
 ## [1.1.2] - 2023-04-18
