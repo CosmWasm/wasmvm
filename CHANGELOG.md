@@ -947,6 +947,29 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x9012951]: https://github.com/CosmWasm/wasmvm/commit/90129512646fdfba38f9cb00347a08957fed38e5
 
 ## [1.5.6] - 2024-12-10
+
+### Added
+
+- Add SimulateStoreCode function ([0x558ea9e])
+- Add comments ([0xf582924])
+
+### Changed
+
+- Merge pull request #572 from CosmWasm/mergify/bp/release/1.5/pr-571 ([0x203e048])
+- Update to cosmwasm 1.5.9 ([0x3c3e2e5])
+- Set libwasmvm version to 1.5.6 ([0x84abe1b])
+
+### Fixed
+
+- Fix ([0xa641c50])
+
+[0x3c3e2e5]: https://github.com/CosmWasm/wasmvm/commit/3c3e2e5516031efea78dd71a577f8b5860425a56
+[0xa641c50]: https://github.com/CosmWasm/wasmvm/commit/a641c5075866e6cf8ad121f68b1f5441c28faaa9
+[0x558ea9e]: https://github.com/CosmWasm/wasmvm/commit/558ea9e56a0fc21f80b421bf17c4afefb72e0cbc
+[0xf582924]: https://github.com/CosmWasm/wasmvm/commit/f58292448d138ceba671dc22916ba7e457939a55
+[0x84abe1b]: https://github.com/CosmWasm/wasmvm/commit/84abe1bf7a5aba8e13af74590d64acd270fc9843
+[0x203e048]: https://github.com/CosmWasm/wasmvm/commit/203e04875de52dc909b46bdf372bc333541f052a
+
 ## [1.5.5] - 2024-09-23
 ## [1.5.4] - 2024-08-08
 ## [1.5.3] - 2024-08-08
