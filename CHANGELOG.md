@@ -1402,7 +1402,28 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 
 ## [1.1.2] - 2023-04-18
 
+### Added
 
+- Add libwasmvm check to demo binary (1.1) ([#420])
+
+### Changed
+
+- Upgrade tempfile (1.1) ([#421])
+- Try regex instead of glob ([0xe6774a0])
+- Build libs on release branches ([0x740d948])
+- Upgrade go and pin version of ghr ([0x63381ec])
+- Upgrade cosmwasm to v1.1.10 ([0x11dc91e])
+- Next try to find the regex ([0x82ec548])
+- Set libwasmvm version to 1.1.2 ([0xed2f501])
+
+[#421]: https://github.com/CosmWasm/wasmvm/pull/421
+[#420]: https://github.com/CosmWasm/wasmvm/pull/420
+[0xe6774a0]: https://github.com/CosmWasm/wasmvm/commit/e6774a07172912019ef2ff89ee9f8eb6ce09e584
+[0x740d948]: https://github.com/CosmWasm/wasmvm/commit/740d948c8369f26ff2008e55eccef20699f977a6
+[0x63381ec]: https://github.com/CosmWasm/wasmvm/commit/63381ec7830a5e004533c1b2be6fd40079e808b1
+[0x11dc91e]: https://github.com/CosmWasm/wasmvm/commit/11dc91e079c5519649592fafa6b20c739b4d08d0
+[0xed2f501]: https://github.com/CosmWasm/wasmvm/commit/ed2f50104b42877ff26895eb66ef8b6e3874da8d
+[0x82ec548]: https://github.com/CosmWasm/wasmvm/commit/82ec5485b463fa38ac1bf7910cd9ab3bb897c485
 
 ## [1.1.1] - 2022-09-19
 ## [1.1.0] - 2022-09-06
