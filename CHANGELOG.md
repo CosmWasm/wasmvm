@@ -869,6 +869,20 @@ The format is based on [Keep a Changelog], and this project adheres to [Semantic
 [0x237dd8a]: https://github.com/CosmWasm/wasmvm/commit/237dd8a9090a3518b228961271b249d061c7d871
 
 ## [1.5.9] - 2025-03-05
+
+### Changed
+
+- Bump cosmwasm ([0x1424dc2])
+- Set libwasmvm version to 1.5.9 ([0x4d727b1])
+
+### Fixed
+
+- Fix tests ([0x237dd8a])
+
+[0x4d727b1]: https://github.com/CosmWasm/wasmvm/commit/4d727b18487b491b723ca90d1bdbd434311b2574
+[0x1424dc2]: https://github.com/CosmWasm/wasmvm/commit/1424dc210a603c335213ba9be80f8ce3b7d79bed
+[0x237dd8a]: https://github.com/CosmWasm/wasmvm/commit/237dd8a9090a3518b228961271b249d061c7d871
+
 ## [1.5.8] - 2025-02-04
 ## [1.5.7] - 2025-01-07
 ## [1.5.6] - 2024-12-10
