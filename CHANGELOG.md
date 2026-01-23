@@ -5,6 +5,7 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 ## [Unreleased]
 
 - Recover the CHANGELOG ([#708])
+- Recovered the changelog ([#709])
 - Add workflow dispatch in CI ([#703])
 - Improved tests ([#699])
 - Update setup-go to v6 ([#697])
@@ -12,6 +13,7 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 - Updated year in NOTICE file. ([0xf2566c3])
 
 [#708]: https://github.com/CosmWasm/wasmvm/issues/708
+[#709]: https://github.com/CosmWasm/wasmvm/pull/709
 [#703]: https://github.com/CosmWasm/wasmvm/pull/703
 [#699]: https://github.com/CosmWasm/wasmvm/pull/699
 [#697]: https://github.com/CosmWasm/wasmvm/pull/697
