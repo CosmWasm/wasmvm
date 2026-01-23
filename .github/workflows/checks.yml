@@ -335,7 +335,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           TITLE="$TAG"
-          BODY="Build artifacts generated at this tag."
+          BODY="See the [CHANGELOG](https://github.com/CosmWasm/wasmvm/blob/main/CHANGELOG.md) for details on the changes in this version."
 
           # Check if tag is a version without suffix (e.g. -rc or -beta)
           # and set prerelease flag accordingly
