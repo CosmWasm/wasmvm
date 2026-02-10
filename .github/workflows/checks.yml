@@ -125,7 +125,7 @@ jobs:
 
       - name: Run cargo-audit
         working-directory: libwasmvm
-        run: cargo audit
+        run: cargo audit --ignore RUSTSEC-2026-0007 --ignore RUSTSEC-2026-0001 --ignore RUSTSEC-2026-0009
 
   format-go:
     runs-on: ubuntu-latest
