@@ -437,15 +437,15 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-core"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63efd882086668c3bad621b5b897a0e058d0b5fae027c984e1a6230bf284ab85"
+checksum = "d2fbaa4a5d5159d37d72e6c1b17c192fd9733f9b602cf02b2008b772394afc50"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0969e6f569f867725bf89e672058ae336e130c1fcf914def4f7c6c0380b2bc83"
+checksum = "039d780d6aebc7c073053eef7029a80140f0935d7052e4672d3efb59500d1c81"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -467,9 +467,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0da0db99715fc86e6a5ad7be9c19d0d9e5a92179862b17cae7406b729a402c2"
+checksum = "2bdcdcb390071df856658fd09b432a3bf65db5c5f5d6e2007bd4f416795f0b9f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -478,9 +478,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7791cf4d35da8f731ae904d5397011cb5c86ea0ef3ac0779b626baeacdb84f2"
+checksum = "0362240d6db280553d69a27eb9d9f95e469820ad68f60de4549a4ca66d0fd6d3"
 dependencies = [
  "base64",
  "bech32",
@@ -502,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "489a57cbbc02776e7a0be066255827a7eaed4b749c50c08b8367258da3b6f7c6"
+checksum = "12e85e630240a79f33fc9882e5e0cef7d89c1bc40e44da0d73bc6439b12bcaa9"
 dependencies = [
  "bech32",
  "blake2",
@@ -532,9 +532,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-vm-derive"
-version = "2.3.0"
+version = "2.2.7-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "682193c1d5f34f7945362a275888c2150df70ef9a5bb475f4ebc210a9696fb3a"
+checksum = "2dbb561bb0c8f9d3c4d52e5636c00728078b6ccb257b3665eb6e0e8e66ed5eda"
 dependencies = [
  "blake2",
  "proc-macro2",
@@ -2245,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "wasmvm"
-version = "2.2.5"
+version = "2.2.6-rc.0"
 dependencies = [
  "cbindgen",
  "cosmwasm-std",
