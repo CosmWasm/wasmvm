@@ -21,7 +21,7 @@ import (
 const MOCK_CONTRACT_ADDR = "contract"
 
 func MockEnv() types.Env {
-	tx_hash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
+	txHash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
 	return types.Env{
 		Block: types.BlockInfo{
 			Height:  123,
@@ -30,7 +30,7 @@ func MockEnv() types.Env {
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 4,
-			Hash:  tx_hash,
+			Hash:  txHash,
 		},
 		Contract: types.ContractInfo{
 			Address: MOCK_CONTRACT_ADDR,
