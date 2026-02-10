@@ -126,7 +126,15 @@ func (vm *VM) Unpin(checksum Checksum) error {
 	return api.Unpin(vm.cache, checksum)
 }
 
-// Returns a report of static analysis of the wasm contract (uncompiled).
+func (vm *VM) SyncPinnedCodes(checksums []Checksum) error {
+	buffer := make([]byte, 0)
+	for _, checksum := range checksums {
+		buffer = append(buffer, checksum...)
+	}
+	return api.SyncPinnedCodes(vm.cache, buffer)
+}
+
+// AnalyzeCode returns a report of static analysis of the wasm contract (uncompiled).
 // This contract must have been stored in the cache previously (via Create).
 // Only info currently returned is if it exposes all ibc entry points, but this may grow later
 func (vm *VM) AnalyzeCode(checksum Checksum) (*types.AnalysisReport, error) {

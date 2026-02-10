@@ -7,7 +7,7 @@ use cosmwasm_vm::Cache;
 use serde::Serialize;
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
+use crate::args::{CACHE_ARG, CHECKSUMS_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
