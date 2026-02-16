@@ -386,7 +386,7 @@ type RawRangeQuery struct {
 	ContractAddr string `json:"contract_addr"`
 	// Inclusive start bound. This is the first key you would like to get data for.
 	//
-	// If `start` is lexicographically greater than or equal to `end`, an empty range is described, mo matter of the order.
+	// If `start` is lexicographically greater than or equal to `end`, an empty range is described, no matter of the order.
 	Start []byte `json:"start,omitempty"`
 	// Exclusive end bound. This is the key after the last key you would like to get data for.
 	End []byte `json:"end,omitempty"`
