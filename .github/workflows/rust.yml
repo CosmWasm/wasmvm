@@ -1,0 +1,43 @@
+name: Rust Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: rustfmt, clippy
+          override: true
+
+      - name: Check Rust formatting
+        run: cargo fmt -- --check
+        working-directory: libwasmvm
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+        working-directory: libwasmvm
+
+      - name: Run Rust tests
+        run: cargo test
+        working-directory: libwasmvm
+
+      - name: Build docs
+        run: cargo doc --no-deps
+        working-directory: libwasmvm
+
+      - name: Test docs
+        run: |
+          sed -i '/^crate-type = \["cdylib"\]/d' Cargo.toml
+          cargo test --doc
+        working-directory: libwasmvm
