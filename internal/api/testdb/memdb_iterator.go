@@ -61,7 +61,7 @@ func newMemDBIteratorMtxChoice(db *MemDB, start []byte, end []byte, reverse bool
 				skipEqual = nil
 				return true
 			}
-			if abortLessThan != nil && bytes.Compare(item.key, abortLessThan) == -1 {
+			if abortLessThan != nil && bytes.Compare(item.key, abortLessThan) < 0 {
 				return false
 			}
 			select {

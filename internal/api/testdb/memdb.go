@@ -23,7 +23,7 @@ type item struct {
 func (i *item) Less(other btree.Item) bool {
 	// this considers nil == []byte{}, but that's ok since we handle nil endpoints
 	// in iterators specially anyway
-	return bytes.Compare(i.key, other.(*item).key) == -1
+	return bytes.Compare(i.key, other.(*item).key) < 0
 }
 
 // newKey creates a new key item.
