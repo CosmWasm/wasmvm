@@ -383,6 +383,8 @@ type IBC2WriteAcknowledgementMsg struct {
 	Ack IBCAcknowledgement `json:"ack"`
 	// Existing channel where the packet was received
 	SourceClient string `json:"source_client"`
+	// The identifier of the destination IBC client.
+	DestinationClient string `json:"destination_client"`
 	// Sequence number of the packet that was received
 	PacketSequence uint64 `json:"packet_sequence"`
 }
