@@ -92,6 +92,16 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [#590]: https://github.com/CosmWasm/wasmvm/pull/590
 [#587]: https://github.com/CosmWasm/wasmvm/pull/587
 
+## [2.3.2] - 2026-02-11
+
+### Changed
+
+- Updates ([#711])
+- Prepare wasmvm v2.3.2 ([#714])
+
+[#711]: https://github.com/CosmWasm/wasmvm/pull/711
+[#714]: https://github.com/CosmWasm/wasmvm/pull/714
+
 ## [2.3.1] - 2025-12-10
 
 > [!NOTE]
@@ -119,6 +129,16 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [#704]: https://github.com/CosmWasm/wasmvm/pull/704
 [#702]: https://github.com/CosmWasm/wasmvm/pull/702
 [#701]: https://github.com/CosmWasm/wasmvm/pull/701
+
+## [2.2.6] - 2026-02-11
+
+### Changed
+
+- Updates ([#710])
+- Prepare wasmvm v2.2.6 ([#715])
+
+[#710]: https://github.com/CosmWasm/wasmvm/pull/710
+[#715]: https://github.com/CosmWasm/wasmvm/pull/715
 
 ## [2.2.5] - 2025-12-19
 
@@ -1692,9 +1712,11 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [3.0.3]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...v3.0.3
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/CosmWasm/wasmvm/compare/v3.0.0...v3.0.1
-[3.0.0]: https://github.com/CosmWasm/wasmvm/compare/v2.3.1...v3.0.0
+[3.0.0]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...v3.0.0
+[2.3.2]: https://github.com/CosmWasm/wasmvm/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/CosmWasm/wasmvm/compare/v2.3.0...v2.3.1
-[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.3.0
+[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.3.0
+[2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.2.6
 [2.2.5]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
 [2.2.4]: https://github.com/CosmWasm/wasmvm/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/CosmWasm/wasmvm/compare/v2.2.2...v2.2.3
