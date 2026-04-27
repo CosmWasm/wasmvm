@@ -13,6 +13,7 @@
 /demo
 tmp
 a.out
+vendor/
 
 # macOS
 .DS_Store

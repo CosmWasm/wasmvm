@@ -4,16 +4,28 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
-- Recover the CHANGELOG ([#708])
+## [3.0.4] - 2026-04-24
+
+- Fix ibc2 async ack ([#718])
+
+[#718]: https://github.com/CosmWasm/wasmvm/pull/718
+
+## [3.0.3] - 2026-02-11
+
+- Prepare wasmvm v3.0.3 ([#713])
+- Updates ([#712])
 - Recovered the changelog ([#709])
+- Recover the CHANGELOG ([#708])
 - Add workflow dispatch in CI ([#703])
 - Improved tests ([#699])
 - Update setup-go to v6 ([#697])
 - Unified security policy ([#693])
 - Updated year in NOTICE file. ([0xf2566c3])
 
-[#708]: https://github.com/CosmWasm/wasmvm/issues/708
+[#713]: https://github.com/CosmWasm/wasmvm/pull/713
+[#712]: https://github.com/CosmWasm/wasmvm/pull/712
 [#709]: https://github.com/CosmWasm/wasmvm/pull/709
+[#708]: https://github.com/CosmWasm/wasmvm/issues/708
 [#703]: https://github.com/CosmWasm/wasmvm/pull/703
 [#699]: https://github.com/CosmWasm/wasmvm/pull/699
 [#697]: https://github.com/CosmWasm/wasmvm/pull/697
@@ -461,7 +473,7 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 ### Changed
 
 - Merge 2.0.1 ([#535])
-- Migrate to Rust 1.74.0+ in cross compiler ([#513])
+- Migrate to Rust 1.74.0+ in cross-compiler ([#513])
 - Make test-alpine work on ARM as well ([#483])
 - Lock cargo-audit CI job (backport #604) ([#606])
 - Expose pinned metrics through vm ([#544])
@@ -491,7 +503,7 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 - Update to cosmwasm 2.0.8 ([0x68f94f2])
 - Bump wasmvm version ([0x98ba855])
 - Set libwasmvm version to 2.0.4 ([0xff1eb7c])
-- Merge branch 'release/2.0 ([0x4094e65])
+- Merge branch release/2.0 ([0x4094e65])
 
 ### Removed
 
@@ -1675,7 +1687,9 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.4...HEAD
+[3.0.4]: https://github.com/CosmWasm/wasmvm/compare/v3.0.3...v3.0.4
+[3.0.3]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...v3.0.3
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/CosmWasm/wasmvm/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/CosmWasm/wasmvm/compare/v2.3.1...v3.0.0

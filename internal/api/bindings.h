@@ -432,6 +432,10 @@ void pin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedV
 
 void unpin(struct cache_t *cache, struct ByteSliceView checksum, struct UnmanagedVector *error_msg);
 
+void sync_pinned_codes(struct cache_t *cache,
+                       struct ByteSliceView checksums,
+                       struct UnmanagedVector *error_msg);
+
 struct AnalysisReport analyze_code(struct cache_t *cache,
                                    struct ByteSliceView checksum,
                                    struct UnmanagedVector *error_msg);

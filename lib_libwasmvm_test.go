@@ -254,7 +254,7 @@ func TestEnv(t *testing.T) {
 	expected, _ := json.Marshal(env)
 	require.Equal(t, expected, ires.Data)
 
-	tx_hash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
+	txHash, _ := hex.DecodeString("AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011AABBCCDDEEFF0011")
 
 	// Execute mirror env with Transaction
 	env = types.Env{
@@ -268,7 +268,7 @@ func TestEnv(t *testing.T) {
 		},
 		Transaction: &types.TransactionInfo{
 			Index: 18,
-			Hash:  tx_hash,
+			Hash:  txHash,
 		},
 	}
 	info = api.MockInfo("creator", nil)

@@ -7,7 +7,7 @@ use cosmwasm_vm::Cache;
 use serde::Serialize;
 
 use crate::api::GoApi;
-use crate::args::{CACHE_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
+use crate::args::{CACHE_ARG, CHECKSUMS_ARG, CHECKSUM_ARG, CONFIG_ARG, WASM_ARG};
 use crate::error::{handle_c_error_binary, handle_c_error_default, handle_c_error_ptr, Error};
 use crate::handle_vm_panic::handle_vm_panic;
 use crate::memory::{ByteSliceView, UnmanagedVector};
@@ -195,6 +195,39 @@ fn do_unpin(
         .ok_or_else(|| Error::unset_arg(CHECKSUM_ARG))?
         .try_into()?;
     cache.unpin(&checksum)?;
+    Ok(())
+}
+
+#[no_mangle]
+pub extern "C" fn sync_pinned_codes(
+    cache: *mut cache_t,
+    checksums: ByteSliceView,
+    error_msg: Option<&mut UnmanagedVector>,
+) {
+    let r = match to_cache(cache) {
+        Some(c) => catch_unwind(AssertUnwindSafe(move || do_sync_pinned_codes(c, checksums)))
+            .unwrap_or_else(|err| {
+                handle_vm_panic("do_unpin", err);
+                Err(Error::panic())
+            }),
+        None => Err(Error::unset_arg(CACHE_ARG)),
+    };
+    handle_c_error_default(r, error_msg)
+}
+
+fn do_sync_pinned_codes(
+    cache: &mut Cache<GoApi, GoStorage, GoQuerier>,
+    checksums: ByteSliceView,
+) -> Result<(), Error> {
+    let checksums: Vec<u8> = checksums
+        .read()
+        .ok_or_else(|| Error::unset_arg(CHECKSUMS_ARG))?
+        .into();
+    let checksums: Vec<Checksum> = checksums
+        .chunks_exact(32)
+        .map(|checksum| checksum.try_into())
+        .collect::<Result<_, _>>()?;
+    cache.sync_pinned_codes(&checksums)?;
     Ok(())
 }
 

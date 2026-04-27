@@ -26,6 +26,8 @@ type IBC2PacketReceiveMsg struct {
 	Relayer string `json:"relayer"`
 	// The identifier of the source IBC client.
 	SourceClient string `json:"source_client"`
+	// The identifier of the destination IBC client.
+	DestinationClient string `json:"destination_client"`
 	// The unique sequence number of the received packet.
 	PacketSequence uint64 `json:"packet_sequence"`
 }
