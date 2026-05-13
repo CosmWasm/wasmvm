@@ -52,6 +52,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [#702]: https://github.com/CosmWasm/wasmvm/pull/702
 [#701]: https://github.com/CosmWasm/wasmvm/pull/701
 
+## [2.2.7] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 2.2.8 which includes the overflows fix ([#2660])
+
+[#2660]: https://github.com/CosmWasm/cosmwasm/pull/2660
+
 ## [2.2.6] - 2026-02-11
 
 ### Changed
@@ -1629,10 +1637,12 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.3.3...HEAD
+[2.3.3]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...v2.3.3
 [2.3.2]: https://github.com/CosmWasm/wasmvm/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/CosmWasm/wasmvm/compare/v2.3.0...v2.3.1
-[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.3.0
+[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.7...v2.3.0
+[2.2.7]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.2.7
 [2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.2.6
 [2.2.5]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
 [2.2.4]: https://github.com/CosmWasm/wasmvm/compare/v2.2.3...v2.2.4
