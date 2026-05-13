@@ -1591,8 +1591,9 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...HEAD
-[2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.2.7...HEAD
+[2.2.7]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.2.7
+[2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.2.6
 [2.2.5]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
 [2.2.4]: https://github.com/CosmWasm/wasmvm/compare/v2.2.3...v2.2.4
 [2.2.3]: https://github.com/CosmWasm/wasmvm/compare/v2.2.2...v2.2.3
