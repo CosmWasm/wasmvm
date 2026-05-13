@@ -6,6 +6,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 (empty)
 
+## [2.2.7] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 2.2.8 which includes the overflows fix ([#2660])
+
+[#2660]: https://github.com/CosmWasm/cosmwasm/pull/2660
+
 ## [2.2.6] - 2026-02-11
 
 ### Changed
