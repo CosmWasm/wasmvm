@@ -4,6 +4,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
+## [3.0.5] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 3.0.6 which includes the overflows fix ([#2662])
+
+[#2662]: https://github.com/CosmWasm/cosmwasm/pull/2662
+
 ## [3.0.4] - 2026-04-24
 
 - Fix ibc2 async ack ([#718])
@@ -92,6 +100,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [#590]: https://github.com/CosmWasm/wasmvm/pull/590
 [#587]: https://github.com/CosmWasm/wasmvm/pull/587
 
+## [2.3.3] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 2.3.3 which includes the overflows fix ([#2661])
+
+[#2661]: https://github.com/CosmWasm/cosmwasm/pull/2661
+
 ## [2.3.2] - 2026-02-11
 
 ### Changed
@@ -129,6 +145,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [#704]: https://github.com/CosmWasm/wasmvm/pull/704
 [#702]: https://github.com/CosmWasm/wasmvm/pull/702
 [#701]: https://github.com/CosmWasm/wasmvm/pull/701
+
+## [2.2.7] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 2.2.8 which includes the overflows fix ([#2660])
+
+[#2660]: https://github.com/CosmWasm/cosmwasm/pull/2660
 
 ## [2.2.6] - 2026-02-11
 
@@ -1707,15 +1731,18 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.4...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.5...HEAD
+[3.0.5]: https://github.com/CosmWasm/wasmvm/compare/v3.0.4...v3.0.5
 [3.0.4]: https://github.com/CosmWasm/wasmvm/compare/v3.0.3...v3.0.4
 [3.0.3]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...v3.0.3
 [3.0.2]: https://github.com/CosmWasm/wasmvm/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/CosmWasm/wasmvm/compare/v3.0.0...v3.0.1
-[3.0.0]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...v3.0.0
+[3.0.0]: https://github.com/CosmWasm/wasmvm/compare/v2.3.3...v3.0.0
+[2.3.3]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...v2.3.3
 [2.3.2]: https://github.com/CosmWasm/wasmvm/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/CosmWasm/wasmvm/compare/v2.3.0...v2.3.1
-[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.3.0
+[2.3.0]: https://github.com/CosmWasm/wasmvm/compare/v2.2.7...v2.3.0
+[2.2.7]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.2.7
 [2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.2.6
 [2.2.5]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
 [2.2.4]: https://github.com/CosmWasm/wasmvm/compare/v2.2.3...v2.2.4
