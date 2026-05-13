@@ -4,6 +4,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
+## [3.0.5] - 2026-05-13
+
+### Changed
+
+- Bump cosmwasm 3.0.6 which includes the overflows fix ([#2662])
+
+[#2662]: https://github.com/CosmWasm/cosmwasm/pull/2662
+
 ## [3.0.4] - 2026-04-24
 
 - Fix ibc2 async ack ([#718])
