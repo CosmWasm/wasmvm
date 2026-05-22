@@ -4,6 +4,12 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
+## [3.0.6] - 2026-05-22
+
+### Changed
+
+- Bump cosmwasm to version 3.0.7 [CHANGELOG.md](https://github.com/CosmWasm/cosmwasm/blob/v3.0.7/CHANGELOG.md)
+
 ## [3.0.5] - 2026-05-13
 
 ### Changed
@@ -1731,7 +1737,8 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.5...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v3.0.6...HEAD
+[3.0.6]: https://github.com/CosmWasm/wasmvm/compare/v3.0.5...v3.0.6
 [3.0.5]: https://github.com/CosmWasm/wasmvm/compare/v3.0.4...v3.0.5
 [3.0.4]: https://github.com/CosmWasm/wasmvm/compare/v3.0.3...v3.0.4
 [3.0.3]: https://github.com/CosmWasm/wasmvm/compare/v3.0.2...v3.0.3
