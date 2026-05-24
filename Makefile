@@ -60,8 +60,11 @@ build-go:
 
 .PHONY: test
 test:
-	# Use package list mode to include all subdirectores. The -count=1 turns off caching.
+	# Run standard tests (CGO binding) and pure-Go wazero tests.
+	# The first invocation runs default CGO-enabled tests.
 	RUST_BACKTRACE=1 go test -v -count=1 ./...
+	# The second invocation runs all tests under the 'wazero' build tag.
+	RUST_BACKTRACE=1 go test -v -count=1 -tags wazero ./...
 
 .PHONY: test-safety
 test-safety:

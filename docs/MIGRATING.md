@@ -72,3 +72,22 @@ where the old name was deprecated.
 | `VoteMsg.Vote`                    | `VoteMsg.Option`                      | Brings consistency with Cosmos SDK naming                    |
 
 [ft]: https://stackoverflow.com/a/60073310
+
+## Building with or without CGO
+
+The default build links against the Rust based `libwasmvm` and therefore
+requires CGO:
+
+```sh
+go build ./...
+```
+
+If you want a pure Go build without the Rust dependency, disable CGO and enable
+the `wazero` build tag:
+
+```sh
+CGO_ENABLED=0 go build -tags wazero ./...
+```
+
+Once wazero provides all features of the Rust implementation, the Rust
+dependency will be removed.
