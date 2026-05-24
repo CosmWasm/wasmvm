@@ -20,3 +20,5 @@ vendor/
 
 # direnv Nix stuff
 .direnv/
+
+.reference-code/
