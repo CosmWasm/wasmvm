@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.95.0
           components: rustfmt
 
       - name: Cargo cache
@@ -31,9 +31,9 @@ jobs:
             libwasmvm/target/release/.fingerprint
             libwasmvm/target/release/build
             libwasmvm/target/release/deps
-          key: cargocache-v3-libwasmvm_sanity-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          key: cargocache-v3-libwasmvm_sanity-rust-1.95.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
           restore-keys: |
-            cargocache-v3-libwasmvm_sanity-rust-1.82.0-
+            cargocache-v3-libwasmvm_sanity-rust-1.95.0-
 
       - name: Ensure libwasmvm/bindings.h is up-to-date
         working-directory: libwasmvm
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust-version: ["1.82.0", "1.87.0"]
+        rust-version: ["1.95.0"]
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -104,7 +104,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.85.0
+          toolchain: 1.95.0
 
       - name: Install OpenSSL
         run: |
@@ -116,9 +116,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
-          key: v3-libwasmvm_audit-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          key: v3-libwasmvm_audit-rust-1.95.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
           restore-keys: |
-            v3-libwasmvm_audit-rust-1.82.0-
+            v3-libwasmvm_audit-rust-1.95.0-
 
       - name: Install cargo-audit
         run: cargo install --debug cargo-audit --version 0.22.0 --locked
@@ -226,7 +226,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.95.0
       - name: Cargo cache
         uses: actions/cache@v4
         with:
@@ -238,9 +238,9 @@ jobs:
             libwasmvm/target/release/.fingerprint
             libwasmvm/target/release/build
             libwasmvm/target/release/deps
-          key: cargocache-v3-build_shared_library-rust-1.82.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
+          key: cargocache-v3-build_shared_library-rust-1.95.0-${{ hashFiles('libwasmvm/Cargo.lock') }}
           restore-keys: |
-            cargocache-v3-build_shared_library-rust-1.82.0-
+            cargocache-v3-build_shared_library-rust-1.95.0-
       - name: Build shared library
         run: make build-libwasmvm
       - uses: actions/upload-artifact@v4
