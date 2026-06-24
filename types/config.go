@@ -23,6 +23,8 @@ type WasmLimits struct {
 	MaxFunctionParams       *uint32 `json:"max_function_params,omitempty"`
 	MaxTotalFunctionParams  *uint32 `json:"max_total_function_params,omitempty"`
 	MaxFunctionResults      *uint32 `json:"max_function_results,omitempty"`
+	MaxFunctionLocals       *uint32 `json:"max_function_locals,omitempty"`
+	MaxTotalFunctionLocals  *uint32 `json:"max_total_function_locals,omitempty"`
 }
 
 type CacheOptions struct {
