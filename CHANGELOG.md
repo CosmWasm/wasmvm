@@ -6,6 +6,14 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 (empty)
 
+## [2.2.8] - 2026-07-01
+
+### Changed
+
+- Prepare v2.2.8 ([#739])
+
+[#739]: https://github.com/CosmWasm/wasmvm/pull/739
+
 ## [2.2.7] - 2026-05-13
 
 ### Changed
@@ -1591,7 +1599,8 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.2.7...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.2.8...HEAD
+[2.2.8]: https://github.com/CosmWasm/wasmvm/compare/v2.2.7...v2.2.8
 [2.2.7]: https://github.com/CosmWasm/wasmvm/compare/v2.2.6...v2.2.7
 [2.2.6]: https://github.com/CosmWasm/wasmvm/compare/v2.2.5...v2.2.6
 [2.2.5]: https://github.com/CosmWasm/wasmvm/compare/v2.2.4...v2.2.5
