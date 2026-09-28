@@ -472,7 +472,7 @@ func TestPinUnpin(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pinnedMetrics.PerModule, 1)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
-	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+	require.InEpsilon(t, 4800000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 
 	// Create contract 2
 	checksumCyberpunk := createTestContract(t, vm, cyberpunkTestContract)
@@ -486,9 +486,9 @@ func TestPinUnpin(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pinnedMetrics.PerModule, 2)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
-	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+	require.InEpsilon(t, 4800000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[1].Metrics.Hits)
-	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[1].Metrics.Size, 0.25)
+	require.InEpsilon(t, 4800000, pinnedMetrics.PerModule[1].Metrics.Size, 0.25)
 
 	// Unpin contract 1
 	err = vm.Unpin(checksumHackatom)
@@ -499,7 +499,7 @@ func TestPinUnpin(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pinnedMetrics.PerModule, 1)
 	require.Equal(t, uint32(0), pinnedMetrics.PerModule[0].Metrics.Hits)
-	require.InEpsilon(t, 4000000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
+	require.InEpsilon(t, 4800000, pinnedMetrics.PerModule[0].Metrics.Size, 0.25)
 
 	// Unpin contract 2
 	err = vm.Unpin(checksumCyberpunk)
