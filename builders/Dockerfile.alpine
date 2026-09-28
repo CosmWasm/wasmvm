@@ -1,6 +1,9 @@
-FROM --platform=linux/amd64 rust:1.82.0-alpine
+FROM --platform=linux/amd64 rust:1.95.0-alpine
 
-RUN apk add --no-cache ca-certificates build-base
+RUN apk add --no-cache ca-certificates build-base clang-dev clang-static llvm-dev llvm-static
+
+RUN ln -sf "$(find /usr/lib -name llvm-config -type f | head -1)" /usr/local/bin/llvm-config \
+  && llvm-config --version
 
 # Install C compiler for cross-compilation. This is required by
 # Wasmer in https://github.com/wasmerio/wasmer/blob/2.2.1/lib/vm/build.rs.
