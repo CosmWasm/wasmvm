@@ -1,5 +1,5 @@
 # Builds the Rust library libwasmvm
-BUILDERS_PREFIX := ghcr.io/cosmwasm/libwasmvm-builder:0104
+BUILDERS_PREFIX := ghcr.io/cosmwasm/libwasmvm-builder:0105
 # Contains a full Go dev environment including CGO support in order to run Go tests on the built shared library
 # This image is currently not published.
 ALPINE_TESTER := cosmwasm/alpine-tester:local
@@ -101,12 +101,6 @@ release-build-macos-static:
 	cp libwasmvm/artifacts/libwasmvmstatic_darwin.a internal/api/libwasmvmstatic_darwin.a
 	make update-bindings
 
-# Creates a release build in a containerized build environment of the shared library for Windows (.dll)
-release-build-windows:
-	docker run --rm -v $(shell pwd)/libwasmvm:/code $(BUILDERS_PREFIX)-cross build_windows.sh
-	cp libwasmvm/artifacts/wasmvm.dll internal/api
-	make update-bindings
-
 update-bindings:
 # After we build libwasmvm, we have to copy the generated bindings for Go code to use.
 # We cannot use symlinks as those are not reliably resolved by `go get` (https://github.com/CosmWasm/wasmvm/pull/235).
@@ -117,7 +111,6 @@ release-build:
 	make release-build-alpine
 	make release-build-linux
 	make release-build-macos
-	make release-build-windows
 
 .PHONY: create-tester-image
 create-tester-image:
