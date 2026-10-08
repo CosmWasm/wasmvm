@@ -12,16 +12,23 @@ tricky. This folder contains build scripts and a Docker image to create all
 dynamic libraries from one host. In general this is set up for a Linux host, but
 any machine that can run Docker can do the cross-compilation.
 
-## Docker Hub images
+## Docker images
 
-See those DockerHub repos for all available versions of the builder images.
+See those repos for all available versions of the builder images.
 
+- From version 0104: https://github.com/orgs/CosmWasm/packages/container/package/libwasmvm-builder
 - From version 0100: https://hub.docker.com/r/cosmwasm/libwasmvm-builder/tags
 - Before version 0100: https://hub.docker.com/r/cosmwasm/go-ext-builder/tags
 
 ## Changelog
 
 **Unreleased**
+
+**Version 0105:**
+
+- Update Rust to 1.96.0.
+- Install Debian 11 packages from archive.debian.org, as Debian 11 reached end
+  of life.
 
 **Version 0102:**
 
