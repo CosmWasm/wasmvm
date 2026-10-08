@@ -4,7 +4,10 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 ## [Unreleased]
 
-(empty)
+### Changed
+
+- Bump cosmwasm to version 2.2.11-rc.0
+- Update Rust to 1.96.0 and the builder images to version 0105
 
 ## [2.2.9] - 2026-09-28
 
