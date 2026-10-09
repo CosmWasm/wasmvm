@@ -36,7 +36,6 @@ make build-libwasmvm
 make release-build-alpine
 make release-build-linux
 make release-build-macos
-make release-build-windows
 ```
 
 ### Go code

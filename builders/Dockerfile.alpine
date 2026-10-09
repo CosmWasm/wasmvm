@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 rust:1.95.0-alpine
+FROM --platform=linux/amd64 rust:1.96.0-alpine
 
 RUN apk add --no-cache ca-certificates build-base clang-dev clang-static llvm-dev llvm-static
 
