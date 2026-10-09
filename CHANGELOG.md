@@ -6,6 +6,13 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 
 (empty)
 
+## [2.3.6] - 2026-10-08
+
+### Changed
+
+- Bump cosmwasm to version 2.3.6 [CHANGELOG.md](https://github.com/CosmWasm/cosmwasm/blob/v2.3.6/CHANGELOG.md)
+- Update Rust to 1.96.0 and the builder images to version 0105
+
 ## [2.3.5] - 2026-09-28
 
 ### Changed
@@ -1652,7 +1659,8 @@ This format is based on [Keep a Changelog], and the project adheres to [Semantic
 [0x16e8e0a]: https://github.com/CosmWasm/wasmvm/commit/16e8e0a7648823ab0c060aadf60f75236af168e5
 [0x4ff2a3c]: https://github.com/CosmWasm/wasmvm/commit/4ff2a3cadfd01b8bd245e82dc9a1d964d2315f88
 
-[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.3.5...HEAD
+[Unreleased]: https://github.com/CosmWasm/wasmvm/compare/v2.3.6...HEAD
+[2.3.6]: https://github.com/CosmWasm/wasmvm/compare/v2.3.5...v2.3.6
 [2.3.5]: https://github.com/CosmWasm/wasmvm/compare/v2.3.4...v2.3.5
 [2.3.4]: https://github.com/CosmWasm/wasmvm/compare/v2.3.3...v2.3.4
 [2.3.3]: https://github.com/CosmWasm/wasmvm/compare/v2.3.2...v2.3.3
