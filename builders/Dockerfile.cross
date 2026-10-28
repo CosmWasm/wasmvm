@@ -1,8 +1,8 @@
-FROM --platform=linux/amd64 rust:1.82.0-bookworm
+FROM --platform=linux/amd64 rust:1.95.0-bookworm
 
 # Install build dependencies
 RUN apt-get update \
-  && apt install -y clang gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake \
+  && apt install -y clang libclang-dev llvm-dev gcc g++ zlib1g-dev libmpc-dev libmpfr-dev libgmp-dev build-essential cmake \
   # Support for Windows cross-compile
   mingw-w64
 
@@ -24,9 +24,11 @@ RUN rustup target add x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows
 RUN git clone https://github.com/tpoechtrager/osxcross \
   && cd osxcross \
   # Don't change file name when downloading because osxcross auto-detects the version from the name
-  && wget -nc https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz \
-  && mv MacOSX11.3.sdk.tar.xz tarballs/ \
-  && UNATTENDED=yes OSX_VERSION_MIN=10.15 ./build.sh \
+  # SDK 14.0: first with the unwind symbol wasmer 7 needs.
+  && wget -nc https://github.com/joseluisq/macosx-sdks/releases/download/14.0/MacOSX14.0.sdk.tar.xz \
+  && mv MacOSX14.0.sdk.tar.xz tarballs/ \
+  # osxcross 3.0 needs UNATTENDED=1 and a flavor.
+  && UNATTENDED=1 BUILD_FLAVOR=stable OSX_VERSION_MIN=10.15 ./build.sh \
   # Cleanups before Docker layer is finalized
   && rm -r tarballs/
 RUN chmod +rx /opt/osxcross
@@ -34,8 +36,8 @@ RUN chmod +rx /opt/osxcross/target
 RUN chmod -R +rx /opt/osxcross/target/bin
 
 # RUN ls -l /opt/osxcross/target/bin
-RUN /opt/osxcross/target/bin/x86_64-apple-darwin20.4-clang --version
-RUN /opt/osxcross/target/bin/aarch64-apple-darwin20.4-clang --version
+RUN /opt/osxcross/target/bin/x86_64-apple-darwin23-clang --version
+RUN /opt/osxcross/target/bin/aarch64-apple-darwin23-clang --version
 
 # allow non-root user to download more deps later
 RUN chmod -R 777 /usr/local/cargo

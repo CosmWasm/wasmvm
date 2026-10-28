@@ -8,11 +8,13 @@ export TARGET_DIR="/target" # write to /target in the guest's file system to avo
 export PATH="/opt/osxcross/target/bin:$PATH"
 export LIBZ_SYS_STATIC=1
 
+export MACOSX_DEPLOYMENT_TARGET=12.0
+
 # No stripping implemented (see https://github.com/CosmWasm/wasmvm/issues/222#issuecomment-2260007943).
 
 echo "Starting aarch64-apple-darwin build"
-export CC=aarch64-apple-darwin20.4-clang
-export CXX=aarch64-apple-darwin20.4-clang++
+export CC=aarch64-apple-darwin23-clang
+export CXX=aarch64-apple-darwin23-clang++
 cargo build --release --target-dir="$TARGET_DIR" --target aarch64-apple-darwin --example wasmvmstatic
 
 echo "Starting x86_64-apple-darwin build"

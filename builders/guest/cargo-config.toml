@@ -1,10 +1,10 @@
 [target.x86_64-apple-darwin]
-linker = "x86_64-apple-darwin20.4-clang"
-ar = "x86_64-apple-darwin20.4-ar"
+linker = "x86_64-apple-darwin23-clang"
+ar = "x86_64-apple-darwin23-ar"
 
 [target.aarch64-apple-darwin]
-linker = "aarch64-apple-darwin20.4-clang"
-ar = "aarch64-apple-darwin20.4-ar"
+linker = "aarch64-apple-darwin23-clang"
+ar = "aarch64-apple-darwin23-ar"
 
 [target.aarch64-unknown-linux-gnu]
 linker = "/usr/aarch64-linux-gnu/bin/ld"
