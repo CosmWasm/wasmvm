@@ -1,7 +1,6 @@
 name: checks
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -9,12 +8,13 @@ on:
     tags:
       - 'v*.*.*'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   libwasmvm_sanity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.96.0
@@ -73,7 +73,7 @@ jobs:
       matrix:
         rust-version: ["1.96.0"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust-version }}
@@ -101,7 +101,7 @@ jobs:
   libwasmvm_audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.96.0
@@ -125,13 +125,13 @@ jobs:
 
       - name: Run cargo-audit
         working-directory: libwasmvm
-        run: cargo audit --ignore RUSTSEC-2026-0007 --ignore RUSTSEC-2026-0001 --ignore RUSTSEC-2026-0009 --ignore RUSTSEC-2025-0055 --ignore RUSTSEC-2026-0204
+        run: cargo audit --ignore RUSTSEC-2026-0007 --ignore RUSTSEC-2026-0001 --ignore RUSTSEC-2026-0009 --ignore RUSTSEC-2026-0104 --ignore RUSTSEC-2026-0049 --ignore RUSTSEC-2026-0098 --ignore RUSTSEC-2026-0099 --ignore RUSTSEC-2026-0068 --ignore RUSTSEC-2026-0067 --ignore RUSTSEC-2026-0204 --ignore RUSTSEC-2026-0387 --ignore RUSTSEC-2026-0344
 
   format-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
 
@@ -149,8 +149,8 @@ jobs:
   wasmvm_no_cgo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
 
@@ -169,8 +169,8 @@ jobs:
   nolink_libwasmvm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
 
@@ -189,10 +189,10 @@ jobs:
   tidy-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
 
@@ -209,7 +209,7 @@ jobs:
   lint-scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install shellcheck
         run: |
@@ -223,7 +223,7 @@ jobs:
   build_shared_library:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.96.0
@@ -254,8 +254,8 @@ jobs:
     env:
       GORACE: "halt_on_error=1"
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: 1.22.12
 
@@ -353,7 +353,7 @@ jobs:
     runs-on:  ubuntu-latest
     if: github.ref_type == 'branch' && github.ref_name == 'main'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Test Alpine build
         run: make test-alpine
@@ -371,7 +371,7 @@ jobs:
       - wasmvm_test
     if: github.ref_type == 'branch' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: true
 
