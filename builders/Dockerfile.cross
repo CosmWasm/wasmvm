@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 rust:1.95.0-bookworm
+FROM --platform=linux/amd64 rust:1.96.0-bookworm
 
 # Install build dependencies
 RUN apt-get update \
