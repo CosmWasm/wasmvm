@@ -20,7 +20,7 @@ should just be able to import this directly.
 
 ### Rust code
 
-The Rust code lives in `./libwasmvm` directory. This folder compiles to
+The Rust code lives in `./libwasmvm` directory. This code compiles to
 a library that can be used via FFI. It is compiled like this:
 
 ```shell
@@ -74,7 +74,7 @@ CGO_ENABLED=0 go build ./types
 
 #### Package internal/api
 
-This package contains the code binding the libwasmvm build to the Go code.
+This package contains the code binding the **libwasmvm** build to the Go code.
 All low level FFI handling code belongs there. This package can only be built using cgo.
 Using the `internal/` convention makes this package fully private.
 
@@ -90,7 +90,7 @@ go build .
 CGO_ENABLED=0 go build .
 ```
 
-In the case that it may be desirable to compile with cgo, but with libwasmvm
+In the case that it may be desirable to compile with cgo, but with **libwasmvm**
 linking disabled an additional build tag is available.
 
 ```shell
@@ -122,24 +122,24 @@ Our system currently supports the following builds. In general, we can only supp
 [supported by Wasmer singlepass backend](https://docs.wasmer.io/runtime/features#backend-support-by-chipset),
 which for example excludes all 32-bit systems.
 
-| OS family       | Arch    | Linking | Supported                   | Note                                               |
-|-----------------|---------|---------|-----------------------------|----------------------------------------------------|
-| Linux (glibc)   | x86_64  | shared  | ✅libwasmvm.x86_64.so       |                                                    |
-| Linux (glibc)   | x86_64  | static  | 🚫                          |                                                    |
-| Linux (glibc)   | aarch64 | shared  | ✅libwasmvm.aarch64.so      |                                                    |
-| Linux (glibc)   | aarch64 | static  | 🚫                          |                                                    |
-| Linux (musl)    | x86_64  | shared  | 🚫                          |                                                    |
-| Linux (musl)    | x86_64  | static  | ✅libwasmvm_muslc.x86_64.a  |                                                    |
-| Linux (musl)    | aarch64 | shared  | 🚫                          |                                                    |
-| Linux (musl)    | aarch64 | static  | ✅libwasmvm_muslc.aarch64.a |                                                    |
-| macOS           | x86_64  | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architectures. |
-| macOS           | x86_64  | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
-| macOS           | aarch64 | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architectures. |
-| macOS           | aarch64 | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
-| Windows (mingw) | x86_64  | shared  | 🚫                          |                                                    |
-| Windows (mingw) | x86_64  | static  | 🚫                          |                                                    |
-| Windows (mingw) | aarch64 | shared  | 🚫                          |                                                    |
-| Windows (mingw) | aarch64 | static  | 🚫                          |                                                    |
+| OS family       | Arch    | Linking | Supported                    | Note                                               |
+|-----------------|---------|---------|------------------------------|----------------------------------------------------|
+| Linux (glibc)   | x86_64  | shared  | ✅ libwasmvm.x86_64.so       |                                                    |
+| Linux (glibc)   | x86_64  | static  | 🚫                           |                                                    |
+| Linux (glibc)   | aarch64 | shared  | ✅ libwasmvm.aarch64.so      |                                                    |
+| Linux (glibc)   | aarch64 | static  | 🚫                           |                                                    |
+| Linux (musl)    | x86_64  | shared  | 🚫                           |                                                    |
+| Linux (musl)    | x86_64  | static  | ✅ libwasmvm_muslc.x86_64.a  |                                                    |
+| Linux (musl)    | aarch64 | shared  | 🚫                           |                                                    |
+| Linux (musl)    | aarch64 | static  | ✅ libwasmvm_muslc.aarch64.a |                                                    |
+| macOS           | x86_64  | shared  | ✅ libwasmvm.dylib           | Fat/universal library with multiple architectures. |
+| macOS           | x86_64  | static  | ✅ libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
+| macOS           | aarch64 | shared  | ✅ libwasmvm.dylib           | Fat/universal library with multiple architectures. |
+| macOS           | aarch64 | static  | ✅ libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
+| Windows (mingw) | x86_64  | shared  | 🚫                           |                                                    |
+| Windows (mingw) | x86_64  | static  | 🚫                           |                                                    |
+| Windows (mingw) | aarch64 | shared  | 🚫                           |                                                    |
+| Windows (mingw) | aarch64 | static  | 🚫                           |                                                    |
 
 ## Development
 
