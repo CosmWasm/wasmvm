@@ -122,24 +122,24 @@ Our system currently supports the following builds. In general, we can only supp
 [supported by Wasmer singlepass backend](https://docs.wasmer.io/runtime/features#backend-support-by-chipset),
 which for example excludes all 32-bit systems.
 
-| OS family       | Arch    | Linking | Supported                   | Note                                              |
-|-----------------|---------|---------|-----------------------------|---------------------------------------------------|
-| Linux (glibc)   | x86_64  | shared  | ✅libwasmvm.x86_64.so       |                                                   |
-| Linux (glibc)   | x86_64  | static  | 🚫                          |                                                   |
-| Linux (glibc)   | aarch64 | shared  | ✅libwasmvm.aarch64.so      |                                                   |
-| Linux (glibc)   | aarch64 | static  | 🚫                          |                                                   |
-| Linux (musl)    | x86_64  | shared  | 🚫                          |                                                   |
-| Linux (musl)    | x86_64  | static  | ✅libwasmvm_muslc.x86_64.a  |                                                   |
-| Linux (musl)    | aarch64 | shared  | 🚫                          |                                                   |
-| Linux (musl)    | aarch64 | static  | ✅libwasmvm_muslc.aarch64.a |                                                   |
-| macOS           | x86_64  | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architecures. |
-| macOS           | x86_64  | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architecures. |
-| macOS           | aarch64 | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architecures. |
-| macOS           | aarch64 | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architecures. |
-| Windows (mingw) | x86_64  | shared  | 🚫                          |                                                   |
-| Windows (mingw) | x86_64  | static  | 🚫                          |                                                   |
-| Windows (mingw) | aarch64 | shared  | 🚫                          |                                                   |
-| Windows (mingw) | aarch64 | static  | 🚫                          |                                                   |
+| OS family       | Arch    | Linking | Supported                   | Note                                               |
+|-----------------|---------|---------|-----------------------------|----------------------------------------------------|
+| Linux (glibc)   | x86_64  | shared  | ✅libwasmvm.x86_64.so       |                                                    |
+| Linux (glibc)   | x86_64  | static  | 🚫                          |                                                    |
+| Linux (glibc)   | aarch64 | shared  | ✅libwasmvm.aarch64.so      |                                                    |
+| Linux (glibc)   | aarch64 | static  | 🚫                          |                                                    |
+| Linux (musl)    | x86_64  | shared  | 🚫                          |                                                    |
+| Linux (musl)    | x86_64  | static  | ✅libwasmvm_muslc.x86_64.a  |                                                    |
+| Linux (musl)    | aarch64 | shared  | 🚫                          |                                                    |
+| Linux (musl)    | aarch64 | static  | ✅libwasmvm_muslc.aarch64.a |                                                    |
+| macOS           | x86_64  | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architectures. |
+| macOS           | x86_64  | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
+| macOS           | aarch64 | shared  | ✅libwasmvm.dylib           | Fat/universal library with multiple architectures. |
+| macOS           | aarch64 | static  | ✅libwasmvmstatic_darwin.a  | Fat/universal library with multiple architectures. |
+| Windows (mingw) | x86_64  | shared  | 🚫                          |                                                    |
+| Windows (mingw) | x86_64  | static  | 🚫                          |                                                    |
+| Windows (mingw) | aarch64 | shared  | 🚫                          |                                                    |
+| Windows (mingw) | aarch64 | static  | 🚫                          |                                                    |
 
 ## Development
 
