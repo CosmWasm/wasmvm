@@ -1,0 +1,38 @@
+name: Cargo Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/cargo-audit.yml"
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - ".github/workflows/cargo-audit.yml"
+  schedule:
+    - cron: "0 0 * * 0" # Run weekly on Sundays at midnight
+
+jobs:
+  cargo-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo audit
+        working-directory: ./libwasmvm
+        run: cargo audit
+        continue-on-error: ${{ github.event_name == 'schedule' }} # Don't fail scheduled runs
+
+      - name: Run cargo audit with ignore unmaintained
+        working-directory: ./libwasmvm
+        run: cargo audit --ignore RUSTSEC-2024-0436 --ignore RUSTSEC-2024-0370
+        # These are the unmaintained crates we're already tracking in deny.toml
