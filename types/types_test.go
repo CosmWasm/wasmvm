@@ -19,6 +19,46 @@ func TestChecksumString(t *testing.T) {
 	assert.Equal(t, hexRepr, checksumRepr)
 }
 
+func TestChecksumJSON(t *testing.T) {
+	hexRepr := "cd6ff9ff3faea9b3d0224a7e0d1133e6eae1b7800e8392441200056986c358a9"
+	checksum := ForceNewChecksum(hexRepr)
+
+	bz, err := json.Marshal(checksum)
+	require.NoError(t, err)
+	require.Equal(t, `"`+hexRepr+`"`, string(bz))
+
+	var parsed Checksum
+	err = json.Unmarshal(bz, &parsed)
+	require.NoError(t, err)
+	require.Equal(t, checksum, parsed)
+}
+
+func TestChecksumJSONRejectsInvalidInput(t *testing.T) {
+	cases := map[string]string{
+		"invalid hex":  `"not hex"`,
+		"too short":    `"cd6ff9ff3faea9b3d0224a7e0d1133e6eae1b7800e8392441200056986c358"`,
+		"too long":     `"cd6ff9ff3faea9b3d0224a7e0d1133e6eae1b7800e8392441200056986c358a900"`,
+		"not a string": `123`,
+	}
+
+	for name, input := range cases {
+		t.Run(name, func(t *testing.T) {
+			var checksum Checksum
+			err := json.Unmarshal([]byte(input), &checksum)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestForceNewChecksumPanicsForInvalidInput(t *testing.T) {
+	require.Panics(t, func() {
+		ForceNewChecksum("not hex")
+	})
+	require.Panics(t, func() {
+		ForceNewChecksum("cd6ff9ff3faea9b3d0224a7e0d1133e6eae1b7800e8392441200056986c358")
+	})
+}
+
 func TestUint64JSON(t *testing.T) {
 	var u Uint64
 
